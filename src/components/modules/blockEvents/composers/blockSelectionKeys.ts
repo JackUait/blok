@@ -7,12 +7,14 @@ import { focus } from '../../../utils/caret/index';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
 import { announceDeletedRoots, selectionRoots } from '../../../utils/selection-roots';
 import { LIST_TOOL_NAME } from '../constants';
+import { isPrintableKeyEvent } from '../utils/keyboard';
 
 import { BlockEventComposer } from './__base';
 import { canOutdent, getAdoptedSiblings, getIndentTarget } from './structural-siblings';
 import { isChildToolAllowed } from '../../../utils/child-tools';
 import { carriesReadOnly } from '../../../utils/read-only-blocks';
 import { deleteWithTrashToast } from '../../../utils/trash-toast';
+import { askBeforeDelete, deleteAsker, isAskingBeforeDelete, selectionHoldsAsker } from '../../../utils/delete-confirm';
 
 const EDITING_HOST_SELECTOR = '[contenteditable]:not([contenteditable="false"])';
 
@@ -465,7 +467,7 @@ export class BlockSelectionKeys extends BlockEventComposer {
    * @returns true if event was handled
    */
   public handleDeletion(event: KeyboardEvent): boolean {
-    const { BlockSelection, BlockManager, Caret, BlockSettings } = this.Blok;
+    const { BlockSelection, BlockManager, BlockSettings } = this.Blok;
 
     /**
      * Ignore delete/backspace from inside the BlockSettings popover (e.g., search input)
@@ -480,6 +482,13 @@ export class BlockSelectionKeys extends BlockEventComposer {
       return false;
     }
 
+    // A question is open: the key must not ask again or edit a block.
+    if (isAskingBeforeDelete(this.Blok)) {
+      event.preventDefault();
+
+      return true;
+    }
+
     const selectionExists = SelectionUtils.isSelectionExists;
     const selectionCollapsed = SelectionUtils.isCollapsed === true;
     const shouldHandleSelectionDeletion = BlockSelection.anyBlockSelected &&
@@ -489,6 +498,57 @@ export class BlockSelectionKeys extends BlockEventComposer {
       return false;
     }
 
+    const selected = BlockManager.blocks.filter((block) => block.selected);
+    const asker = deleteAsker(selectionRoots(selected));
+
+    if (asker === undefined) {
+      this.removeSelectedBlocks(event);
+    } else {
+      void askBeforeDelete(this.Blok, asker, selected).then((confirmed) => {
+        if (confirmed) {
+          this.removeSelectedBlocks(event);
+        }
+      });
+    }
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    event.stopPropagation();
+
+    return true;
+  }
+
+  /**
+   * A typed character over a selection that holds a block whose tool asks
+   * before it goes does nothing: the selection stays (notion-motion.md Round 67 §2).
+   * A dead key or an IME's first key counts too: navigation mode would otherwise
+   * put the caret in the block for the composed letter. Shortcuts and Enter keep their paths.
+   * @param event - the keydown
+   * @returns true when the key was swallowed
+   */
+  public ignoreTypingOverAsker(event: KeyboardEvent): boolean {
+    const { BlockManager, BlockSelection } = this.Blok;
+    const isShortcut = event.metaKey || (event.ctrlKey && !event.altKey);
+    // A text range keeps native typing, as in BlockSelection.clearSelection.
+    const textSelected = SelectionUtils.isSelectionExists && SelectionUtils.isCollapsed === false;
+
+    if (!isPrintableKeyEvent(event) || event.key === 'Enter' || isShortcut || event.isComposing || !BlockSelection.anyBlockSelected || textSelected) {
+      return false;
+    }
+    if (!selectionHoldsAsker(BlockManager.blocks)) {
+      return false;
+    }
+    event.preventDefault();
+
+    return true;
+  }
+
+  /**
+   * Removes the selected blocks, after any question their tools asked.
+   * @param event - the remove key
+   */
+  private removeSelectedBlocks(event: KeyboardEvent): void {
+    const { BlockSelection, BlockManager, Caret } = this.Blok;
     const selected = BlockManager.blocks.filter((block) => block.selected);
     const nestedContainer = findCommonNestedContainer(selected);
     const roots = selectionRoots(selected);
@@ -508,12 +568,6 @@ export class BlockSelectionKeys extends BlockEventComposer {
     }
 
     BlockSelection.clearSelection(event);
-
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    event.stopPropagation();
-
-    return true;
   }
 
   /**
@@ -766,6 +820,11 @@ export class BlockSelectionKeys extends BlockEventComposer {
    */
   public handleCut(event: ClipboardEvent): void {
     const { BlockSelection, BlockManager, Caret, CrossBlockSelection } = this.Blok;
+
+    // A delete question is open: the selection it keeps must not go another way.
+    if (isAskingBeforeDelete(this.Blok)) {
+      return;
+    }
     const textSelection = CrossBlockSelection.textSelection;
 
     if (textSelection !== null) {

@@ -9,11 +9,13 @@ export const MIN_WIDTH_PERCENT = 10;
 export const MAX_WIDTH_PERCENT = 100;
 
 /**
- * Hard floor for the player's pixel width. Below this the inline controls
- * (volume slider, timecode, scrubber, view-mode buttons) crush together, so the
- * resize handle clamps here instead of the global 10% percent floor.
+ * How small a drag on the resize handle can make the player. Whichever limit the
+ * video's shape reaches first stops it (see resize-floor.ts).
+ * 180px wide is the narrowest capsule that keeps the time and the mute button.
+ * 124px tall is where the resize handles stop touching the ends of the capsule.
  */
-export const MIN_WIDTH_PX = 440;
+export const MIN_WIDTH_PX = 180;
+export const MIN_HEIGHT_PX = 124;
 
 /** Direct links to a playable video file. */
 export const URL_PATTERN = /^https?:\/\/\S+\.(mp4|webm|ogg|mov|m4v)(\?\S*)?$/i;

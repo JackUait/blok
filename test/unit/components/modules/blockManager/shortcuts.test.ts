@@ -26,6 +26,7 @@ const createMockHandlers = (): BlockShortcutsHandlers => ({
   onMoveDown: vi.fn(),
   onCopyAsMarkdown: vi.fn(),
   onDuplicate: vi.fn(),
+  onDuplicateWithoutContent: vi.fn(),
 });
 
 describe('BlockShortcuts', () => {
@@ -499,6 +500,7 @@ describe('BlockShortcuts', () => {
         onMoveDown: vi.fn(),
         onCopyAsMarkdown: vi.fn(),
         onDuplicate: vi.fn(),
+        onDuplicateWithoutContent: vi.fn(),
       };
       const nullShortcuts = new BlockShortcuts(wrapper, nullHandlers);
 

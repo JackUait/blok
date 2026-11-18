@@ -474,6 +474,12 @@ describe('cell editor CSS', () => {
       expect(declared("[data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-cell-input]", 'min-height'))
         .toEqual(['38px']);
     });
+
+    // notion-motion.md Round 67 §3: a calendar card's Edit property › Text box is 240x38.
+    it('is 38px tall at a calendar card\'s right-click point', () => {
+      expect(declared("[data-blok-popover-custom-class~='blok-database-point-editor'] [data-blok-database-cell-input]", 'min-height'))
+        .toEqual(['38px']);
+    });
   });
 
   // Notion's picker, measured 2026-10-25 from its top-left: field 12/12, header 52, grid 74 (224 tall), first row 307.
@@ -786,6 +792,84 @@ describe('cell editor CSS', () => {
   // notion-motion.md Round 55 §5: the peek mode menu grows from the top centre (origin 110px 0 on 220 wide).
   it('scales the peek mode menu from its top centre', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-peek-mode-menu'] > [data-blok-popover-container]", 'transform-origin')).toEqual(['top center']);
+  });
+
+  // notion-motion.md Round 62 §1: the Move to picker scales 0.96 → 1 from its centre.
+  it('scales the Move to picker from its centre', () => {
+    expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] > [data-blok-popover-container]", 'transform-origin')).toEqual(['center']);
+  });
+
+  // notion-motion.md Round 62 §1: search box 306x28 at +12,+12; result rows 322x28 at +4, radius 6, icon 18 at +13, title 14/16.8 at +40.
+  describe('Move to picker', () => {
+    const MOVE = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']";
+
+    it('insets the search box 12px from the top and sides', () => {
+      expect(declared(`${MOVE} [data-blok-popover-container] > [data-blok-field]`, 'margin')).toEqual(['var(--blok-space-3) var(--blok-space-2) 0']);
+    });
+
+    it('draws the rows 322x28 at +4 with the icon at +13 and the title at +40', () => {
+      expect(declared(`${MOVE} [role='option']`, 'margin-inline')).toEqual(['0']);
+      expect(declared(`${MOVE} [role='option']`, 'min-height')).toEqual(['28px']);
+      expect(declared(`${MOVE} [role='option']`, 'padding')).toEqual(['var(--blok-space-1-25) var(--blok-space-2) var(--blok-space-1-25) var(--blok-space-2-25)']);
+      expect(declared(`${MOVE} [role='option']`, 'gap')).toEqual(['var(--blok-space-2-25)']);
+      expect(declared(`${MOVE} [role='option'] > div > *`, 'line-height')).toEqual(['16.8px']);
+      expect(declared(`${MOVE} [data-blok-testid='page-picker-option-icon']`, 'width')).toEqual(['18px']);
+      expect(declared(`${MOVE} [data-blok-testid='page-picker-option-icon']`, 'height')).toEqual(['18px']);
+    });
+
+    // Round 62 §1: at rest the box keeps 453 tall and its rows run 330 wide edge to edge, square.
+    it('keeps the box 453 tall with full-bleed square rows until a query', () => {
+      const REST = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']:not([data-blok-database-move-searched])";
+
+      expect(declared(`${REST} > [data-blok-popover-container]`, 'height')).toEqual(['453px']);
+      expect(declared(`${MOVE} > [data-blok-popover-container]`, '--max-height')).toEqual(['453px']);
+      expect(declared(`${REST} > [data-blok-popover-container]`, 'padding-inline')).toEqual(['0']);
+      expect(declared(`${REST} [data-blok-popover-container] > [data-blok-field]`, 'margin-inline')).toEqual(['var(--blok-space-3)']);
+      expect(declared(`${REST} [role='option']`, 'outline-offset')).toEqual(['-2px']);
+      expect(declared(`${REST} [role='option']`, 'border-radius')).toEqual(['0']);
+      expect(declared(`${REST} [role='option']`, 'padding-inline')).toEqual(['var(--blok-space-3-25) var(--blok-space-3)']);
+    });
+
+    // Round 62 §1: a Workspace row's chevron 20 at +14, icon 16 at +37, title 14/21 at +60; a level is +14 more.
+    describe('Workspace tree', () => {
+      const TREE_ROW = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']:not([data-blok-database-move-searched]) [role='option'][data-blok-page-picker-tree-row]";
+      const CHEVRON = `${MOVE} [data-blok-testid='page-picker-tree-chevron']`;
+
+      it('starts each level 14px further in', () => {
+        expect(declared(TREE_ROW, 'padding-inline')).toEqual(['calc(var(--blok-space-3-5) * (1 + var(--blok-page-picker-depth, 0))) var(--blok-space-3)']);
+        expect(declared(TREE_ROW, 'padding-block')).toEqual(['0']);
+        expect(declared(TREE_ROW, 'gap')).toEqual(['0']);
+        expect(declared(TREE_ROW, 'align-items')).toEqual(['center']);
+        expect(declared(`${TREE_ROW} > div > *`, 'line-height')).toEqual(['21px']);
+      });
+
+      it('puts the 20 chevron, then the 16 icon 3px after it, then the title 7px after that', () => {
+        expect(declared(CHEVRON, 'width')).toEqual(['20px']);
+        expect(declared(CHEVRON, 'height')).toEqual(['20px']);
+        expect(declared(CHEVRON, 'margin-inline-end')).toEqual(['var(--blok-space-0-75)']);
+        expect(declared(CHEVRON, 'border-radius')).toEqual(['var(--blok-radius-control-sm)']);
+        expect(declared(CHEVRON, 'color')).toEqual(['var(--blok-database-table-header-icon)']);
+        // notion-motion.md Round 65 §3: IconChevronRight at 20 paints Notion's 4.5 x 8 open chevron.
+        expect(declared(`${CHEVRON} svg`, 'width')).toEqual(['20px']);
+        expect(declared(`${TREE_ROW} [data-blok-testid='page-picker-option-icon']`, 'width')).toEqual(['16px']);
+        expect(declared(`${TREE_ROW} [data-blok-testid='page-picker-option-icon']`, 'height')).toEqual(['16px']);
+        expect(declared(`${TREE_ROW} [data-blok-testid='page-picker-option-icon']`, 'margin-inline-end')).toEqual(['var(--blok-space-1-75)']);
+      });
+
+      // page-picker.ts plays the 0.2s turn on `rotate` (Round 65 §3), so no transition is declared.
+      it('turns the chevron 90° while the row is open', () => {
+        expect(declared(`${CHEVRON} svg`, 'transition')).toEqual([]);
+        expect(declared(`${MOVE} [data-blok-page-picker-expanded='true'] [data-blok-testid='page-picker-tree-chevron'] svg`, 'rotate')).toEqual(['90deg']);
+        expect(declared(`[dir="rtl"] ${CHEVRON} svg`, 'transform')).toEqual(['scaleX(-1)']);
+        // `rotate` applies after the flip, so the RTL turn is the other way to point down.
+        expect(declared(`[dir="rtl"] ${MOVE} [data-blok-page-picker-expanded='true'] [data-blok-testid='page-picker-tree-chevron'] svg`, 'rotate')).toEqual(['-90deg']);
+      });
+    });
+
+    it('types the query at 14/20', () => {
+      expect(declared(`${MOVE} [data-blok-field] input`, 'font-size')).toEqual(['14px']);
+      expect(declared(`${MOVE} [data-blok-field] input`, 'line-height')).toEqual(['20px']);
+    });
   });
 
   // notion-spec-2 §18.3 (b4-rel-dlg.txt): head 33 tall, "Select a page" 16px in, rows 544x32 one pixel apart.

@@ -2,7 +2,7 @@
  * The anonymous-presence silhouettes, read back out of the stylesheet that
  * owns them.
  *
- * The artwork lives in src/styles/presence.css as mask data URIs, because
+ * The artwork lives in src/styles/presence.css as image data URIs, because
  * block copy unwraps the gutter strip and a face therefore may not carry a
  * child <svg> (see anonymous-identity.ts). The icon gallery needs the same
  * shapes as markup, so this decodes the sheet instead of keeping a second
@@ -17,10 +17,22 @@ import presenceCss from '../styles/presence.css?raw';
 /** Gallery group the silhouettes are drawn under. */
 export const PRESENCE_GLYPH_GROUP = 'Anonymous Presence';
 
+// Only the resting drawing: `--blok-presence-glyph-live` follows it in each rule.
 const GLYPH_RULE = /\[data-blok-presence-glyph="([^"]+)"\]\s*\{\s*--blok-presence-glyph:\s*url\("data:image\/svg\+xml,([^"]*)"\)/g;
 
+/** The one ink every drawing is stroked and filled with. */
+const INK = /#37352f/g;
+
 /**
- * Turn the sheet's mask declarations back into SVG markup, keyed by the
+ * Make a sheet drawing behave like a gallery icon: 20 pixels, and inked in
+ * `currentColor` so the lightbox can recolour it.
+ * @param svg - a drawing as presence.css stores it
+ */
+const asGalleryIcon = (svg: string): string =>
+  svg.replace('<svg ', '<svg width="20" height="20" ').replace(INK, 'currentColor');
+
+/**
+ * Turn the sheet's image declarations back into SVG markup, keyed by the
  * `data-blok-presence-glyph` value.
  *
  * Slot order comes first, so the gallery reads the way a room fills up.
@@ -32,7 +44,7 @@ export function decodePresenceGlyphs(css: string): Record<string, string> {
   const decoded: Record<string, string> = {};
 
   for (const [, glyph, payload] of css.matchAll(GLYPH_RULE)) {
-    decoded[glyph] = decodeURIComponent(payload);
+    decoded[glyph] = asGalleryIcon(decodeURIComponent(payload));
   }
 
   const slotOrder: readonly string[] = [...ANONYMOUS_GLYPHS, UNKNOWN_GLYPH];

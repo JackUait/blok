@@ -187,6 +187,33 @@ test.describe('Table of contents block', () => {
     await expect(entries(page).first()).toBeFocused();
   });
 
+  test('keeps the text being read in place when an entry leaves while the list\'s tail is on screen', async ({ page }) => {
+    await createBlok(page, longDocument);
+    await expect(entries(page)).toHaveCount(3);
+
+    // The list's last 40px are at the top of the window: the browser would
+    // otherwise anchor the scroll position to the list itself.
+    await page.evaluate((toc) => {
+      const bottom = document.querySelector(toc)?.getBoundingClientRect().bottom ?? 0;
+
+      window.scrollTo(0, window.scrollY + bottom - 40);
+    }, TOC);
+    const read = page.locator('[data-blok-id="intro-3"]');
+    const topOf = async (): Promise<number> => Math.round((await read.boundingBox())?.y ?? Number.NaN);
+
+    await expect(read).toBeInViewport();
+    const before = await topOf();
+
+    await page.evaluate(async () => {
+      const blocks = window.blokInstance?.blocks;
+
+      await blocks?.delete(blocks.getBlockIndex('h-deep'));
+    });
+    await expect(entries(page)).toHaveCount(2);
+
+    expect(await topOf()).toBe(before);
+  });
+
   test('arrow keys walk the entries', async ({ page }) => {
     await createBlok(page, longDocument);
 

@@ -1174,8 +1174,8 @@ describe('a consumer that imports one tool gets only that tool (tree shaking)', 
     ImageTool: 'image-fullscreen',
     VideoTool: 'video-copy-url-at-time',
     AudioTool: 'audio-cover-remove',
-    // The level menu's dataset key; the bare name also appears in core CSS selectors.
-    Header: '"blok-header-level":',
+    // The toggle heading toolbox entries' name prefix.
+    Header: 'toggle-header-',
   }
 
   // Paragraph's own placeholder attribute; proves the bundle is not empty.

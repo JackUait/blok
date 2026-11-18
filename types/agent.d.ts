@@ -3,6 +3,7 @@ import type { OutputBlockData, OutputData } from './data-formats/output-data';
 import type { RichText, RichTextMarks } from './rich-text';
 import type { AgentContract, BlockToolManifestEntry, CommandEntry, InlineToolManifestEntry } from './tool-manifest';
 import type { FormSubmissionAccess } from './tools/database';
+import type { DatabaseCommentAttachment, DatabaseCommentMention } from './tools/database-comment';
 import type { PageCover, PageIcon } from './tools/page';
 
 export type CoreCommandName =
@@ -220,6 +221,10 @@ export interface ViewComment {
   editedAt?: number;
   /** A thread about one cell: that property's id. */
   propertyId?: string;
+  /** People, pages and dates mentioned in the shown text. */
+  mentions?: DatabaseCommentMention[];
+  /** Files attached to the comment. */
+  attachments?: DatabaseCommentAttachment[];
   /** The text was cut at textLimit. */
   truncated?: true;
   /** The person you act for wrote it, so you may edit or delete it. */

@@ -1,4 +1,4 @@
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
@@ -153,19 +153,10 @@ const openBlockTunesViaToolbar = async (page: Page): Promise<void> => {
   await waitForBlockTunesPopover(page);
 };
 
-/**
- * Heading 1-6 are flat radio tiles in the block menu itself. `exact` keeps
- * "Heading 1" from also matching the "Toggle heading 1" convert entry.
- */
-const headingLevelOption = async (page: Page, level: number): Promise<Locator> => {
-  const option = page
-    .getByTestId('block-tunes-popover')
-    .getByRole('menuitemradio', { name: `Heading ${level}`,
-      exact: true });
-
-  await expect(option).toBeVisible();
-
-  return option;
+/** `exact` keeps "Heading 1" from also matching "Toggle heading 1". */
+const turnIntoHeading = async (page: Page, level: number): Promise<void> => {
+  await page.getByTestId('block-tunes-popover').getByRole('menuitem', { name: 'Turn into', exact: true }).click();
+  await page.locator(NESTED_POPOVER_SELECTOR).getByRole('menuitem', { name: `Heading ${level}`, exact: true }).click();
 };
 
 const openBlockTunesViaShortcut = async (page: Page): Promise<void> => {
@@ -256,32 +247,28 @@ test.describe('header Tool', () => {
   });
 
   test.describe('level changing', () => {
-    test('changes header level from H2 to H1 via tune menu', async ({ page }) => {
+    test('changes header level from H2 to H1 via Turn into', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: createHeaderData('Test Header', 2),
       });
       await openBlockTunesViaToolbar(page);
 
-      const h1Option = await headingLevelOption(page, 1);
-
-      await h1Option.dispatchEvent('click');
+      await turnIntoHeading(page, 1);
 
       const header = page.getByRole('heading', { level: 1, name: 'Test Header' });
 
       await expect(header).toBeVisible();
     });
 
-    test('changes header level from H2 to H3 via tune menu', async ({ page }) => {
+    test('changes header level from H2 to H3 via Turn into', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: createHeaderData('Test Header', 2),
       });
       await openBlockTunesViaToolbar(page);
 
-      const h3Option = await headingLevelOption(page, 3);
-
-      await h3Option.dispatchEvent('click');
+      await turnIntoHeading(page, 3);
 
       const header = page.getByRole('heading', { level: 3, name: 'Test Header' });
 
@@ -295,9 +282,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h4Option = await headingLevelOption(page, 4);
-
-      await h4Option.dispatchEvent('click');
+      await turnIntoHeading(page, 4);
 
       const header = page.getByRole('heading', { level: 4, name: 'Test Header' });
 
@@ -311,9 +296,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h5Option = await headingLevelOption(page, 5);
-
-      await h5Option.dispatchEvent('click');
+      await turnIntoHeading(page, 5);
 
       const header = page.getByRole('heading', { level: 5, name: 'Test Header' });
 
@@ -327,9 +310,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h6Option = await headingLevelOption(page, 6);
-
-      await h6Option.dispatchEvent('click');
+      await turnIntoHeading(page, 6);
 
       const header = page.getByRole('heading', { level: 6, name: 'Test Header' });
 
@@ -345,9 +326,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h1Option = await headingLevelOption(page, 1);
-
-      await h1Option.dispatchEvent('click');
+      await turnIntoHeading(page, 1);
 
       const header = page.getByRole('heading', { level: 1, name: originalText });
 
@@ -509,10 +488,8 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h4Option = await headingLevelOption(page, 4);
-
-      await h4Option.dispatchEvent('click');
-
+      await turnIntoHeading(page, 4);
+      await expect(page.getByRole('heading', { level: 4, name: 'Test Header' })).toBeVisible();
 
       const savedData: OutputData | undefined = await page.evaluate(async () => {
         return await window.blokInstance?.save();
@@ -520,34 +497,6 @@ test.describe('header Tool', () => {
 
        
       expect(savedData?.blocks[0].data.level).toBe(4);
-    });
-  });
-
-  test.describe('tune menu display', () => {
-    test('displays all heading level options', async ({ page }) => {
-      await createBlok(page, {
-        tools: defaultTools,
-        data: createHeaderData('Test Header', 2),
-      });
-      await openBlockTunesViaToolbar(page);
-
-      for (let level = 1; level <= 6; level++) {
-        const option = await headingLevelOption(page, level);
-
-        await expect(option).toBeVisible();
-      }
-    });
-
-    test('highlights current heading level', async ({ page }) => {
-      await createBlok(page, {
-        tools: defaultTools,
-        data: createHeaderData('Test Header', 3),
-      });
-      await openBlockTunesViaToolbar(page);
-
-      const h3Option = await headingLevelOption(page, 3);
-
-      await expect(h3Option).toHaveAttribute('data-blok-popover-item-active', 'true');
     });
   });
 });

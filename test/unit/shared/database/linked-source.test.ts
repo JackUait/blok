@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { mintDatabaseRefIds, remapDatabaseRefs } from '../../../../src/shared/database/linked-source';
+import { mintDatabaseRefIds, remapDatabaseRefs, withoutRowOrderOf } from '../../../../src/shared/database/linked-source';
 
 const database = (id: string, targetDatabaseId: string, extra: Record<string, unknown> = {}): { id: string; type: string; data: Record<string, unknown> } => ({
   id,
@@ -75,5 +75,21 @@ describe('copying a database re-points relations and manual order at the copy', 
 
     expect(next.properties).toEqual({ rel: [{ id: 'n2' }, { id: 'far' }], who: [{ id: 'user-1' }], t: 'r2' });
     expect(data.properties).toEqual({ rel: [{ id: 'r2' }, { id: 'far' }], who: [{ id: 'user-1' }], t: 'r2' });
+  });
+});
+
+describe('a database copied without its rows', () => {
+  it('drops the left-out rows from each view\'s manual order', () => {
+    const data = { views: [{ id: 'v1', rowOrder: { r1: 'a0', r2: 'a1', kept: 'a2' } }, { id: 'v2' }] };
+
+    expect(withoutRowOrderOf('database', data, new Set(['r1', 'r2']))).toEqual({ views: [{ id: 'v1', rowOrder: { kept: 'a2' } }, { id: 'v2' }] });
+    expect(data.views[0].rowOrder).toEqual({ r1: 'a0', r2: 'a1', kept: 'a2' });
+  });
+
+  it('leaves other blocks and a copy with nothing left out alone', () => {
+    const data = { views: [{ id: 'v1', rowOrder: { r1: 'a0' } }] };
+
+    expect(withoutRowOrderOf('paragraph', data, new Set(['r1']))).toBe(data);
+    expect(withoutRowOrderOf('database', data, undefined)).toBe(data);
   });
 });

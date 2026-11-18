@@ -5,7 +5,9 @@ import { openDatabaseConfirm } from './database-confirm-dialog';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { propertyGlyph } from './database-property-types';
 import type { I18n } from '../../../types';
-import { DatabasePanel, panelRow } from './database-panel';
+import type { History, HistoryValue, HistoryValueChange } from '../../../types/api/history';
+import { DatabasePanel, historyKeyStaysInPanel, panelRow } from './database-panel';
+import { isHistoryKey } from './database-keyboard';
 import { PersonalViewEdits } from './database-view-state';
 import type { ViewStateFallback } from './database-view-state';
 import { editorLocale } from './cells/date-format';
@@ -16,7 +18,7 @@ import { chipPart, filterChip, openFilterChip } from './database-filter-chip';
 import { SORTABLE_TYPES, propertyPicker, sortEditor } from './database-sort-panel';
 import { clearSearchMatches, paintSearchMatches } from './database-search-highlight';
 import { onHover } from '../../components/utils/tooltip';
-import type { AutofillPanelSettings, DataSourceSettings, EditPropertiesSettings, StarterRow, StructureSettings, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
+import type { AutofillPanelSettings, DataSourceSettings, EditPropertiesSettings, PersonalWriteOptions, StarterRow, StructureSettings, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
 import { sortFromHeader } from './view-data';
 import type { ViewChanges } from './database-model';
 import { groupByChange } from './group-keys';
@@ -63,6 +65,8 @@ export interface ViewControlsHost {
   rowPageDatabaseName?: () => string | null;
   /** A shared write to the active view. The tool refuses it while locked. */
   updateView: (changes: ViewChanges) => void;
+  /** The editor's undo history; undefined while read-only. */
+  history?: () => Pick<History, 'track'> | undefined;
   setLayout: (type: ViewType) => void;
   setLocked: (locked: boolean) => void;
   /** A linked view: its lock reads "Lock views". */
@@ -109,6 +113,34 @@ export interface ViewControlsHost {
   /** ⤢ "Open as full page": undefined hides it. */
   openFullPage?: () => (() => void) | undefined;
 }
+
+/**
+ * The sorts and filters each undo token stands for. Module-wide, so a token
+ * still replays after the controls that wrote it were rebuilt.
+ */
+const sortSteps = new Map<string, { viewId: string; personal: PersonalViewPatch }>();
+
+/** Names this block's sort tokens in the document. Per browser: a peer must not share the key. */
+const SORT_UNDO_ID_KEY = 'sort-undo-id';
+
+/**
+ * notion-motion.md Round 67 §5: typed filter text saves once keys pause (Notion: ~165–255 ms),
+ * so keys 160 ms apart save once.
+ */
+const TYPING_SAVE_IDLE_MS = 200;
+
+/**
+ * notion-motion.md Round 67 §5: one undo step takes every save less than ~700 ms after its
+ * first save (675 ms joined, 700 and 725 ms did not). The step is not timed from the first key.
+ */
+const TYPING_STEP_WINDOW_MS = 700;
+
+/** The controls now drawn for each key: a rebuilt tool replays steps the old one wrote. A block's widgets share its key. */
+const liveSortControls = new Map<string, Set<DatabaseViewControls>>();
+
+/** Personal state compared as the store keeps it: an absent key and an undefined one are the same. */
+const samePersonal = (a: PersonalViewPatch, b: PersonalViewPatch): boolean =>
+  JSON.stringify([a.sorts, a.filters, a.filterTree]) === JSON.stringify([b.sorts, b.filters, b.filterTree]);
 
 const button = (testId: string, label: string, content: { icon?: string; text?: string }): HTMLButtonElement => {
   const el = document.createElement('button');
@@ -186,6 +218,23 @@ export class DatabaseViewControls {
   private query = '';
   /** Repaints the match tint when the rows redraw after a search (lazy rows, remote edits). */
   private matchObserver: MutationObserver | null = null;
+  private sortHistory: { key: string; value: HistoryValue<string> } | null = null;
+  /** An undo or redo is writing the sorts: that write is not a new step. */
+  private replayingSorts = false;
+  private undoId: string | null = null;
+  /**
+   * Typed filter text not yet an undo step. `saved` is what the last idle save took;
+   * `stepTimer` runs from the first save of the open step.
+   */
+  private typingRun: {
+    viewId: string;
+    before: PersonalViewPatch;
+    saved: PersonalViewPatch;
+    after: PersonalViewPatch;
+    saveTimer: ReturnType<typeof setTimeout> | null;
+    stepTimer: ReturnType<typeof setTimeout> | null;
+  } | null = null;
+  private destroyed = false;
 
   constructor(host: ViewControlsHost) {
     this.host = host;
@@ -359,6 +408,7 @@ export class DatabaseViewControls {
   /** Fetches personal edits from the host store; without one they are read on demand. */
   load(viewIds: string[]): void {
     void this.personal.load(viewIds);
+    this.sortValue();
   }
 
   get search(): string {
@@ -390,7 +440,7 @@ export class DatabaseViewControls {
     const patch = { ...this.personal.get(view.id) };
 
     delete patch.sorts;
-    this.personal.replace(view.id, view.sorts.length === 0 ? patch : { ...patch, sorts: [] });
+    this.writePersonal(view.id, view.sorts.length === 0 ? patch : { ...patch, sorts: [] });
     this.refresh();
   }
 
@@ -489,6 +539,9 @@ export class DatabaseViewControls {
   }
 
   destroy(): void {
+    this.endTypingRun();
+    this.destroyed = true;
+    if (this.sortHistory !== null) liveSortControls.get(this.sortHistory.key)?.delete(this);
     this.endSearchClose();
     if (this.expandTimer !== null) clearTimeout(this.expandTimer);
     this.expandTimer = null;
@@ -565,15 +618,179 @@ export class DatabaseViewControls {
     return saved === undefined ? undefined : this.effective(saved);
   }
 
-  private updatePersonal(patch: PersonalViewPatch): void {
+  private updatePersonal(patch: PersonalViewPatch, options: PersonalWriteOptions = {}): void {
     const view = this.host.savedView();
 
     if (view === undefined) return;
-    this.personal.set(view.id, {
+    this.writePersonal(view.id, {
+      ...this.personal.get(view.id),
       ...patch,
       ...(patch.filters !== undefined ? { filters: withEntryIds(patch.filters) } : {}),
       ...(patch.sorts !== undefined ? { sorts: withEntryIds(patch.sorts) } : {}),
-    });
+    }, options);
+    this.host.rerender();
+    this.refresh();
+  }
+
+  /** Every personal write goes here, so a sort or filter change is always an undo step. */
+  private writePersonal(viewId: string, next: PersonalViewPatch, options: PersonalWriteOptions = {}): void {
+    const before = this.personal.get(viewId);
+
+    this.personal.replace(viewId, next);
+    if (this.replayingSorts) return;
+    const run = this.typingRun;
+
+    if (options.typing === true && run?.viewId === viewId) {
+      run.after = next;
+      this.scheduleTypingSave();
+
+      return;
+    }
+    this.endTypingRun();
+    if (samePersonal(before, next)) return;
+    if (options.typing !== true) {
+      this.recordSorts(viewId, before, next);
+
+      return;
+    }
+    this.typingRun = { viewId, before, saved: before, after: next, saveTimer: null, stepTimer: null };
+    this.scheduleTypingSave();
+    window.addEventListener('keydown', this.endTypingRunOnHistoryKey, true);
+  }
+
+  private scheduleTypingSave(): void {
+    const run = this.typingRun;
+
+    if (run === null) return;
+    if (run.saveTimer !== null) clearTimeout(run.saveTimer);
+    run.saveTimer = setTimeout(() => {
+      run.saveTimer = null;
+      run.saved = run.after;
+      run.stepTimer ??= setTimeout(() => this.closeTypingStep(), TYPING_STEP_WINDOW_MS);
+    }, TYPING_SAVE_IDLE_MS);
+  }
+
+  /** The open step's window ends: its saves become one step, and a save still waiting starts the next. */
+  private closeTypingStep(): void {
+    const run = this.typingRun;
+
+    if (run === null) return;
+    run.stepTimer = null;
+    if (run.saveTimer === null) {
+      this.endTypingRun();
+
+      return;
+    }
+    if (!samePersonal(run.before, run.saved)) this.recordSorts(run.viewId, run.before, run.saved);
+    run.before = run.saved;
+  }
+
+  get typingRunOpen(): boolean {
+    return this.typingRun !== null;
+  }
+
+  /** The open typing run becomes its step. An undo or redo calls it first, so the walk takes the typed text. */
+  endTypingRun(): void {
+    const run = this.typingRun;
+
+    if (run === null) return;
+    this.typingRun = null;
+    if (run.saveTimer !== null) clearTimeout(run.saveTimer);
+    if (run.stepTimer !== null) clearTimeout(run.stepTimer);
+    window.removeEventListener('keydown', this.endTypingRunOnHistoryKey, true);
+    if (!samePersonal(run.before, run.after)) this.recordSorts(run.viewId, run.before, run.after);
+  }
+
+  /**
+   * Window capture: before the editor's own undo key handler on the document.
+   * A key the open popover ignores keeps the run (notion-motion.md Round 66 §3).
+   */
+  private readonly endTypingRunOnHistoryKey = (event: KeyboardEvent): void => {
+    if (isHistoryKey(event) && !historyKeyStaysInPanel(event.target)) this.endTypingRun();
+  };
+
+  /**
+   * notion-motion.md Round 63 §1: a sort change is one undo step; Round 64 §2: a filter's
+   * add and its value are one step each. Both are personal (D4), so the document holds
+   * only a token and this browser keeps what it stands for.
+   */
+  private recordSorts(viewId: string, before: PersonalViewPatch, after: PersonalViewPatch): void {
+    const value = this.sortValue();
+
+    if (value === undefined) return;
+    const current = value.get();
+    const known = current === undefined ? undefined : sortSteps.get(current);
+
+    // Undo needs a token for the state before this step. A host store load changes it without one.
+    if (known === undefined || known.viewId !== viewId || !samePersonal(known.personal, before)) {
+      const base = nanoid();
+
+      sortSteps.set(base, { viewId, personal: before });
+      value.set(base, { record: false });
+    }
+    const token = nanoid();
+
+    sortSteps.set(token, { viewId, personal: after });
+    value.set(token);
+  }
+
+  /** One key per block: each token names its view. */
+  private sortValue(): HistoryValue<string> | undefined {
+    if (this.sortHistory !== null) return this.sortHistory.value;
+    const history = this.host.history?.();
+
+    if (history === undefined) return undefined;
+    const key = `database-sorts:${this.sortUndoId()}`;
+    const value = history.track<string>(key, (token, change) => liveSortControls.get(key)?.forEach((controls) => controls.replaySorts(token, change)));
+    const live = liveSortControls.get(key) ?? new Set<DatabaseViewControls>();
+
+    live.add(this);
+    liveSortControls.set(key, live);
+    this.sortHistory = { key, value };
+
+    return value;
+  }
+
+  private sortUndoId(): string {
+    if (this.undoId !== null) return this.undoId;
+    const stored = this.readFallback(SORT_UNDO_ID_KEY);
+
+    if (typeof stored === 'string') {
+      this.undoId = stored;
+
+      return stored;
+    }
+    const id = nanoid();
+
+    this.undoId = id;
+
+    try {
+      this.host.fallback.set(SORT_UNDO_ID_KEY, id);
+    } catch {
+      // Blocked storage: this session still has one id.
+    }
+
+    return id;
+  }
+
+  private readFallback(key: string): unknown {
+    try {
+      return this.host.fallback.get(key);
+    } catch {
+      return undefined;
+    }
+  }
+
+  private replaySorts(token: string | undefined, change: HistoryValueChange): void {
+    const step = token === undefined ? undefined : sortSteps.get(token);
+
+    if (this.destroyed || change.source === 'remote' || step === undefined) return;
+    this.replayingSorts = true;
+    try {
+      this.personal.replace(step.viewId, step.personal);
+    } finally {
+      this.replayingSorts = false;
+    }
     this.host.rerender();
     this.refresh();
   }
@@ -611,7 +828,7 @@ export class DatabaseViewControls {
   private writeDraft(viewId: string): void {
     const patch = this.personal.get(viewId);
 
-    this.personal.clear(viewId);
+    this.writePersonal(viewId, {});
     this.host.updateView(patch);
     this.refresh();
   }
@@ -620,7 +837,7 @@ export class DatabaseViewControls {
     const view = this.host.savedView();
 
     if (view === undefined) return;
-    this.personal.clear(view.id);
+    this.writePersonal(view.id, {});
     this.host.rerender();
     this.refresh();
   }
@@ -638,7 +855,7 @@ export class DatabaseViewControls {
       layouts: this.host.layouts,
       canDeleteView: () => this.host.viewCount() > 1,
       updateView: (changes) => this.host.updateView(changes),
-      updatePersonal: (patch) => this.updatePersonal(patch),
+      updatePersonal: (patch, options) => this.updatePersonal(patch, options),
       setLayout: (type) => this.host.setLayout(type),
       setLocked: (locked) => {
         this.host.setLocked(locked);
@@ -685,6 +902,8 @@ export class DatabaseViewControls {
 
   /** Escape hands focus back to the button that opened the panel (findings K03), as Add view does. */
   private panelClosed(anchor: HTMLElement, escape = false, opener: HTMLElement = anchor): void {
+    // A closed popover takes no more typing: its text becomes a step before any later edit.
+    this.endTypingRun();
     anchor.removeAttribute('data-popover-open');
     this.panel = null;
     if (escape && opener.isConnected) opener.focus();
@@ -754,9 +973,9 @@ export class DatabaseViewControls {
     this.panel?.close();
     const ctx: ViewSettingsContext = {
       ...this.settingsContext(),
-      updatePersonal: (patch) => {
+      updatePersonal: (patch, options) => {
         this.barOpen = true;
-        this.updatePersonal(patch);
+        this.updatePersonal(patch, options);
       },
     };
 

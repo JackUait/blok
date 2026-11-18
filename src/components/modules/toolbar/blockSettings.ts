@@ -1,4 +1,5 @@
 import type { MenuConfigItem } from '../../../../types/tools';
+import type { ToolbarBlockSettingsOptions } from '../../../../types/api';
 import type { BlockTuneRenderContext } from '../../../../types/block-tunes/block-tune';
 import type { UserInfo } from '../../../../types/configs/user-info';
 import { Module } from '../../__module';
@@ -27,8 +28,11 @@ import { isToolConvertable, translateToolTitle } from '../../utils/tools';
 import { prepareImportString } from '../blockManager/block-mutation';
 import { isBlockReadOnly } from '../../utils/read-only-blocks';
 import { deleteWithTrashToast, showTrashToast } from '../../utils/trash-toast';
+import { askBeforeDelete } from '../../utils/delete-confirm';
 import { assertCanMoveAll, type BlockTree } from '../api/block-placement';
 import { PagePicker } from '../../../tools/page/page-picker';
+import { createMoveFlight, type MoveFlight } from './move-flight';
+import { MoveWire } from './move-wire';
 import { filterMoveTargets, listMoveTargets } from './move-to';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
@@ -175,6 +179,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   /** True during an Escape press, so its close keeps the block selected (Notion U109). */
   private escapePressed = false;
 
+  /** Closes the open "Move to" picker and its wire. */
+  private closeMovePicker: () => void = () => undefined;
+
   /** True while a click inside the open menu is being handled. */
   private clickInMenu = false;
 
@@ -197,6 +204,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * Destroys module
    */
   public destroy(): void {
+    this.closeMovePicker();
     // An open popover holds the page scroll lock until it is destroyed.
     this.popover?.destroy();
     this.popover = null;
@@ -221,7 +229,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   public async open(
     targetBlock?: Block,
     anchor?: HTMLElement | DOMRect,
-    options?: { placeLeftOfAnchor?: boolean }
+    options?: ToolbarBlockSettingsOptions
   ): Promise<void> {
     /**
      * readOnly: { hideControls: true } — no block settings popover at all
@@ -241,7 +249,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
      * wrapper for mounting.
      */
     const trigger = anchor instanceof HTMLElement ? anchor : undefined;
-    const providedAnchorRect = anchor instanceof HTMLElement ? undefined : anchor;
+    const at = options?.at;
+    const pointRect = at === undefined ? undefined : new DOMRect(at.x, at.y + 1, 0, 0);
+    const providedAnchorRect = pointRect ?? (anchor instanceof HTMLElement ? undefined : anchor);
 
     const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
     const hasMultipleBlocksSelected = selectedBlocks.length > 1;
@@ -345,7 +355,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         autoFocusFirstItem: false,
         // A floor, not a fixed width: a long translation plus its shortcut
         // would otherwise be pushed past the menu edge.
-        minWidth: '280px',
+        minWidth: block.tool?.blockMenu?.minWidth ?? '280px',
+        ...(block.tool?.blockMenu?.class === undefined ? {} : { class: block.tool.blockMenu.class }),
         /**
          * A cursor/holder-anchored menu (context menu, Shift+F10) opens AT the
          * anchor going down/right; the dots-button menu opens to the LEFT of
@@ -373,6 +384,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
          * motion deltas through nested scrolling.
          */
         positionContext: block.holder,
+        // A pointer point: the top 1px under it, else the bottom on it (coverFlipOffset 1 from the rect's y + 1).
+        ...(at === undefined ? {} : { cover: true, coverFlipOffset: 1, viewportMargin: 12 }),
       };
       const popoverParams: PopoverParams & { flipper?: Flipper } = anchorRect === undefined
         ? popoverBaseParams
@@ -389,6 +402,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       popoverRef.current = this.popover.getElement();
       popoverRef.current.setAttribute('data-blok-testid', 'block-tunes-popover');
       popoverRef.current.id = SETTINGS_POPOVER_ID;
+      // The block menu grows with its rows; popover-animation.css still caps it at the window.
+      popoverRef.current.style.setProperty('--max-height', '100dvh');
 
       /**
        * Remember the trigger (settings toggler) so focus can be returned to it
@@ -559,6 +574,38 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           if (this.Blok.BlockManager.getBlockById(block.id) === undefined) {
             showTrashToast(this.Blok, stepBefore);
           }
+        });
+      },
+    };
+  }
+
+  /**
+   * For a block that asks before it goes: the menu closes, the block asks,
+   * and only a yes runs the delete, on this block. A no leaves it selected.
+   * @param tune - the delete tune
+   * @param block - the block it deletes
+   */
+  private withDeleteConfirm(tune: MenuConfigItem, block: Block): MenuConfigItem {
+    if (!block.asksBeforeDelete || !('onActivate' in tune) || typeof tune.onActivate !== 'function') {
+      return tune;
+    }
+    const run = tune.onActivate;
+
+    return {
+      ...tune,
+      // Returns the delete's promise, like the tune, so the Trash toast can wait for it.
+      onActivate: (item: PopoverItemParams, event?: PointerEvent): Promise<void> => {
+        this.Blok.Toolbar.close();
+        // Closing the menu unselected it; Notion keeps it selected through the question.
+        this.Blok.BlockSelection.selectBlock(block);
+
+        return askBeforeDelete(this.Blok, block, [block]).then(async (confirmed) => {
+          if (!confirmed || this.Blok.BlockManager.getBlockById(block.id) === undefined) {
+            return;
+          }
+          // The delete tune removes the current block, and the dialog may have moved it.
+          this.Blok.BlockManager.currentBlock = block;
+          await run(item, event);
         });
       },
     };
@@ -808,34 +855,61 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
      * is duplicated; for a single block we duplicate the menu's own block.
      */
     const duplicateSelected = hasMultipleBlocksSelected ? [...selectedBlocks] : [];
-    const duplicateItem: MenuConfigItem = {
-      icon: IconCopy,
-      title: this.Blok.I18n.t('blockSettings.duplicate'),
-      name: 'duplicate',
-      secondaryLabel: beautifyShortcut('CMD+D'),
-      closeOnActivate: true,
-      onActivate: () => {
-        const { BlockSelection, DragManager, Toolbar } = this.Blok;
+    const duplicate = (leaveOut: string[]): void => {
+      const { BlockSelection, DragManager, Toolbar } = this.Blok;
 
-        // A selected source makes the duplicate select its copies, as in Notion.
-        if (duplicateSelected.length > 1) {
-          BlockSelection.clearSelection();
-          duplicateSelected.forEach((selected) => BlockSelection.selectBlock(selected));
-        } else {
-          BlockSelection.selectBlock(currentBlock);
+      // A selected source makes the duplicate select its copies, as in Notion.
+      if (duplicateSelected.length > 1) {
+        BlockSelection.clearSelection();
+        duplicateSelected.forEach((selected) => BlockSelection.selectBlock(selected));
+      } else {
+        BlockSelection.selectBlock(currentBlock);
+      }
+
+      // The menu's restored caret can leave its field focused under the selected copy.
+      void DragManager?.duplicateBlocksInPlace(currentBlock, { leaveOut, numberCopies: true })?.then((copies) => {
+        if (copies.some((copy) => copy.selected)) {
+          this.releaseFocus();
+          this.letGoOnFocus(copies);
         }
+      });
 
-        // The menu's restored caret can leave its field focused under the selected copy.
-        void DragManager?.duplicateBlocksInPlace(currentBlock).then((copies) => {
-          if (copies.some((copy) => copy.selected)) {
-            this.releaseFocus();
-            this.letGoOnFocus(copies);
-          }
-        });
-
-        Toolbar.close();
-      },
+      Toolbar.close();
     };
+    // A block with content (a database's rows) gets Notion's two-row submenu, without icons.
+    const content = hasMultipleBlocksSelected ? [] : currentBlock.contentBlockIds();
+    const duplicateItem: MenuConfigItem = content.length === 0
+      ? {
+        icon: IconCopy,
+        title: this.Blok.I18n.t('blockSettings.duplicate'),
+        name: 'duplicate',
+        secondaryLabel: beautifyShortcut('CMD+D'),
+        closeOnActivate: true,
+        onActivate: () => duplicate([]),
+      }
+      : {
+        icon: IconCopy,
+        title: this.Blok.I18n.t('blockSettings.duplicate'),
+        name: 'duplicate',
+        children: {
+          items: [
+            {
+              title: this.Blok.I18n.t('blockSettings.duplicateWithContent'),
+              name: 'duplicate-with-content',
+              secondaryLabel: beautifyShortcut('CMD+D'),
+              closeOnActivate: true,
+              onActivate: () => duplicate([]),
+            },
+            {
+              title: this.Blok.I18n.t('blockSettings.duplicateWithoutContent'),
+              name: 'duplicate-without-content',
+              secondaryLabel: beautifyShortcut('CMD+SHIFT+D'),
+              closeOnActivate: true,
+              onActivate: () => duplicate(content),
+            },
+          ],
+        },
+      };
 
     // A block standing for something else (a page) copies that thing's link.
     // Decided from the declaration alone: asking for the link calls the host's
@@ -846,7 +920,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         : tune)
       : commonTunes;
 
-    const moveToItem = this.createMoveToItem(hasMultipleBlocksSelected ? selectionRoots(selectedBlocks) : [currentBlock]);
+    // A locked block keeps Copy link and its own items, as Notion's locked database (notion-motion.md Round 67 §1).
+    const locked = !hasMultipleBlocksSelected && currentBlock.toolLocked;
+    const moveToItem = locked ? null : this.createMoveToItem(hasMultipleBlocksSelected ? selectionRoots(selectedBlocks) : [currentBlock]);
     const moveTo = moveToItem === null ? [] : [moveToItem];
 
     // Keep custom actions in registration order, with deletion isolated last.
@@ -855,15 +931,19 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         (tune) => 'name' in tune && tune.name === 'delete'
       );
 
-      if (deleteIndex === -1) {
+      if (locked) {
+        items.push(...actionTunes.filter((_tune, index) => index !== deleteIndex));
+      } else if (deleteIndex === -1) {
         items.push(...actionTunes);
       } else if (blockMenu?.trash === true) {
         // Trashing is an ordinary action beside Duplicate, as in Notion's page menu.
+        const trash = this.withDeleteConfirm({ ...actionTunes[deleteIndex], title: this.Blok.I18n.t('blockSettings.moveToTrash') } as MenuConfigItem, currentBlock);
+
         items.push(
           ...actionTunes.filter((_tune, index) => index !== deleteIndex),
           duplicateItem,
           ...moveTo,
-          this.withTrashToast({ ...actionTunes[deleteIndex], title: this.Blok.I18n.t('blockSettings.moveToTrash') } as MenuConfigItem, currentBlock)
+          blockMenu.trashToast === false ? trash : this.withTrashToast(trash, currentBlock)
         );
       } else {
         items.push(
@@ -871,7 +951,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           duplicateItem,
           ...moveTo,
           { type: PopoverItemType.Separator },
-          actionTunes[deleteIndex]
+          this.withDeleteConfirm(actionTunes[deleteIndex], currentBlock)
         );
       }
     } else {
@@ -989,14 +1069,63 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     const t = (key: string, vars?: Record<string, string | number>): string => this.Blok.I18n.t(key, vars);
     const untitled = t('tools.database.relationUntitled');
     const picker = new PagePicker(t('blockSettings.moveTo'), untitled, t('tools.page.draft'), t('popover.nothingFound'), t);
+    // Set once the picker is open; the wire is drawn inside it.
+    const motion: { wire: MoveWire | null; flight: MoveFlight | null } = { wire: null, flight: null };
+    const { BlockManager, BlockSelection } = this.Blok;
+    const movingBlocks = (): Block[] => rootIds.map((id) => BlockManager.getBlockById(id)).filter((block): block is Block => block !== undefined);
+    const stop = (): void => {
+      motion.flight?.restore();
+      motion.wire?.destroy();
+      movingBlocks().filter((block) => block.selected).forEach((block) => BlockSelection.unselectBlock(block));
+      this.closeMovePicker = () => undefined;
+    };
 
-    picker.open('', anchor, (rowId) => this.moveInto(rootIds, rowId, rules), {
+    picker.open('', anchor, (rowId) => {
+      // Before the move: it writes its own styles on the holders it reparents.
+      stop();
+      this.moveInto(rootIds, rowId, rules);
+    }, {
       searchField: {
         placeholder: t('tools.page.search'),
         onQuery: (query) => picker.setResults(filterMoveTargets(targets, query, untitled)),
       },
+      onActiveRow: (row) => motion.wire?.aim(row),
+      beforePick: (_rowId, row) => motion.flight?.fly(row.querySelector(`[${DATA_ATTR.testid}="page-picker-option-icon"]`)) ?? Promise.resolve(true),
+      onClose: stop,
     });
+
+    const root = picker.getElement();
+
+    // After open(): the click that opened the picker cleared the selection.
+    // It shows which blocks are about to move.
+    movingBlocks().forEach((block) => BlockSelection.selectBlock(block));
+    if (root !== null) {
+      motion.wire = new MoveWire({ picker: root, block: anchor });
+      motion.flight = createMoveFlight({ wire: motion.wire, holders: this.outermostHolders(rootIds), picker: () => picker.getElement() });
+      this.closeMovePicker = () => picker.close();
+    }
     picker.setResults(targets);
+  }
+
+  /**
+   * The holders that draw `rootIds` and everything under them: a holder nested
+   * in another one of them is left out.
+   * @param rootIds - the blocks to move
+   */
+  private outermostHolders(rootIds: string[]): HTMLElement[] {
+    const { BlockManager } = this.Blok;
+    const moving = new Set(rootIds);
+    const isMoving = (block: Block | undefined, seen = new Set<string>()): boolean => {
+      if (block === undefined || seen.has(block.id)) {
+        return false;
+      }
+      seen.add(block.id);
+
+      return moving.has(block.id) || (block.parentId !== null && isMoving(BlockManager.getBlockById(block.parentId), seen));
+    };
+    const holders = BlockManager.blocks.filter((block) => isMoving(block)).map((block) => block.holder);
+
+    return holders.filter((holder) => !holders.some((other) => other !== holder && other.contains(holder)));
   }
 
   /**
@@ -1022,7 +1151,10 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     BlockSelection.clearSelection();
-    (blocks.transact ?? ((fn: () => void): void => fn()))(() => {
+    // A move group, not blocks.transact: transact records the moves as tracked
+    // writes, and undo refuses to reverse those on a block another client wrote,
+    // which is every block of a reopened document.
+    this.Blok.YjsManager.transactMoves(() => {
       roots.forEach((root) => blocks.moveTo(root.id, { parentId: rowId, position: 'end' }));
     });
   }

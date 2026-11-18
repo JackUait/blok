@@ -46,7 +46,7 @@ export const ROUTE_PROBES: Record<string, RouteProbe> = {
   'menu:database/database-row-duplicate': duplicateRow,
   'menu:database/database-table-selection-duplicate': duplicateRow,
   'menu:database/database-selection-duplicate': duplicateRow,
-  'menu:database/database-row-move-to-*': {
+  'menu:database/database-row-move-to': {
     seed: TWO_DATABASES,
     commands: [{ name: 'database.moveRowTo', args: { id: 'db1', rowId: 'r1', databaseId: 'db2' } }],
   },

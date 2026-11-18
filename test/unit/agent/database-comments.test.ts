@@ -281,6 +281,29 @@ describe.each(SESSIONS)('agent comments, as a person writes them (%s session)', 
     expect(outline.some(block => block.type === 'database-comment')).toBe(false);
   });
 
+  it('shows a comment\'s mentions and files on a full read; a mention cut off by textLimit is left out', async () => {
+    const data = seed();
+    const thread = data.blocks.find(block => block.id === 'theirs');
+
+    if (thread !== undefined) {
+      thread.data = {
+        ...thread.data,
+        text: 'ask @Hana about Roadmap',
+        mentions: [{ type: 'person', id: 'human-1', start: 4, label: '@Hana' }, { type: 'page', id: 'p1', start: 16, label: 'Roadmap' }],
+        attachments: [{ url: 'https://f.test/a.pdf', name: 'a.pdf' }],
+      };
+    }
+    const session = start(data);
+    const full = (await session.read({ ids: ['r'], detail: 'full' })).blocks[0]?.comments?.threads[0];
+    const cut = (await session.read({ ids: ['r'], textLimit: 12 })).blocks[0]?.comments?.threads[0];
+
+    expect(full).toMatchObject({
+      mentions: [{ type: 'person', id: 'human-1', start: 4, label: '@Hana' }, { type: 'page', id: 'p1', start: 16, label: 'Roadmap' }],
+      attachments: [{ url: 'https://f.test/a.pdf', name: 'a.pdf' }],
+    });
+    expect(cut?.mentions).toEqual([{ type: 'person', id: 'human-1', start: 4, label: '@Hana' }]);
+  });
+
   it('cuts a long comment at textLimit, as it cuts block text', async () => {
     const data = seed();
     const thread = data.blocks.find(block => block.id === 'theirs');

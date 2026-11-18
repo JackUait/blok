@@ -228,6 +228,8 @@ describe('board column, card and header look (research/08)', () => {
 
     expect(body).toContain('font-size: 14px');
     expect(body).toContain('color: var(--_blok-group-accent, var(--blok-database-column-accent))');
+    // notion-motion.md Round 65 §5: Notion's chip is at least 20 wide ("1" is 20).
+    expect(body).toContain('min-inline-size: 20px');
   });
 
   it('draws the count button as bare text with a gray hover (research/16 §1)', () => {

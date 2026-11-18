@@ -6,9 +6,10 @@
  * else, so it stays a working example of what a consumer can build. Blok ships
  * the data and no presence UI of its own outside the block gutter.
  *
- * The silhouette is a CSS mask that src/styles/presence.css keys off
+ * The silhouette is a CSS image that src/styles/presence.css keys off
  * `data-blok-presence-glyph`, so writing the event's glyph name into that
- * attribute IS the whole integration — the artwork is already on the page.
+ * attribute, and the colour into `--blok-presence-color`, IS the whole
+ * integration — the artwork is already on the page.
  */
 import { onHover } from '../components/utils/tooltip';
 
@@ -16,6 +17,9 @@ import type { CollaborationParticipant } from '../../types/events/editor-events'
 
 /** The attribute presence.css turns into a silhouette. */
 const GLYPH_ATTR = 'data-blok-presence-glyph';
+
+/** The colour presence.css washes a silhouette face with. */
+const COLOR_PROPERTY = '--blok-presence-color';
 
 /** What an anonymous participant is called when no translator labelled them. */
 const UNLABELLED = 'Anonymous';
@@ -33,14 +37,16 @@ export const buildPresenceFace = (
   const { name, color, glyph, label } = person.user;
 
   face.className = 'playground-presence-face';
-  face.style.background = color;
 
   // A nameless participant wears the silhouette the editor picked for them.
   // A monogram here would be the initial of a name nobody published, which is
   // what drew a question mark on every anonymous face.
   if (glyph === null) {
+    face.style.background = color;
     face.textContent = (Array.from(name)[0] ?? '').toUpperCase();
   } else {
+    // No inline background: it would beat the wash presence.css paints.
+    face.style.setProperty(COLOR_PROPERTY, color);
     face.setAttribute(GLYPH_ATTR, glyph);
   }
 

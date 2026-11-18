@@ -309,12 +309,12 @@ class FilterChipPages {
     return withEntryIds(this.ctx.view().filters).find((f) => f.id === this.filterId);
   }
 
-  private write(next: (filters: Filter[]) => FilterConfig[]): void {
-    this.ctx.updatePersonal({ filters: next(withEntryIds(this.ctx.view().filters)) });
+  private write(next: (filters: Filter[]) => FilterConfig[], typing = false): void {
+    this.ctx.updatePersonal({ filters: next(withEntryIds(this.ctx.view().filters)) }, typing ? { typing } : undefined);
   }
 
   /** An operator in `patch` keeps the saved lead part (quantifier, End date) unless `lead` is false. */
-  private update(patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>, lead = true): void {
+  private update(patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>, lead = true, typing = false): void {
     if (this.writer !== undefined) {
       this.writer(patch);
 
@@ -324,7 +324,7 @@ class FilterChipPages {
       if (f.id !== this.filterId) return f;
 
       return { ...f, ...patch, ...(patch.operator !== undefined && lead ? { operator: keepLead(f.operator, patch.operator) } : {}) };
-    }));
+    }), typing);
   }
 
   /** A header button: an optional plain lead text, a medium-weight label, a chevron. */
@@ -485,7 +485,7 @@ class FilterChipPages {
 
     if (isDate && spanOf(operator, value) !== undefined) return this.relativeEditor(spanOf(operator, value) ?? DEFAULT_SPAN);
     if (!operatorNeedsValue(operator)) return [];
-    if (isQuantifiedText(property, filter.operator)) return [this.valueInput(typeof value === 'string' ? value : '', (text) => this.update({ value: text }))];
+    if (isQuantifiedText(property, filter.operator)) return [this.valueInput(typeof value === 'string' ? value : '', (text) => this.update({ value: text }, true, true))];
 
     switch (property.type) {
       case 'select':
@@ -518,7 +518,7 @@ class FilterChipPages {
         return [this.valueInput(typeof value === 'number' ? String(value) : '', (text) => {
           const n = Number(text);
 
-          this.update({ value: text.trim() === '' || !Number.isFinite(n) ? null : n });
+          this.update({ value: text.trim() === '' || !Number.isFinite(n) ? null : n }, true, true);
         })];
       case 'files':
       case 'formula':
@@ -533,7 +533,7 @@ class FilterChipPages {
       case 'email':
       case 'phone':
       case 'place':
-        return [this.valueInput(typeof value === 'string' ? value : '', (text) => this.update({ value: text }))];
+        return [this.valueInput(typeof value === 'string' ? value : '', (text) => this.update({ value: text }, true, true))];
     }
   }
 
@@ -1096,6 +1096,7 @@ export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, fi
     root: pages.root(),
     testId: 'database-filter-popover',
     width: listed ? LIST_FILTER_WIDTH : VALUE_FIELD_FILTER_WIDTH,
+    ignoresHistoryKeys: true,
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
     gap: CHIP_POPOVER_GAP,
     // notion-motion.md Round 23 §1 (r23-flipH-*.raw): at most half the window tall, 8 from its top and bottom. Below the

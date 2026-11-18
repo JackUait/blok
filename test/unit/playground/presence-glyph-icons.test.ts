@@ -41,12 +41,21 @@ describe('presence glyph icons', () => {
     const svg = new DOMParser().parseFromString(glyphs[glyph], 'text/html').querySelector('svg');
 
     expect(svg).not.toBeNull();
-    expect(svg?.getAttribute('viewBox')).toBe('0 0 20 20');
+    expect(svg?.getAttribute('viewBox')).toBe('0 0 32 32');
+    // The sheet's drawings carry no size; the gallery lays icons out at 20.
     expect(svg?.getAttribute('width')).toBe('20');
     expect(svg?.getAttribute('height')).toBe('20');
-    // The lightbox recolours by setting `color`, so a hard-coded fill is dead.
-    expect(glyphs[glyph]).toContain('currentColor');
+    // The lightbox recolours by setting `color`, so a hard-coded ink is dead.
+    expect(svg?.getAttribute('stroke')).toBe('currentColor');
+    expect(glyphs[glyph]).not.toContain('#37352f');
     expect(glyphs[glyph]).not.toContain('%3C');
+  });
+
+  it('shows the resting drawing, not the one that moves', () => {
+    for (const glyph of SLOT_ORDER) {
+      expect(glyphs[glyph]).not.toContain('<style');
+      expect(glyphs[glyph]).not.toContain('@keyframes');
+    }
   });
 
   it('keeps a glyph the slot list does not know rather than hiding it', () => {

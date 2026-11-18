@@ -1,3 +1,4 @@
+import { keptAttachments, keptMentions } from '../database-comment-mentions';
 import { createComputedReader } from '../database/computed-read';
 import { isRichText } from '../rich-text/guards';
 import { findTextMatches } from '../text-match';
@@ -150,6 +151,9 @@ const openThreads = (snap: DocSnapshot, rowId: string): SnapBlock[] =>
 const viewComment = (block: SnapBlock, viewer: string | undefined, textLimit: number): ViewComment => {
   const { text, authorName, authorId, createdAt, editedAt, propertyId } = block.data;
   const full = typeof text === 'string' ? text : '';
+  const shown = full.length > textLimit ? full.slice(0, textLimit) : full;
+  const mentions = keptMentions(shown, block.data.mentions);
+  const attachments = keptAttachments(block.data.attachments);
 
   return {
     id: block.id,
@@ -160,6 +164,8 @@ const viewComment = (block: SnapBlock, viewer: string | undefined, textLimit: nu
     createdAt: typeof createdAt === 'number' ? createdAt : 0,
     ...(typeof editedAt === 'number' && { editedAt }),
     ...(typeof propertyId === 'string' && propertyId !== '' && { propertyId }),
+    ...(mentions.length > 0 && { mentions }),
+    ...(attachments.length > 0 && { attachments }),
     // As the comment panel's isOwn, and the comment actions' check: an anonymous comment is no one's.
     ...(viewer !== undefined && viewer !== '' && authorId === viewer && { own: true }),
   };

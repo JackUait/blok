@@ -35,7 +35,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const theme of ['light', 'dark'] as const) {
-  test(`menu text remains readable in resting and selected states in ${theme} mode`, async ({ page }) => {
+  test(`menu text remains readable in ${theme} mode`, async ({ page }) => {
     await page.evaluate(value => document.documentElement.setAttribute('data-blok-theme', value), theme);
     await openSettings(page);
 
@@ -48,11 +48,6 @@ for (const theme of ['light', 'dark'] as const) {
       expect(result.violations).toEqual([]);
     };
 
-    await scan();
-    const selected = page.getByRole('menuitemradio', { name: 'Heading 1', exact: true });
-
-    await expect(selected).toBeVisible();
-    await expect(selected).toHaveAttribute('aria-checked', 'true');
     await scan();
   });
 }
@@ -117,23 +112,9 @@ test('color swatches visibly track keyboard focus without motion when reduced mo
   await expect(swatch).toHaveCSS('transition-property', 'none');
 });
 
-test('heading controls and color submenu stay usable near the viewport edge', async ({ page }) => {
+test('color submenu stays usable near the viewport edge', async ({ page }) => {
   await page.setViewportSize({ width: 760, height: 620 });
   await openSettings(page);
-  const heading = page.getByRole('menuitemradio', { name: 'Heading 6', exact: true });
-
-  await heading.scrollIntoViewIfNeeded();
-  await expect(heading).toBeVisible();
-  const bounds = await heading.boundingBox();
-
-  expect(bounds).not.toBeNull();
-  expect(bounds?.x).toBeGreaterThanOrEqual(0);
-  expect((bounds?.x ?? 0) + (bounds?.width ?? 0)).toBeLessThanOrEqual(760);
-  expect((bounds?.y ?? 0) + (bounds?.height ?? 0)).toBeLessThanOrEqual(620);
-  await heading.click();
-  await expect(page.getByRole('heading', { name: 'A little more clarity', level: 6 })).toBeVisible();
-
-  await page.getByTestId('settings-toggler').click();
   await page.getByRole('menuitem', { name: 'Color', exact: true }).hover();
   const picker = page.getByTestId('block-color-picker');
 
@@ -166,9 +147,7 @@ for (const locale of ['hu', 'ta']) {
         .flatMap(row => {
           const box = row.getBoundingClientRect();
           const labels = [...row.querySelectorAll<HTMLElement>('*')]
-            .filter(el => [...el.childNodes].some(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()))
-            // Screen-reader-only labels (the heading tiles) are 1px boxes by design.
-            .filter(el => el.getBoundingClientRect().width > 1);
+            .filter(el => [...el.childNodes].some(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()));
 
           return labels.flatMap(label => {
             const range = document.createRange();

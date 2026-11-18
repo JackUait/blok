@@ -20,7 +20,6 @@ import type {
   PasteConfig,
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
-import { PopoverItemType } from '../../../types/utils/popover/popover-item-type';
 import { DATA_ATTR } from '../../components/constants';
 import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconToggleH1, IconToggleH2, IconToggleH3, IconToggleH4, IconToggleH5, IconToggleH6 } from '../../components/icons';
 import { findOwn } from '../../components/utils/own-element';
@@ -594,53 +593,16 @@ export class Header implements BlockTool {
   }
 
   /**
-   * Returns header block tunes config
+   * Returns header block tunes config. Levels are not here: Turn into changes them.
    *
    * @returns MenuConfig array
    */
   public renderSettings(): MenuConfig {
-    const label = document.createElement('div');
-
-    label.className = 'px-2 pt-1 pb-1 text-[11px] font-medium text-gray-text';
-    label.textContent = this.api.i18n.t('toolNames.heading');
-
-    const levelEntries = this.levels.map(level => {
-      const translated = this.api.i18n.t(level.nameKey);
-      const title = translated !== level.nameKey ? translated : level.name;
-
-      return {
-        icon: level.icon,
-        title,
-        englishTitle: `Heading ${level.number}`,
-        name: `header-level-${level.number}`,
-        onActivate: (): void => this.setLevel(level.number),
-        closeOnActivate: true,
-        toggle: 'header-levels',
-        isActive: this.currentLevel.number === level.number,
-        dataset: {
-          'blok-header-level': String(level.number),
-        },
-      };
-    });
-
-    const colorTunes = buildBlockColorTunes({
+    return buildBlockColorTunes({
       data: this._data,
       i18n: this.api.i18n,
       onPick: (field, value): void => this.setBlockColor(field, value),
     });
-
-    const colorItems = Array.isArray(colorTunes) ? colorTunes : [colorTunes];
-
-    return [
-      {
-        type: PopoverItemType.Html,
-        name: 'header-levels',
-        element: label,
-      },
-      ...levelEntries,
-      { type: PopoverItemType.Separator },
-      ...colorItems,
-    ] as MenuConfig;
   }
 
   /**
@@ -661,18 +623,6 @@ export class Header implements BlockTool {
 
     applyBlockColor(this._element, this._data);
     this.block?.dispatchChange();
-  }
-
-  /**
-   * Callback for Block's settings buttons
-   *
-   * @param level - level to set
-   */
-  private setLevel(level: number): void {
-    this.data = {
-      ...this.data,
-      level,
-    };
   }
 
   /**

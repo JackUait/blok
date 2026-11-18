@@ -133,6 +133,67 @@ describe('DatabaseTool — calendar event selection (research/22 §1)', () => {
     expect(open).not.toHaveBeenCalled();
   });
 
+  // notion-motion.md Round 66 §3: a right-click selects the card, and it stays selected through Edit property.
+  it('a right-click selects the event, and Edit property keeps it selected', () => {
+    const { el, tool } = buildTool(doc(), {}, calendarData());
+
+    eventOf(el, 'delta').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+
+    expect(selected(el)).toEqual(['delta']);
+    (tool as unknown as { editRowProperty: (rowId: string, propertyId: string) => void }).editRowProperty('delta', 'due');
+    expect(selected(el)).toEqual(['delta']);
+  });
+
+  describe('Edit property › Text (notion-motion.md Round 67 §3)', () => {
+    const NOTE_SCHEMA: PropertyDefinition[] = [...SCHEMA, { id: 'note', name: 'Note', type: 'text', position: 'a2' }];
+    const noteDoc = (): Doc => makeDoc([fakeRow('delta', 'db', { title: 'Delta', due: '2026-10-20', note: 'Short note' }, 'a0')]);
+
+    const editNoteFromMenu = (el: HTMLElement, propertyId = 'note'): void => {
+      eventOf(el, 'delta').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+      const editProperty = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened] [data-blok-testid="popover-item-title"]')]
+        .find((node) => node.textContent === 'tools.database.tableEditProperty')?.closest<HTMLElement>('[data-blok-popover-item]');
+
+      editProperty?.click();
+      document.querySelector<HTMLElement>(`[data-blok-popover-item][data-blok-item-name="database-row-edit-property-${propertyId}"]`)?.click();
+    };
+
+    it('opens the value alone at the right-click point, not the row page', () => {
+      const { el } = buildTool(noteDoc(), {}, tableData(NOTE_SCHEMA, { type: 'calendar' }));
+
+      editNoteFromMenu(el);
+      const field = document.querySelector<HTMLTextAreaElement>('[data-blok-database-cell-editor] textarea');
+
+      expect(document.querySelector('[data-blok-database-drawer], [data-blok-database-peek]')).toBeNull();
+      expect(field?.value).toBe('Short note');
+      expect(field).toHaveFocus();
+      // Notion's box: x = click x - 1, y = click y, 240 wide, with no entrance motion.
+      const point = document.querySelector<HTMLElement>('[data-blok-database-edit-point]');
+
+      expect([point?.style.left, point?.style.top]).toEqual(['299px', '120px']);
+      expect(document.querySelector('[data-blok-popover-custom-class~="blok-database-point-editor"]')).not.toBeNull();
+    });
+
+    it('Escape closes it at once, and the card stays selected', () => {
+      const { el } = buildTool(noteDoc(), {}, tableData(NOTE_SCHEMA, { type: 'calendar' }));
+
+      editNoteFromMenu(el);
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(document.querySelector('[data-blok-database-cell-editor] textarea')).toBeNull();
+      expect(document.querySelector('[data-blok-database-edit-point]')).toBeNull();
+      expect(selected(el)).toEqual(['delta']);
+    });
+
+    it('a type not measured yet still opens on the row page', () => {
+      const { el } = buildTool(noteDoc(), {}, tableData(NOTE_SCHEMA, { type: 'calendar' }));
+
+      editNoteFromMenu(el, 'due');
+
+      expect(document.querySelector('[data-blok-database-edit-point]')).toBeNull();
+      expect(selected(el)).toEqual(['delta']);
+    });
+  });
+
   it('Shift-click adds an event on the same day and replaces the selection on another day', () => {
     const { el } = buildTool(doc(), {}, calendarData());
 

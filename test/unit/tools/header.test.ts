@@ -83,25 +83,12 @@ describe('Header Tool - heading level entries', () => {
     vi.restoreAllMocks();
   });
 
-  it('shows the heading levels directly below a label (no toggle conversion anywhere)', () => {
+  it('offers no level controls: a level change goes through Turn into', () => {
     const header = new Header(createHeaderOptions({ text: 'Hi', level: 2 }));
-    const config = header.renderSettings();
-    const settings = toMenuArray(config);
-    const headingLevels = settings.find(setting => setting.name === 'header-levels');
-    const items = levelEntries(config);
+    const settings = toMenuArray(header.renderSettings());
 
-    expect(headingLevels).toMatchObject({ type: 'html', element: expect.any(HTMLElement) });
-    expect((headingLevels?.element as HTMLElement).textContent).toBe('toolNames.heading');
-    expect(headingLevels?.children).toBeUndefined();
-    expect(settings.find(setting => setting.name === 'header-toggle-convert')).toBeUndefined();
-    expect(items.map(item => item.dataset as Record<string, string> | undefined)).toEqual([
-      { 'blok-header-level': '1' },
-      { 'blok-header-level': '2' },
-      { 'blok-header-level': '3' },
-      { 'blok-header-level': '4' },
-      { 'blok-header-level': '5' },
-      { 'blok-header-level': '6' },
-    ]);
+    expect(levelEntries(header.renderSettings())).toEqual([]);
+    expect(settings.map(setting => setting.name)).toEqual(['block-color']);
   });
 });
 
@@ -134,33 +121,22 @@ describe('Header Tool - Custom Configurations', () => {
 
 
   describe('levels configuration', () => {
-    it('restricts available levels when levels config is provided', () => {
-      const options = createHeaderOptions({}, { levels: [1, 2, 3] });
-      const header = new Header(options);
-      const settings = levelEntries(header.renderSettings());
+    it('renders a level the config does not allow as the nearest allowed one', () => {
+      const header = new Header(createHeaderOptions({ text: 'Test', level: 5 }, { levels: [1, 2, 3] }));
 
-      expect(settings).toHaveLength(3);
-      expect(settings.filter(s => s.dataset !== undefined).map(s => s.dataset as Record<string, string>)).toEqual([
-        { 'blok-header-level': '1' },
-        { 'blok-header-level': '2' },
-        { 'blok-header-level': '3' },
-      ]);
+      expect(header.render().tagName).toBe('H3');
     });
 
-    it('shows all levels (1-6) when levels config is not provided', () => {
-      const options = createHeaderOptions({}, {});
-      const header = new Header(options);
-      const settings = levelEntries(header.renderSettings());
+    it('allows all levels (1-6) when levels config is not provided', () => {
+      const header = new Header(createHeaderOptions({ text: 'Test', level: 6 }, {}));
 
-      expect(settings).toHaveLength(6);
+      expect(header.render().tagName).toBe('H6');
     });
 
-    it('only allows specified levels in settings', () => {
-      const options = createHeaderOptions({}, { levels: [2, 4, 6] });
-      const header = new Header(options);
-      const settings = levelEntries(header.renderSettings());
+    it('keeps a level the config allows', () => {
+      const header = new Header(createHeaderOptions({ text: 'Test', level: 4 }, { levels: [2, 4, 6] }));
 
-      expect(settings).toHaveLength(3);
+      expect(header.render().tagName).toBe('H4');
     });
   });
 
@@ -232,21 +208,10 @@ describe('Header Tool - Custom Configurations', () => {
       expect(element.tagName).toBe('DIV');
     });
 
-    it('applies custom name override in settings', () => {
-      const options = createHeaderOptions(
-        {},
-        {
-          levelOverrides: {
-            1: { name: 'Title' },
-            2: { name: 'Subtitle' },
-          },
-        }
-      );
-      const header = new Header(options);
-      const settings = levelEntries(header.renderSettings());
+    it('applies custom name override to the placeholder', () => {
+      const header = new Header(createHeaderOptions({ level: 1 }, { levelOverrides: { 1: { name: 'Title' } } }));
 
-      expect(settings[0]?.title).toBe('Title');
-      expect(settings[1]?.title).toBe('Subtitle');
+      expect(header.render()).toHaveAttribute('data-placeholder', 'Title');
     });
 
     it('applies custom font size via inline styles', () => {
@@ -326,12 +291,10 @@ describe('Header Tool - Custom Configurations', () => {
           },
         }
       );
-      const header = new Header(options);
-      const settings = levelEntries(header.renderSettings());
+      const element = new Header(options).render();
 
-      expect(settings).toHaveLength(2);
-      expect(settings[0].title).toBe('Main Title');
-      expect(settings[1].title).toBe('Section Title');
+      expect(element.tagName).toBe('H2');
+      expect(element.style.fontSize).toBe('2rem');
     });
 
     it('works with defaultLevel and levelOverrides together', () => {
@@ -1066,17 +1029,12 @@ describe('Header Tool - Custom Configurations', () => {
     });
 
     describe('data setter preserves isToggleable', () => {
-      it('preserves isToggleable when level is changed via setLevel', () => {
+      it('preserves isToggleable when the level changes', () => {
         const options = createHeaderOptions({ text: 'Test', level: 2, isToggleable: true });
         const header = new Header(options);
         header.render();
 
-        // Trigger setLevel through renderSettings onActivate
-        const settings = levelEntries(header.renderSettings());
-        const h3Setting = settings.find(s => (s.dataset as Record<string, string>)?.['blok-header-level'] === '3');
-        const onActivate = h3Setting?.onActivate as (() => void) | undefined;
-
-        onActivate?.();
+        header.data = { ...header.data, level: 3 };
 
         const savedData = header.save(header.render());
 

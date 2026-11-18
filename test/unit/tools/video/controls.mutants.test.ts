@@ -359,11 +359,11 @@ describe('video controls — menu structure', () => {
     expect((row.childNodes[2] as HTMLElement).getAttribute('aria-hidden')).toBe('true');
   });
 
-  it('builds both panes with the shared pane class, the main one first', () => {
+  it('builds both panes with the shared pane class, the main one first, then the tiles', () => {
     const menu = q(h.figure, '[data-role="playback-menu"]');
 
-    expect([...menu.children].map((el) => el.getAttribute('data-role'))).toEqual(['menu-main', 'menu-speed']);
-    expect([...menu.children].map((el) => el.getAttribute('class'))).toEqual(['blok-video-controls__menu-pane', 'blok-video-controls__menu-pane']);
+    expect([...menu.children].map((el) => el.getAttribute('data-role'))).toEqual(['menu-main', 'menu-speed', 'menu-tiles']);
+    expect([...menu.children].map((el) => el.getAttribute('class'))).toEqual(['blok-video-controls__menu-pane', 'blok-video-controls__menu-pane', 'blok-video-controls__tiles']);
     expect(q(h.figure, '[data-role="menu-speed"]').getAttribute('role')).toBe('group');
     expect(q(h.figure, '[data-role="menu-speed"]').getAttribute('aria-label')).toBe('Playback speed');
   });

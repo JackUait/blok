@@ -27,10 +27,10 @@ import {
 import { DatabaseTableGrid, createTableState } from './database-table-grid';
 import { SELECTION_BAR_SEGMENTS, bulkCloseClearsSelection, bulkStartValue, selectionPropertyButton, watchBulkCloseKey } from './database-selection-bar';
 import { cellText } from './database-table-clipboard';
-import type { CellChange, TableState } from './database-table-grid';
+import type { CellChange, CellRef, TableState } from './database-table-grid';
 import { fileChipIcon, rowPageGlyph, showsPageIcon } from './page-icon';
 
-import { CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, headerViewItems, loadLimitItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
+import { CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, headerViewItems, loadLimitItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
 import type { CountCap, OpenMenuOptions, RowFavorite } from './database-table-menus';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { DatabaseTableColumnResize, MIN_COLUMN_WIDTH } from './database-table-resize';
@@ -47,6 +47,7 @@ import type { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { pointerMenuPlacement } from './database-list-view';
+import { menuFrom, pointerFrom, type MovePickerFrom } from './database-move-picker';
 import {
   IconPlayerPlay,
   IconChevronRight,
@@ -81,6 +82,8 @@ const OPEN_INSET = 4;
 const FROZEN_STICK_INSET = 30;
 /** notion-motion.md Round 47 §B6: Notion's shadow comes on at 268, 29 after the stick (239). A fit to the measured numbers. */
 const FROZEN_SHADOW_AFTER_STICK = 29;
+/** notion-motion.md Round 65 §3: Notion's row element starts 8 left of its selection halo (531 vs 539). */
+const ROW_HALO_INSET = 8;
 
 /**
  * A narrow title column shows an icon-only OPEN (notion-motion.md Round 27 §2, Round 28 §1): below Notion's 102,
@@ -183,10 +186,10 @@ export interface TableHandlers {
   /** Opens a row page, in `mode` when the row menu's "Open in" names one. */
   openRow: (rowId: string, mode?: OpenPagesIn) => void;
   copyRowLink: (rowId: string) => void;
-  /** Other databases of this document a row can move to. */
-  moveTargets?: () => Array<{ id: string; title: string }>;
-  /** "Move to": the row leaves for another database. */
-  moveRowTo?: (rowId: string, databaseId: string) => void;
+  /** Whether "Move to" has anywhere to send a row. */
+  canMoveRow?: () => boolean;
+  /** "Move to": opens the picker, placed from `from`, moving with `anchor`. */
+  openMoveTo?: (rowId: string, anchor: HTMLElement, from: MovePickerFrom, onEscape?: () => void) => void;
   editRowIcon: (rowId: string) => void;
   updateView: (changes: ViewChanges) => void;
   /** The Load more row's ⋯. The tool leaves it out when the view cannot change. */
@@ -703,6 +706,30 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     };
 
     rowEl.addEventListener('animationend', landed);
+  }
+
+  /**
+   * notion-motion.md Round 63 §1 and Round 65 §2: undo or redo makes these rows
+   * the selection; none drops a row selection, and a cell selection stays. The
+   * halo's 200ms transition is the fade, so the rows a redraw just made get their style first.
+   */
+  pickAfterUndo(rowIds: string[]): void {
+    const current = this.state.selection;
+
+    if (this.grid === null || (rowIds.length === 0 && current?.kind !== 'rows')) return;
+    const changing = new Set([...rowIds, ...(current?.kind === 'rows' ? current.rowIds : [])]);
+
+    this.root?.querySelectorAll<HTMLElement>('[data-blok-database-table-row]').forEach((rowEl) => {
+      if (changing.has(rowEl.getAttribute('data-row-id') ?? '')) getComputedStyle(rowEl, '::after').getPropertyValue('opacity');
+    });
+    this.grid.selectRows(rowIds);
+  }
+
+  /** The selected rows; none for a cell selection. */
+  pickedRows(): string[] {
+    const current = this.state.selection;
+
+    return current?.kind === 'rows' ? [...current.rowIds] : [];
   }
 
   appendRow(container: HTMLElement, row: DatabaseRow): void {
@@ -2254,12 +2281,16 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
       return true;
     }
-    const targets = handlers.moveRowTo === undefined || this.options.readOnly ? [] : handlers.moveTargets?.() ?? [];
-
-    if (targets.length === 0) return false;
-    this.showMenu(anchor, moveTargetItems(this.options.i18n, targets, (databaseId) => handlers.moveRowTo?.(rowId, databaseId)), { searchable: true });
+    if (handlers.openMoveTo === undefined || this.options.readOnly || handlers.canMoveRow?.() !== true) return false;
+    // Blok's row box is Notion's halo box. Notion drops the selection on Escape (Round 65 §3).
+    handlers.openMoveTo(rowId, anchor, { under: anchor, shift: -ROW_HALO_INSET }, () => this.grid?.selectRows([]));
 
     return true;
+  }
+
+  private selectCell(ref: CellRef): void {
+    this.state.selection = { kind: 'cell', anchor: ref, focus: ref };
+    this.grid?.paint();
   }
 
   /** From the ⋮⋮ `handle`, or at the `pointer` of a right-click. */
@@ -2279,6 +2310,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     if (anchor === null || commentAnchor === null) return;
     const favorite = this.options.favorite?.(rowId);
+    // notion-motion.md Round 64 §3: Move to opens at a right-click's point, read now while the row is where it was clicked.
+    const spot = rowEl === null || pointer === undefined ? undefined : pointerFrom(rowEl, pointer);
 
     this.showMenu(anchor, rowMenuItems({
       i18n: this.options.i18n,
@@ -2288,14 +2321,23 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       onEditProperty: (propertyId) => {
         const ref = { rowId, propertyId };
 
-        this.state.selection = { kind: 'cell', anchor: ref, focus: ref };
-        this.grid?.paint();
+        this.selectCell(ref);
         this.grid?.openEditor(ref);
       },
       onOpenIn: (mode) => handlers.openRow(rowId, mode),
       onCopyLink: () => handlers.copyRowLink(rowId),
       onDuplicate: () => handlers.duplicateRow(rowId),
-      ...(handlers.moveRowTo !== undefined ? { moveTargets: handlers.moveTargets?.() ?? [], onMoveTo: (databaseId: string) => handlers.moveRowTo?.(rowId, databaseId) } : {}),
+      // notion-motion.md Round 65 §3: from the ⋮⋮ the picker hangs under the handle.
+      // Round 66 §4: from a right-click, Escape leaves the Name cell selected; Round 67 §4: and focused. The ⋮⋮ case is unmeasured.
+      ...(handlers.openMoveTo !== undefined && handlers.canMoveRow?.() === true ? { onMoveTo: (menu: DOMRect | undefined) => handlers.openMoveTo?.(
+        rowId,
+        commentAnchor,
+        spot ?? (handle === null ? menuFrom(menu, commentAnchor) : { under: handle }),
+        pointer === undefined ? undefined : () => {
+          this.selectCell({ rowId, propertyId: this.options.titlePropertyId });
+          this.grid?.focus({ holdEscape: true });
+        },
+      ) } : {}),
       ...rowMenuFooter({
         row: this.allRows().find((row) => row.id === rowId),
         titlePropertyId: this.options.titlePropertyId,

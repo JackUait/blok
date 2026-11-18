@@ -34,7 +34,8 @@ import {
 import { attachResizeHandle, type ResizeEdge } from '../image/resizer';
 import { figureInsets } from '../image/figure-insets';
 import { renderUploadingState, type UploadingStateElement } from '../image/uploading-state';
-import { DEFAULT_CAPTION_PLACEHOLDER, DEFAULT_MIME_TYPES, MIN_WIDTH_PX, URL_PATTERN } from './constants';
+import { DEFAULT_CAPTION_PLACEHOLDER, DEFAULT_MIME_TYPES, URL_PATTERN } from './constants';
+import { resizeFloorPx } from './resize-floor';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
 import { deliverToRebuiltBlock, isStillInDocument, putBackOnRebuiltBlock, releaseObjectUrl } from '../image/detached-upload';
@@ -942,7 +943,8 @@ export class VideoTool implements BlockTool {
         container: figure.parentElement ?? figure,
         edge,
         alignment: this.data.alignment ?? 'center',
-        minWidthPx: MIN_WIDTH_PX,
+        // At drag start: the shape is only known once the frame is drawn.
+        minWidthPx: () => resizeFloorPx(figure.querySelector<HTMLElement>('[data-role="video-media"]') ?? figure),
         onPreview: (percent) => {
           figure.style.setProperty('width', `${percent}%`);
         },

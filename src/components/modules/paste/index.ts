@@ -2,6 +2,8 @@ import { Module } from '../../__module';
 import { Dom as dom$ } from '../../dom';
 import { findOwn } from '../../utils/own-element';
 import { carriesReadOnly } from '../../utils/read-only-blocks';
+import { isAskingBeforeDelete, selectionHoldsAsker } from '../../utils/delete-confirm';
+import { selectionRoots } from '../../utils/selection-roots';
 import { recordPasteHandling } from '../../utils/paste-continuation';
 import { log } from '../../utils/logger';
 import { waitAtMost } from '../../utils/lazy-styles';
@@ -604,6 +606,11 @@ export class Paste extends Module {
       return;
     }
 
+    // A delete question is open: the selection it keeps is not a paste target.
+    if (isAskingBeforeDelete(this.Blok)) {
+      return;
+    }
+
     // Read now: the awaits below can outlive the event, and the browser empties its clipboard then.
     const clipboard = event.clipboardData ? snapshotOf(event.clipboardData) : null;
     const loadedAtEvent = this.engineLoaded;
@@ -704,6 +711,12 @@ export class Paste extends Module {
    */
   private async pasteOverBlockSelection(clipboard: DataTransfer | null, loadedAtEvent: boolean): Promise<void> {
     const { BlockManager, BlockSelection, Caret, Toolbar } = this.Blok;
+
+    if (selectionHoldsAsker(BlockManager.blocks)) {
+      await this.pasteAfterBlockSelection(clipboard, loadedAtEvent);
+
+      return;
+    }
     const first = BlockManager.blocks.find(block => block.selected);
     const defaultTool = this.config.defaultBlock;
     // The shared replacement goes to the root, so a nested selection swaps its
@@ -731,6 +744,36 @@ export class Paste extends Module {
     }
 
     Toolbar.moveAndOpen();
+  }
+
+  /**
+   * A selection that holds a block whose tool asks before it goes is not
+   * replaced: the paste lands right after the last selected block, at its
+   * level, and the pasted blocks end up selected (notion-motion.md Round 67 §2).
+   */
+  private async pasteAfterBlockSelection(clipboard: DataTransfer | null, loadedAtEvent: boolean): Promise<void> {
+    const { BlockManager, BlockSelection, Caret } = this.Blok;
+    const last = selectionRoots(BlockManager.blocks.filter(block => block.selected)).at(-1);
+
+    if (last === undefined || clipboard === null) {
+      return;
+    }
+
+    const before = new Set(BlockManager.blocks.map(block => block.id));
+    const target = BlockManager.insert({ placement: { parentId: last.parentId, afterId: last.id } });
+
+    BlockSelection.clearSelection();
+    Caret.setToBlock(target, Caret.positions.START);
+
+    if (this.isShiftHeld) {
+      await this.processAsText(clipboard.getData('text/plain'), loadedAtEvent);
+    } else {
+      await this.processDataTransfer(clipboard, target.currentInput, loadedAtEvent);
+    }
+
+    BlockManager.blocks
+      .filter(block => !before.has(block.id) && block.parentId === last.parentId)
+      .forEach(block => BlockSelection.selectBlock(block));
   }
 
   /**

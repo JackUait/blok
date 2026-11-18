@@ -86,6 +86,8 @@ export interface PageConfig {
   createFromMention?: boolean;
   /** Searches visible pages for an inline reference. `''` asks for recent pages. */
   search?(query: string): Promise<readonly PageSearchResult[]>;
+  /** The pages directly under a page; `null` asks for the top-level pages. Gives Move to its Workspace tree. */
+  children?(pageId: string | null): Promise<readonly PageSearchResult[]>;
   /** The page's URL. Without it the link has no href. */
   href?(pageId: string): string;
   /** The reverse of `href`: the page an absolute URL points at, or `null`. */

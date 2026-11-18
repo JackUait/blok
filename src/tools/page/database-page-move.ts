@@ -32,6 +32,24 @@ export const databasePageHost = (api: API): DatabasePageHost | null => {
   return null;
 };
 
+/**
+ * The page tool a row page can move to through Move to: `search` lists the
+ * targets, and `create` must store both `document` (what `databasePages`
+ * promises) and `parentId` (what `createFromMention` promises).
+ */
+export const rowMoveHost = (api: API): DatabasePageHost | null => {
+  for (const tool of api.tools.getBlockTools()) {
+    const config = tool.settings as PageConfig;
+
+    if (config.databasePages === true && config.createFromMention === true &&
+      typeof config.create === 'function' && typeof config.search === 'function') {
+      return { name: tool.name, config };
+    }
+  }
+
+  return null;
+};
+
 /** The block and every block under it, in saved order. */
 export const subtreeOf = (blocks: OutputBlockData[], rootId: string): OutputBlockData[] => {
   const childrenOf = new Map<string, string[]>();

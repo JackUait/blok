@@ -555,16 +555,27 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       expect(event.defaultPrevented).toBe(true);
     });
 
-    it('a picked board card lists the other databases on ⌘⇧P', () => {
+    /** The Move to picker's rows, once its first search has answered. */
+    const moveOptions = async (): Promise<string[]> => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      return [...document.querySelectorAll('[data-blok-database-move-picker] [role="option"]')].map((option) => option.textContent ?? '');
+    };
+
+    afterEach(() => {
+      document.querySelectorAll('[data-blok-database-move-picker]').forEach((picker) => picker.remove());
+    });
+
+    it('a picked board card lists the other databases on ⌘⇧P', async () => {
       const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('board'));
 
       rowEl(el, 'board').dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }));
       press(document.body, 'p');
 
-      expect(menuItem('database-row-move-to-db2')).not.toBeNull();
+      expect(await moveOptions()).toEqual(['Projects']);
     });
 
-    it('a selected table row opens its comments on ⌘⇧M and lists the other databases on ⌘⇧P', () => {
+    it('a selected table row opens its comments on ⌘⇧M and lists the other databases on ⌘⇧P', async () => {
       const open = vi.fn();
       const { el } = buildTool(withOtherDatabase(oneRow()), { comments: { open } }, viewData('table'));
 
@@ -576,7 +587,98 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       press(grid, 'm');
       expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a' }, expect.any(HTMLElement));
       press(grid, 'p');
-      expect(menuItem('database-row-move-to-db2')).not.toBeNull();
+      expect(await moveOptions()).toEqual(['Projects']);
+    });
+
+    // notion-motion.md Round 65 §3: Escape after ⌘⇧P drops the row selection.
+    it('drops the table row selection when Escape closes the ⌘⇧P picker', async () => {
+      const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('table'));
+
+      openMenu(el, 'table');
+      document.querySelectorAll('[data-blok-popover]').forEach((popover) => popover.remove());
+      const grid = el.querySelector<HTMLElement>('[role="grid"]');
+      const row = (): Element | null => el.querySelector('[data-blok-database-table-row][data-row-id="a"]');
+
+      if (grid === null) throw new Error('no grid');
+      press(grid, 'p');
+      expect(await moveOptions()).toEqual(['Projects']);
+      expect(row()?.getAttribute('aria-selected')).toBe('true');
+      document.querySelector('[data-blok-database-move-picker] input')
+        ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(row()?.getAttribute('aria-selected')).toBe('false');
+    });
+
+    // notion-motion.md Round 66 §4: from a right-click, Escape drops the row selection and leaves the Name cell selected.
+    it('leaves the Name cell selected when Escape closes the right-click Move to picker', async () => {
+      const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('table'));
+      const row = (): Element | null => el.querySelector('[data-blok-database-table-row][data-row-id="a"]');
+      const selectedCells = (): Array<string | null> => [...el.querySelectorAll('[data-row-id="a"] [role="gridcell"][aria-selected="true"]')]
+        .map((cell) => cell.getAttribute('data-property-id'));
+
+      rowEl(el, 'table').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+      itemByTitle('tools.database.tableMoveTo').click();
+      expect(await moveOptions()).toEqual(['Projects']);
+      expect(row()?.getAttribute('aria-selected')).toBe('true');
+      document.querySelector('[data-blok-database-move-picker] input')
+        ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(selectedCells()).toEqual(['title']);
+      expect(row()?.getAttribute('aria-selected')).toBe('false');
+    });
+
+    // notion-motion.md Round 67 §4: that Escape also focuses the Name cell, so keys act on it.
+    it('focuses the selected Name cell when Escape closes the right-click Move to picker', async () => {
+      const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('table'));
+
+      rowEl(el, 'table').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+      itemByTitle('tools.database.tableMoveTo').click();
+      expect(await moveOptions()).toEqual(['Projects']);
+      document.querySelector('[data-blok-database-move-picker] input')
+        ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      const grid = el.querySelector<HTMLElement>('[role="grid"]');
+      const nameCell = el.querySelector<HTMLElement>('[data-row-id="a"] [role="gridcell"][data-property-id="title"]');
+
+      expect(grid).toHaveFocus();
+      expect(grid?.getAttribute('aria-activedescendant')).toBe(nameCell?.id);
+    });
+
+    const escapeMovePicker = async (el: HTMLElement): Promise<HTMLElement> => {
+      rowEl(el, 'table').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+      itemByTitle('tools.database.tableMoveTo').click();
+      expect(await moveOptions()).toEqual(['Projects']);
+      document.querySelector('[data-blok-database-move-picker] input')
+        ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      const grid = el.querySelector<HTMLElement>('[role="grid"]');
+
+      if (grid === null) throw new Error('no grid');
+
+      return grid;
+    };
+    const selectedRow = (el: HTMLElement): Element | null => el.querySelector('[data-blok-database-table-row][aria-selected="true"]');
+    const nameSelected = (el: HTMLElement): boolean => el.querySelector('[data-row-id="a"] [role="gridcell"][data-property-id="title"]')?.getAttribute('aria-selected') === 'true';
+
+    // notion-motion.md Round 67 §4: a second Escape changes nothing. A third: unmeasured.
+    it('keeps the Name cell on a second Escape after the right-click Move to picker', async () => {
+      const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('table'));
+      const grid = await escapeMovePicker(el);
+
+      press(grid, 'Escape');
+
+      expect(selectedRow(el)).toBeNull();
+      expect(nameSelected(el)).toBe(true);
+      expect(grid).toHaveFocus();
+    });
+
+    it('lets Escape select the row again once the cell selection moves', async () => {
+      const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('table'));
+      const grid = await escapeMovePicker(el);
+
+      press(grid, 'ArrowRight');
+      press(grid, 'Escape');
+
+      expect(selectedRow(el)).not.toBeNull();
     });
 
     it('two picked rows take no ⌘⇧M: the comment is for one page', () => {
@@ -589,6 +691,71 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       press(document.body, 'm');
 
       expect(open).not.toHaveBeenCalled();
+    });
+  });
+
+  // notion-motion.md Round 60 §4, Round 61 §4: a right-click on a feed card's blank area opens the database
+  // block's own menu at the pointer (1px under it, or flipped above), not core's menu 8px under it.
+  // Round 60 §4: on the title text Notion shows no menu of its own, so that stays the browser's.
+  describe('feed card right-click', () => {
+    const feed = (readOnly = false): { el: HTMLElement; toggle: ReturnType<typeof vi.fn> } => {
+      const doc = oneRow();
+      const toggle = vi.fn();
+
+      Object.assign(doc.api, { toolbar: { toggleBlockSettings: toggle, close: vi.fn() } });
+      const { el } = buildTool(doc, {}, viewData('feed'), readOnly);
+
+      return { el, toggle };
+    };
+    const card = (el: HTMLElement): HTMLElement => {
+      const found = el.querySelector<HTMLElement>('[data-blok-database-feed-card][data-row-id="a"]');
+
+      if (found === null) throw new Error('no feed card');
+
+      return found;
+    };
+    const rightClickAt = (target: Element, clientX: number, clientY: number): { event: MouseEvent; reachedCore: boolean } => {
+      const state = { reachedCore: false };
+      const core = (): void => {
+        state.reachedCore = true;
+      };
+
+      document.body.addEventListener('contextmenu', core);
+      const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX, clientY });
+
+      target.dispatchEvent(event);
+      document.body.removeEventListener('contextmenu', core);
+
+      return { event, reachedCore: state.reachedCore };
+    };
+
+    it('opens the database block\'s menu at the pointer, in place of core\'s', () => {
+      const { el, toggle } = feed();
+      const target = card(el);
+      const { event, reachedCore } = rightClickAt(target, 700, 350);
+
+      expect(toggle).toHaveBeenCalledWith(true, target, { at: { x: 700, y: 350 } });
+      expect(event.defaultPrevented).toBe(true);
+      expect(reachedCore).toBe(false);
+    });
+
+    it('leaves a right-click on the title text to the browser', () => {
+      const { el, toggle } = feed();
+      const title = card(el).querySelector('[data-blok-database-feed-title]');
+
+      if (title === null) throw new Error('no title');
+      const { event } = rightClickAt(title, 600, 380);
+
+      expect(toggle).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('opens nothing of its own for a reader', () => {
+      const { el, toggle } = feed(true);
+
+      rightClickAt(card(el), 700, 350);
+
+      expect(toggle).not.toHaveBeenCalled();
     });
   });
 

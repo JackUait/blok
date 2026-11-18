@@ -86,6 +86,62 @@ describe('database drop line css', () => {
     expect(database).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[^@]*\[data-blok-database-card\]::after[^{]*\{ transition: none;/);
   });
 
+  // notion-motion.md Round 64 §4: a selected database block's halo fades in over 0.2s. Only the
+  // database: no plain block's halo has been measured. The tint stays core's one ::after.
+  it('fades a selected database block\'s tint in over 200ms ease, and not under reduced motion', () => {
+    const selector = '[data-blok-component="database"][data-blok-selected="true"] > [data-blok-element-content]::after';
+
+    expect(ruleBody(database, selector)).toBe(' animation: blok-database-landed 200ms ease; ');
+    const off = database.lastIndexOf(`${selector} { animation: none; }`);
+
+    expect(off).toBeGreaterThan(database.indexOf(`${selector} { animation: blok-database-landed`));
+    expect(database.lastIndexOf('@media (prefers-reduced-motion: reduce)', off)).toBeGreaterThan(database.indexOf(`${selector} { animation: blok-database-landed`));
+  });
+
+  // notion-motion.md Round 64 §1: a List row or Gallery card an undo brings back fades its pick in (~200ms).
+  it('fades a landed list row or gallery card tint in over 200ms ease, and not under reduced motion', () => {
+    const landed = ':is([data-blok-database-list-row], [data-blok-database-gallery-card])[data-blok-database-row-landed]';
+    const body = ruleBody(database, landed);
+
+    expect(database).toMatch(/@property --blok-database-landed-tint \{ syntax: '<color>'; inherits: false; initial-value: transparent; \}/);
+    expect(body).toContain('--blok-database-landed-tint: var(--blok-icon-active-bg)');
+    expect(body).toContain('background-image: linear-gradient(var(--blok-database-landed-tint), var(--blok-database-landed-tint))');
+    expect(body).toContain('animation: blok-database-landed-tint 200ms ease');
+    expect(database).toMatch(/@keyframes blok-database-landed-tint \{ from \{ --blok-database-landed-tint: transparent; \} \}/);
+    const off = database.lastIndexOf(`${landed} { animation: none; }`);
+
+    expect(off).toBeGreaterThan(database.indexOf(`${landed} {`));
+    expect(database.lastIndexOf('@media (prefers-reduced-motion: reduce)', off)).toBeGreaterThan(database.indexOf(`${landed} {`));
+  });
+
+  // notion-motion.md Round 65 §2 (List swap): the pick an undo replaces fades out over ~200ms.
+  it('fades a leaving list row or gallery card tint out over 200ms ease, and not under reduced motion', () => {
+    const leaving = ':is([data-blok-database-list-row], [data-blok-database-gallery-card])[data-blok-database-row-leaving]';
+    const body = ruleBody(database, leaving);
+
+    expect(body).toContain('background-image: linear-gradient(var(--blok-database-landed-tint), var(--blok-database-landed-tint))');
+    expect(body).toContain('animation: blok-database-leaving-tint 200ms ease');
+    expect(database).toMatch(/@keyframes blok-database-leaving-tint \{ from \{ --blok-database-landed-tint: var\(--blok-icon-active-bg\); \} \}/);
+    const off = database.lastIndexOf(`${leaving} { animation: none; }`);
+
+    expect(off).toBeGreaterThan(database.indexOf(`${leaving} {`));
+    expect(database.lastIndexOf('@media (prefers-reduced-motion: reduce)', off)).toBeGreaterThan(database.indexOf(`${leaving} {`));
+  });
+
+  // notion-motion.md Round 66 §3: a calendar card's halo fades out over ~200ms when redo unpicks it.
+  it('fades a leaving calendar event halo out over 200ms ease, and not under reduced motion', () => {
+    const leaving = '[data-blok-database-calendar-event][data-blok-database-row-leaving]::after';
+    const body = ruleBody(database, leaving);
+
+    expect(body).toContain('animation: blok-database-leaving 200ms ease forwards');
+    expect(ruleBody(database, '[data-blok-database-calendar-event][data-blok-database-row-selected]::after, [data-blok-database-calendar-event][data-blok-database-row-leaving]::after')).toContain('background-color: var(--blok-icon-active-bg)');
+    expect(database).toMatch(/@keyframes blok-database-leaving \{ to \{ opacity: 0; \} \}/);
+    const off = database.lastIndexOf(`${leaving} { animation: none; opacity: 0; }`);
+
+    expect(off).toBeGreaterThan(database.indexOf(`${leaving} {`));
+    expect(database.lastIndexOf('@media (prefers-reduced-motion: reduce)', off)).toBeGreaterThan(database.indexOf(`${leaving} {`));
+  });
+
   // notion-motion.md Round 40 §2: the cursor while a card is held reads `grabbing`.
   it('shows the grabbing cursor over the board while a card is dragged', () => {
     expect(database).toMatch(/\[data-blok-database-dragging\], \[data-blok-database-dragging\] \* \{ cursor: grabbing; \}/);

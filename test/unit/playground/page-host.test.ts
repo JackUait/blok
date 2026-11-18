@@ -87,6 +87,20 @@ describe('PageRegistry', () => {
     expect(pages.info('plan')?.status).toBe('draft');
   });
 
+  it('lists the pages directly under a page for the Move to tree, Trash left out', async () => {
+    const pages = new PageRegistry({
+      ...seed(),
+      plan: { title: 'Release plan', parentId: 'guide', blocks: [] },
+      old: { title: 'Old guide', parentId: null, blocks: [], trashed: true },
+    });
+
+    await expect(pages.children(null)).resolves.toEqual([
+      { pageId: 'guide', title: 'Guide', icon: { type: 'emoji', value: '📘' }, path: ['Blok'] },
+    ]);
+    expect((await pages.children('guide')).map((page) => page.pageId)).toEqual(['keys', 'plan']);
+    await expect(pages.children('keys')).resolves.toEqual([]);
+  });
+
   it('keeps edits in localStorage, so a new registry sees them', () => {
     const first = new PageRegistry(seed());
 

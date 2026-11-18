@@ -95,6 +95,11 @@ export interface CellContext {
    */
   coverCell?: boolean | 'value';
   /**
+   * The anchor is a zero-size point: the editor opens with its top-left on it,
+   * or above it when it would not fit below. Text editors only.
+   */
+  atPoint?: boolean;
+  /**
    * The table grid: Tab saves and closes a text-like editor, so focus stays in
    * the grid. Elsewhere Tab moves to the next field.
    */

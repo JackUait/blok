@@ -20,6 +20,13 @@ export interface ToolbarBlockSettingsOptions {
    * Set to false to open to the right instead.
    */
   placeLeftOfAnchor?: boolean;
+
+  /**
+   * A viewport point, such as a right-click's. The menu opens with its top 1px
+   * under it, or above with its bottom on it when it does not fit below,
+   * and keeps 12px from the window's edges. The trigger still picks the block.
+   */
+  at?: { x: number; y: number };
 }
 
 /**

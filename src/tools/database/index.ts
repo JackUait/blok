@@ -11,6 +11,7 @@ import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolDa
 import type { AgentRun } from '../../../types/api';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
 import { HistoryDraftsCommit, type HistoryDraftsCommitPayload } from '../../components/events/HistoryDraftsCommit';
+import type { HistoryStep } from '../../../types/api/history';
 import type { AutofillSettings, ButtonAction, ButtonCallbackAction, ButtonSendNotificationAction, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, DeletedPropertyDefinition, PropertyValue, DatabasePermissionAction, DashboardWidget, DashboardRow, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue, LoadLimit, ViewCalculation } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
@@ -47,7 +48,7 @@ import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
 import { announce } from '../../components/utils/announcer';
 import { bulkCloseClearsSelection, bulkEditableProperties, bulkStartValue, createSelectionBar, watchBulkCloseKey } from './database-selection-bar';
-import { CALC_MENU_MIN_WIDTH, CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems, selectionActionItems, selectionMenuItems } from './database-table-menus';
+import { CALC_MENU_MIN_WIDTH, CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, openMenu, rowMenuFooter, rowMenuItems, selectionActionItems, selectionMenuItems } from './database-table-menus';
 import type { OpenMenuOptions, RowFavorite } from './database-table-menus';
 import { EmojiPicker, prefetchEmojiPickerData } from '../callout/emoji-picker';
 import { refreshCommentBadges } from './database-comment-badge';
@@ -145,14 +146,16 @@ import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar, VIEW_ICONS } from './database-tab-bar';
 import { foldTitleRow } from './database-view-bar-fold';
-import { IconArrowDiagonal, IconCalendar, IconReplace, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconDownload, IconImage, IconForm, IconViewForm, IconMergeCells, IconPageLayout, IconReturn, IconTable, IconTimeline, IconUpload, IconWand, IconInfo } from '../../components/icons';
+import { IconArrowDiagonal, IconCalendar, IconReplace, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconDownload, IconImage, IconForm, IconViewForm, IconMergeCells, IconLock, IconPencil, IconExpandDiagonal, IconPageLayout, IconReturn, IconTable, IconTimeline, IconUpload, IconWand, IconInfo } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import type { PopoverDesktopParams } from '../../components/utils/popover/popover-desktop';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { nanoid } from 'nanoid';
 import type { MenuConfigItem } from '../../../types/tools/menu-config';
-import { databasePageHost, movedDatabases, subtreeOf } from '../page/database-page-move';
+import { databasePageHost, movedDatabases, rowMoveHost, subtreeOf } from '../page/database-page-move';
+import type { PagePicker } from '../page/page-picker';
+import { menuFrom, openMovePicker, pointerFrom, type MovePickerFrom } from './database-move-picker';
 import { createdId } from '../page/page-values';
 import { generateBlockId } from '../../components/utils/id-generator';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -313,6 +316,8 @@ const isEmptyLine = (block: { type: string; data: unknown } | undefined): boolea
 const changedBlock = (payload: unknown): ChangedBlock | undefined =>
   (payload as { event?: { detail?: { target?: ChangedBlock } } } | undefined)?.event?.detail?.target;
 
+const sameIds = (a: readonly string[], b: readonly string[]): boolean => a.length === b.length && a.every((id) => b.includes(id));
+
 /** A computed value as one line of text, for the formula editor's preview. */
 const formatPreview = (value: PropertyValue): string => {
   if (Array.isArray(value)) {
@@ -354,6 +359,8 @@ const iconOf = (data: Partial<DatabaseData> | undefined): DatabaseIcon | undefin
     : undefined;
 };
 
+const emojiOf = (data: Partial<DatabaseData> | undefined): string => (typeof data?.emoji === 'string' ? data.emoji.trim() : '');
+
 const starterOf = (data: Partial<DatabaseData> | undefined): StarterId | undefined =>
   DATABASE_STARTERS.find((starter) => starter.id === data?.starter)?.id;
 
@@ -380,6 +387,10 @@ const BOARD_GROUP_PAGE = 10;
  * near a window edge it slides in to `margin` from it instead of turning to end at the button.
  * Above, its bottom sits `offset` over the button's top. The top and bottom keep no margin.
  */
+/** Core's rule for a right-click that keeps the browser menu: the element holds text itself. */
+const ownsText = (target: Element | null | undefined): boolean =>
+  Array.from(target?.childNodes ?? []).some((node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? '').trim() !== '');
+
 const groupMenuCoverPlacement = (anchor: HTMLElement, margin: number, offset: number): Pick<PopoverDesktopParams, 'cover' | 'viewportMargin' | 'coverFlipOffset' | 'coverVerticalMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
   const rect = anchor.getBoundingClientRect();
 
@@ -496,7 +507,7 @@ const BACKLINKS_SETTLE_MS = 300;
 const cleanDescription = (value: unknown): string =>
   typeof value === 'string' ? cleanHtml(value, { ...INLINE_TEXT_SANITIZE }) : '';
 
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'description', 'schema', 'views', 'activeViewId', 'deletedProperties', 'source', 'automations', 'hideDataSourceTitles', 'fullPage', INITIAL_VIEW_KEY, LINK_PICKER_KEY, ALONE_SKIPS_PANEL_KEY]);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['emoji', 'title', 'description', 'schema', 'views', 'activeViewId', 'deletedProperties', 'source', 'automations', 'hideDataSourceTitles', 'fullPage', INITIAL_VIEW_KEY, LINK_PICKER_KEY, ALONE_SKIPS_PANEL_KEY]);
 
 const sourceRefOf = (data: DatabaseData | undefined): DatabaseSourceRef | undefined => {
   const source = data?.source as unknown;
@@ -630,6 +641,14 @@ export class DatabaseTool implements BlockTool {
     return { allow: ['database-row', 'database', 'tabs', 'database-comment'] };
   }
 
+  /**
+   * notion-motion.md Round 65 §1: Notion's database block menu is 265 wide with 28px rows.
+   * Round 66 §1: Move to Trash sits beside Duplicate, and no toast follows.
+   */
+  public static get blockMenu(): { class: string; minWidth: string; trash: true; trashToast: false } {
+    return { class: 'blok-database-block-menu', minWidth: '265px', trash: true, trashToast: false };
+  }
+
   /** Deleting a database deletes its rows, sources and comments. Promoting them would drop rows into the parent. */
   public static get deletesChildren(): boolean {
     return true;
@@ -687,6 +706,10 @@ export class DatabaseTool implements BlockTool {
   private linkPicker: boolean;
   /** The open "New database" / "New view" panel of a linked view. */
   private sourcePicker: DatabasePanel | null = null;
+  /** The open Move to picker and its row. */
+  private movePicker: { picker: PagePicker; rowId: string } | null = null;
+  /** Rows waiting on the host's `create` for a move to a page: a second pick must not make a second page. */
+  private readonly pageMoves = new Set<string>();
   /** "Hide data source titles": one setting for the whole block (per view is unmeasured). */
   private dataSourceTitlesHidden: boolean;
   /** The database is the whole page: the page title is its title. */
@@ -696,9 +719,12 @@ export class DatabaseTool implements BlockTool {
   /** The description field, drawn only on a full-page database. */
   private descriptionElement: HTMLElement | null = null;
   private databaseIcon: DatabaseIcon | undefined;
+  /** The emoji Edit icon picked; it takes the place of `databaseIcon`. */
+  private databaseEmoji = '';
+  private iconPicker: EmojiPicker | null = null;
   /** The Suggested template this database was made from (research/27 §1). */
   private starter: StarterId | undefined;
-  private iconElement: HTMLElement | null = null;
+  private iconElement: HTMLButtonElement | null = null;
   /** The source's name as last read: a deleted source still shows it. */
   private lastSourceTitle = '';
   /** A source in another document, as the host last answered: `null` when it is gone. */
@@ -849,7 +875,18 @@ export class DatabaseTool implements BlockTool {
   /** A new board card left unnamed by Escape: selected alone, it shows no bar. Any other selection drops it. */
   private barlessRowId: string | null = null;
   /** The row a drop just landed: the next paint marks it so its halo fades in once. */
-  private landedRowId: string | null = null;
+  private landedRowIds: readonly string[] = [];
+  /** The rows an undo just unpicked: the next paint fades their tint out once. */
+  private leavingRowIds: readonly string[] = [];
+  /** What an undo does to the selection, applied once its redraw is done. */
+  private undoPick: { restored: string[]; edited: boolean; redone: boolean; step?: HistoryStep; atUndo?: string[] } | null = null;
+  private undoPickTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * Per row-edit step: the row pick when it was recorded, the pick its undo replaced,
+   * and the pick its undo left. The step handle stays the same across undo and redo.
+   */
+  private readonly stepPicks = new WeakMap<HistoryStep, { recorded: string[]; undone?: string[]; applied?: string[] }>();
+  private stepPickTimer: ReturnType<typeof setTimeout> | null = null;
   /** A row "+ New" just made, with the values it was born with. Escape deletes it while it stays so. */
   private freshRow: { id: string; properties: string } | null = null;
 
@@ -869,6 +906,7 @@ export class DatabaseTool implements BlockTool {
     this.fullPage = data?.fullPage === true;
     this.description = cleanDescription(data?.description);
     this.databaseIcon = iconOf(data);
+    this.databaseEmoji = emojiOf(data);
     this.starter = starterOf(data);
     this.savedAutomations = structuredClone(data?.automations);
     const initialView = (data as Record<string, unknown> | undefined)?.[INITIAL_VIEW_KEY];
@@ -916,6 +954,7 @@ export class DatabaseTool implements BlockTool {
       locale: () => editorLocale(this.api.i18n),
       me: () => this.config.people?.me?.() ?? null,
       personName: (id) => this.people?.find((person) => person.id === id)?.name,
+      people: () => this.people,
       permitted: () => this.config.comments === undefined && this.permits('comment'),
       // A source in another document has no row blocks here to write to.
       readOnly: () => this.editorReadOnly || this.source?.documentId !== undefined,
@@ -950,6 +989,7 @@ export class DatabaseTool implements BlockTool {
     this.api.events.on('block changed', this.handleBodyEdit);
     this.api.events.on('block changed', this.handleBodyShape);
     this.api.events.on('block changed', this.handleAgentRowWrite);
+    this.api.events.on('block changed', this.recordStepPick);
     this.api.events.on('block changed', this.scheduleBacklinks);
     this.builtInComments.listen();
     this.api.events.on('block replayed', this.scheduleBacklinks);
@@ -2567,23 +2607,40 @@ export class DatabaseTool implements BlockTool {
     }
   }
 
-  /** research/27:42: the icon a template gave, before the title. */
+  /** research/27:42: the icon a template gave, or the emoji Edit icon picked, before the title. */
   private paintDatabaseIcon(): void {
     const icon = this.databaseIcon;
+    const emoji = this.databaseEmoji;
 
-    if (icon === undefined || this.titleRowElement === null || this.titleElement === null) {
+    if ((icon === undefined && emoji === '') || this.titleRowElement === null || this.titleElement === null) {
       this.iconElement?.remove();
       this.iconElement = null;
 
       return;
     }
-    const el = this.iconElement ?? document.createElement('span');
+    const el = this.iconElement ?? this.createIconButton();
 
-    el.setAttribute('data-blok-database-icon', icon.color);
-    el.setAttribute('aria-hidden', 'true');
-    el.innerHTML = ICON_GLYPHS[icon.glyph];
+    // "emoji" matches no tile colour rule, so an emoji gets no tile.
+    el.setAttribute('data-blok-database-icon', emoji !== '' ? 'emoji' : icon?.color ?? 'gray');
+    el.disabled = !this.titleEditable();
+    if (emoji !== '') {
+      el.textContent = emoji;
+    } else if (icon !== undefined) {
+      el.innerHTML = ICON_GLYPHS[icon.glyph];
+    }
     if (el.nextElementSibling !== this.titleElement) this.titleRowElement.insertBefore(el, this.titleElement);
     this.iconElement = el;
+  }
+
+  /** notion-motion.md Round 67 §1: the icon is a button that opens the picker under itself. */
+  private createIconButton(): HTMLButtonElement {
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.setAttribute('aria-label', this.api.i18n.t('tools.database.tableEditIcon'));
+    button.addEventListener('click', () => this.openIconPicker(button));
+
+    return button;
   }
 
   private createTitleElement(): HTMLElement {
@@ -2648,26 +2705,177 @@ export class DatabaseTool implements BlockTool {
     [...this.model.getOrderedRows(), ...this.templates].forEach((row) => void this.sync.syncDeleteRow({ rowId: row.id }));
   }
 
+  /**
+   * The block menu's Delete asks first (notion-motion.md Round 65 §1). A linked
+   * view has no pages of its own, so a selection of only linked views does not ask.
+   * Two or more data sources are counted in the text (Round 67 §2).
+   * @param blockIds - the top blocks the delete removes
+   */
+  public confirmDelete(blockIds: string[] = [this.block.id]): Promise<boolean> {
+    const sources = blockIds.reduce((sum, id) => sum + (this.dashboardOwner(id)?.dataSourceCount() ?? 0), 0);
+
+    if (sources === 0) return Promise.resolve(true);
+    const t = (key: string): string => this.api.i18n.t(key);
+
+    return openDatabaseConfirm({
+      title: t('tools.database.trashDatabaseConfirm'),
+      description: sources > 1
+        ? this.api.i18n.t('tools.database.trashDataSourcesConfirmDescription', { count: sources })
+        : t('tools.database.trashDatabaseConfirmDescription'),
+      confirmLabel: t('tools.database.tableMoveToTrash'),
+      cancelLabel: t('tools.database.layoutCancel'),
+      destructive: true,
+      filled: true,
+      focusConfirm: true,
+      trash: true,
+      directionSource: this.element,
+    });
+  }
+
+  /** This database and its second sources; 0 for a linked view, which has none of its own. */
+  private dataSourceCount(): number {
+    if (this.linked) return 0;
+
+    return 1 + this.api.blocks.getChildren(this.block.id).filter((child) => child.name === this.block.name).length;
+  }
+
+  /**
+   * "Duplicate without content" leaves these out: the rows of this database
+   * and of its second sources (notion-motion.md Round 66 §1). Templates stay
+   * with the set-up. A linked view has no rows of its own, so no submenu.
+   */
+  public contentBlockIds(): string[] {
+    if (this.linked || this.readOnly) return [];
+    const sources = this.api.blocks.getChildren(this.block.id).filter((child) => child.name === this.block.name);
+
+    return [this.block.id, ...sources.map((source) => source.id)].flatMap((id) => this.api.blocks.getChildren(id)
+      .filter((child) => child.name === 'database-row' && !isTemplateData(child.preservedData as { template?: unknown }))
+      .map((child) => child.id));
+  }
+
   /** Called by a row this client deleted on its own; the row's backend copy goes too. */
   rowDeleted({ rowId }: { rowId: string }): void {
     if (this.destroyed || this.linked || this.readOnly || this.movingOut) return;
     void this.sync.syncDeleteRow({ rowId });
   }
 
+  /** The user's lock: core's block menu then leaves out Duplicate, Move to and Move to Trash. */
+  public isLocked(): boolean {
+    return !this.linked && this.model.isDatabaseLocked();
+  }
+
   /**
-   * The ⋮⋮ menu. "Turn into page" leads Notion's inline database menu
-   * (research-live-notion.md §4); it needs a host that stores the new page's document.
+   * The ⋮⋮ menu: Notion's database rows that Blok backs, in Notion's groups
+   * (notion-motion.md Round 64 §4). Core adds Copy link, Duplicate, Move to and Delete.
+   * "Turn into page" needs a host that stores the new page's document.
    */
   public renderSettings(): MenuConfigItem[] {
-    if (this.readOnly || this.linked || this.fullPage || this.insideDatabase() || databasePageHost(this.api) === null) return [];
-
-    return [{
+    if (this.readOnly || this.fullPage || this.insideDatabase()) return [];
+    const t = (key: string): string => this.api.i18n.t(`tools.database.${key}`);
+    // A locked database's menu has no Turn into page, Edit icon, Lock or Rename (notion-motion.md Round 67 §1).
+    const locked = this.isLocked();
+    const turnIntoPage: MenuConfigItem[] = locked || this.linked || databasePageHost(this.api) === null ? [] : [{
       icon: IconReplace,
-      title: this.api.i18n.t('tools.database.turnIntoPage'),
+      title: t('turnIntoPage'),
       name: 'database-turn-into-page',
       closeOnActivate: true,
       onActivate: (): void => void this.turnIntoPage(),
     }];
+    const editIcon: MenuConfigItem[] = locked || !this.titleEditable() || this.dataSourceTitlesHidden ? [] : [{
+      icon: IconEmojiSmile,
+      title: this.api.i18n.t('tools.database.tableEditIcon'),
+      name: 'database-edit-icon',
+      closeOnActivate: true,
+      onActivate: (): void => this.openIconPicker(),
+    }];
+    // No closeOnActivate: core keeps the menu open and the block selected, as for a switch.
+    const lock: MenuConfigItem[] = locked || this.structureDenied ? [] : [{
+      icon: IconLock,
+      title: t(this.linked ? 'settingsLockViews' : 'settingsLockDatabase'),
+      name: 'database-lock',
+      isActive: (): boolean => this.structureLocked(),
+      onActivate: (): void => this.setDatabaseLocked(!this.structureLocked()),
+    }];
+    const rename: MenuConfigItem[] = locked || !this.titleEditable() || this.dataSourceTitlesHidden ? [] : [{
+      icon: IconPencil,
+      title: t('renameView'),
+      name: 'database-rename',
+      closeOnActivate: true,
+      onActivate: (): void => this.focusTitle(),
+    }];
+    // Hidden, not disabled: Notion's menu has no disabled row (Round 64 §4). A lock set
+    // from this open menu leaves the row, so the click checks again.
+    const merge: MenuConfigItem[] = this.structureLocked() ? [] : [{
+      icon: IconMergeCells,
+      title: t('csvMerge'),
+      name: 'database-merge-csv',
+      closeOnActivate: true,
+      onActivate: (): void => {
+        if (!this.structureLocked()) this.activeSource().openCsvMerge();
+      },
+    }];
+    const open = this.fullPageOpener();
+    const openAsPage: MenuConfigItem[] = open === undefined ? [] : [{
+      icon: IconExpandDiagonal,
+      title: t('openAsPage'),
+      name: 'database-open-as-page',
+      closeOnActivate: true,
+      onActivate: open,
+    }];
+
+    // Same link as a row's New tab: a `#<id>?full` hash opens the full page on load.
+    // A host that opens full pages itself gives no link.
+    const openInNewTab: MenuConfigItem[] = open === undefined || this.config.openFullPage !== undefined ? [] : [{
+      icon: IconArrowDiagonal,
+      title: this.api.i18n.t('tools.file.previewOpenInNewTab'),
+      name: 'database-open-in-new-tab',
+      closeOnActivate: true,
+      onActivate: (): void => {
+        const href = safeHref(`${window.location.href.split('#')[0]}#${encodeURIComponent(this.block.id)}?full`);
+
+        if (href !== null) window.open(href, '_blank', 'noopener');
+      },
+    }];
+
+    return [[...turnIntoPage, ...editIcon, ...lock, ...rename, ...merge], [...openAsPage, ...openInNewTab]]
+      .filter((group) => group.length > 0)
+      .flatMap((group, index) => index === 0 ? group : [{ type: PopoverItemType.Separator }, ...group]);
+  }
+
+  /**
+   * Edit icon: the emoji picker the row pages use. A pick or Remove is one change.
+   * notion-motion.md Round 67 §1: centred under the ⋮⋮ handle from the menu, or under the icon when it is clicked.
+   * A menu opened with no handle shown keeps the icon or title as anchor: unmeasured.
+   */
+  private openIconPicker(from?: HTMLElement): void {
+    const anchor = from ?? this.iconElement ?? this.titleElement;
+
+    if (anchor === null || !this.titleEditable()) return;
+    // Read now: the handle hides once the menu closes.
+    const handle = from !== undefined ? undefined : [...this.block.holder.closest(`[${DATA_ATTR.editor}]`)?.querySelectorAll<HTMLElement>(`[${DATA_ATTR.settingsToggler}]`) ?? []]
+      .map((el) => el.getBoundingClientRect())
+      .find((rect) => rect.width > 0);
+    const write = (emoji: string): void => {
+      this.databaseEmoji = emoji;
+      this.databaseIcon = undefined;
+      // A glyph icon this tool could not draw is kept in `unknown`; a new choice replaces it.
+      delete this.unknown.icon;
+      this.paintDatabaseIcon();
+      this.block.dispatchChange();
+    };
+    const handlers = { onSelect: (native: string): void => write(native), onRemove: (): void => write('') };
+
+    if (this.iconPicker === null) {
+      this.iconPicker = new EmojiPicker({ ...handlers, i18n: this.api.i18n, locale: this.api.i18n.getLocale?.() ?? 'en', centred: true });
+    }
+    const element = this.iconPicker.getElement();
+
+    if (!element.isConnected) document.body.appendChild(element);
+    void this.iconPicker.open(anchor, handle, {
+      ...handlers,
+      current: this.databaseEmoji,
+      removable: this.databaseEmoji !== '' || this.databaseIcon !== undefined,
+    });
   }
 
   /** A database's children are rows, sources and tabs: a page link put there would be turned into a row. */
@@ -2928,6 +3136,7 @@ export class DatabaseTool implements BlockTool {
       ...(this.fullPage ? { fullPage: true } : {}),
       ...(description !== '' ? { description } : {}),
       ...(this.databaseIcon !== undefined ? { icon: { ...this.databaseIcon } } : {}),
+      ...(this.databaseEmoji !== '' ? { emoji: this.databaseEmoji } : {}),
       ...(this.starter !== undefined ? { starter: this.starter } : {}),
       title: currentTitle,
       activeViewId: this.activeViewId,
@@ -2948,7 +3157,13 @@ export class DatabaseTool implements BlockTool {
 
   destroy(): void {
     this.destroyed = true;
+    if (this.undoPickTimer !== null) clearTimeout(this.undoPickTimer);
+    if (this.stepPickTimer !== null) clearTimeout(this.stepPickTimer);
+    this.undoPickTimer = null;
+    this.stepPickTimer = null;
+    this.undoPick = null;
     this.sourcePicker?.close();
+    this.movePicker?.picker.close();
     this.formPreview?.close();
     this.pinnedGroupModal?.close();
     this.formPromptAbort?.abort();
@@ -2966,6 +3181,7 @@ export class DatabaseTool implements BlockTool {
     this.api.events.off('block changed', this.handleBodyEdit);
     this.api.events.off('block changed', this.handleBodyShape);
     this.api.events.off('block changed', this.handleAgentRowWrite);
+    this.api.events.off('block changed', this.recordStepPick);
     this.api.events.off('block changed', this.scheduleBacklinks);
     this.api.events.off('block replayed', this.scheduleBacklinks);
     if (this.backlinksTimer !== null) clearTimeout(this.backlinksTimer);
@@ -2999,6 +3215,9 @@ export class DatabaseTool implements BlockTool {
     this.reactionPicker?.close();
     this.reactionPicker?.getElement().remove();
     this.reactionPicker = null;
+    this.iconPicker?.close();
+    this.iconPicker?.getElement().remove();
+    this.iconPicker = null;
     this.stopComments?.();
     this.remoteWatch?.stop();
     this.remoteWatch = null;
@@ -3090,6 +3309,7 @@ export class DatabaseTool implements BlockTool {
     this.description = cleanDescription(data.description);
     this.syncDescription();
     this.databaseIcon = iconOf(data);
+    this.databaseEmoji = emojiOf(data);
     this.starter = starterOf(data);
     this.paintDatabaseIcon();
     this.savedAutomations = structuredClone(data.automations);
@@ -3234,6 +3454,7 @@ export class DatabaseTool implements BlockTool {
     if (openId !== undefined && openId !== null && templateIds.has(openId)) this.showTemplateBanner(openId);
     this.recreateDeletedRows();
     this.createCopiedRows();
+    if (this.movePicker !== null && this.model.getRow(this.movePicker.rowId) === undefined) this.movePicker.picker.close();
   }
 
   /**
@@ -3326,9 +3547,13 @@ export class DatabaseTool implements BlockTool {
   /** A host undo or redo: an open editor's draft is written as its own step first, so the walk cannot drop it. */
   private readonly commitDraftsBeforeHistory = ({ commit }: HistoryDraftsCommitPayload): void => {
     const open = [...this.openCellEditors].filter((editor) => editor.isOpen);
+    const controls = this.viewControls?.typingRunOpen === true ? this.viewControls : null;
 
-    if (this.destroyed || open.length === 0) return;
-    commit(() => open.forEach((editor) => editor.close()));
+    if (this.destroyed || (open.length === 0 && controls === null)) return;
+    commit(() => {
+      open.forEach((editor) => editor.close());
+      controls?.endTypingRun();
+    });
   };
 
   /**
@@ -3348,10 +3573,129 @@ export class DatabaseTool implements BlockTool {
     open.forEach((editor) => editor.cancel());
   }
 
+  /**
+   * notion-motion.md Round 65 §2: an undo brings back the row pick that was
+   * current when its step was recorded. So each local row write notes the pick
+   * on its step; the first write of a step wins.
+   */
+  private readonly recordStepPick = (payload: unknown): void => {
+    const detail = (payload as { event?: { type?: unknown; detail?: { origin?: unknown; replaySource?: unknown } } } | undefined)?.event;
+    const target = changedBlock(payload);
+
+    if (
+      this.destroyed || this.readOnly || this.stepPickTimer !== null || detail?.type !== 'block-changed' ||
+      detail.detail?.origin !== 'local' || detail.detail.replaySource !== undefined ||
+      target?.name !== 'database-row' || target.parentId !== this.dataId
+    ) return;
+    const recorded = this.currentPick();
+
+    // Later: the write lands in the history after this event, and one look covers a burst.
+    this.stepPickTimer = setTimeout(() => {
+      this.stepPickTimer = null;
+      const step = this.api.history.latestStep();
+
+      if (!this.destroyed && step !== undefined && !this.stepPicks.has(step)) this.stepPicks.set(step, { recorded });
+    }, 0);
+  };
+
+  /** The picked rows of the shown view: a table's row selection (not its cells), or the other views' picks. */
+  private currentPick(): string[] {
+    return this.view instanceof DatabaseTableView ? this.view.pickedRows() : [...this.rowSelection];
+  }
+
+  /**
+   * notion-motion.md Round 63 §1 (table): an undone row delete selects the
+   * row. Round 65 §2: an undone cell edit brings back the pick recorded with
+   * it, and its redo the pick the undo replaced. A reorder writes only the
+   * position, and its undo keeps the selection.
+   */
+  private noteUndoPick(capture: BlockReplayCapture): void {
+    const native = capture.native;
+
+    if (
+      this.destroyed || (capture.origin !== 'undo' && capture.origin !== 'redo') || capture.relocation !== undefined ||
+      native?.type !== 'database-row' || !native.parent.present || native.parent.value !== this.dataId
+    ) return;
+    const restored = capture.origin === 'undo' && capture.type === 'add';
+
+    if (!restored && (capture.type !== 'update' || !capture.changes.some((change) => change.path[0] === 'properties'))) return;
+    const pick = this.undoPick ?? { restored: [], edited: false, redone: false };
+
+    if (restored) pick.restored.push(capture.blockId);
+    else if (capture.origin === 'undo') pick.edited = true;
+    else pick.redone = true;
+    // Only now, mid-replay, is the undone step still the newest one.
+    if (capture.origin === 'undo' && pick.step === undefined) {
+      pick.step = this.api.history.latestStep();
+      pick.atUndo = this.currentPick();
+    }
+    this.undoPick = pick;
+    // A timeout: the redraw runs in the microtasks the same change queued.
+    this.undoPickTimer ??= setTimeout(() => this.applyUndoPick(), 0);
+  }
+
+  private applyUndoPick(): void {
+    const pick = this.undoPick;
+
+    this.undoPick = null;
+    this.undoPickTimer = null;
+    if (pick === null || this.destroyed) return;
+    const live = (ids: readonly string[]): string[] => ids.filter((id) => this.model.getRow(id) !== undefined);
+    const restored = live(pick.restored);
+
+    if (restored.length > 0) {
+      this.landPick(restored, true);
+
+      return;
+    }
+    if (pick.edited && pick.step !== undefined) {
+      const record = this.stepPicks.get(pick.step) ?? { recorded: [] };
+      const next = live(record.recorded);
+
+      this.stepPicks.set(pick.step, { recorded: record.recorded, undone: pick.atUndo ?? [], applied: next });
+      this.landPick(next, false);
+
+      return;
+    }
+    if (!pick.redone) return;
+    const step = this.api.history.latestStep();
+    const record = step === undefined ? undefined : this.stepPicks.get(step);
+    const current = this.currentPick();
+
+    // A pick made since the undo stays.
+    if (record?.undone === undefined || record.applied === undefined || !sameIds(current, record.applied)) return;
+    this.landPick(live(record.undone), false);
+  }
+
+  /**
+   * Make these rows the pick, fading the change. A table and, Round 64 §1 and
+   * Round 65 §2, a List or Gallery; a Board card comes back unpicked, and the
+   * other views are unmeasured. An undone delete only adds its rows.
+   * Round 66 §3: a Calendar edit's pick too; its undone delete is unmeasured.
+   */
+  private landPick(rowIds: string[], restoring: boolean): void {
+    if (this.view instanceof DatabaseTableView) {
+      this.view.pickAfterUndo(rowIds);
+
+      return;
+    }
+    const type = this.shownView()?.type;
+
+    if (type !== 'list' && type !== 'gallery' && (type !== 'calendar' || restoring)) return;
+    const before = restoring ? [] : [...this.rowSelection];
+
+    this.landedRowIds = rowIds.filter((id) => !before.includes(id));
+    this.leavingRowIds = before.filter((id) => !rowIds.includes(id));
+    this.selectRows(rowIds);
+    this.landedRowIds = [];
+    this.leavingRowIds = [];
+  }
+
   private readonly handleBlockReplayed = (capture: BlockReplayCapture): void => {
     const native = capture.native;
 
     this.closeEditorsOnHistory(capture);
+    this.noteUndoPick(capture);
 
     if (
       this.destroyed || this.readOnly || this.source !== undefined ||
@@ -7086,6 +7430,8 @@ export class DatabaseTool implements BlockTool {
       ...(context === undefined && this.config.viewState !== undefined ? { store: this.config.viewState } : {}),
       ...(context !== undefined && context.store !== undefined ? { store: context.store } : {}),
       fallback: context?.fallback ?? this.viewStateFallback(),
+      // A host api without track (an older or partial one) keeps sorts out of undo.
+      history: () => (this.readOnly || typeof this.api.history?.track !== 'function' ? undefined : this.api.history),
       savedView: () => owner.model.getView(context?.viewId ?? this.activeViewId),
       // Filters and sorts read a formula or rollup as its result type.
       schema: () => localizeDatabaseSchema(data().model.getValueSchema(), this.api.i18n),
@@ -7650,7 +7996,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** Inline edit of a board card property (Notion 2022-08-25): the cell editor, no page. */
-  private editCardProperty(rowId: string, propertyId: string, anchor: HTMLElement, afterClose?: () => void, context?: NativeWidgetContext): void {
+  private editCardProperty(rowId: string, propertyId: string, anchor: HTMLElement, afterClose?: () => void, context?: NativeWidgetContext, atPoint = false): void {
     const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === propertyId);
     const row = this.model.getRow(rowId);
 
@@ -7665,6 +8011,7 @@ export class DatabaseTool implements BlockTool {
       i18n: this.api.i18n,
       readOnly: false,
       options: this.model.getProperty(propertyId)?.config?.options ?? [],
+      ...(atPoint ? { atPoint } : {}),
       ...(reminder !== undefined ? { reminder } : {}),
       ...(property.type === 'date'
         ? { onReminderChange: (next: DateReminderOffset | null) => { if (context === undefined || context.writable()) this.commitReminder(rowId, propertyId, next); } }
@@ -8376,7 +8723,7 @@ export class DatabaseTool implements BlockTool {
       openRow: (rowId, mode) => context === undefined ? this.handleRowClick(rowId, mode) : context.openRow(rowId, mode),
       rowsEscaped: () => { if (context === undefined) this.closeRowPage(); },
       copyRowLink: (rowId) => this.copyRowLink(rowId),
-      moveTargets: () => this.moveTargets(),
+      canMoveRow: () => this.canMoveRow(),
       // After the click that closed the editor, which would count as outside the
       // new menu; the table may have redrawn by then, so find the header late.
       editProperty: (propertyId) => setTimeout(() => {
@@ -8384,7 +8731,7 @@ export class DatabaseTool implements BlockTool {
 
         if (header !== null && writable()) this.openPropertyMenu(propertyId, header, table?.(), context);
       }, 0),
-      moveRowTo: (rowId, databaseId) => { if (writable()) this.moveRowTo({ rowId, databaseId }); },
+      openMoveTo: (rowId, anchor, from, onEscape) => { if (writable()) this.openMoveTo(rowId, anchor, from, onEscape); },
       editRowIcon: (rowId) => { if (writable()) this.editRowIcon(rowId, context); },
       updateView: (changes) => { if (writable()) this.updateActiveView(changes, context); },
       // notion-motion.md Round 29 §1: the Load more row's ⋯. Round 30 §3: a locked database keeps it working.
@@ -9924,16 +10271,28 @@ export class DatabaseTool implements BlockTool {
 
       // A field being edited keeps the native menu, for copy and paste.
       if ((target?.closest('input, textarea, [contenteditable="true"]') ?? null) !== null) return;
+      const feedCard = target?.closest<HTMLElement>('[data-blok-database-feed-card]');
+
+      // notion-motion.md Round 60 §4: a feed card opens the database block's menu at the pointer; text keeps the browser's, as in core.
+      if (feedCard !== null && feedCard !== undefined && !this.readOnly && !ownsText(target)) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.api.toolbar.toggleBlockSettings(true, feedCard, { at: { x: event.clientX, y: event.clientY } });
+
+        return;
+      }
       if (rowEl === null || rowEl === undefined || rowId === null || rowId === undefined) return;
       event.preventDefault();
       // Core opens its block menu on a right-click; this menu replaces it.
       event.stopPropagation();
       // notion-motion.md Round 13: a board card's right-click drops every pick and opens that card's own menu.
       if (rowEl.matches('[data-blok-database-board] [data-blok-database-card]')) this.clearRowSelection();
+      // Round 66 §3: a calendar card's right-click selects it, and the pick stays through the menu's edits.
+      if (rowEl.matches('[data-blok-database-calendar-event]')) this.selectRows([rowId]);
       const placement = pointerMenuPlacement(rowEl, event);
       const anchor = placement?.anchor ?? rowEl;
 
-      this.openCardMenu(anchor, rowEl, rowId, undefined, 'card', placement?.coverFlipOffset);
+      this.openCardMenu(anchor, rowEl, rowId, undefined, 'card', placement?.coverFlipOffset, event);
       if (anchor !== rowEl) this.cardMenuPopover?.on(PopoverEvent.Closed, () => anchor.remove());
     });
     boardEl.addEventListener('click', (event) => {
@@ -9992,7 +10351,7 @@ export class DatabaseTool implements BlockTool {
    * Board and gallery carry Layout and Property visibility; a list row does not (research/12 §3).
    * A timeline bar has no Comment; its table panel row does (research/22 §11).
    */
-  private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string, at?: OpenMenuOptions['at'], kind: 'card' | 'handle' = 'card', coverFlipOffset?: number): void {
+  private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string, at?: OpenMenuOptions['at'], kind: 'card' | 'handle' = 'card', coverFlipOffset?: number, pointer?: Pick<MouseEvent, 'clientX' | 'clientY'>): void {
     const type = this.shownView()?.type;
 
     this.openRowMenu(rowId, anchor, cardEl, {
@@ -10001,6 +10360,7 @@ export class DatabaseTool implements BlockTool {
       kind,
       ...(at !== undefined ? { at } : {}),
       ...(coverFlipOffset !== undefined ? { coverFlipOffset } : {}),
+      ...(pointer !== undefined ? { pointer } : {}),
     });
   }
 
@@ -10019,17 +10379,18 @@ export class DatabaseTool implements BlockTool {
    * `rowMenuItems` as the table's ⋮⋮ so they cannot drift. `card` keeps its
    * hover buttons while the menu is up.
    */
-  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean; at?: OpenMenuOptions['at']; kind?: 'card' | 'handle'; viewportMargin?: number; coverFlipOffset?: number }): void {
+  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean; at?: OpenMenuOptions['at']; kind?: 'card' | 'handle'; viewportMargin?: number; coverFlipOffset?: number; pointer?: Pick<MouseEvent, 'clientX' | 'clientY'> }): void {
+    // notion-motion.md Round 64 §3: Move to opens at a right-click's point, read now while the card is where it was clicked.
+    const spot = options.pointer === undefined ? undefined : pointerFrom(card, options.pointer);
     const comment = options.comment === false ? undefined : this.commentLever().comment;
     const writable = (): boolean => !this.readOnly && !this.destroyed;
-    const listTargets = (): Array<{ id: string; title: string }> => this.moveTargets();
     // notion-motion.md Round 42 §2: Edit property › lists every property A→Z, shown or not; Created time and ID were not in it.
     const properties = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n)
       .filter((p) => !['title', 'createdTime', 'uniqueId'].includes(p.type))
       .sort((a, b) => a.name.localeCompare(b.name));
     const edits = !writable() ? {} : {
       onEditIcon: () => this.editRowIcon(rowId),
-      onEditProperty: (propertyId: string) => this.editRowProperty(rowId, propertyId),
+      onEditProperty: (propertyId: string) => this.editRowProperty(rowId, propertyId, card, options.pointer),
       ...(options.viewSettings
         ? {
           onLayout: () => this.controls.openSettingsPage('layout', card),
@@ -10038,9 +10399,7 @@ export class DatabaseTool implements BlockTool {
         : {}),
       onDuplicate: () => { if (writable()) this.duplicateTableRow(rowId); },
       onDelete: () => { if (writable()) this.deleteTableRows([rowId]); },
-      // A getter: the targets walk every block, so they are read only when the menu opens.
-      get moveTargets() { return listTargets(); },
-      onMoveTo: (databaseId: string) => { if (writable()) this.moveRowTo({ rowId, databaseId }); },
+      ...(this.canMoveRow() ? { onMoveTo: (menu: DOMRect | undefined) => { if (writable()) this.openMoveTo(rowId, card, spot ?? menuFrom(menu, card)); } } : {}),
     };
 
     this.cardMenuPopover?.destroy();
@@ -10100,8 +10459,20 @@ export class DatabaseTool implements BlockTool {
     this.cardDrawer?.editIcon();
   }
 
-  /** A card's Edit property ›: the row page opens, then that value's editor. */
-  private editRowProperty(rowId: string, propertyId: string): void {
+  /**
+   * A card's Edit property ›: the row page opens, then that value's editor.
+   * notion-motion.md Round 67 §3: a calendar card's Text opens alone at the right-click point, 1px left of it.
+   * Other types and views, and a menu opened with no pointer, are unmeasured.
+   */
+  private editRowProperty(rowId: string, propertyId: string, card?: HTMLElement, pointer?: Pick<MouseEvent, 'clientX' | 'clientY'>): void {
+    if (card?.matches('[data-blok-database-calendar-event]') === true && pointer !== undefined && this.model.getProperty(propertyId)?.type === 'text') {
+      const point = pointerAnchor(card, { clientX: pointer.clientX - 1, clientY: pointer.clientY });
+
+      point.setAttribute('data-blok-database-edit-point', '');
+      this.editCardProperty(rowId, propertyId, point, () => point.remove(), undefined, true);
+
+      return;
+    }
     this.handleRowClick(rowId);
     this.cardDrawer?.editProperty(propertyId);
   }
@@ -10844,15 +11215,20 @@ export class DatabaseTool implements BlockTool {
           // A template's page: the row actions would miss it, as they read the rows only.
           if (this.model.getRow(rowId) === undefined) return undefined;
           const copyLink = { onCopyLink: () => this.copyRowLink(rowId) };
-          const listTargets = (): Array<{ id: string; title: string }> => this.moveTargets();
+          const canMove = (): boolean => this.canMoveRow();
+          // notion-motion.md Round 64 §3: under the ••• button, 12 in from the window's edge.
+          const moveTo = (menu: DOMRect | undefined): void => {
+            const button = document.querySelector<HTMLElement>('[data-blok-database-peek-actions]:not([hidden])');
+
+            if (writable()) this.openMoveTo(rowId, button ?? this.block.holder, button === null ? menuFrom(menu, this.block.holder) : { under: button });
+          };
 
           return !writable() ? copyLink : {
             ...copyLink,
             onDuplicate: () => { if (writable()) this.duplicateTableRow(rowId); },
             onDelete: () => { if (writable()) this.deleteTableRows([rowId]); },
             // A getter: the targets walk every block, so they are read only when the menu opens.
-            get moveTargets() { return listTargets(); },
-            onMoveTo: (databaseId: string) => { if (writable()) this.moveRowTo({ rowId, databaseId }); },
+            get onMoveTo() { return canMove() ? moveTo : undefined; },
           };
         },
         // A template's page is not a row, so it has no star.
@@ -11587,9 +11963,13 @@ export class DatabaseTool implements BlockTool {
 
   /** notion-motion.md Round 40 §2–3: a dropped card or event is left selected, its halo fading in. */
   private landRow(rowId: string): void {
-    this.landedRowId = rowId;
-    this.selectRows([rowId]);
-    this.landedRowId = null;
+    this.landRows([rowId]);
+  }
+
+  private landRows(rowIds: string[]): void {
+    this.landedRowIds = rowIds;
+    this.selectRows(rowIds);
+    this.landedRowIds = [];
   }
 
   private clearRowSelection(): void {
@@ -11627,7 +12007,8 @@ export class DatabaseTool implements BlockTool {
       const selected = this.rowSelection.has(el.getAttribute('data-row-id') ?? '');
 
       el.toggleAttribute('data-blok-database-row-selected', selected);
-      el.toggleAttribute('data-blok-database-row-landed', selected && el.getAttribute('data-row-id') === this.landedRowId);
+      el.toggleAttribute('data-blok-database-row-landed', selected && this.landedRowIds.includes(el.getAttribute('data-row-id') ?? ''));
+      el.toggleAttribute('data-blok-database-row-leaving', !selected && this.leavingRowIds.includes(el.getAttribute('data-row-id') ?? ''));
       if (selected) {
         el.setAttribute('aria-selected', 'true');
       } else {
@@ -11748,11 +12129,7 @@ export class DatabaseTool implements BlockTool {
 
       return;
     }
-    const targets = this.moveTargets();
-
-    if (targets.length > 0) {
-      act(() => openMenu(rowEl, moveTargetItems(this.api.i18n, targets, (databaseId) => this.moveRowTo({ rowId, databaseId })), { searchable: true }));
-    }
+    if (this.canMoveRow()) act(() => this.openMoveTo(rowId, rowEl, { under: rowEl }));
   }
 
   /**
@@ -12937,6 +13314,114 @@ export class DatabaseTool implements BlockTool {
   /** "Move to" targets: every other database of the document. A linked view shows another's rows, so it is none. */
   private moveTargets(): Array<{ id: string; title: string }> {
     return this.documentDatabases().filter((database) => database.id !== this.dataId && !this.isLinkedBlock(database.id));
+  }
+
+  /** Move to has somewhere to send a row: another database, or a host that takes pages. */
+  private canMoveRow(): boolean {
+    if (this.readOnly) return false;
+    if (this.source !== undefined) return this.api.blocks.getById(this.source.databaseId) !== null && (this.moveTargets().length > 0 || rowMoveHost(this.api) !== null);
+
+    return this.moveTargets().length > 0 || rowMoveHost(this.api) !== null;
+  }
+
+  /**
+   * The "Move page to…" picker, placed from `from` by `openMovePicker`'s one
+   * rule (notion-motion.md Round 64 §3). It moves with `anchor`, or with the
+   * holder once `anchor` is gone.
+   */
+  private openMoveTo(rowId: string, anchor: HTMLElement, from: MovePickerFrom, onEscape?: () => void): void {
+    if (this.readOnly || this.destroyed) return;
+
+    this.movePicker?.picker.close();
+    // After the row menu's close, which hands focus back to its trigger.
+    queueMicrotask(() => {
+      if (this.destroyed || this.readOnly || this.model.getRow(rowId) === undefined) return;
+      const host = rowMoveHost(this.api);
+      const picker = openMovePicker({
+        i18n: this.api.i18n,
+        anchor,
+        context: anchor.isConnected ? anchor : this.block.holder,
+        from,
+        databases: () => this.moveTargets(),
+        pages: host?.config ?? null,
+        onDatabase: (databaseId) => { if (!this.readOnly && !this.destroyed) this.moveRowTo({ rowId, databaseId }); },
+        onPage: (pageId, title) => { if (!this.readOnly && !this.destroyed) void this.moveRowToPage({ rowId, pageId, title }); },
+        ...(onEscape === undefined ? {} : { onEscape }),
+      });
+
+      this.movePicker = { picker, rowId };
+    });
+  }
+
+  /**
+   * Move to a page (notion-motion.md Round 62 §1): the row becomes a plain page
+   * under `pageId`, made by the host's `create` with the row's body, and leaves
+   * the database in one undo step. Its properties are dropped, as in Notion.
+   * Its comment threads stay with the removed row: a plain page has no thread UI.
+   * Undo brings the row back here; the new page is left as it is.
+   */
+  async moveRowToPage(param: { rowId: string; pageId: string; title: string }): Promise<void> {
+    const { rowId, pageId, title } = param;
+
+    if (this.readOnly || this.destroyed) return;
+    if (this.source !== undefined) {
+      this.api.blocks.getById(this.source.databaseId)?.call('moveRowToPage', param);
+
+      return;
+    }
+    const host = rowMoveHost(this.api);
+    const row = this.model.getRow(rowId);
+
+    if (host === null || row === undefined || this.pageMoves.has(rowId)) return;
+    this.pageMoves.add(rowId);
+    try {
+      const [root, ...rest] = subtreeOf((await this.api.saver.save()).blocks, rowId);
+
+      if (root === undefined) return;
+      const comments = new Set<string>();
+
+      rest.forEach((block) => {
+        if (block.id !== undefined && (block.type === 'database-comment' || (block.parent !== undefined && comments.has(block.parent)))) comments.add(block.id);
+      });
+      const body = rest
+        .filter((block) => block.id === undefined || !comments.has(block.id))
+        .map((block) => {
+          if (block.parent !== rowId) return block;
+          const { parent: _parent, ...top } = block;
+
+          return top;
+        });
+      const rowData = root.data as DatabaseRowData;
+      const rowTitle = row.properties[this.titlePropertyId()];
+      const name = typeof rowTitle === 'string' ? rowTitle : '';
+      const document: OutputData = {
+        ...(name !== '' ? { title: name } : {}),
+        ...(typeof rowData.icon === 'string' && rowData.icon !== '' ? { icon: { type: 'emoji' as const, value: rowData.icon } } : {}),
+        ...(typeof rowData.cover === 'string' && rowData.cover !== ''
+          ? { cover: { type: 'image' as const, url: rowData.cover, ...(rowData.coverPosition !== undefined ? { position: rowData.coverPosition } : {}) } }
+          : {}),
+        blocks: body,
+      };
+      const made = await Promise.resolve(host.config.create?.({ pageId: generateBlockId(), title: name, document, parentId: pageId }))
+        .then(() => true, () => false);
+
+      // The save and the host were async: the row may be gone, or the database locked or closed.
+      if (!made || this.destroyed || this.readOnly || this.model.getRow(rowId) === undefined) return;
+      this.inOneStep(() => {
+        // The bodies live in the new page now: removing this copy must not delete their databases' rows.
+        body.forEach((block) => { if (block.id !== undefined) movedDatabases.add(block.id); });
+        // Only the row: a delete would take its sub-items, which the new page does not hold.
+        if (this.cardDrawer?.openRowId === rowId) this.cardDrawer.close();
+        this.pendingDescriptions.delete(rowId);
+        this.removeRowBlock(rowId);
+        void this.sync.syncDeleteRow({ rowId });
+      });
+      this.syncRowsFromBlocks();
+      this.rerenderView({ keepDrawer: true });
+      announce(this.api.i18n.t('tools.database.movedRowTo', { title: name === '' ? this.api.i18n.t('tools.database.relationUntitled') : name, target: title }));
+    } finally {
+      this.pageMoves.delete(rowId);
+    }
   }
 
   /** Move row blocks whole so their page children stay attached. */

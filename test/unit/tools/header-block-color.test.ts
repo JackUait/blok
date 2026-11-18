@@ -40,24 +40,8 @@ const createHeaderOptions = (
   block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
 });
 
-/**
- * Invoke the "Heading N" level entry exposed by renderSettings(), mirroring a
- * real user picking a different level from the block-settings menu. setLevel()
- * is private, so we route through the menu entry's onActivate just like the UI.
- */
 const activateLevel = (header: Header, level: number): void => {
-  const settings = header.renderSettings();
-  const items = (Array.isArray(settings) ? settings : [settings]) as Array<Record<string, unknown>>;
-
-  const entry = items.find(
-    s => (s.dataset as Record<string, string> | undefined)?.['blok-header-level'] === String(level)
-  );
-
-  if (!entry || typeof entry.onActivate !== 'function') {
-    throw new Error(`Level entry ${level} not found`);
-  }
-
-  (entry.onActivate as () => void)();
+  header.data = { ...header.data, level };
 };
 
 describe('Header Tool - block-level color survives level change', () => {

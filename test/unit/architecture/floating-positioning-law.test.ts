@@ -151,6 +151,8 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/rectangleSelection.ts': 'Selection rectangle converts pointer coordinates into its measured local overlay container.',
   'components/modules/toolbar/inline/toolbar-ghost.ts': 'Fading copy of the inline toolbar, placed once at the toolbar\'s measured spot beside its wrapper and removed within 400ms; it never tracks movement.',
   'components/modules/toolbar/index.ts': 'Editor-owned toolbar wrapper uses locally resolved offsets supplied by the toolbar positioner.',
+  'components/modules/toolbar/move-wire.ts': 'The Move to wire is an svg inside the picker popover, so it scrolls with it. It turns the block, panel and row rects into svg-local path points on each row change, spring frame and window resize, and is removed when the picker closes.',
+  'components/modules/toolbar/move-flight.ts': 'Not a floating surface: it reads a moved block\'s height once to fold the holder to zero in place, then puts the inline styles back.',
   'components/modules/toolbar/positioning.ts': 'Toolbar geometry is converted into offsets local to the editor-owned wrapper.',
   'components/utils/link-hover-card.ts': 'Fixed top-layer hover card continuously tracks its live anchor and viewport bounds.',
   'components/utils/notifier/draw.ts': 'Toast exit ghosts subtract the card rect from each part rect and write offsets inside the card; they fade out and are removed.',
@@ -172,6 +174,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/database-list-view.ts': 'The right-click menu point is placed once at the pointer inside the row, corrected for a transformed ancestor, and removed when the menu closes.',
   'tools/database/database-table-column-drag.ts': 'Fixed pointer-following table header ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-filter-chip.ts': 'The "Invalid date" message is placed once, left of the day field\'s rect, in viewport coordinates; any scroll, an edit, a redraw or the popover closing removes it.',
+  'tools/database/database-comment-mention-menu.ts': 'The "@" menu is placed from the comment box rect and the "@" x on open and on each redraw, in viewport coordinates; any scroll outside it, a blur, Escape or the box closing removes it.',
   'tools/database/database-panel.ts': 'A dragged panel list row follows the pointer in flow, offset from its own box read at drag start.',
   'tools/database/database-table-row-drag.ts': 'Fixed pointer-following table row ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-dashboard-editor.ts': 'Dashboard drop line, absolute inside the dashboard root, placed from row and widget rects on every drag pointer move and removed on drop or Escape.',
@@ -189,6 +192,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
 
 /** Dynamic property setters remain exact review points, never silent escapes. */
 const DYNAMIC_STYLE_ACCESS_CLASSIFICATIONS: Record<string, string> = {
+  'tools/database/database-comment-mention-menu.ts': 'A hidden copy of the comment textarea takes its text styles by name, to find where the "@" sits; it is removed at once.',
   'tools/file/pptx/renderer/TableRenderer.ts': 'Writes a pptx table cell border side picked by name (borderTop…borderLeft); never a coordinate.',
   'components/modules/collaboration/agent-marker-layer.ts': 'Writes --blok-presence-color on the holder-local agent outline and name flag; presence.css supplies their placement without root mounts or JS coordinates.',
   'components/marks/mark-engine.ts': 'Writes/strips the style properties a MarkSpec declares while applying, splitting and sanitizing marks.',
@@ -230,6 +234,7 @@ const CAPTURE_SCROLL_CLASSIFICATIONS: Record<string, string> = {
   'tools/file/preview-scroll-haze.ts': 'Capture-phase listener refreshes local file-preview scroll haze state.',
   'tools/table-of-contents/index.ts': 'Capture-phase listener marks which heading is being read as any scroller moves; the thumb sits at the row offset inside the nav, never at viewport coordinates.',
   'tools/database/database-filter-chip.ts': 'Capture-phase scroll listener dismisses the once-placed "Invalid date" message.',
+  'tools/database/database-comment-mention-menu.ts': 'Capture-phase scroll listener closes the "@" menu unless the scroll is its own list.',
   'tools/table/table-row-col-controls.ts': 'Capture-phase listener catches the full-screen table modal\'s own scroll (scroll does not bubble) and re-places the grips in its overlay, including a column grip held fixed at the header line.',
 };
 
@@ -246,6 +251,7 @@ const ROOT_SURFACE_CONTRACTS: Record<string, SurfaceContract> = {
   'tools/callout/emoji-picker/index.ts': 'tracked-manual',
   'tools/database/database-property-type-popover.ts': 'shared',
   'tools/database/database-filter-chip.ts': 'dismiss-on-scroll',
+  'tools/database/database-comment-mention-menu.ts': 'dismiss-on-scroll',
   'tools/image/alt-popover.ts': 'shared',
   'tools/page/hover-preview.ts': 'shared',
 };
@@ -281,12 +287,14 @@ const TRACKED_VIRTUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/cells/cell-popover.ts': 'A table cell editor covers its cell: the 1px-grown cell rect tracks the cell element.',
   'tools/database/cells/options-editor.ts': 'An option row\'s menu tracks the options list, which outlives the row it opened from when an edit redraws the list.',
   'tools/database/database-card-drawer.ts': 'The page ⋯ menu takes its button\'s rect, moved in to stay 12px from the window: the rect tracks the button.',
+  'tools/database/database-move-picker.ts': 'The Move to picker\'s corner (a right-click point, the row menu\'s corner or under an element) is read relative to the row it opened from and tracks it.',
   'tools/database/database-pinned-group-modal.ts': 'The pinned group modal\'s ⋯ menu is centred under its button: the centred rect tracks the button.',
   'tools/database/database-property-menu.ts': 'The type list takes the closed panel\'s corner rect, which then moves with the property anchor that opened the panel.',
   'tools/database/database-rollup-setup.ts': 'The rollup setup menu covers its cell 2px above the row: the corner rect tracks the cell element.',
   'tools/database/database-table-menus.ts': 'openMenu passes the caller\'s point and its live element through to the popover.',
   'tools/database/index.ts': 'A board or gallery card\'s ⋯ menu opens at the click point: the point tracks the card.',
   'tools/link/paste-menu/controller.ts': 'Link-end rectangles track the inserted link block holder while open.',
+  'tools/page/page-picker.ts': 'The `at` option passes the caller\'s corner and its live element through: the database Move to picker tracks the row it opened from.',
 };
 
 const DISMISSIBLE_VIRTUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {

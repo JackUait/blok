@@ -2036,6 +2036,10 @@
             }
           }
         },
+        "emoji": {
+          "type": "string",
+          "description": "An emoji before the title. A database keeps one of emoji and icon."
+        },
         "starter": {
           "type": "string",
           "enum": [
@@ -5487,6 +5491,65 @@
         "resolved": {
           "type": "boolean",
           "description": "Set on a resolved thread."
+        },
+        "mentions": {
+          "type": "array",
+          "description": "People, pages and dates mentioned in text, in text order. Each covers label at start; one whose label is no longer there is dropped.",
+          "items": {
+            "type": "object",
+            "required": [
+              "type",
+              "id",
+              "start",
+              "label"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "person",
+                  "page",
+                  "date"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "description": "A person id, a page id, or a day as YYYY-MM-DD."
+              },
+              "start": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Index into text, in UTF-16 code units."
+              },
+              "label": {
+                "type": "string",
+                "description": "The text the mention covers."
+              }
+            }
+          }
+        },
+        "attachments": {
+          "type": "array",
+          "description": "Files attached to the comment, as the host's uploader stored them.",
+          "items": {
+            "type": "object",
+            "required": [
+              "url",
+              "name"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "Where the file is stored."
+              },
+              "name": {
+                "type": "string",
+                "description": "The file name shown."
+              }
+            }
+          }
         }
       }
     },

@@ -71,6 +71,7 @@ describe('database panels (Filter, Sort, pickers)', () => {
     ['view settings (notion-motion.md "View settings": no entrance)', 'blok-database-docked-panel'],
     ['a table cell editor (notion-motion.md "Cell editors")', 'blok-database-table-cell-editor'],
     ['a row page value editor', 'blok-database-value-editor'],
+    ['a calendar card value editor (notion-motion.md Round 67 §3)', 'blok-database-point-editor'],
   ])('%s still opens at its final size and opacity', (_, cls) => {
     const at = `[data-blok-popover][data-blok-popover-custom-class~='${cls}']`;
     const ownRule = lastBody(outsideReducedMotion, `${at} > [data-blok-popover-container]`);

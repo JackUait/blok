@@ -1,5 +1,7 @@
 import type { API } from '../../../types';
 import type { DatabaseCommentData } from '../database-comment/types';
+import type { DatabaseCommentAttachment, DatabaseCommentMention } from '../../../types/tools/database-comment';
+import { keptAttachments, keptMentions } from '../../shared/database-comment-mentions';
 
 const COMMENT_TOOL = 'database-comment';
 
@@ -12,6 +14,13 @@ export interface StoredComment {
 /** A thread: its first comment and the replies under it. */
 export interface StoredThread extends StoredComment {
   replies: StoredComment[];
+}
+
+/** What the composer sends: the text and what it mentions. */
+export interface CommentDraft {
+  text: string;
+  mentions?: DatabaseCommentMention[];
+  attachments?: DatabaseCommentAttachment[];
 }
 
 /** Who writes a new comment: the host's current user, else the collaboration name, else nobody (shown as Anonymous). */
@@ -38,6 +47,16 @@ const commentsUnder = (api: CommentApi, parentId: string): StoredComment[] =>
 
     return data === undefined ? [] : [{ id: child.id, data }];
   });
+
+const draftOf = (draft: CommentDraft | string): CommentDraft => (typeof draft === 'string' ? { text: draft } : draft);
+
+/** Trims the text and shifts the mentions with it; a mention cut by the trim goes. */
+const settled = (draft: CommentDraft): { text: string; mentions: DatabaseCommentMention[] } => {
+  const lead = draft.text.length - draft.text.trimStart().length;
+  const text = draft.text.trim();
+
+  return { text, mentions: keptMentions(text, (draft.mentions ?? []).map((mention) => ({ ...mention, start: mention.start - lead }))) };
+};
 
 /**
  * Built-in comments: thread blocks under each row (design 18, option A).
@@ -72,20 +91,21 @@ export class BuiltInComments {
   }
 
   /** Starts a thread on the row, or on one of its cells. Returns its id. */
-  public add(rowId: string, text: string, propertyId?: string): string | undefined {
-    return this.insert(rowId, text, propertyId);
+  public add(rowId: string, draft: CommentDraft | string, propertyId?: string): string | undefined {
+    return this.insert(rowId, draftOf(draft), propertyId);
   }
 
-  public reply(threadId: string, text: string): string | undefined {
-    return this.insert(threadId, text, undefined);
+  public reply(threadId: string, draft: CommentDraft | string): string | undefined {
+    return this.insert(threadId, draftOf(draft), undefined);
   }
 
-  public edit(id: string, text: string): void {
-    const trimmed = text.trim();
+  public edit(id: string, draft: CommentDraft | string): void {
+    const { text, mentions } = settled(draftOf(draft));
     const data = readComment(this.api, id);
 
-    if (data === undefined || trimmed === '' || trimmed === data.text) return;
-    this.change(id, { text: trimmed, editedAt: this.now() });
+    if (data === undefined || text === '') return;
+    if (text === data.text && JSON.stringify(mentions) === JSON.stringify(keptMentions(data.text, data.mentions))) return;
+    this.change(id, { text, editedAt: this.now(), mentions });
   }
 
   public resolve(threadId: string, resolved: boolean): void {
@@ -105,15 +125,18 @@ export class BuiltInComments {
     });
   }
 
-  private insert(parentId: string, text: string, propertyId: string | undefined): string | undefined {
-    const trimmed = text.trim();
+  private insert(parentId: string, draft: CommentDraft, propertyId: string | undefined): string | undefined {
+    const { text, mentions } = settled(draft);
+    const attachments = keptAttachments(draft.attachments);
 
-    if (trimmed === '' || this.api.blocks.getById(parentId) === null) return undefined;
+    if (text === '' || this.api.blocks.getById(parentId) === null) return undefined;
     const data: DatabaseCommentData = {
-      text: trimmed,
+      text,
       createdAt: this.now(),
       ...this.author(),
       ...(propertyId === undefined ? {} : { propertyId }),
+      ...(mentions.length === 0 ? {} : { mentions }),
+      ...(attachments.length === 0 ? {} : { attachments }),
     };
     const box: { id?: string } = {};
 
@@ -125,7 +148,7 @@ export class BuiltInComments {
   }
 
   /** The tool takes the change and saves it as derived data: no undo step, redo kept. */
-  private change(id: string, param: { text?: string; editedAt?: number; resolved?: boolean }): void {
+  private change(id: string, param: { text?: string; editedAt?: number; resolved?: boolean; mentions?: DatabaseCommentMention[] }): void {
     const block = this.api.blocks.getById(id);
 
     if (block === null) return;

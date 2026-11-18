@@ -28,12 +28,7 @@ const settingsItems = (header: Header): MenuConfigItem[] => {
 };
 
 const activateLevel = (header: Header, level: number): void => {
-  const entry = settingsItems(header).find(candidate => 'dataset' in candidate && candidate.dataset?.['blok-header-level'] === String(level));
-
-  if (!entry || !('onActivate' in entry) || !entry.onActivate) {
-    throw new Error('Missing heading setting');
-  }
-  entry.onActivate(entry);
+  header.data = { ...header.data, level };
 };
 
 describe('Header settings controls', () => {
@@ -47,7 +42,7 @@ describe('Header settings controls', () => {
     document.body.replaceChildren();
   });
 
-  it('keeps the stored anchor and live text when changing level through settings', () => {
+  it('keeps the stored anchor and live text when the level changes', () => {
     const header = createHeader({ anchor: 'section-original', textColor: 'red', backgroundColor: 'blue' });
     const element = header.render();
 
@@ -65,58 +60,20 @@ describe('Header settings controls', () => {
     expect(document.body.querySelector('h3')?.id).toBe('section-original');
   });
 
-  it('exposes only configured levels as direct named controls with the current level selected', () => {
-    const header = createHeader({}, { levels: [1, 2, 4] });
-    const popover = new PopoverDesktop({ items: settingsItems(header) });
-
-    popovers.push(popover);
-    popover.show();
-    const controls = Array.from(popover.getElement().querySelectorAll<HTMLElement>('[role="menuitemradio"]'));
-
-    expect(controls.map(control => control.getAttribute('data-blok-header-level'))).toEqual(['1', '2', '4']);
-    expect(controls.map(control => control.textContent?.trim())).toEqual(['Heading 1', 'Heading 2', 'Heading 4']);
-    expect(controls.map(control => control.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false']);
-    document.body.append(header.render());
-    controls[2].click();
-    expect(header.save(document.body).level).toBe(4);
-  });
-
-  it.each([false, true])('separates configured heading levels from Color (toggleable: %s)', (isToggleable) => {
+  it.each([false, true])('shows Color alone, with no level controls (toggleable: %s)', (isToggleable) => {
     const header = createHeader({ isToggleable }, { levels: [1, 3, 6] });
     const popover = new PopoverDesktop({ items: settingsItems(header) });
 
     popovers.push(popover);
     popover.show();
-    const separators = popover.getElement().querySelectorAll('[role="separator"]');
+    const root = popover.getElement();
 
-    expect(separators).toHaveLength(1);
-    expect(separators[0].previousElementSibling?.getAttribute('data-blok-header-level')).toBe('6');
-    expect(separators[0].nextElementSibling?.getAttribute('data-blok-item-name')).toBe('block-color');
+    expect(root.querySelectorAll('[role="menuitemradio"]')).toHaveLength(0);
+    expect(root.querySelectorAll('[role="separator"]')).toHaveLength(0);
+    expect(Array.from(root.querySelectorAll('[data-blok-item-name]'), item => item.getAttribute('data-blok-item-name'))).toEqual(['block-color']);
   });
 
-  it('keeps level settings searchable without falling back to block conversion', () => {
-    const header = createHeader({ anchor: 'search-anchor' });
-
-    document.body.append(header.render());
-    const popover = new PopoverDesktop({ items: settingsItems(header), searchable: true });
-
-    popovers.push(popover);
-    popover.show();
-    const input = popover.getElement().querySelector('input');
-
-    if (!input) {
-      throw new Error('Missing settings search');
-    }
-    input.value = 'Heading 3';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    const level = popover.getElement().querySelector<HTMLElement>('[data-blok-header-level="3"]');
-
-    expect(level?.closest('[data-blok-hidden="true"]')).toBeNull();
-    level?.click();
-    expect(header.save(document.body)).toEqual({ text: 'Section', level: 3, anchor: 'search-anchor' });
-  });
-
-  it('retains collapsed toggle state and children while using a direct level control', () => {
+  it('retains collapsed toggle state and children when the level changes', () => {
     const header = createHeader({ isToggleable: true, anchor: 'toggle-anchor' });
     const wrapper = header.render();
     const children = wrapper.querySelector('[data-blok-nested-blocks]');

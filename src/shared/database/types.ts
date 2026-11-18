@@ -1101,6 +1101,8 @@ export interface DatabaseData extends BlockToolData {
   description?: string;
   /** The icon before the title. */
   icon?: DatabaseIcon;
+  /** An emoji before the title, picked with Edit icon. A database keeps one of `emoji` and `icon`. */
+  emoji?: string;
   /** The Suggested template this database was made from. Removed by "Undo … database". */
   starter?: DatabaseStarterId;
   /**

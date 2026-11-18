@@ -335,8 +335,10 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
     await quiet();
 
     expect([(await saved('r1'))?.properties?.notes, (await saved('r2'))?.properties?.notes]).toEqual(['same', 'same']);
+    // notion-motion.md Round 65 §2: a table or list undo brings back the rows the edit was made with. A board's is unmeasured.
+    expect(picked(rowSelector)).toBe(!isBoard(rowSelector));
+    if (isBoard(rowSelector)) await selectRows(rowSelector, 'r1', 'r2');
 
-    await selectRows(rowSelector, 'r1', 'r2');
     await openBulk(rowSelector, 's');
     const search = document.querySelector<HTMLInputElement>('[data-blok-database-cell-editor] input');
 

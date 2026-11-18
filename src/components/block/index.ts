@@ -1152,8 +1152,13 @@ export class Block extends EventsDispatcher<BlockEvents> {
     return this.askTool('isDataReadOnly');
   }
 
+  /** The tool's lock (BlockTool.isLocked). */
+  public get toolLocked(): boolean {
+    return this.askTool('isLocked');
+  }
+
   /** A missing answer is false, a throw is true. */
-  private askTool(method: 'isReadOnly' | 'isDataReadOnly'): boolean {
+  private askTool(method: 'isReadOnly' | 'isDataReadOnly' | 'isLocked'): boolean {
     const answer = this.toolInstance[method];
 
     if (!isFunction(answer)) {

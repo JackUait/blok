@@ -362,4 +362,40 @@ describe('the database block menu in core', () => {
     expect(block(instance, 'r1').parentId).toBe('db');
     expect(removed).not.toHaveBeenCalled();
   });
+
+  // notion-motion.md Round 67 §1: a locked database's menu keeps only the open rows and Copy link.
+  it('a locked database leaves out Edit icon, Lock, Rename, Merge, Duplicate, Move to and Move to Trash', async () => {
+    const locked = databaseBlocks('db', ['r1']);
+
+    locked[0].data = { ...locked[0].data, schema: [{ ...schema[0], databaseLocked: true }] };
+    const instance = await boot([...locked, ...databaseBlocks('other', ['o1'])]);
+    const order = names(await openMenu(instance, 'db'));
+
+    ['database-edit-icon', 'database-lock', 'database-rename', 'database-merge-csv', 'duplicate', 'move-to', 'delete']
+      .forEach((name) => expect(order).not.toContain(name));
+    expect(order).toEqual(expect.arrayContaining(['database-open-as-page', 'database-open-in-new-tab', 'copy-link']));
+  });
+
+  it('an unlocked database keeps them', async () => {
+    const instance = await boot([...databaseBlocks('db', ['r1']), ...databaseBlocks('other', ['o1'])]);
+    const order = names(await openMenu(instance, 'db'));
+
+    expect(order).toEqual(expect.arrayContaining(['database-edit-icon', 'database-lock', 'database-rename', 'duplicate', 'move-to', 'delete']));
+  });
+
+  // notion-motion.md Round 67 §2: Notion keeps the database selected while its trash dialog is open.
+  it('keeps the database selected while the menu\'s trash dialog is open', async () => {
+    const instance = await boot(databaseBlocks('db', ['r1']));
+
+    // As after ↑ or a click: the selected database is the current block.
+    instance.moduleInstances.BlockManager.currentBlock = block(instance, 'db');
+    instance.moduleInstances.BlockSelection.selectBlock(block(instance, 'db'));
+    (await openMenu(instance, 'db')).find((row) => row.getAttribute('data-blok-item-name') === 'delete')?.click();
+    await vi.waitFor(() => {
+      if (document.querySelector('[data-blok-database-confirm-action="confirm"]') === null) throw new Error('no dialog');
+    });
+    await quiet();
+
+    expect(block(instance, 'db').selected).toBe(true);
+  });
 });

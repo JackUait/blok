@@ -2746,6 +2746,11 @@ export class DatabaseTool implements BlockTool {
     void this.sync.syncDeleteRow({ rowId });
   }
 
+  /** The user's lock: core's block menu then leaves out Duplicate, Move to and Move to Trash. */
+  public isLocked(): boolean {
+    return !this.linked && this.model.isDatabaseLocked();
+  }
+
   /**
    * The ⋮⋮ menu: Notion's database rows that Blok backs, in Notion's groups
    * (notion-motion.md Round 64 §4). Core adds Copy link, Duplicate, Move to and Delete.
@@ -2754,14 +2759,16 @@ export class DatabaseTool implements BlockTool {
   public renderSettings(): MenuConfigItem[] {
     if (this.readOnly || this.fullPage || this.insideDatabase()) return [];
     const t = (key: string): string => this.api.i18n.t(`tools.database.${key}`);
-    const turnIntoPage: MenuConfigItem[] = this.linked || databasePageHost(this.api) === null ? [] : [{
+    // A locked database's menu has no Turn into page, Edit icon, Lock or Rename (notion-motion.md Round 67 §1).
+    const locked = this.isLocked();
+    const turnIntoPage: MenuConfigItem[] = locked || this.linked || databasePageHost(this.api) === null ? [] : [{
       icon: IconReplace,
       title: t('turnIntoPage'),
       name: 'database-turn-into-page',
       closeOnActivate: true,
       onActivate: (): void => void this.turnIntoPage(),
     }];
-    const editIcon: MenuConfigItem[] = !this.titleEditable() || this.dataSourceTitlesHidden ? [] : [{
+    const editIcon: MenuConfigItem[] = locked || !this.titleEditable() || this.dataSourceTitlesHidden ? [] : [{
       icon: IconEmojiSmile,
       title: this.api.i18n.t('tools.database.tableEditIcon'),
       name: 'database-edit-icon',
@@ -2769,14 +2776,14 @@ export class DatabaseTool implements BlockTool {
       onActivate: (): void => this.openIconPicker(),
     }];
     // No closeOnActivate: core keeps the menu open and the block selected, as for a switch.
-    const lock: MenuConfigItem[] = this.structureDenied ? [] : [{
+    const lock: MenuConfigItem[] = locked || this.structureDenied ? [] : [{
       icon: IconLock,
       title: t(this.linked ? 'settingsLockViews' : 'settingsLockDatabase'),
       name: 'database-lock',
       isActive: (): boolean => this.structureLocked(),
       onActivate: (): void => this.setDatabaseLocked(!this.structureLocked()),
     }];
-    const rename: MenuConfigItem[] = !this.titleEditable() || this.dataSourceTitlesHidden ? [] : [{
+    const rename: MenuConfigItem[] = locked || !this.titleEditable() || this.dataSourceTitlesHidden ? [] : [{
       icon: IconPencil,
       title: t('renameView'),
       name: 'database-rename',

@@ -220,6 +220,14 @@ export interface BlockTool extends BaseTool {
    * `api.blocks` calls still write. A throw counts as true.
    */
   isDataReadOnly?(): boolean;
+
+  /**
+   * True while the user has locked this block, like a locked database. Its
+   * block menu then leaves out Duplicate, Move to and Delete; Copy link and
+   * the tool's own items stay. Asked each time the menu opens. A throw
+   * counts as true.
+   */
+  isLocked?(): boolean;
 }
 
 /**

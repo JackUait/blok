@@ -153,16 +153,18 @@ describe('the database block menu', () => {
   it('Merge with CSV leaves a locked database, and a lock set from the open menu stops it', async () => {
     const instance = await boot();
     const merge = item(instance, 'database-merge-csv');
+    // The open menu's switch: a locked menu has no Lock row (Round 67 §1).
+    const lock = item(instance, 'database-lock');
     const dialog = (): Element | null => document.querySelector('[data-blok-testid="database-csv-import-dialog"]');
 
-    item(instance, 'database-lock').onActivate?.();
+    lock.onActivate?.();
     await settle();
 
     expect(layout(toolItems(instance))).not.toContain('database-merge-csv');
     merge.onActivate?.();
     expect(dialog()).toBeNull();
 
-    item(instance, 'database-lock').onActivate?.();
+    lock.onActivate?.();
     await settle();
     merge.onActivate?.();
     expect(dialog()).not.toBeNull();

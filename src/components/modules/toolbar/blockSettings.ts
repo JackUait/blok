@@ -594,6 +594,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       // Returns the delete's promise, like the tune, so the Trash toast can wait for it.
       onActivate: (item: PopoverItemParams, event?: PointerEvent): Promise<void> => {
         this.Blok.Toolbar.close();
+        // Closing the menu unselected it; Notion keeps it selected through the question.
+        this.Blok.BlockSelection.selectBlock(block);
 
         return askBeforeDelete(this.Blok, block, [block]).then(async (confirmed) => {
           if (!confirmed || this.Blok.BlockManager.getBlockById(block.id) === undefined) {
@@ -916,7 +918,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         : tune)
       : commonTunes;
 
-    const moveToItem = this.createMoveToItem(hasMultipleBlocksSelected ? selectionRoots(selectedBlocks) : [currentBlock]);
+    // A locked block keeps Copy link and its own items, as Notion's locked database (notion-motion.md Round 67 §1).
+    const locked = !hasMultipleBlocksSelected && currentBlock.toolLocked;
+    const moveToItem = locked ? null : this.createMoveToItem(hasMultipleBlocksSelected ? selectionRoots(selectedBlocks) : [currentBlock]);
     const moveTo = moveToItem === null ? [] : [moveToItem];
 
     // Keep custom actions in registration order, with deletion isolated last.
@@ -925,7 +929,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         (tune) => 'name' in tune && tune.name === 'delete'
       );
 
-      if (deleteIndex === -1) {
+      if (locked) {
+        items.push(...actionTunes.filter((_tune, index) => index !== deleteIndex));
+      } else if (deleteIndex === -1) {
         items.push(...actionTunes);
       } else if (blockMenu?.trash === true) {
         // Trashing is an ordinary action beside Duplicate, as in Notion's page menu.

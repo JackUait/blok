@@ -325,6 +325,8 @@ const HIDDEN_IN_KEYS: Partial<Record<ViewType, string>> = {
 };
 
 const DATE_LIKE_TYPES: readonly PropertyType[] = ['date', 'createdTime', 'lastEditedTime'];
+/** notion-motion.md Round 75 §2: types whose new colour rule starts "is not empty" with nothing focused. */
+const BLUR_AFTER_NEW_COLOR_RULE: ReadonlySet<PropertyType> = new Set<PropertyType>(['text', 'number', 'select', 'date']);
 
 /** A picker's search text, kept across page redraws. */
 interface QueryState {
@@ -3535,8 +3537,13 @@ export class ViewSettingsPages {
             write([...rules(), { id, propertyId: property.id, ...newColorRule(property, this.ctx.storedType?.(property.id)) }]);
             panel.refresh();
 
-            // notion-motion.md Round 74 §4: a new Rollup rule focuses its value input. Other types are unmeasured and keep Add another.
-            return this.ctx.storedType?.(property.id) === 'rollup' ? panel.root.querySelector<HTMLInputElement>(`input[data-blok-testid="${CSS.escape(`database-color-value-${id}`)}"]`) : null;
+            const stored = this.ctx.storedType?.(property.id) ?? property.type;
+
+            // notion-motion.md Round 74 §4: a new Rollup rule focuses its value input.
+            if (stored === 'rollup') return panel.root.querySelector<HTMLInputElement>(`input[data-blok-testid="${CSS.escape(`database-color-value-${id}`)}"]`);
+
+            // notion-motion.md Round 75 §2: a new Text, Number, Select or Date rule leaves nothing focused. Other types are unmeasured and keep Add another.
+            return BLUR_AFTER_NEW_COLOR_RULE.has(stored) ? false : null;
           })), { gap: COLOR_PROPERTY_FLYOUT_GAP, flip: true }),
         }), cards.length === 0 ? 'data-blok-database-color-new' : 'data-blok-database-color-add-another');
 

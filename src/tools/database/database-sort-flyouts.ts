@@ -30,7 +30,7 @@ export const openFlyout = (
   host: DatabasePanel,
   testId: string,
   width: number,
-  rows: (pick: (write: () => HTMLElement | null | undefined | void) => void) => HTMLElement[],
+  rows: (pick: (write: () => HTMLElement | false | null | undefined | void) => void) => HTMLElement[],
   place: { beside?: number; aside?: { side: 'left' | 'right'; gap: number; flip?: boolean }; fit?: boolean; gap?: number; flip?: boolean; alignEnd?: boolean; escapeFocus?: () => HTMLElement | null | undefined } = {}
 ): DatabasePanel => {
   const release = host.hold();
@@ -44,9 +44,14 @@ export const openFlyout = (
       ...(place.fit === true ? { fitContent: true } : {}),
       build: () => rows((write) => {
         flyout.close();
-        // A write may name the control that takes the focus next; otherwise it goes back to the anchor.
+        // A write may name the control that takes the focus next, or false for none; otherwise it goes back to the anchor.
         const next = write();
 
+        if (next === false) {
+          if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+
+          return;
+        }
         (next ?? host.root.querySelector<HTMLElement>(`[data-blok-testid="${CSS.escape(focusKey)}"]`))?.focus();
       }),
     },

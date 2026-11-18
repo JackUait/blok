@@ -2689,6 +2689,16 @@ describe('view settings panel', () => {
       expect(add(h, 'txt')).toMatchObject({ operator: 'is_not_empty', value: null });
     });
 
+    // notion-motion.md Round 75 §2 (r75-n-ccfocus.raw): a new "is not empty" Text, Number, Select or Date rule leaves nothing focused, 4/4.
+    it.each(['txt', 'num', 'stage', 'due'])('leaves nothing focused after a new %s rule', (id) => {
+      const h = open();
+
+      add(h, id);
+
+      expect(document.activeElement).toBe(document.body);
+      expect(q('database-color-add')).not.toHaveFocus();
+    });
+
     // notion-motion.md Round 22 §3: a Number formula starts on "=" with its input. The panel gets it as its result type.
     it('starts a Number formula on "=", and a plain Number on "is not empty"', () => {
       const h = open();

@@ -747,7 +747,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
   /**
    * findings C07: a new bar's title is typed in the bar. Enter keeps the bar
-   * selected; Escape keeps the name and leaves nothing selected.
+   * selected; Escape keeps the name and leaves nothing selected, unless the
+   * name is empty (notion-motion.md Round 71 §3).
    */
   editTitle(rowId: string): void {
     const barEl = this.rowsOf('[data-blok-database-timeline-bar]').find((el) => el.getAttribute('data-row-id') === rowId);
@@ -782,7 +783,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         if (title !== original) {
           this.options.handlers?.renameRow?.(rowId, title);
         }
-        if (!escaped.value) {
+        if (!escaped.value || title === '') {
           this.options.handlers?.pickRow?.(rowId, false);
         }
       },

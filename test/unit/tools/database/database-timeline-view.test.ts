@@ -1171,6 +1171,21 @@ describe('DatabaseTimelineView', () => {
       expect(pickRow).toHaveBeenCalledTimes(1);
     });
 
+    // notion-motion.md Round 71 §3 "Escape on an empty draft": Notion keeps the untitled row and selects it.
+    it('selects a new bar left unnamed by Escape', () => {
+      const renameRow = vi.fn();
+      const pickRow = vi.fn();
+      const { root, view } = mount({ groups: single([row('r1', '', '2026-10-12')]), handlers: { ...makeHandlers(), renameRow, pickRow } });
+
+      view.editTitle('r1');
+      const input = bar(root, 'r1').querySelector('input');
+
+      if (input === null) throw new Error('no input');
+      key(input, 'Escape');
+      expect(pickRow).toHaveBeenCalledWith('r1', false);
+      expect(renameRow).not.toHaveBeenCalled();
+    });
+
     // notion-motion.md Round 50 §5: a row with no bar is named in a box over its panel title.
     it('names a new undated row over its panel title', () => {
       const renameRow = vi.fn();

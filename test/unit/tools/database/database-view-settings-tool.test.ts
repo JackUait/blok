@@ -412,6 +412,71 @@ describe('DatabaseTool — view settings', () => {
     expect(q('database-toolbar-locked')?.hidden).toBe(false);
   });
 
+  // notion-motion.md Round 68 §1: "Unlock for me" unlocks for this viewer only; "Re-lock" locks again.
+  describe('Locked button', () => {
+    const lockedSchema = (): PropertyDefinition[] => schema.map((p) => (p.type === 'title' ? { ...p, databaseLocked: true } : p));
+    const menuItem = (name: string): HTMLElement | null => document.querySelector(`[data-blok-popover-opened] [data-blok-item-name="${name}"]`);
+    const unlockForMe = (): void => {
+      click('database-toolbar-locked');
+      const item = menuItem('database-unlock-for-me');
+
+      if (item === null) throw new Error('no Unlock for me');
+      item.click();
+    };
+
+    it('unlocks for this viewer without saving it, and Re-lock locks again', () => {
+      const { tool, root } = mount({}, {}, { schema: lockedSchema() });
+
+      unlockForMe();
+
+      expect(tool.isLocked()).toBe(false);
+      expect(tool.save(root).schema.find((p) => p.type === 'title')?.databaseLocked).toBe(true);
+      tool.renameView('v1', 'Renamed');
+      expect(tool.save(root).views.map((v) => v.name)).toEqual(['Renamed']);
+      expect(q('database-toolbar-locked')?.hasAttribute('data-blok-database-relock')).toBe(true);
+
+      click('database-toolbar-locked');
+
+      expect(tool.isLocked()).toBe(true);
+      expect(q('database-toolbar-locked')?.hasAttribute('data-blok-database-relock')).toBe(false);
+      tool.renameView('v1', 'Again');
+      expect(tool.save(root).views.map((v) => v.name)).toEqual(['Renamed']);
+    });
+
+    it('gives back the full block menu with Lock database off while unlocked for this viewer, and Lock database locks again', () => {
+      const { tool, root } = mount({}, {}, { schema: lockedSchema() });
+
+      unlockForMe();
+      const lock = tool.renderSettings().find((item) => 'name' in item && item.name === 'database-lock');
+
+      if (lock === undefined || !('onActivate' in lock) || lock.onActivate === undefined) throw new Error('no Lock database');
+      expect('isActive' in lock && typeof lock.isActive === 'function' ? lock.isActive() : undefined).toBe(false);
+      lock.onActivate(lock, undefined);
+
+      expect(tool.isLocked()).toBe(true);
+      expect(tool.save(root).schema.find((p) => p.type === 'title')?.databaseLocked).toBe(true);
+      expect(q('database-toolbar-locked')?.hasAttribute('data-blok-database-relock')).toBe(false);
+    });
+
+    it('unlocks for everyone from Unlock for everyone', () => {
+      const { tool, root } = mount({}, {}, { schema: lockedSchema() });
+
+      click('database-toolbar-locked');
+      menuItem('database-unlock-for-everyone')?.click();
+
+      expect(tool.save(root).schema.find((p) => p.type === 'title')?.databaseLocked).toBeUndefined();
+      expect(q('database-toolbar-locked')?.hidden).toBe(true);
+    });
+
+    it('offers no unlock when the host denies structure edits', () => {
+      mount({}, { permissions: { can: (action) => action !== 'editStructure' } }, { schema: lockedSchema() });
+
+      click('database-toolbar-locked');
+
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    });
+  });
+
   it('offers no new option in a locked table, so no cell can point at an option that was never saved', () => {
     const { root } = mount({}, {}, { schema: schema.map((p) => (p.type === 'title' ? { ...p, databaseLocked: true } : p)) });
 

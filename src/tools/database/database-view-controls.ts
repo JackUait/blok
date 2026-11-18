@@ -1,6 +1,6 @@
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { nanoid } from 'nanoid';
-import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand, IconArrowUp, IconCross, IconChevronDoubleRight, IconPageLayout, IconExpandDiagonal } from '../../components/icons';
+import { IconSearch, IconSliders, IconLock, IconLockOpen, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand, IconArrowUp, IconCross, IconChevronDoubleRight, IconPageLayout, IconExpandDiagonal } from '../../components/icons';
 import { openDatabaseConfirm } from './database-confirm-dialog';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { propertyGlyph } from './database-property-types';
@@ -17,7 +17,9 @@ import { openAdvancedFilter, openViewSettings } from './database-view-settings-p
 import { chipPart, filterChip, openFilterChip } from './database-filter-chip';
 import { SORTABLE_TYPES, propertyPicker, sortEditor } from './database-sort-panel';
 import { clearSearchMatches, paintSearchMatches } from './database-search-highlight';
-import { onHover } from '../../components/utils/tooltip';
+import { offHover, onHover } from '../../components/utils/tooltip';
+import { openMenu } from './database-table-menus';
+import type { PopoverDesktop } from '../../components/utils/popover';
 import type { AutofillPanelSettings, DataSourceSettings, EditPropertiesSettings, PersonalWriteOptions, StarterRow, StructureSettings, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
 import { sortFromHeader } from './view-data';
 import type { ViewChanges } from './database-model';
@@ -69,6 +71,8 @@ export interface ViewControlsHost {
   history?: () => Pick<History, 'track'> | undefined;
   setLayout: (type: ViewType) => void;
   setLocked: (locked: boolean) => void;
+  /** The "Locked" button's unlocks. Without it the button offers no menu. */
+  lock?: LockLevers;
   /** A linked view: its lock reads "Lock views". */
   linked?: () => boolean;
   /** The block's "Show data source titles" (Layout page). */
@@ -112,6 +116,14 @@ export interface ViewControlsHost {
   previewForm?: () => void;
   /** ⤢ "Open as full page": undefined hides it. */
   openFullPage?: () => (() => void) | undefined;
+}
+
+/** "Unlock for me" lifts the saved lock for this viewer only; it is never saved. */
+export interface LockLevers {
+  unlockedForMe: () => boolean;
+  setUnlockedForMe: (on: boolean) => void;
+  /** False: the button only says it is locked. */
+  canUnlock: () => boolean;
 }
 
 /**
@@ -210,7 +222,10 @@ export class DatabaseViewControls {
   private readonly settingsButton: HTMLButtonElement;
   /** Notion's ⤢ is a link (notion-motion.md Round 15 B), with no href: it opens in place. */
   private readonly fullPageLink: HTMLAnchorElement;
-  private readonly lockBadge: HTMLElement;
+  /** notion-motion.md Round 68 §1: "Locked" with its unlock menu, or "Re-lock" once unlocked for this viewer. */
+  private readonly lockBadge: HTMLButtonElement;
+  private readonly lockText: HTMLElement;
+  private lockMenu: PopoverDesktop | null = null;
   private readonly shareFormButton: HTMLButtonElement;
   private readonly previewFormButton: HTMLButtonElement;
   private newSplit: HTMLElement | null = null;
@@ -254,12 +269,12 @@ export class DatabaseViewControls {
     // The fold probes write here on every resize (database-view-bar-fold.ts); they are not edits.
     this.toolbar.setAttribute(DATA_ATTR.mutationFree, 'true');
 
-    this.lockBadge = document.createElement('span');
+    this.lockBadge = document.createElement('button');
+    this.lockBadge.type = 'button';
     this.lockBadge.setAttribute('data-blok-database-lock-badge', '');
     this.lockBadge.setAttribute('data-blok-testid', 'database-toolbar-locked');
-    this.lockBadge.setAttribute('role', 'img');
-    this.lockBadge.setAttribute('aria-label', this.t('lockedLabel'));
-    this.lockBadge.innerHTML = IconLock;
+    this.lockText = document.createElement('span');
+    this.lockBadge.addEventListener('click', () => this.lockClicked());
 
     this.filterButton = iconButton('database-toolbar-filter', this.t('settingsFilter'), IconFilter);
     this.noDateButton = button('database-toolbar-no-date', '', {});
@@ -354,7 +369,8 @@ export class DatabaseViewControls {
     this.previewFormButton = button('database-toolbar-preview-form', previewLabel, { icon: IconPreview, text: previewLabel });
     this.previewFormButton.setAttribute('data-blok-database-toolbar-preview-form', '');
     this.previewFormButton.addEventListener('click', () => this.host.previewForm?.());
-    this.toolbar.append(this.lockBadge, this.minimizeButton, this.noDateButton, this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton, this.expandButton, this.fullPageLink, this.settingsButton, this.previewFormButton, this.shareFormButton);
+    // notion-motion.md Round 68 §1 (r68-n-unlockforme.raw): Minimize, then Re-lock, then Filter.
+    this.toolbar.append(this.minimizeButton, this.noDateButton, this.lockBadge, this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton, this.expandButton, this.fullPageLink, this.settingsButton, this.previewFormButton, this.shareFormButton);
     if (host.newRow !== undefined) {
       this.newSplit = this.newSplitButton(host.newRow, host.openNewMenu);
       this.toolbar.append(this.newSplit);
@@ -444,6 +460,92 @@ export class DatabaseViewControls {
     this.refresh();
   }
 
+  private syncLock(): void {
+    const relock = !this.host.locked() && this.host.lock?.unlockedForMe() === true;
+    const unlocks = this.unlockItems();
+
+    this.lockBadge.hidden = !this.host.locked() && !relock;
+    this.lockBadge.toggleAttribute('data-blok-database-relock', relock);
+    this.lockBadge.innerHTML = relock ? IconLockOpen : IconLock;
+    this.lockText.textContent = this.t(relock ? 'relockButton' : 'lockedButton');
+    this.lockBadge.append(this.lockText);
+    if (relock || unlocks.length === 0) {
+      this.lockBadge.removeAttribute('aria-haspopup');
+    } else {
+      this.lockBadge.setAttribute('aria-haspopup', 'menu');
+    }
+    // Notion's hint names who locked it; Blok keeps no lock owner, so it names no one. Re-lock's hint is unmeasured.
+    if (relock) {
+      offHover(this.lockBadge);
+    } else {
+      onHover(this.lockBadge, unlocks.length === 0 ? this.t('lockedLabel') : this.lockHint(), { placement: 'top', gap: 6 });
+    }
+  }
+
+  /** Two lines in the tooltip's own ink: Notion's per-line inks are unmeasured. */
+  private lockHint(): HTMLElement {
+    const hint = document.createElement('div');
+
+    for (const key of ['lockedHint', 'lockedHintAction']) {
+      const line = document.createElement('div');
+
+      line.textContent = this.t(key);
+      hint.append(line);
+    }
+
+    return hint;
+  }
+
+  private unlockItems(): PopoverItemParams[] {
+    const lock = this.host.lock;
+
+    if (lock?.canUnlock() !== true) return [];
+
+    return [{
+      name: 'database-unlock-for-me',
+      title: this.t('unlockForMe'),
+      icon: IconLockOpen,
+      closeOnActivate: true,
+      onActivate: () => {
+        lock.setUnlockedForMe(true);
+        this.refresh();
+      },
+    }, {
+      name: 'database-unlock-for-everyone',
+      title: this.t('unlockForEveryone'),
+      icon: IconLockOpen,
+      closeOnActivate: true,
+      onActivate: () => {
+        this.host.setLocked(false);
+        this.refresh();
+      },
+    }];
+  }
+
+  private lockClicked(): void {
+    if (!this.host.locked()) {
+      this.host.lock?.setUnlockedForMe(false);
+      this.refresh();
+
+      return;
+    }
+    const items = this.unlockItems();
+
+    if (items.length === 0) return;
+    if (this.lockMenu !== null) {
+      this.lockMenu.hide();
+
+      return;
+    }
+    // notion-motion.md Round 68 §1: 181.5 wide under the button, no gap; the first row is filled on open.
+    const menu = openMenu(this.lockBadge, items, { kind: 'header', offset: 0, minWidth: '0px', onClose: () => {
+      this.lockMenu = null;
+    } });
+
+    this.lockMenu = menu;
+    menu.focusItemByName('database-unlock-for-me');
+  }
+
   /** Shows ⤢ only where it can open. Touches the toolbar alone: a filter bar redraw is a block change. */
   syncFullPage(): void {
     this.fullPageLink.hidden = this.host.openFullPage?.() === undefined;
@@ -463,7 +565,7 @@ export class DatabaseViewControls {
     }
     const view = this.effective(saved);
 
-    this.lockBadge.hidden = !this.host.locked();
+    this.syncLock();
     this.syncFullPage();
     this.shareFormButton.hidden = this.host.shareForm === undefined || saved.type !== 'form' || this.host.locked();
     this.previewFormButton.hidden = this.host.previewForm === undefined || this.shareFormButton.hidden;
@@ -547,6 +649,8 @@ export class DatabaseViewControls {
     this.expandTimer = null;
     this.panel?.close();
     this.panel = null;
+    this.lockMenu?.hide();
+    this.lockMenu = null;
     this.matchObserver?.disconnect();
     this.matchObserver = null;
     clearSearchMatches(this);

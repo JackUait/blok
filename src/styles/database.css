@@ -12269,8 +12269,7 @@ button[data-blok-database-table-group-count]:hover {
 }
 
 [data-blok-database-view-toolbar] > button,
-[data-blok-database-view-toolbar] > [data-blok-database-toolbar-full-page],
-[data-blok-database-lock-badge] {
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-full-page] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -12280,7 +12279,7 @@ button[data-blok-database-table-group-count]:hover {
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  /* The lock badge: secondary ink. Icon buttons take Notion's icon gray below. */
+  /* Text buttons: secondary ink. Icon buttons take Notion's icon gray below. */
   color: var(--blok-database-ink-secondary);
   font-size: 14px;
   cursor: pointer;
@@ -12330,14 +12329,38 @@ button[data-blok-database-table-group-count]:hover {
   color: var(--blok-icon-active-text);
 }
 
-[data-blok-database-view-toolbar] svg,
-[data-blok-database-lock-badge] svg {
+[data-blok-database-view-toolbar] svg {
   width: 16px;
   height: 16px;
 }
 
-[data-blok-database-lock-badge] {
-  cursor: default;
+/* notion-motion.md Round 68 §1: "Locked", a text button with its unlock menu. Text keeps Blok's AA ink. */
+[data-blok-database-view-toolbar] > [data-blok-database-lock-badge] {
+  height: 24px;
+  padding: 0 var(--blok-space-1-5);
+  gap: var(--blok-space-1);
+  border-radius: var(--blok-radius-control-sm);
+  transition: background-color 0.02s ease-in;
+}
+
+[data-blok-database-view-toolbar] > [data-blok-database-lock-badge] svg {
+  width: 20px;
+  height: 20px;
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-view-toolbar] > [data-blok-database-lock-badge]:hover,
+[data-blok-database-view-toolbar] > [data-blok-database-lock-badge][data-popover-open] {
+  background-color: var(--blok-database-hover-bg);
+}
+
+/* Notion's Re-lock is rgb(39,131,222); Blok's link blue keeps the text at AA. */
+[data-blok-database-view-toolbar] > [data-blok-database-lock-badge][data-blok-database-relock] {
+  color: var(--blok-link);
+}
+
+[data-blok-database-view-toolbar] > [data-blok-database-lock-badge][data-blok-database-relock] svg {
+  color: inherit;
 }
 
 /* Notion's ⤢ points up-right and down-left (notion-motion.md Round 15 B); IconExpandDiagonal points the other way. */

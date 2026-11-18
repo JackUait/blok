@@ -460,6 +460,8 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/database-title-edit': exempt('chrome', 'Puts the caret in the database title; the title edit itself is ui-file:src/tools/database/index.ts (block.update).'),
   'menu:database/database-title-edit-layout': cmds(['database.updateProperty'], PAGE_LAYOUT),
   'menu:database/database-lock': cmds(['database.setLock'], 'The block menu\'s Lock database switch, the same write as the view settings panel\'s.'),
+  'menu:database/database-unlock-for-everyone': cmds(['database.setLock'], 'The Locked button\'s Unlock for everyone: the same write as the Lock database switch turned off.'),
+  'menu:database/database-unlock-for-me': exempt('view-only', 'The Locked button\'s Unlock for me lifts the lock for this viewer only; it is never saved, so the document does not change.'),
   'menu:database/database-rename': exempt('chrome', 'Puts the caret in the database title, as menu:database/database-title-edit does.'),
   'menu:database/database-merge-csv': cmds(['database.addRow'], 'Opens the CSV merge dialog; an agent adds the rows itself.'),
   'menu:database/database-open-in-new-tab': exempt('view-only', 'Opens the database\'s full-page link in a new browser tab; the document does not change.'),

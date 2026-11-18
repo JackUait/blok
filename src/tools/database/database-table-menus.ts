@@ -221,6 +221,8 @@ export interface OpenMenuOptions {
   viewportMargin?: number;
   /** The gap to the anchor, instead of the kind's own. */
   offset?: number;
+  /** The least width, instead of the kind's own. */
+  minWidth?: string;
   /** The menu's end edge on the anchor's end edge. */
   alignEnd?: boolean;
   /** A card menu that does not fit below opens above, its bottom this far over the anchor's top, when it fits there. */
@@ -271,7 +273,7 @@ export const openMenu = (
     trigger: anchor,
     items,
     width: 'auto' as const,
-    minWidth: (options.kind === undefined ? undefined : MENU_MIN_WIDTH[options.kind]) ?? '220px',
+    minWidth: options.minWidth ?? (options.kind === undefined ? undefined : MENU_MIN_WIDTH[options.kind]) ?? '220px',
     // A card's menu opens over its "•••", shifted to stay in the window (feel findings B15, 09-notion-card-menu.png).
     // Round 35: a tall card menu stops 12px above the window bottom.
     ...(options.kind === 'card' ? { cover: true, viewportMargin: 12 } : {}),

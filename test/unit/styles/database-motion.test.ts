@@ -304,6 +304,35 @@ describe('database toolbar search', () => {
   });
 });
 
+// notion-motion.md Round 68 §1 (r68-n-locked-btn.raw): "Locked" is a 24 tall text button, r4, padding 0 6, gap 4, a 20px glyph,
+// filled on hover by 0.02s ease-in. Text keeps Blok's AA ink; "Re-lock" takes Blok's AA link blue, not Notion's rgb(39,131,222).
+describe('database Locked button', () => {
+  const LOCK = '[data-blok-database-view-toolbar] > [data-blok-database-lock-badge]';
+
+  it('is a 24px text button with a 20px glyph, radius 4, padding 0 6 and gap 4', () => {
+    const rest = lastBody(database, LOCK);
+
+    expect(rest).toContain('height: 24px');
+    expect(rest).toContain('padding: 0 var(--blok-space-1-5)');
+    expect(rest).toContain('gap: var(--blok-space-1)');
+    expect(rest).toContain('border-radius: var(--blok-radius-control-sm)');
+    expect(rest).toContain('transition: background-color 0.02s ease-in');
+    expect(lastBody(database, `${LOCK} svg`)).toContain('width: 20px');
+    expect(lastBody(database, `${LOCK} svg`)).toContain('height: 20px');
+    expect(lastBody(database, `${LOCK} svg`)).toContain('color: var(--blok-database-table-header-icon)');
+  });
+
+  it('fills on hover and while its menu is open', () => {
+    expect(lastBody(database, `${LOCK}:hover`)).toContain('background-color: var(--blok-database-hover-bg)');
+    expect(lastBody(database, `${LOCK}[data-popover-open]`)).toContain('background-color: var(--blok-database-hover-bg)');
+  });
+
+  it('draws Re-lock, glyph and text, in the link blue', () => {
+    expect(lastBody(database, `${LOCK}[data-blok-database-relock]`)).toContain('color: var(--blok-link)');
+    expect(lastBody(database, `${LOCK}[data-blok-database-relock] svg`)).toContain('color: inherit');
+  });
+});
+
 // notion-motion.md Round 4 re-checks: a minimized toolbar keeps only « and settings; « shows on header hover and fades 200ms ease.
 describe('minimized database toolbar', () => {
   const TOOLBAR = '[data-blok-database-view-toolbar]';

@@ -665,6 +665,8 @@ export class DatabaseTool implements BlockTool {
   private editorReadOnly: boolean;
   /** No `editStructure` permission: acts as a locked database. */
   private structureDenied = false;
+  /** "Unlock for me" (notion-motion.md Round 68 §1): the saved lock is lifted for this viewer. Never saved. */
+  private unlockedForMe = false;
   /**
    * Rows this tool's sync created in its backend and has not deleted. Never
    * seeded from the document: a row here can be missing from the backend.
@@ -967,7 +969,7 @@ export class DatabaseTool implements BlockTool {
     this.hostLevers = new DatabaseHostLevers({
       databaseId: block.id,
       isDestroyed: () => this.destroyed,
-      canTriggerAutomations: () => !this.model.isDatabaseLocked(),
+      canTriggerAutomations: () => !this.isLocked(),
       savedAutomations: () => this.savedAutomations,
       schema: () => this.model.getSchema(),
       rowValues: (rowId) => this.model.getRow(rowId)?.properties,
@@ -2274,7 +2276,19 @@ export class DatabaseTool implements BlockTool {
 
   /** Locked by the document, or by the host's permissions. A linked view also by its own "Lock views". */
   private structureLocked(): boolean {
-    return this.structureDenied || this.model.isDatabaseLocked() || this.viewsLocked() || this.holderLocked();
+    return this.structureDenied || this.savedLockHolds() || this.holderLocked();
+  }
+
+  /** The saved lock (the database's, or a linked view's own), unless this viewer unlocked it for themselves. */
+  private savedLockHolds(): boolean {
+    return !this.unlockedForMe && (this.model.isDatabaseLocked() || this.viewsLocked());
+  }
+
+  private setUnlockedForMe(on: boolean): void {
+    if (this.unlockedForMe === on || (on && !(this.model.isDatabaseLocked() || this.viewsLocked()))) return;
+    this.unlockedForMe = on;
+    this.rebuildTabBar();
+    this.rerenderView({ keepDrawer: true });
   }
 
   /** A second data source (a child database) follows the lock of the database that holds it. */
@@ -2761,7 +2775,7 @@ export class DatabaseTool implements BlockTool {
 
   /** The user's lock: core's block menu then leaves out Duplicate, Move to and Move to Trash. */
   public isLocked(): boolean {
-    return !this.linked && this.model.isDatabaseLocked();
+    return !this.linked && !this.unlockedForMe && this.model.isDatabaseLocked();
   }
 
   /**
@@ -7464,6 +7478,12 @@ export class DatabaseTool implements BlockTool {
       updateView: (changes) => this.updateActiveView(changes, context),
       setLayout: (type) => (context?.widget === undefined ? this.setActiveLayout(type) : this.setWidgetLayout(context, type)),
       setLocked: (locked) => this.setDatabaseLocked(locked),
+      lock: {
+        unlockedForMe: () => owner.unlockedForMe,
+        setUnlockedForMe: (on) => owner.setUnlockedForMe(on),
+        // A host's structure denial is no lock: neither unlock lifts it.
+        canUnlock: () => !owner.readOnly && !owner.structureDenied && (owner.model.isDatabaseLocked() || owner.viewsLocked()),
+      },
       linked: () => owner.linked,
       // The tab menu's switch: the main toolbar only, and not on a full page, where the title never shows.
       ...(context === undefined && !this.fullPage ? {
@@ -7688,6 +7708,16 @@ export class DatabaseTool implements BlockTool {
   }
 
   private setDatabaseLocked(locked: boolean): void {
+    // Locking or unlocking for everyone ends this viewer's own unlock. The lock may already be saved.
+    if (this.unlockedForMe && !this.readOnly && !this.structureDenied) {
+      this.unlockedForMe = false;
+      if (locked) {
+        this.rebuildTabBar();
+        this.rerenderView({ keepDrawer: true });
+
+        return;
+      }
+    }
     if (this.linked) {
       this.setViewsLocked(locked);
 
@@ -8623,7 +8653,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private setRelationPairEnabled(on: boolean, forwardRole: RelationRole, backwardRole: RelationRole, forwardName: string, backwardName: string, forwardLimitOne: boolean): void {
-    if (this.readOnly || this.model.isDatabaseLocked()) return;
+    if (this.readOnly || this.isLocked()) return;
     const pair = relationPair(this.model.getSchema(), this.dataId, forwardRole, backwardRole);
 
     if (on === (pair !== undefined)) return;

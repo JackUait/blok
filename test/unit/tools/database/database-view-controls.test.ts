@@ -19,6 +19,15 @@ const q = (id: string): HTMLElement | null => document.querySelector(`[data-blok
 /** Text as a reader sees it: icon markup leaves whitespace nodes. */
 const text = (el: Element | null | undefined): string | undefined => el?.textContent?.replace(/\s+/g, ' ').trim();
 
+/** The next control a reader sees: hidden ones (the lock on an unlocked database) are skipped. */
+const nextShown = (el: Element | null | undefined): Element | null => {
+  let next = el?.nextElementSibling ?? null;
+
+  while (next instanceof HTMLElement && next.hidden) next = next.nextElementSibling;
+
+  return next;
+};
+
 const click = (id: string): void => {
   const el = q(id);
 
@@ -148,7 +157,7 @@ describe('DatabaseViewControls', () => {
 
       expect(button?.hidden).toBe(false);
       expect(text(button)).toBe('No date (2)');
-      expect(button?.nextElementSibling).toBe(q('database-toolbar-filter'));
+      expect(nextShown(button)).toBe(q('database-toolbar-filter'));
       button?.click();
       expect(open).toHaveBeenCalledWith(button);
     });
@@ -987,6 +996,116 @@ describe('DatabaseViewControls', () => {
     expect(q('database-view-save')).toBeNull();
     expect(q('database-view-reset')).not.toBeNull();
     expect(q('database-toolbar-locked')?.hidden).toBe(false);
+  });
+
+  // notion-motion.md Round 68 §1: Notion's "Locked" is a text button with a menu: Unlock for me, Unlock for everyone.
+  describe('Locked button', () => {
+    const lockLevers = (state: { forMe: boolean }, canUnlock = true): Partial<ViewControlsHost> => ({
+      lock: {
+        unlockedForMe: () => state.forMe,
+        setUnlockedForMe: vi.fn(),
+        canUnlock: () => canUnlock,
+      },
+    });
+    const item = (name: string): HTMLElement | null => document.querySelector(`[data-blok-popover-opened] [data-blok-item-name="${name}"]`);
+
+    it('is a button reading "Locked" that opens Unlock for me and Unlock for everyone, the first row filled', () => {
+      setup({ locked: true, levers: lockLevers({ forMe: false }) });
+      const lock = q('database-toolbar-locked');
+
+      expect(lock?.tagName).toBe('BUTTON');
+      expect(text(lock)).toBe('tools.database.lockedButton');
+      expect(lock?.querySelector('svg')).not.toBeNull();
+      click('database-toolbar-locked');
+
+      expect(text(item('database-unlock-for-me'))).toBe('tools.database.unlockForMe');
+      expect(text(item('database-unlock-for-everyone'))).toBe('tools.database.unlockForEveryone');
+      expect(item('database-unlock-for-me')?.getAttribute('data-blok-focused')).toBe('true');
+      expect(lock?.hasAttribute('data-popover-open')).toBe(true);
+    });
+
+    it('closes its menu on a second click', () => {
+      setup({ locked: true, levers: lockLevers({ forMe: false }) });
+      click('database-toolbar-locked');
+      click('database-toolbar-locked');
+
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+      expect(q('database-toolbar-locked')?.hasAttribute('data-popover-open')).toBe(false);
+    });
+
+    it('unlocks for this viewer only from Unlock for me, and for everyone from Unlock for everyone', () => {
+      const levers = lockLevers({ forMe: false });
+      const { host } = setup({ locked: true, levers });
+
+      click('database-toolbar-locked');
+      item('database-unlock-for-me')?.click();
+      expect(levers.lock?.setUnlockedForMe).toHaveBeenCalledWith(true);
+      expect(host.setLocked).not.toHaveBeenCalled();
+
+      click('database-toolbar-locked');
+      item('database-unlock-for-everyone')?.click();
+      expect(host.setLocked).toHaveBeenCalledWith(false);
+    });
+
+    it('reads "Re-lock" once unlocked for this viewer, and one click locks again with no menu', () => {
+      const levers = lockLevers({ forMe: true });
+
+      setup({ locked: false, levers });
+      const lock = q('database-toolbar-locked');
+
+      expect(lock?.hidden).toBe(false);
+      expect(text(lock)).toBe('tools.database.relockButton');
+      // r68-n-unlockforme.raw: Minimize, Re-lock, Filter.
+      expect(nextShown(lock)).toBe(q('database-toolbar-filter'));
+      expect(lock?.hasAttribute('data-blok-database-relock')).toBe(true);
+      click('database-toolbar-locked');
+
+      expect(levers.lock?.setUnlockedForMe).toHaveBeenCalledWith(false);
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    });
+
+    it('is hidden on an unlocked database', () => {
+      setup({ locked: false, levers: lockLevers({ forMe: false }) });
+
+      expect(q('database-toolbar-locked')?.hidden).toBe(true);
+    });
+
+    it('opens nothing when no unlock is allowed, as under a host\'s structure denial', () => {
+      setup({ locked: true, levers: lockLevers({ forMe: false }, false) });
+      click('database-toolbar-locked');
+
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    });
+
+    // Notion's hint names who locked it; Blok keeps no lock owner, so it names no one.
+    it('hints why it is locked and how to unlock, on hover after the delay', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        setup({ locked: true, levers: lockLevers({ forMe: false }) });
+        hover(q('database-toolbar-locked'));
+        vi.advanceTimersByTime(HINT_DELAY - 1);
+        expect(shownHint()).toBeNull();
+        vi.advanceTimersByTime(1);
+        expect(shownHint()?.text).toBe('tools.database.lockedHinttools.database.lockedHintAction');
+        expect(shownHint()?.placement).toBe('top');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('hints only that it is locked when no unlock is allowed', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        setup({ locked: true, levers: lockLevers({ forMe: false }, false) });
+        hover(q('database-toolbar-locked'));
+        vi.advanceTimersByTime(HINT_DELAY);
+        expect(shownHint()?.text).toBe('tools.database.lockedLabel');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   it('opens the filter of an old id-less pill, not a "deleted property" one', () => {
@@ -2396,7 +2515,7 @@ describe('DatabaseViewControls', () => {
 
       expect(minimize?.hidden).toBe(false);
       expect(minimize?.getAttribute('aria-label')).toBe('tools.database.filterBarMinimize');
-      expect(q('database-toolbar-no-date')?.nextElementSibling).toBe(q('database-toolbar-filter'));
+      expect(nextShown(q('database-toolbar-no-date'))).toBe(q('database-toolbar-filter'));
 
       click('database-toolbar-minimize');
 
@@ -2725,7 +2844,7 @@ describe('DatabaseViewControls', () => {
       expect(minimize?.hidden).toBe(false);
       // A calendar or timeline's "No date" sits between them (findings C03); here it is hidden.
       expect(minimize?.nextElementSibling).toBe(q('database-toolbar-no-date'));
-      expect(q('database-toolbar-no-date')?.nextElementSibling).toBe(q('database-toolbar-filter'));
+      expect(nextShown(q('database-toolbar-no-date'))).toBe(q('database-toolbar-filter'));
       expect(minimize?.getAttribute('aria-label')).toBe('tools.database.filterBarMinimize');
       expect(minimize?.querySelector('svg')).not.toBeNull();
 

@@ -120,6 +120,7 @@ export const openMovePicker = (options: MovePickerOptions): PagePicker => {
     sections: { idle: t('tools.database.linkedSuggested'), query: t('tools.database.moveToPages') },
     highlightIdle: false,
     showAll: true,
+    ...(options.onEscape === undefined ? {} : { onEscape: options.onEscape }),
     ...(host?.children === undefined ? {} : {
       tree: {
         label: t('tools.database.moveToWorkspace'),
@@ -136,10 +137,6 @@ export const openMovePicker = (options: MovePickerOptions): PagePicker => {
     }),
   });
   picker.getElement()?.setAttribute('data-blok-database-move-picker', '');
-  // Capture: the picker's own Escape handler closes it before the key bubbles here.
-  picker.getElement()?.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !event.isComposing) options.onEscape?.();
-  }, true);
   picker.startSearch('');
   void show('');
 

@@ -590,6 +590,25 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       expect(await moveOptions()).toEqual(['Projects']);
     });
 
+    // notion-motion.md Round 65 §3: Escape after ⌘⇧P drops the row selection.
+    it('drops the table row selection when Escape closes the ⌘⇧P picker', async () => {
+      const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('table'));
+
+      openMenu(el, 'table');
+      document.querySelectorAll('[data-blok-popover]').forEach((popover) => popover.remove());
+      const grid = el.querySelector<HTMLElement>('[role="grid"]');
+      const row = (): Element | null => el.querySelector('[data-blok-database-table-row][data-row-id="a"]');
+
+      if (grid === null) throw new Error('no grid');
+      press(grid, 'p');
+      expect(await moveOptions()).toEqual(['Projects']);
+      expect(row()?.getAttribute('aria-selected')).toBe('true');
+      document.querySelector('[data-blok-database-move-picker] input')
+        ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(row()?.getAttribute('aria-selected')).toBe('false');
+    });
+
     it('two picked rows take no ⌘⇧M: the comment is for one page', () => {
       const open = vi.fn();
       const doc = makeDoc([fakeRow('a', 'db', { title: 'Alpha', status: 'o1' }, 'a0'), fakeRow('b', 'db', { title: 'Beta', status: 'o1' }, 'a1')]);

@@ -1858,7 +1858,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r157: Round 65 §2 the pick an undo replaces fades out (leaving rule + keyframes). Net database.css growth against origin/main.
     const DATABASE_R157_BYTES = 599;
     // Lane r159: Round 65 Move to chevron, form card, today dot, board count and side peek radius. Net database.css growth against origin/main.
-    const DATABASE_R159_BYTES = 832;
+    const DATABASE_R159_BYTES = 973;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

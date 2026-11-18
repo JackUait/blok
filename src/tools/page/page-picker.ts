@@ -71,6 +71,8 @@ export interface PagePickerOptions {
   newPage?: PagePickerNewPage;
   /** Called once when the picker closes without a pick. */
   onClose?: () => void;
+  /** Escape closed the picker. Runs after `onClose`. */
+  onEscape?: () => void;
   /** Gets the active row's page title, or null when the active row is not a page. */
   onActiveTitle?: (title: string | null) => void;
   /** Gets the active row's element, or null when no row is active. */
@@ -160,6 +162,9 @@ export class PagePicker {
   private combobox: HTMLElement | null = null;
   private search: SearchInput | null = null;
   private onClose: (() => void) | null = null;
+  private onEscape: (() => void) | null = null;
+  /** Set by an Escape seen on its way in; core's popover registry may close the picker before the field sees the key. */
+  private escaping = false;
   private onActiveTitle: ((title: string | null) => void) | null = null;
   private onActiveRow: ((row: HTMLElement | null) => void) | null = null;
   private beforePick: ((pageId: string, row: HTMLElement) => Promise<boolean>) | null = null;
@@ -231,6 +236,11 @@ export class PagePicker {
     }
     this.onPick = onPick;
     this.onClose = options.onClose ?? null;
+    this.onEscape = options.onEscape ?? null;
+    if (this.onEscape !== null) {
+      // Window capture runs before the registry's document listener.
+      window.addEventListener('keydown', this.noteEscape, true);
+    }
     this.onActiveTitle = options.onActiveTitle ?? null;
     this.onActiveRow = options.onActiveRow ?? null;
     this.beforePick = options.beforePick ?? null;
@@ -407,6 +417,7 @@ export class PagePicker {
     const listbox = this.listbox;
     const content = this.content;
     const onClose = this.onClose;
+    const onEscape = this.escaping ? this.onEscape : null;
 
     this.restoreAnchor();
     this.popover = null;
@@ -418,6 +429,9 @@ export class PagePicker {
     this.onPick = null;
     this.onChoose = null;
     this.onClose = null;
+    this.onEscape = null;
+    this.escaping = false;
+    window.removeEventListener('keydown', this.noteEscape, true);
     this.onActiveTitle = null;
     this.onActiveRow = null;
     this.beforePick = null;
@@ -450,7 +464,16 @@ export class PagePicker {
     search?.destroy();
     popover?.destroy();
     onClose?.();
+    onEscape?.();
   }
+
+  private readonly noteEscape = (event: KeyboardEvent): void => {
+    const root = this.popover?.getElement();
+
+    if (event.key === 'Escape' && !event.isComposing && root !== undefined && event.target instanceof Node && root.contains(event.target)) {
+      this.escaping = true;
+    }
+  };
 
   private claimCombobox(combobox: HTMLElement | null): void {
     this.combobox = combobox;

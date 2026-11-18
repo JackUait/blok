@@ -6240,6 +6240,10 @@ span[data-blok-slash-search] {
   cursor: pointer;
 }
 
+[data-peek-mode="side"] [data-blok-database-drawer-close], [data-peek-mode="side"] [data-blok-database-peek-mode], [data-peek-mode="side"] [data-blok-database-peek-prev], [data-peek-mode="side"] [data-blok-database-peek-next], [data-peek-mode="side"] [data-blok-database-peek-actions] {
+  border-radius: var(--blok-radius-control);
+}
+
 [data-blok-database-peek-copy-link], [data-blok-database-peek-page-info], [data-blok-database-peek-favorite], [data-blok-database-peek-actions] {
   width: 28px;
   height: 28px;
@@ -6402,10 +6406,6 @@ span[data-blok-slash-search] {
 
 [@media (hover: hover)] [data-blok-database-drawer-close]:hover {
   background-color: var(--blok-database-peek-hover-bg);
-}
-
-[data-peek-mode="side"] :is([data-blok-database-drawer-close], [data-blok-database-peek-mode], [data-blok-database-peek-prev], [data-blok-database-peek-next], [data-blok-database-peek-actions]) {
-  border-radius: var(--blok-radius-control);
 }
 
 [data-blok-database-drawer-close] svg {

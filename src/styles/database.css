@@ -1981,6 +1981,16 @@
   cursor: pointer;
 }
 
+/* notion-motion.md Round 65 §3: in the side peek, Close, Switch peek mode, Previous, Next and ••• are radius 6.
+   The other peeks and buttons are unmeasured. */
+[data-peek-mode="side"] [data-blok-database-drawer-close],
+[data-peek-mode="side"] [data-blok-database-peek-mode],
+[data-peek-mode="side"] [data-blok-database-peek-prev],
+[data-peek-mode="side"] [data-blok-database-peek-next],
+[data-peek-mode="side"] [data-blok-database-peek-actions] {
+  border-radius: var(--blok-radius-control);
+}
+
 /* The end group is 28px with the brighter ink (research/10 §10, feel/findings-rowpage R04). */
 [data-blok-database-peek-copy-link],
 [data-blok-database-peek-page-info],
@@ -2213,10 +2223,6 @@
   }
 }
 
-/* notion-motion.md Round 65 §3: the side peek's Close, Switch peek mode, Previous, Next and ••• are radius 6. */
-[data-peek-mode="side"] :is([data-blok-database-drawer-close], [data-blok-database-peek-mode], [data-blok-database-peek-prev], [data-blok-database-peek-next], [data-blok-database-peek-actions]) {
-  border-radius: var(--blok-radius-control);
-}
 
 [data-blok-database-drawer-close] svg {
   width: 20px;

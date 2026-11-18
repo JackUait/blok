@@ -1537,6 +1537,8 @@ export class DragController extends Module {
     if (prep.aborted) {
       return;
     }
+    // notion-motion.md Round 68 §5: an Alt-drag copy of a database is numbered like a ⌘D copy.
+    prep.numberCopies = true;
 
     // History integration: wrap the sync tail of the alt-drag — every insert
     // from `applyDuplicates` AND the follow-up `setBlockParent` loop that

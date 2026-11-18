@@ -268,6 +268,45 @@ describe('the database block menu in core', () => {
     expect(await copyTitle('Tasks (2)')).toBe('Tasks (3)');
   });
 
+  /** The first database block that is not `id`, once it exists. */
+  const copyOf = (instance: Core, id: string): Promise<NonNullable<ReturnType<Core['moduleInstances']['BlockManager']['getBlockById']>>> => vi.waitFor(() => {
+    const found = instance.moduleInstances.BlockManager.blocks.find((candidate) => candidate.name === 'database' && candidate.id !== id);
+
+    if (found === undefined) throw new Error('no copy yet');
+
+    return found;
+  });
+
+  /** notion-motion.md Round 68 §5: ⌘D names the copy as the menu's Duplicate does. */
+  it('Cmd+D titles the copy " (n + 1)", like Notion', async () => {
+    const blocks = setUpDatabase();
+
+    blocks[0] = { ...blocks[0], data: { ...blocks[0].data, title: 'Tasks (1)' } };
+    const instance = await boot(blocks);
+
+    instance.moduleInstances.BlockSelection.selectBlock(block(instance, 'db'));
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', code: 'KeyD', metaKey: true, bubbles: true, cancelable: true }));
+
+    expect((await (await copyOf(instance, 'db')).save())?.data.title).toBe('Tasks (2)');
+  });
+
+  /** notion-motion.md Round 68 §5: an Alt-drag copy follows the same rule. */
+  it('an Alt-drag copy is titled " (1)" too', async () => {
+    const instance = await boot(setUpDatabase());
+    const target = block(instance, 'p');
+    const handle = document.createElement('div');
+
+    block(instance, 'db').holder.appendChild(handle);
+    instance.moduleInstances.DragManager.setupDragHandle(handle, block(instance, 'db'));
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => target.holder });
+    vi.spyOn(target.holder, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 200, 300, 50));
+    handle.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 10, clientY: 10, bubbles: true }));
+    target.holder.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 240, altKey: true, bubbles: true }));
+    target.holder.dispatchEvent(new MouseEvent('mouseup', { clientX: 20, clientY: 240, altKey: true, bubbles: true }));
+
+    expect((await (await copyOf(instance, 'db')).save())?.data.title).toBe('Tasks (1)');
+  });
+
   it('a linked view\'s Duplicate has no submenu, as in Notion', async () => {
     const instance = await boot([...setUpDatabase(), { id: 'linked', type: 'database', data: { title: '', source: { databaseId: 'db' }, views: [], activeViewId: '' } }]);
     const rows = await openMenu(instance, 'linked');

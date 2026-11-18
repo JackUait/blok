@@ -2290,7 +2290,8 @@ export class BlockManager extends Module {
       return;
     }
 
-    void this.Blok.DragManager?.duplicateBlocksInPlace(anchor);
+    // notion-motion.md Round 68 §5: a database copy is titled " (1)", as the block menu's Duplicate does.
+    void this.Blok.DragManager?.duplicateBlocksInPlace(anchor, { numberCopies: true });
   }
 
   /**

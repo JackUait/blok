@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "પ્રશ્નનું નામ",
   "tools.database.formTitlePlaceholder": "ફોર્મનું શીર્ષક",
   "tools.database.formDescriptionPlaceholder": "વર્ણન (વૈકલ્પિક)",
+  "tools.database.formAddOption": "વિકલ્પ ઉમેરો",
   "tools.database.formAnswerPlaceholder": "ઉત્તરદાતાનો જવાબ",
   "tools.database.formIcon": "ફોર્મનું આઇકન",
   "tools.database.formCover": "ફોર્મનું કવર",

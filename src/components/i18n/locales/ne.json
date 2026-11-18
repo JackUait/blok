@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "प्रश्नको नाम",
   "tools.database.formTitlePlaceholder": "फारमको शीर्षक",
   "tools.database.formDescriptionPlaceholder": "विवरण (वैकल्पिक)",
+  "tools.database.formAddOption": "विकल्प थप्नुहोस्",
   "tools.database.formAnswerPlaceholder": "उत्तरदाताको जवाफ",
   "tools.database.formIcon": "फारमको आइकन",
   "tools.database.formCover": "फारमको कभर",

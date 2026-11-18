@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Име на прашањето",
   "tools.database.formTitlePlaceholder": "Наслов на формуларот",
   "tools.database.formDescriptionPlaceholder": "Опис (опционално)",
+  "tools.database.formAddOption": "Додај опција",
   "tools.database.formAnswerPlaceholder": "Одговор на испитаникот",
   "tools.database.formIcon": "Икона на формуларот",
   "tools.database.formCover": "Насловна слика на формуларот",

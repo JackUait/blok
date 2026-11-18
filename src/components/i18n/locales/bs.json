@@ -1710,6 +1710,7 @@
   "tools.database.formQuestionNamePlaceholder": "Naziv pitanja",
   "tools.database.formTitlePlaceholder": "Naslov obrasca",
   "tools.database.formDescriptionPlaceholder": "Opis (neobavezno)",
+  "tools.database.formAddOption": "Dodaj opciju",
   "tools.database.formAnswerPlaceholder": "Odgovor ispitanika",
   "tools.database.formIcon": "Ikona obrasca",
   "tools.database.formCover": "Naslovna slika obrasca",

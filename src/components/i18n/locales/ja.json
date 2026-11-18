@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "質問名",
   "tools.database.formTitlePlaceholder": "フォームのタイトル",
   "tools.database.formDescriptionPlaceholder": "説明（任意）",
+  "tools.database.formAddOption": "オプションを追加",
   "tools.database.formAnswerPlaceholder": "回答者の回答",
   "tools.database.formIcon": "フォームのアイコン",
   "tools.database.formCover": "フォームのカバー",

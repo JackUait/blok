@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Jina la swali",
   "tools.database.formTitlePlaceholder": "Kichwa cha fomu",
   "tools.database.formDescriptionPlaceholder": "Maelezo (si lazima)",
+  "tools.database.formAddOption": "Ongeza chaguo",
   "tools.database.formAnswerPlaceholder": "Jibu la mjibuji",
   "tools.database.formIcon": "Ikoni ya fomu",
   "tools.database.formCover": "Jalada la fomu",

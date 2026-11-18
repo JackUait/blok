@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Име на въпроса",
   "tools.database.formTitlePlaceholder": "Заглавие на формуляра",
   "tools.database.formDescriptionPlaceholder": "Описание (по избор)",
+  "tools.database.formAddOption": "Добави опция",
   "tools.database.formAnswerPlaceholder": "Отговор на респондента",
   "tools.database.formIcon": "Икона на формуляра",
   "tools.database.formCover": "Корица на формуляра",

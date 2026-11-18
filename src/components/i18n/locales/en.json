@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Question name",
   "tools.database.formTitlePlaceholder": "Form title",
   "tools.database.formDescriptionPlaceholder": "Description (optional)",
+  "tools.database.formAddOption": "Add option",
   "tools.database.formAnswerPlaceholder": "Respondent's answer",
   "tools.database.formIcon": "Form icon",
   "tools.database.formCover": "Form cover",

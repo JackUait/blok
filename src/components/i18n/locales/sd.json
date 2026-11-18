@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "سوال جو نالو",
   "tools.database.formTitlePlaceholder": "فارم جو عنوان",
   "tools.database.formDescriptionPlaceholder": "وضاحت (اختياري)",
+  "tools.database.formAddOption": "ڪو اختيار شامل ڪريو",
   "tools.database.formAnswerPlaceholder": "جواب ڏيندڙ جو جواب",
   "tools.database.formIcon": "فارم جو آئڪن",
   "tools.database.formCover": "فارم جو ڪور",

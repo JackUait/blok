@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "ਸਵਾਲ ਦਾ ਨਾਮ",
   "tools.database.formTitlePlaceholder": "ਫਾਰਮ ਦਾ ਸਿਰਲੇਖ",
   "tools.database.formDescriptionPlaceholder": "ਵੇਰਵਾ (ਵਿਕਲਪਿਕ)",
+  "tools.database.formAddOption": "ਕੋਈ ਵਿਕਲਪ ਜੋੜੋ",
   "tools.database.formAnswerPlaceholder": "ਜਵਾਬਦਾਤਾ ਦਾ ਜਵਾਬ",
   "tools.database.formIcon": "ਫਾਰਮ ਦਾ ਆਈਕਨ",
   "tools.database.formCover": "ਫਾਰਮ ਦਾ ਕਵਰ",

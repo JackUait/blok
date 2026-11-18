@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "မေးခွန်း အမည်",
   "tools.database.formTitlePlaceholder": "ဖောင် ခေါင်းစဉ်",
   "tools.database.formDescriptionPlaceholder": "ဖော်ပြချက် (ရွေးချယ်နိုင်)",
+  "tools.database.formAddOption": "ရွေးချယ်စရာ ထည့်ရန်",
   "tools.database.formAnswerPlaceholder": "ဖြေဆိုသူ၏ အဖြေ",
   "tools.database.formIcon": "ဖောင် အိုင်ကွန်",
   "tools.database.formCover": "ဖောင် အဖုံးပုံ",

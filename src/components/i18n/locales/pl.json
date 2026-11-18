@@ -1726,6 +1726,7 @@
   "tools.database.formQuestionNamePlaceholder": "Nazwa pytania",
   "tools.database.formTitlePlaceholder": "Tytuł formularza",
   "tools.database.formDescriptionPlaceholder": "Opis (opcjonalnie)",
+  "tools.database.formAddOption": "Dodaj opcję",
   "tools.database.formAnswerPlaceholder": "Odpowiedź osoby odpowiadającej",
   "tools.database.formIcon": "Ikona formularza",
   "tools.database.formCover": "Okładka formularza",

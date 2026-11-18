@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Nama pertanyaan",
   "tools.database.formTitlePlaceholder": "Judul formulir",
   "tools.database.formDescriptionPlaceholder": "Deskripsi (opsional)",
+  "tools.database.formAddOption": "Tambahkan opsi",
   "tools.database.formAnswerPlaceholder": "Jawaban responden",
   "tools.database.formIcon": "Ikon formulir",
   "tools.database.formCover": "Sampul formulir",

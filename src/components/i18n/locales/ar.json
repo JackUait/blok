@@ -1758,6 +1758,7 @@
   "tools.database.formQuestionNamePlaceholder": "اسم السؤال",
   "tools.database.formTitlePlaceholder": "عنوان النموذج",
   "tools.database.formDescriptionPlaceholder": "الوصف (اختياري)",
+  "tools.database.formAddOption": "إضافة خيار",
   "tools.database.formAnswerPlaceholder": "إجابة المُجيب",
   "tools.database.formIcon": "أيقونة النموذج",
   "tools.database.formCover": "غلاف النموذج",

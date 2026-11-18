@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "ސުވާލުގެ ނަން",
   "tools.database.formTitlePlaceholder": "ފޯމުގެ ސުރުޚީ",
   "tools.database.formDescriptionPlaceholder": "ތަފްސީލު (އިޚްތިޔާރީ)",
+  "tools.database.formAddOption": "އިޚްތިޔާރެއް އިތުރުކުރޭ",
   "tools.database.formAnswerPlaceholder": "ޖަވާބުދިން މީހާގެ ޖަވާބު",
   "tools.database.formIcon": "ފޯމުގެ އައިކަން",
   "tools.database.formCover": "ފޯމުގެ ކަވަރު",

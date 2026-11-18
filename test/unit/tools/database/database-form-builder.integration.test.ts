@@ -559,6 +559,29 @@ describe('local form question builder', () => {
     expect(q(`${question('tags')} fieldset input[type="checkbox"]`)).not.toBeNull();
   });
 
+  // notion-motion.md Round 75 §2: the builder edits options in place; the edit is the property's own option list.
+  it('renames and adds a multiple choice option from the builder into the property options, across a reload', async () => {
+    await mount(blocksFor([tags]));
+    const optionsOf = (output: OutputData): Array<{ label: string }> | undefined =>
+      (output.blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined)?.schema.find((property) => property.id === 'tags')?.config?.options;
+    const first = requireElement<HTMLInputElement>(`${question('tags')} [data-blok-database-form-option-name]`);
+
+    first.value = 'Crimson';
+    first.dispatchEvent(new Event('change', { bubbles: true }));
+    await vi.waitFor(() => expect(q<HTMLInputElement>(`${question('tags')} [data-blok-database-form-option-name]`)?.value).toBe('Crimson'));
+    requireElement(`${question('tags')} [data-blok-database-form-add-option]`).click();
+    const fresh = [...document.querySelectorAll<HTMLInputElement>(`${question('tags')} [data-blok-database-form-option-name]`)].at(-1);
+
+    if (fresh === undefined) throw new Error('Missing new option row');
+    fresh.value = 'Green';
+    fresh.dispatchEvent(new Event('change', { bubbles: true }));
+    const saved = await save();
+
+    expect(optionsOf(saved)?.map((option) => option.label)).toEqual([...(tags.config?.options ?? []).map((option, index) => (index === 0 ? 'Crimson' : option.label)), 'Green']);
+    await mount(saved.blocks);
+    expect([...document.querySelectorAll<HTMLInputElement>(`${question('tags')} [data-blok-database-form-option-name]`)].map((input) => input.value).at(-1)).toBe('Green');
+  });
+
   it('picks a preset or custom selection limit, shows it under the question title, and goes back to unlimited', async () => {
     await mount(blocksFor([tags]));
     expect(q(`${question('tags')} [data-blok-database-form-selection-limit]`)?.textContent)

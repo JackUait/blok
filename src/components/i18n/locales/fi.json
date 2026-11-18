@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Kysymyksen nimi",
   "tools.database.formTitlePlaceholder": "Lomakkeen otsikko",
   "tools.database.formDescriptionPlaceholder": "Kuvaus (valinnainen)",
+  "tools.database.formAddOption": "Lisää vaihtoehto",
   "tools.database.formAnswerPlaceholder": "Vastaajan vastaus",
   "tools.database.formIcon": "Lomakkeen kuvake",
   "tools.database.formCover": "Lomakkeen kansikuva",

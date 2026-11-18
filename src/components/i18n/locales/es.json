@@ -1710,6 +1710,7 @@
   "tools.database.formQuestionNamePlaceholder": "Nombre de la pregunta",
   "tools.database.formTitlePlaceholder": "Título del formulario",
   "tools.database.formDescriptionPlaceholder": "Descripción (opcional)",
+  "tools.database.formAddOption": "Añadir una opción",
   "tools.database.formAnswerPlaceholder": "Respuesta del encuestado",
   "tools.database.formIcon": "Icono del formulario",
   "tools.database.formCover": "Portada del formulario",

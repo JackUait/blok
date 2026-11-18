@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Küsimuse nimi",
   "tools.database.formTitlePlaceholder": "Vormi pealkiri",
   "tools.database.formDescriptionPlaceholder": "Kirjeldus (valikuline)",
+  "tools.database.formAddOption": "Lisa valik",
   "tools.database.formAnswerPlaceholder": "Vastaja vastus",
   "tools.database.formIcon": "Vormi ikoon",
   "tools.database.formCover": "Vormi kaanepilt",

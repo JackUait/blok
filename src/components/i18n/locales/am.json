@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "የጥያቄ ስም",
   "tools.database.formTitlePlaceholder": "የቅጽ ርዕስ",
   "tools.database.formDescriptionPlaceholder": "መግለጫ (አማራጭ)",
+  "tools.database.formAddOption": "አማራጭ አክል",
   "tools.database.formAnswerPlaceholder": "የመላሹ መልስ",
   "tools.database.formIcon": "የቅጽ አዶ",
   "tools.database.formCover": "የቅጽ ሽፋን",

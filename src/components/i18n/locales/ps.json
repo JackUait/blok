@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "د پوښتنې نوم",
   "tools.database.formTitlePlaceholder": "د فورمې سرلیک",
   "tools.database.formDescriptionPlaceholder": "تشریح (اختیاري)",
+  "tools.database.formAddOption": "یو اختیار ورزیات کړئ",
   "tools.database.formAnswerPlaceholder": "د ځواب ورکوونکي ځواب",
   "tools.database.formIcon": "د فورمې آیکون",
   "tools.database.formCover": "د فورمې پوښ",

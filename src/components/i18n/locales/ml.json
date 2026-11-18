@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "ചോദ്യത്തിന്റെ പേര്",
   "tools.database.formTitlePlaceholder": "ഫോം ശീർഷകം",
   "tools.database.formDescriptionPlaceholder": "വിവരണം (ഓപ്ഷണൽ)",
+  "tools.database.formAddOption": "ഒരു ഓപ്ഷൻ ചേർക്കുക",
   "tools.database.formAnswerPlaceholder": "പ്രതികരിച്ചയാളുടെ ഉത്തരം",
   "tools.database.formIcon": "ഫോം ഐക്കൺ",
   "tools.database.formCover": "ഫോം കവർ",

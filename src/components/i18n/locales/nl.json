@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Vraagnaam",
   "tools.database.formTitlePlaceholder": "Formuliertitel",
   "tools.database.formDescriptionPlaceholder": "Beschrijving (optioneel)",
+  "tools.database.formAddOption": "Een optie toevoegen",
   "tools.database.formAnswerPlaceholder": "Antwoord van respondent",
   "tools.database.formIcon": "Formulierpictogram",
   "tools.database.formCover": "Omslagafbeelding formulier",

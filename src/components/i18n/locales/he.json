@@ -1710,6 +1710,7 @@
   "tools.database.formQuestionNamePlaceholder": "שם השאלה",
   "tools.database.formTitlePlaceholder": "כותרת הטופס",
   "tools.database.formDescriptionPlaceholder": "תיאור (אופציונלי)",
+  "tools.database.formAddOption": "הוסף אפשרות",
   "tools.database.formAnswerPlaceholder": "תשובת המשיב",
   "tools.database.formIcon": "סמל הטופס",
   "tools.database.formCover": "תמונת הכיסוי של הטופס",

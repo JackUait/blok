@@ -4,7 +4,7 @@ import { EmojiPicker } from '../callout/emoji-picker';
 import { chooseLanding, playLanding } from '../callout/emoji-landing';
 import { isPageCover } from '../../shared/page-cover';
 import { readIcon } from '../page/page-values';
-import { IconChevronUpDown, IconDotsHorizontal, IconLock, IconPlus } from '../../components/icons';
+import { IconCalendar, IconChevronUpDown, IconDotsHorizontal, IconLock, IconPlus } from '../../components/icons';
 import { formatBytes } from '../../components/utils/format-bytes';
 import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import { onHover } from '../../components/utils/tooltip';
@@ -12,6 +12,7 @@ import type { I18n } from '../../../types';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { DEFAULT_MAX_SIZE } from '../file/constants';
 import { openCellEditor, renderCellValue } from './cells';
+import { newSelectOption } from './cells/option-editing';
 import type { CellContext, CellEditorHandle } from './cells';
 import { accessLine, openFormShare } from './database-form-share';
 import type { FormShareHost } from './database-form-share';
@@ -43,6 +44,8 @@ export interface DatabaseFormViewOptions {
   /** Makes an existing property the last question. */
   showQuestion?: (propertyId: string) => void;
   renameProperty?: (propertyId: string, name: string) => void;
+  /** The property's whole new option list after a builder option edit, as the property menu's options list sends it. */
+  changeOptions?: (propertyId: string, options: SelectOption[]) => void;
   /** Another property of this database already has `name`. Such a rename is refused (research/14 §3). */
   isNameTaken?: (propertyId: string, name: string) => boolean;
   changePropertyType?: (propertyId: string, type: PropertyType) => void;
@@ -147,7 +150,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     return this.building || this.pressing || this.panel !== null || this.editor?.isOpen === true
       // The icon and cover pickers mark their button while open.
       || this.root?.querySelector('[data-blok-database-form-header] [aria-expanded="true"]') != null
-      || (active?.matches('[data-blok-database-form-question-name], input[data-blok-database-form-header-title], input[data-blok-database-form-header-description]') === true
+      || (active?.matches('[data-blok-database-form-question-name], [data-blok-database-form-option-name], input[data-blok-database-form-header-title], input[data-blok-database-form-header-description]') === true
         && this.root?.contains(active) === true);
   }
 
@@ -195,7 +198,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       } else if (field instanceof HTMLFieldSetElement) {
         const chosen = Array.isArray(value) ? value : [value];
 
-        for (const box of field.querySelectorAll<HTMLInputElement>('input')) {
+        for (const box of field.querySelectorAll<HTMLInputElement>('input:is([type="radio"], [type="checkbox"])')) {
           box.checked = chosen.some((selected) => selected === box.value);
         }
       } else if (field instanceof HTMLInputElement && field.type === 'checkbox') {
@@ -694,7 +697,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     } else {
       field.required = required;
     }
-    wrapper.appendChild(field);
+    wrapper.appendChild(this.isBuilder() && property.type === 'checkbox' ? this.checkboxRow(field) : field);
 
     const maxSelections = PICKS_MANY.includes(property.type) ? setting.maxSelections : undefined;
 
@@ -705,9 +708,15 @@ export class DatabaseFormView implements DatabaseViewRenderer {
 
   private field(property: PropertyDefinition, id: string, setting: ViewPropertySetting): Field {
     const options = [...(property.config?.options ?? [])].sort((a, b) => (a.position < b.position ? -1 : 1));
+    const builder = this.isBuilder();
 
-    if (property.type === 'person' || property.type === 'files' || property.type === 'relation') {
+    // notion-motion.md Round 75 §2: the builder's date answer is a picker field, not a native date box.
+    if (property.type === 'person' || property.type === 'files' || property.type === 'relation' || (builder && property.type === 'date')) {
       return this.providerField(property, id, setting);
+    }
+    if (builder && this.options.changeOptions !== undefined && (property.type === 'select' || property.type === 'multiSelect')
+      && showOptionsAs(property, setting) === 'list') {
+      return this.optionRows(property, options, id, property.type === 'select' ? 'radio' : 'checkbox');
     }
     if (property.type === 'select' && showOptionsAs(property, setting) === 'list') {
       return this.choiceList(options, id, 'radio');
@@ -756,6 +765,116 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       : propertyTypeMeta(type).labelKey);
   }
 
+  /** The builder: a writable form that edits its questions. A respondent's form, and the Preview, answer them. */
+  private isBuilder(): boolean {
+    return !this.options.readOnly && this.options.setQuestionSetting !== undefined;
+  }
+
+  /**
+   * notion-motion.md Round 75 §2: the builder edits a choice question's options in place, one row per
+   * option, then "Add option". Each edit sends the property's whole option list.
+   */
+  private optionRows(property: PropertyDefinition, options: SelectOption[], id: string, kind: 'radio' | 'checkbox'): HTMLFieldSetElement {
+    const set = document.createElement('fieldset');
+    const add = document.createElement('button');
+    const label = document.createElement('span');
+    // The list as last sent: the host redraws only once the builder is idle, so a second edit builds on the first.
+    const state = { options };
+    const taken = (name: string, except?: string): boolean =>
+      state.options.some((option) => option.id !== except && option.label.toLowerCase() === name.toLowerCase());
+    const send = (next: SelectOption[]): void => {
+      state.options = next;
+      this.write(() => this.options.changeOptions?.(property.id, next));
+    };
+
+    // A row names an option; a new row gets its option on its first name, then renames it like the others.
+    const nameRow = (optionId: string | null): HTMLElement => {
+      const { row, name } = this.optionRow(kind);
+      const owner = { id: optionId };
+      const saved = (): string => state.options.find((entry) => entry.id === owner.id)?.label ?? '';
+
+      name.defaultValue = saved();
+      name.setAttribute('aria-label', this.options.i18n.t(optionId === null ? 'tools.database.addOption' : 'tools.database.optionName'));
+      name.addEventListener('change', () => {
+        const next = name.value.trim();
+
+        if (next === '' || next === saved() || taken(next, owner.id ?? undefined)) {
+          name.value = saved();
+
+          return;
+        }
+        if (owner.id === null) {
+          const option = newSelectOption(state.options, next);
+
+          owner.id = option.id;
+          send([...state.options, option]);
+
+          return;
+        }
+        send(state.options.map((entry) => (entry.id === owner.id ? { ...entry, label: next } : entry)));
+      });
+      // Notion's label for a new option is unmeasured, so an empty new row waits for one and leaves when blurred.
+      name.addEventListener('focusout', () => {
+        if (owner.id === null && name.value.trim() === '') row.remove();
+      });
+
+      return row;
+    };
+
+    set.id = id;
+    set.setAttribute('data-blok-database-form-options', '');
+    options.forEach((option) => set.appendChild(nameRow(option.id)));
+    add.type = 'button';
+    add.setAttribute('data-blok-database-form-add-option', '');
+    add.setAttribute('data-blok-testid', 'database-form-add-option');
+    add.innerHTML = IconPlus;
+    label.textContent = this.options.i18n.t('tools.database.formAddOption');
+    add.appendChild(label);
+    add.addEventListener('click', () => {
+      const row = nameRow(null);
+
+      set.insertBefore(row, add);
+      row.querySelector<HTMLInputElement>('[data-blok-database-form-option-name]')?.focus();
+    });
+    set.appendChild(add);
+
+    return set;
+  }
+
+  /** One builder option row: a radio or checkbox that only shows the kind, then the option's name. */
+  private optionRow(kind: 'radio' | 'checkbox'): { row: HTMLElement; name: HTMLInputElement } {
+    const row = document.createElement('div');
+    const box = document.createElement('input');
+    const name = document.createElement('input');
+
+    row.setAttribute('data-blok-database-form-option', '');
+    box.type = kind;
+    box.tabIndex = -1;
+    box.setAttribute('aria-hidden', 'true');
+    box.addEventListener('click', (event) => event.preventDefault());
+    name.type = 'text';
+    name.setAttribute('data-blok-database-form-option-name', '');
+    name.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || event.isComposing) return;
+      event.preventDefault();
+      name.blur();
+    });
+    name.addEventListener('focusout', (event) => this.endEdit(event));
+    row.append(box, name);
+
+    return { row, name };
+  }
+
+  /** notion-motion.md Round 75 §2: the builder's checkbox answer sits in a 36-tall row. Notion's label field there is unmeasured. */
+  private checkboxRow(field: Field): HTMLElement {
+    const row = document.createElement('div');
+
+    row.setAttribute('data-blok-database-form-checkbox-row', '');
+    row.appendChild(field);
+
+    return row;
+  }
+
   private choiceList(options: SelectOption[], id: string, kind: 'radio' | 'checkbox', maxSelections?: number): HTMLFieldSetElement {
     const set = document.createElement('fieldset');
 
@@ -782,8 +901,12 @@ export class DatabaseFormView implements DatabaseViewRenderer {
   private paintProviderField(property: PropertyDefinition, field: HTMLButtonElement): void {
     const value = this.answers.get(property.id);
     // Only a Dropdown multiple choice reaches a provider field as multiSelect.
-    const chevron = property.type === 'multiSelect' ? [this.dropdownChevron()] : [];
+    const chevron: HTMLSpanElement[] = [];
 
+    if (property.type === 'multiSelect') chevron.push(this.dropdownChevron());
+    if (property.type === 'date') chevron.push(this.dateGlyph());
+
+    field.toggleAttribute('data-empty', value === undefined);
     if (value === undefined) {
       field.replaceChildren(this.options.i18n.t('tools.database.formChooseAnswer'), ...chevron);
 
@@ -807,6 +930,17 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     return chevron;
   }
 
+  /** notion-motion.md Round 75 §2: Notion's date answer ends in a 16px calendar glyph. */
+  private dateGlyph(): HTMLSpanElement {
+    const glyph = document.createElement('span');
+
+    glyph.setAttribute('data-blok-database-form-date-glyph', '');
+    glyph.setAttribute('aria-hidden', 'true');
+    glyph.innerHTML = IconCalendar;
+
+    return glyph;
+  }
+
   private providerField(property: PropertyDefinition, id: string, setting: ViewPropertySetting): HTMLButtonElement {
     const field = document.createElement('button');
     const context = { ...this.options.cellContext, i18n: this.options.i18n, readOnly: false, openRelated: undefined };
@@ -816,6 +950,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     field.id = id;
     field.setAttribute('data-blok-database-form-provider-answer', '');
     if (property.type === 'multiSelect') field.setAttribute('data-blok-database-form-dropdown', '');
+    if (property.type === 'date') field.setAttribute('data-blok-database-form-date', '');
     field.setAttribute('aria-label', setting.questionName ?? property.name);
     field.addEventListener('click', () => {
       if (this.destroying) return;

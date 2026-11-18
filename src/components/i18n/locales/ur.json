@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "سوال کا نام",
   "tools.database.formTitlePlaceholder": "فارم کا عنوان",
   "tools.database.formDescriptionPlaceholder": "تفصیل (اختیاری)",
+  "tools.database.formAddOption": "اختیار شامل کریں",
   "tools.database.formAnswerPlaceholder": "جواب دہندہ کا جواب",
   "tools.database.formIcon": "فارم کا آئیکن",
   "tools.database.formCover": "فارم کا کور",

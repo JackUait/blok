@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Spørgsmålets navn",
   "tools.database.formTitlePlaceholder": "Formularens titel",
   "tools.database.formDescriptionPlaceholder": "Beskrivelse (valgfri)",
+  "tools.database.formAddOption": "Tilføj en mulighed",
   "tools.database.formAnswerPlaceholder": "Respondentens svar",
   "tools.database.formIcon": "Formularens ikon",
   "tools.database.formCover": "Formularens coverbillede",

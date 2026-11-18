@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Frågans namn",
   "tools.database.formTitlePlaceholder": "Formulärtitel",
   "tools.database.formDescriptionPlaceholder": "Beskrivning (valfritt)",
+  "tools.database.formAddOption": "Lägg till ett alternativ",
   "tools.database.formAnswerPlaceholder": "Svarandens svar",
   "tools.database.formIcon": "Formulärikon",
   "tools.database.formCover": "Formulärets omslagsbild",

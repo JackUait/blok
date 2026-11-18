@@ -1726,6 +1726,7 @@
   "tools.database.formQuestionNamePlaceholder": "Назва запитання",
   "tools.database.formTitlePlaceholder": "Назва форми",
   "tools.database.formDescriptionPlaceholder": "Опис (необов’язково)",
+  "tools.database.formAddOption": "Додати варіант",
   "tools.database.formAnswerPlaceholder": "Відповідь респондента",
   "tools.database.formIcon": "Іконка форми",
   "tools.database.formCover": "Обкладинка форми",

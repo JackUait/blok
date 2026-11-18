@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Tên câu hỏi",
   "tools.database.formTitlePlaceholder": "Tiêu đề biểu mẫu",
   "tools.database.formDescriptionPlaceholder": "Mô tả (không bắt buộc)",
+  "tools.database.formAddOption": "Thêm tùy chọn",
   "tools.database.formAnswerPlaceholder": "Câu trả lời của người trả lời",
   "tools.database.formIcon": "Biểu tượng biểu mẫu",
   "tools.database.formCover": "Ảnh bìa biểu mẫu",

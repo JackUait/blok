@@ -1710,6 +1710,7 @@
   "tools.database.formQuestionNamePlaceholder": "Назив питања",
   "tools.database.formTitlePlaceholder": "Наслов обрасца",
   "tools.database.formDescriptionPlaceholder": "Опис (опционо)",
+  "tools.database.formAddOption": "Додај опцију",
   "tools.database.formAnswerPlaceholder": "Одговор испитаника",
   "tools.database.formIcon": "Икона обрасца",
   "tools.database.formCover": "Насловна слика обрасца",

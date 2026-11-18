@@ -1710,6 +1710,7 @@
   "tools.database.formQuestionNamePlaceholder": "Jautājuma nosaukums",
   "tools.database.formTitlePlaceholder": "Veidlapas nosaukums",
   "tools.database.formDescriptionPlaceholder": "Apraksts (neobligāts)",
+  "tools.database.formAddOption": "Pievienot opciju",
   "tools.database.formAnswerPlaceholder": "Respondenta atbilde",
   "tools.database.formIcon": "Veidlapas ikona",
   "tools.database.formCover": "Veidlapas vāka attēls",

@@ -23034,7 +23034,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   cursor: pointer;
 }
 
-[data-blok-database-form-dropdown] {
+[data-blok-database-form-dropdown], [data-blok-database-form-date] {
   display: flex;
   align-items: center;
   gap: var(--blok-space-1-5);
@@ -23058,7 +23058,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   font-size: 0.875em;
 }
 
-[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name]), textarea, select, [data-blok-database-form-provider-answer]) {
+[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name], [data-blok-database-form-option-name]), textarea, select, [data-blok-database-form-provider-answer]) {
   box-sizing: border-box;
   min-block-size: 38px;
   padding-block: var(--blok-space-1);
@@ -23070,7 +23070,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   font: inherit;
 }
 
-[data-blok-database-form-question] input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name]) {
+[data-blok-database-form-question] input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name], [data-blok-database-form-option-name]) {
   padding-block: calc(var(--blok-space-2-25) - var(--blok-border-width-hairline));
   padding-inline: calc(var(--blok-space-2-5) - var(--blok-border-width-hairline));
 }
@@ -23092,6 +23092,109 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   margin: 0;
   padding: 0;
   border: none;
+}
+
+[data-blok-database-form-question]:has(> [data-blok-database-form-question-header]) > [data-blok-database-form-question-name-error] + :is([data-blok-database-form-options], [data-blok-database-form-date], [data-blok-database-form-selection-limit]) {
+  margin-block-start: calc(-1 * var(--blok-space-2));
+}
+
+[data-blok-database-form-question]:has(> [data-blok-database-form-question-header]) > [data-blok-database-form-selection-limit] {
+  margin-block-end: var(--blok-space-2);
+  padding-inline: var(--blok-space-2-5);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+[data-blok-database-form-question] button[data-blok-database-form-date][data-blok-database-form-provider-answer] {
+  padding-block: 0;
+  padding-inline: calc(var(--blok-space-2-5) - var(--blok-border-width-hairline)) calc(var(--blok-space-1-5) - var(--blok-border-width-hairline));
+}
+
+[data-blok-database-form-question] button[data-blok-database-form-date][data-blok-database-form-provider-answer][data-empty] {
+  color: var(--blok-database-title-placeholder);
+}
+
+[data-blok-database-form-date-glyph] {
+  display: inline-flex;
+  flex: none;
+  margin-inline-start: auto;
+  color: var(--blok-database-ink-tertiary);
+}
+
+[data-blok-database-form-date-glyph] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+[data-blok-database-form-question] [data-blok-database-form-options] {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 0;
+}
+
+[data-blok-database-form-option] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-3);
+  block-size: 32px;
+  margin-inline: calc(-1 * var(--blok-space-2));
+  padding-inline: var(--blok-space-5) 7px;
+  border-radius: var(--blok-radius-control);
+}
+
+:is([data-blok-database-form-option], [data-blok-database-form-checkbox-row]) input:is([type="radio"], [type="checkbox"]) {
+  flex: none;
+  inline-size: 18px;
+  block-size: 18px;
+  margin: 0;
+}
+
+[data-blok-database-form-option-name] {
+  flex: 1;
+  min-inline-size: 0;
+  block-size: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--blok-database-ink);
+  font: inherit;
+  outline: none;
+}
+
+[data-blok-database-form-add-option] {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  block-size: 28px;
+  margin-block: var(--blok-space-1) var(--blok-space-0-5);
+  margin-inline-start: var(--blok-space-1);
+  padding-inline: var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-ink-secondary);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+[data-blok-database-form-add-option]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-form-add-option] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+[data-blok-database-form-checkbox-row] {
+  display: flex;
+  align-items: center;
+  min-block-size: 36px;
+  margin-block-end: var(--blok-space-2-5);
+  padding-inline: var(--blok-space-2-5);
+  border-radius: var(--blok-radius-control);
 }
 
 [data-blok-database-form-submit], [data-blok-database-form-again] {

@@ -1,12 +1,22 @@
+import { nanoid } from 'nanoid';
+
 import { IconCheck, IconChevronRight, IconEmojiFlag, IconGroup, IconTrash } from '../../../components/icons';
 import { getTabbables } from '../../../components/utils/modal-dialog';
 import { DatabaseModel } from '../database-model';
 import { statusGroupOf } from '../property-values';
 import type { PropertyDefinition, SelectOption } from '../types';
-import { OPTION_COLORS, optionColorLabelKey, optionColorOf } from './option-colors';
+import { OPTION_COLORS, optionColorLabelKey, optionColorOf, pickOptionColor } from './option-colors';
 import type { OptionColor } from './option-colors';
 
 type Translate = (key: string) => string;
+
+/** A new option after the last one in `options`, in the next free colour. */
+export const newSelectOption = (options: SelectOption[], label: string): SelectOption => ({
+  id: nanoid(),
+  label,
+  color: pickOptionColor(options),
+  position: DatabaseModel.positionBetween(options.at(-1)?.position ?? null, null),
+});
 
 /**
  * The "⋯" panel of one option: name field, Delete, then the 10 colors.

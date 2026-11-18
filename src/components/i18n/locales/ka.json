@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "კითხვის სახელი",
   "tools.database.formTitlePlaceholder": "ფორმის სათაური",
   "tools.database.formDescriptionPlaceholder": "აღწერა (არასავალდებულო)",
+  "tools.database.formAddOption": "ვარიანტის დამატება",
   "tools.database.formAnswerPlaceholder": "რესპონდენტის პასუხი",
   "tools.database.formIcon": "ფორმის ხატულა",
   "tools.database.formCover": "ფორმის გარეკანი",

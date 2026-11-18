@@ -1726,6 +1726,7 @@
   "tools.database.formQuestionNamePlaceholder": "Ime vprašanja",
   "tools.database.formTitlePlaceholder": "Naslov obrazca",
   "tools.database.formDescriptionPlaceholder": "Opis (neobvezno)",
+  "tools.database.formAddOption": "Dodaj možnost",
   "tools.database.formAnswerPlaceholder": "Odgovor anketiranca",
   "tools.database.formIcon": "Ikona obrazca",
   "tools.database.formCover": "Naslovnica obrazca",

@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "ชื่อคำถาม",
   "tools.database.formTitlePlaceholder": "ชื่อฟอร์ม",
   "tools.database.formDescriptionPlaceholder": "คำอธิบาย (ไม่บังคับ)",
+  "tools.database.formAddOption": "เพิ่มตัวเลือก",
   "tools.database.formAnswerPlaceholder": "คำตอบของผู้ตอบ",
   "tools.database.formIcon": "ไอคอนฟอร์ม",
   "tools.database.formCover": "ภาพปกฟอร์ม",

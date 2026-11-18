@@ -1080,6 +1080,7 @@ export type BlokMessageKey =
   | 'tools.database.formAccessFull'
   | 'tools.database.formAccessNone'
   | 'tools.database.formAccessView'
+  | 'tools.database.formAddOption'
   | 'tools.database.formAddQuestion'
   | 'tools.database.formAnonymous'
   | 'tools.database.formAnonymousPill'

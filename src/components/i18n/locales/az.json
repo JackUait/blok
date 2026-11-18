@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Sualın adı",
   "tools.database.formTitlePlaceholder": "Formanın başlığı",
   "tools.database.formDescriptionPlaceholder": "Təsvir (istəyə bağlı)",
+  "tools.database.formAddOption": "Seçim əlavə et",
   "tools.database.formAnswerPlaceholder": "Cavablayanın cavabı",
   "tools.database.formIcon": "Formanın simvolu",
   "tools.database.formCover": "Formanın üz qabığı",

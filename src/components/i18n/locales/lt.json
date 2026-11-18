@@ -1726,6 +1726,7 @@
   "tools.database.formQuestionNamePlaceholder": "Klausimo pavadinimas",
   "tools.database.formTitlePlaceholder": "Formos pavadinimas",
   "tools.database.formDescriptionPlaceholder": "Aprašas (neprivalomas)",
+  "tools.database.formAddOption": "Pridėti parinktį",
   "tools.database.formAnswerPlaceholder": "Respondento atsakymas",
   "tools.database.formIcon": "Formos piktograma",
   "tools.database.formCover": "Formos viršelis",

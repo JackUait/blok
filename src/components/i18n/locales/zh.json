@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "问题名称",
   "tools.database.formTitlePlaceholder": "表单标题",
   "tools.database.formDescriptionPlaceholder": "描述（可选）",
+  "tools.database.formAddOption": "添加选项",
   "tools.database.formAnswerPlaceholder": "填写者的回答",
   "tools.database.formIcon": "表单图标",
   "tools.database.formCover": "表单封面",

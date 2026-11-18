@@ -310,7 +310,7 @@ describe('form builder question card (research/21 §1k)', () => {
 
   // notion-motion.md Round 31 §1, Round 32 §4: the answer box is 38 tall (Blok drew 28).
   it('draws the answer box 38 tall', () => {
-    const answer = ruleBody('[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name]), textarea, select, [data-blok-database-form-provider-answer])');
+    const answer = ruleBody('[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name], [data-blok-database-form-option-name]), textarea, select, [data-blok-database-form-provider-answer])');
 
     expect(answer).toContain('box-sizing: border-box');
     expect(answer).toContain('min-block-size: 38px');
@@ -318,12 +318,40 @@ describe('form builder question card (research/21 §1k)', () => {
 
   // notion-motion.md Round 74 §5 (r74-n-form-card.raw): the text sits 9px 10px in from the box's edge; Blok's 1px border is part of that.
   it('sets a text answer\'s text 9px 10px in from the box edge', () => {
-    const text = ruleBody('[data-blok-database-form-question] input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name])');
+    const text = ruleBody('[data-blok-database-form-question] input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name], [data-blok-database-form-option-name])');
 
     expect(text).toContain('padding-block: calc(var(--blok-space-2-25) - var(--blok-border-width-hairline))');
     expect(text).toContain('padding-inline: calc(var(--blok-space-2-5) - var(--blok-border-width-hairline))');
-    expect(ruleBody('[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name]), textarea, select, [data-blok-database-form-provider-answer])'))
+    expect(ruleBody('[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name], [data-blok-database-form-option-name]), textarea, select, [data-blok-database-form-provider-answer])'))
       .toContain('border-radius: var(--blok-radius-control)');
+  });
+
+  // notion-motion.md Round 75 §2 (r75-n-form-answers.raw): Date, Select and Multi-select answers start 62 under the card top,
+  // 8 above a text answer; option rows are 32 tall with an 18px box; a checkbox row is 36 tall.
+  it('places the builder\'s date, option and checkbox answers where Notion does', () => {
+    const builder = '[data-blok-database-form-question]:has(> [data-blok-database-form-question-header])';
+    const options = ruleBody(`${builder} > [data-blok-database-form-question-name-error] + :is([data-blok-database-form-options], [data-blok-database-form-date], [data-blok-database-form-selection-limit])`);
+    const row = ruleBody('[data-blok-database-form-option]');
+    const box = ruleBody(':is([data-blok-database-form-option], [data-blok-database-form-checkbox-row]) input:is([type="radio"], [type="checkbox"])');
+    const hint = ruleBody(`${builder} > [data-blok-database-form-selection-limit]`);
+    const check = ruleBody('[data-blok-database-form-checkbox-row]');
+
+    expect(options).toContain('margin-block-start: calc(-1 * var(--blok-space-2))');
+    expect(hint).toContain('margin-block-end: var(--blok-space-2)');
+    expect(hint).toContain('line-height: 24px');
+    expect(row).toContain('block-size: 32px');
+    expect(row).toContain('margin-inline: calc(-1 * var(--blok-space-2))');
+    expect(box).toContain('inline-size: 18px');
+    expect(box).toContain('block-size: 18px');
+    expect(check).toContain('min-block-size: 36px');
+    expect(ruleBody('[data-blok-database-form-add-option]')).toContain('block-size: 28px');
+    expect(ruleBody('[data-blok-database-form-date-glyph] svg')).toContain('inline-size: 16px');
+    expect(ruleBody('[data-blok-database-form-question] button[data-blok-database-form-date][data-blok-database-form-provider-answer][data-empty]'))
+      .toContain('color: var(--blok-database-title-placeholder)');
+  });
+
+  it('keeps an option name out of the 38px answer box', () => {
+    expect(database).toContain('[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name], [data-blok-database-form-option-name])');
   });
 
   it('has no rule for the in-card Required checkbox, which is gone', () => {

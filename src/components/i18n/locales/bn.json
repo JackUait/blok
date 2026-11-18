@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "প্রশ্নের নাম",
   "tools.database.formTitlePlaceholder": "ফর্মের শিরোনাম",
   "tools.database.formDescriptionPlaceholder": "বিবরণ (ঐচ্ছিক)",
+  "tools.database.formAddOption": "একটি বিকল্প যোগ করুন",
   "tools.database.formAnswerPlaceholder": "উত্তরদাতার উত্তর",
   "tools.database.formIcon": "ফর্মের আইকন",
   "tools.database.formCover": "ফর্মের প্রচ্ছদ",

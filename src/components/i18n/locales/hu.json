@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Kérdés neve",
   "tools.database.formTitlePlaceholder": "Űrlap címe",
   "tools.database.formDescriptionPlaceholder": "Leírás (nem kötelező)",
+  "tools.database.formAddOption": "Lehetőség hozzáadása",
   "tools.database.formAnswerPlaceholder": "A válaszadó válasza",
   "tools.database.formIcon": "Űrlap ikonja",
   "tools.database.formCover": "Űrlap borítóképe",

@@ -1710,6 +1710,7 @@
   "tools.database.formQuestionNamePlaceholder": "Nome domanda",
   "tools.database.formTitlePlaceholder": "Titolo del modulo",
   "tools.database.formDescriptionPlaceholder": "Descrizione (facoltativa)",
+  "tools.database.formAddOption": "Aggiungi un’opzione",
   "tools.database.formAnswerPlaceholder": "Risposta del rispondente",
   "tools.database.formIcon": "Icona del modulo",
   "tools.database.formCover": "Copertina del modulo",

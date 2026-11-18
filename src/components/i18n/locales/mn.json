@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Асуултын нэр",
   "tools.database.formTitlePlaceholder": "Маягтын гарчиг",
   "tools.database.formDescriptionPlaceholder": "Тайлбар (заавал биш)",
+  "tools.database.formAddOption": "Сонголт нэмэх",
   "tools.database.formAnswerPlaceholder": "Хариулагчийн хариулт",
   "tools.database.formIcon": "Маягтын дүрс",
   "tools.database.formCover": "Маягтын хавтас",

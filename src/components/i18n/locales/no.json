@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Spørsmålsnavn",
   "tools.database.formTitlePlaceholder": "Skjematittel",
   "tools.database.formDescriptionPlaceholder": "Beskrivelse (valgfritt)",
+  "tools.database.formAddOption": "Legg til et alternativ",
   "tools.database.formAnswerPlaceholder": "Respondentens svar",
   "tools.database.formIcon": "Skjemaikon",
   "tools.database.formCover": "Omslagsbilde for skjema",

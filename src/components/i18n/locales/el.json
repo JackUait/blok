@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Όνομα ερώτησης",
   "tools.database.formTitlePlaceholder": "Τίτλος φόρμας",
   "tools.database.formDescriptionPlaceholder": "Περιγραφή (προαιρετικά)",
+  "tools.database.formAddOption": "Προσθήκη επιλογής",
   "tools.database.formAnswerPlaceholder": "Απάντηση ερωτώμενου",
   "tools.database.formIcon": "Εικονίδιο φόρμας",
   "tools.database.formCover": "Εξώφυλλο φόρμας",

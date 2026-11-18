@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Emri i pyetjes",
   "tools.database.formTitlePlaceholder": "Titulli i formularit",
   "tools.database.formDescriptionPlaceholder": "Përshkrim (opsional)",
+  "tools.database.formAddOption": "Shto një opsion",
   "tools.database.formAnswerPlaceholder": "Përgjigjja e të anketuarit",
   "tools.database.formIcon": "Ikona e formularit",
   "tools.database.formCover": "Kopertina e formularit",

@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Nama soalan",
   "tools.database.formTitlePlaceholder": "Tajuk borang",
   "tools.database.formDescriptionPlaceholder": "Perihalan (pilihan)",
+  "tools.database.formAddOption": "Tambah pilihan",
   "tools.database.formAnswerPlaceholder": "Jawapan responden",
   "tools.database.formIcon": "Ikon borang",
   "tools.database.formCover": "Muka depan borang",

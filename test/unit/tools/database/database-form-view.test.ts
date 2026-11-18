@@ -1129,3 +1129,153 @@ describe('DatabaseFormView drag to reorder questions', () => {
     expect(moveQuestion).not.toHaveBeenCalled();
   });
 });
+
+// notion-motion.md Round 75 §2 "Form answers, non-text": the builder edits options in place,
+// draws a date as a picker field and a checkbox as a row. A respondent keeps the answer controls.
+describe('DatabaseFormView builder answers', () => {
+  const tags: PropertyDefinition = {
+    id: 'tags', name: 'Tags', type: 'multiSelect', position: 'a7', config: {
+      options: [{ id: 't1', label: 'Red', position: 'a0' }, { id: 't2', label: 'Blue', position: 'a1' }],
+    },
+  };
+  const due: PropertyDefinition = { id: 'due', name: 'Due', type: 'date', position: 'a8' };
+  const properties = ['pick', 'tags', 'due', 'agree'].map((id) => ({ id, visible: true }));
+  const build = (changeOptions = vi.fn()): { root: HTMLElement; changeOptions: ReturnType<typeof vi.fn> } => ({
+    root: mount({ schema: [...schema, tags, due], view: view({ properties }), setQuestionSetting: vi.fn(), changeOptions }).root,
+    changeOptions,
+  });
+  const names = (root: HTMLElement, id: string): HTMLInputElement[] =>
+    [...(question(root, id)?.querySelectorAll<HTMLInputElement>('[data-blok-database-form-option-name]') ?? [])];
+  const addOption = (root: HTMLElement, id: string): HTMLButtonElement | null | undefined =>
+    question(root, id)?.querySelector<HTMLButtonElement>('[data-blok-database-form-add-option]');
+  const type = (input: HTMLInputElement, value: string): void => {
+    input.value = value;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('a select question lists each option as an editable row with a radio, then Add option', () => {
+    const { root } = build();
+    const rows = [...(question(root, 'pick')?.querySelectorAll('[data-blok-database-form-option]') ?? [])];
+
+    expect(names(root, 'pick').map((input) => input.value)).toEqual(['One', 'Two']);
+    expect(rows.map((row) => row.querySelector('input[type="radio"]') !== null)).toEqual([true, true]);
+    expect(addOption(root, 'pick')?.textContent?.trim()).toBe('tools.database.formAddOption');
+  });
+
+  it('a multiple choice question lists each option with a checkbox, then Add option', () => {
+    const { root } = build();
+    const rows = [...(question(root, 'tags')?.querySelectorAll('[data-blok-database-form-option]') ?? [])];
+
+    expect(names(root, 'tags').map((input) => input.value)).toEqual(['Red', 'Blue']);
+    expect(rows.map((row) => row.querySelector('input[type="checkbox"]') !== null)).toEqual([true, true]);
+    expect(addOption(root, 'tags')).not.toBeNull();
+  });
+
+  it('renaming an option in the builder changes the property options, keeping the others', () => {
+    const { root, changeOptions } = build();
+
+    type(names(root, 'pick')[0], ' Uno ');
+
+    expect(changeOptions).toHaveBeenCalledTimes(1);
+    expect(changeOptions).toHaveBeenCalledWith('pick', [
+      { id: 'o1', label: 'Uno', position: 'a0' },
+      { id: 'o2', label: 'Two', position: 'a1' },
+    ]);
+  });
+
+  it('an empty or taken option name is refused and the old name comes back', () => {
+    const { root, changeOptions } = build();
+    const [first] = names(root, 'pick');
+
+    type(first, '  ');
+    expect(first.value).toBe('One');
+    type(first, 'two');
+    expect(first.value).toBe('One');
+    expect(changeOptions).not.toHaveBeenCalled();
+  });
+
+  it('Add option opens an empty focused row whose name adds an option after the last', () => {
+    const { root, changeOptions } = build();
+
+    addOption(root, 'tags')?.click();
+    const fresh = names(root, 'tags').at(-1);
+
+    expect(names(root, 'tags')).toHaveLength(3);
+    expect(fresh?.value).toBe('');
+    expect(document.activeElement).toBe(fresh);
+    if (fresh !== undefined) type(fresh, 'Green');
+
+    expect(changeOptions).toHaveBeenCalledTimes(1);
+    const [propertyId, next] = changeOptions.mock.calls[0] as [string, Array<{ id: string; label: string; position: string }>];
+
+    expect(propertyId).toBe('tags');
+    expect(next.map((option) => option.label)).toEqual(['Red', 'Blue', 'Green']);
+    expect(next[2].id).not.toBe('');
+    expect(next[2].position > 'a1').toBe(true);
+  });
+
+  it('a new option renamed before the redraw is renamed, not added twice', () => {
+    const { root, changeOptions } = build();
+
+    addOption(root, 'tags')?.click();
+    const fresh = names(root, 'tags').at(-1);
+
+    if (fresh !== undefined) {
+      type(fresh, 'Green');
+      type(fresh, 'Teal');
+    }
+
+    expect(changeOptions).toHaveBeenCalledTimes(2);
+    const last = changeOptions.mock.calls[1][1] as Array<{ label: string }>;
+
+    expect(last.map((option) => option.label)).toEqual(['Red', 'Blue', 'Teal']);
+  });
+
+  it('a new option row left empty adds nothing', () => {
+    const { root, changeOptions } = build();
+
+    addOption(root, 'tags')?.click();
+    const fresh = names(root, 'tags').at(-1);
+
+    expect(names(root, 'tags')).toHaveLength(3);
+    if (fresh !== undefined) type(fresh, '');
+
+    expect(changeOptions).not.toHaveBeenCalled();
+  });
+
+  it('a date question is a picker field with a calendar glyph that opens the date picker', () => {
+    const { root } = build();
+    const answer = question(root, 'due')?.querySelector<HTMLButtonElement>('button[data-blok-database-form-provider-answer]');
+
+    expect(question(root, 'due')?.querySelector('input[type="date"]')).toBeNull();
+    expect(answer?.querySelector('[data-blok-database-form-date-glyph] svg')).not.toBeNull();
+    answer?.click();
+
+    expect(document.querySelector('[data-blok-database-date-editor]')).not.toBeNull();
+  });
+
+  it('a checkbox question is a row holding the checkbox', () => {
+    const { root } = build();
+    const row = question(root, 'agree')?.querySelector('[data-blok-database-form-checkbox-row]');
+
+    expect(row?.querySelector('input[type="checkbox"]')).toBeInstanceOf(HTMLInputElement);
+  });
+
+  it('a respondent keeps the plain choices, the native date and no option editing', () => {
+    const root = mount({ schema: [...schema, tags, due], view: view({ properties }) }).root;
+
+    expect(root.querySelector('[data-blok-database-form-option-name]')).toBeNull();
+    expect(root.querySelector('[data-blok-database-form-add-option]')).toBeNull();
+    expect(question(root, 'due')?.querySelector('input[type="date"]')).not.toBeNull();
+    expect(question(root, 'pick')?.querySelectorAll('input[type="radio"]')).toHaveLength(2);
+  });
+});

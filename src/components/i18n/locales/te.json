@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "ప్రశ్న పేరు",
   "tools.database.formTitlePlaceholder": "ఫారమ్ శీర్షిక",
   "tools.database.formDescriptionPlaceholder": "వివరణ (ఐచ్ఛికం)",
+  "tools.database.formAddOption": "ఎంపికను జోడించు",
   "tools.database.formAnswerPlaceholder": "ప్రతిస్పందనదారు సమాధానం",
   "tools.database.formIcon": "ఫారమ్ చిహ్నం",
   "tools.database.formCover": "ఫారమ్ కవర్",

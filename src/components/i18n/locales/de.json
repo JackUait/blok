@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Name der Frage",
   "tools.database.formTitlePlaceholder": "Formulartitel",
   "tools.database.formDescriptionPlaceholder": "Beschreibung (optional)",
+  "tools.database.formAddOption": "Option hinzufügen",
   "tools.database.formAnswerPlaceholder": "Antwort der befragten Person",
   "tools.database.formIcon": "Formularsymbol",
   "tools.database.formCover": "Formular-Titelbild",

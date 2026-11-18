@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "ප්‍රශ්නයේ නම",
   "tools.database.formTitlePlaceholder": "පෝරමයේ මාතෘකාව",
   "tools.database.formDescriptionPlaceholder": "විස්තරය (විකල්ප)",
+  "tools.database.formAddOption": "විකල්පයක් එක් කරන්න",
   "tools.database.formAnswerPlaceholder": "ප්‍රතිචාර දැක්වූ තැනැත්තාගේ පිළිතුර",
   "tools.database.formIcon": "පෝරමයේ නිරූපකය",
   "tools.database.formCover": "පෝරමයේ කවරය",

@@ -1,15 +1,12 @@
-import { nanoid } from 'nanoid';
-
 import { IconCross, IconDotsHorizontal, IconMenu, IconSliders } from '../../../components/icons';
 import { onHover } from '../../../components/utils/tooltip';
-import { DatabaseModel } from '../database-model';
 import { orderedStatusOptions, personIdsOf, statusGroupOf, statusGroupsOf } from '../property-values';
 import { sortedSelectOptions } from '../../../shared/database/value-helpers';
 import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { CellPopover, coverMinWidth } from './cell-popover';
 import { createOptionPill, optionsFor } from './display';
 import { pickOptionColor, shownStatusOption } from './option-colors';
-import { OptionDrag, buildDeletePrompt, buildOptionPanel, placeDroppedOption } from './option-editing';
+import { OptionDrag, buildDeletePrompt, buildOptionPanel, newSelectOption, placeDroppedOption } from './option-editing';
 import type { CellEditorContext, CellEditorHandle } from './types';
 
 const listIds = { next: 0 };
@@ -213,13 +210,7 @@ class SelectEditor {
   }
 
   private create(label: string): void {
-    const last = this.options[this.options.length - 1];
-    const option: SelectOption = {
-      id: nanoid(),
-      label,
-      color: pickOptionColor(this.options),
-      position: DatabaseModel.positionBetween(last?.position ?? null, null),
-    };
+    const option = newSelectOption(this.options, label);
 
     this.setOptions([...this.options, option]);
     this.pick(option.id);

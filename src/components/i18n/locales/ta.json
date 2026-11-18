@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "கேள்வியின் பெயர்",
   "tools.database.formTitlePlaceholder": "படிவத் தலைப்பு",
   "tools.database.formDescriptionPlaceholder": "விளக்கம் (விருப்பத்தேர்வு)",
+  "tools.database.formAddOption": "ஒரு விருப்பத்தைச் சேர்",
   "tools.database.formAnswerPlaceholder": "பதிலளித்தவரின் பதில்",
   "tools.database.formIcon": "படிவ ஐகான்",
   "tools.database.formCover": "படிவ அட்டைப்படம்",

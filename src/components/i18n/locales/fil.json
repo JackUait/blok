@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "Pangalan ng tanong",
   "tools.database.formTitlePlaceholder": "Pamagat ng pormularyo",
   "tools.database.formDescriptionPlaceholder": "Paglalarawan (opsyonal)",
+  "tools.database.formAddOption": "Magdagdag ng opsyon",
   "tools.database.formAnswerPlaceholder": "Sagot ng sumasagot",
   "tools.database.formIcon": "Icon ng pormularyo",
   "tools.database.formCover": "Cover ng pormularyo",

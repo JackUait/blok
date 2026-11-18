@@ -1694,6 +1694,7 @@
   "tools.database.formQuestionNamePlaceholder": "نام پرسش",
   "tools.database.formTitlePlaceholder": "عنوان فرم",
   "tools.database.formDescriptionPlaceholder": "توضیحات (اختیاری)",
+  "tools.database.formAddOption": "افزودن گزینه",
   "tools.database.formAnswerPlaceholder": "پاسخ پاسخ‌دهنده",
   "tools.database.formIcon": "نماد فرم",
   "tools.database.formCover": "جلدنگاره فرم",

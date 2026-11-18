@@ -1726,6 +1726,7 @@
   "tools.database.formQuestionNamePlaceholder": "Názov otázky",
   "tools.database.formTitlePlaceholder": "Názov formulára",
   "tools.database.formDescriptionPlaceholder": "Popis (voliteľné)",
+  "tools.database.formAddOption": "Pridať možnosť",
   "tools.database.formAnswerPlaceholder": "Odpoveď respondenta",
   "tools.database.formIcon": "Ikona formulára",
   "tools.database.formCover": "Obálka formulára",

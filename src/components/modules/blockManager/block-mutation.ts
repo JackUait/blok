@@ -35,6 +35,12 @@ import type { BlockYjsSync } from './yjs-sync';
 import { textOffsetOf } from '../../utils/caret/selection';
 import { Dom as $ } from '../../dom';
 
+/** Data a turn-into keeps when the tool stays the same and only its variant changes. */
+const SAME_TOOL_KEPT_FIELDS: Readonly<Record<string, readonly string[]>> = {
+  header: ['anchor'],
+  list: ['depth', 'start'],
+};
+
 /** A caret read before a keyboard move. */
 interface MovedCaret {
   input: HTMLElement;
@@ -1786,16 +1792,14 @@ export class BlockMutation {
 
     Object.assign(newBlockData, carriedBlockColors(savedBlock.data, newBlockData, field => field in targetSanitize));
 
-    // Links in the document point at a heading's anchor; another level is still that heading.
-    const sourceAnchor = savedBlock.data.anchor;
+    // A variant of the same tool is still that block: links point at a heading's
+    // anchor, and a list item keeps its indent and its start number.
+    const keptFields = source.name === replacingTool.name ? SAME_TOOL_KEPT_FIELDS[source.name] ?? [] : [];
 
-    if (
-      source.name === 'header'
-      && replacingTool.name === 'header'
-      && typeof sourceAnchor === 'string'
-      && newBlockData.anchor === undefined
-    ) {
-      newBlockData.anchor = sourceAnchor;
+    for (const field of keptFields) {
+      if (savedBlock.data[field] !== undefined && newBlockData[field] === undefined) {
+        newBlockData[field] = savedBlock.data[field];
+      }
     }
 
     /**

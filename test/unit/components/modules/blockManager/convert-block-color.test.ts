@@ -158,6 +158,7 @@ const createMockBlockFactory = (): BlockFactory => {
   mockTools.set('paragraph', createMockBlockToolAdapter('paragraph'));
   mockTools.set('header', createMockBlockToolAdapter('header', { textColor: false, backgroundColor: false }));
   mockTools.set('plain', createMockBlockToolAdapter('plain'));
+  mockTools.set('list', createMockBlockToolAdapter('list'));
 
   return new BlockFactory({
     API: {} as unknown as API,
@@ -310,5 +311,39 @@ describe('convert() keeps a heading anchor when a heading stays a heading', () =
     await operations.convert(heading, 'paragraph', blocksStore);
 
     expect(replaceSpy.mock.calls[0][2].anchor).toBeUndefined();
+  });
+});
+
+describe('convert() keeps a list item\'s place when it stays a list item', () => {
+  let operations: BlockOperations;
+  let blocksStore: BlocksStore;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    blocksStore = createBlocksStore([createMockBlock({ id: 'block-1', name: 'paragraph' })]);
+
+    const repository = new BlockRepository();
+
+    repository.initialize(blocksStore);
+
+    operations = new BlockOperations(
+      createMockDependencies(),
+      repository,
+      createMockBlockFactory(),
+      new BlockHierarchy(repository),
+      vi.fn(<Type extends BlockMutationType>(_t: Type, block: Block) => block),
+      0
+    );
+    operations.setYjsSync(createMockYjsSync());
+  });
+
+  it('carries depth and start to another list style', async () => {
+    const item = createMockBlock({ id: 'li', name: 'list', data: { text: 'Hi', style: 'ordered', depth: 2, start: 5 } });
+    const replaceSpy = vi.spyOn(operations, 'replace').mockReturnValue(item);
+
+    await operations.convert(item, 'list', blocksStore, { style: 'unordered' });
+
+    expect(replaceSpy.mock.calls[0][2]).toMatchObject({ style: 'unordered', depth: 2, start: 5 });
   });
 });

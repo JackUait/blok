@@ -18436,7 +18436,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: var(--blok-space-1);
+  gap: var(--blok-space-1-5);
   background-color: transparent;
   box-shadow: 0 0 0 1px var(--blok-database-gallery-preview-border);
   color: var(--blok-database-gallery-muted-text);
@@ -18446,7 +18446,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-gallery-new]::before {
   content: '';
-  margin-inline-end: calc(-1 * var(--blok-space-1));
+  margin-inline-end: calc(-1 * var(--blok-space-1-5));
   padding-block-start: var(--blok-database-gallery-new-height, calc(56.25% + 38.5px));
 }
 
@@ -18459,8 +18459,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-gallery-new] svg {
-  inline-size: 16px;
-  block-size: 16px;
+  inline-size: 15px;
+  block-size: 15px;
 }
 
 [data-blok-database-gallery-load-more], [data-blok-database-column-load-more] {

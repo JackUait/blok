@@ -112,6 +112,15 @@ describe('database gallery and calendar styles', () => {
     expect(tile).not.toContain('min-height: 80px');
   });
 
+  // notion-motion.md Round 70 §3 "Gallery New page tile": glyph 15×15, words 6px after it.
+  it('draws the "+ New page" glyph 15px with a 6px gap before the words', () => {
+    expect(ruleBody('[data-blok-database-gallery-new] svg')).toContain('inline-size: 15px');
+    expect(ruleBody('[data-blok-database-gallery-new] svg')).toContain('block-size: 15px');
+    expect(ruleBody('[data-blok-database-gallery-new]')).toContain('gap: var(--blok-space-1-5)');
+    // The ::before spacer takes no gap, or the glyph and words shift off centre.
+    expect(ruleBody('[data-blok-database-gallery-new]::before')).toContain('margin-inline-end: calc(-1 * var(--blok-space-1-5))');
+  });
+
   it('crops images unless Fit image is on', () => {
     expect(ruleBody('[data-blok-database-gallery-image]')).toMatch(/object-fit:\s*cover/);
     expect(ruleBody('[data-blok-database-gallery][data-fit-image] [data-blok-database-gallery-image]')).toMatch(/object-fit:\s*contain/);

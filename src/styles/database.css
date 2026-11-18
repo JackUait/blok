@@ -19192,6 +19192,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 /* notion-motion.md Round 32 §3 Feed (notion-live/r32-b-feed-geom.raw): avatar, name 8 after it, time 6 after the name, all centred. */
 [data-blok-database-feed-byline] {
+  /* notion-motion.md Round 72 §5: Notion's byline sits 2px lower; the title under it does not move. */
+  position: relative;
+  inset-block-start: var(--blok-space-0-5);
   display: flex;
   align-items: center;
   gap: var(--blok-space-1-5);
@@ -19307,6 +19310,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 [data-blok-database-feed-react]:hover,
 [data-blok-database-feed-more-actions]:hover {
   background-color: var(--blok-database-hover-bg);
+}
+
+/* notion-motion.md Round 72 §5: Notion's "More actions" glyph is 16; React's stays 20. */
+[data-blok-database-feed-more-actions] > svg {
+  inline-size: 16px;
+  block-size: 16px;
 }
 
 /* Reactions, measured (research/19 §2c): pills "<emoji> <count>", 25px tall,

@@ -21509,6 +21509,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-feed-byline] {
+  position: relative;
+  inset-block-start: var(--blok-space-0-5);
   display: flex;
   align-items: center;
   gap: var(--blok-space-1-5);
@@ -21605,6 +21607,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-feed-react]:hover, [data-blok-database-feed-more-actions]:hover {
   background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-feed-more-actions] > svg {
+  inline-size: 16px;
+  block-size: 16px;
 }
 
 [data-blok-database-feed-reactions] {

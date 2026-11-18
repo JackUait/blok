@@ -1880,7 +1880,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r177: Round 71 §3 the timeline draft's hidden "←" chip, the dependency dot's 200ms fade and pointer, primary-ink "New page". Net database.css growth against origin/main.
     const DATABASE_R177_BYTES = 527;
     // Lane r181: Round 72 §2 the dependency dot shows at once; §5 the feed byline 2px lower and a 16px "More actions" glyph. Net database.css growth against origin/main.
-    const DATABASE_R181_BYTES = 114;
+    const DATABASE_R181_BYTES = 468;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

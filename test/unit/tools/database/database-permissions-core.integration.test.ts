@@ -719,20 +719,22 @@ describe('database permissions reach core block actions', () => {
   });
 
   describe('without editStructure', () => {
-    it('the block menu matches a locked database: delete and duplicate stay, edit icon, lock and rename go', async () => {
+    it('the block menu keeps delete and duplicate; edit icon, lock and rename go', async () => {
       const denied = await menuItems(await boot(['editStructure']), 'db');
 
-      if (core !== undefined) await destroyCore(core);
-      holder?.remove();
-      const locked = await menuItems(await boot([], true), 'db');
-
-      const coreItems = (names: string[]): string[] => names.filter((name) => !name.startsWith('database-'));
-
-      expect(coreItems(denied)).toEqual(coreItems(locked));
       expect(denied).toContain('delete');
+      expect(denied).toContain('duplicate');
       // Only a writer of the structure can change its icon, lock, unlock or rename it.
       expect(denied.filter((name) => name.startsWith('database-'))).toEqual(['database-open-as-page', 'database-open-in-new-tab']);
-      expect(locked.filter((name) => name.startsWith('database-'))).toEqual(['database-edit-icon', 'database-lock', 'database-rename', 'database-open-as-page', 'database-open-in-new-tab']);
+    });
+
+    // notion-motion.md Round 67 §1: a user's lock also drops Duplicate, Move to and Move to Trash; a host's denial is unmeasured.
+    it('a locked database\'s menu keeps only the open rows and Copy link', async () => {
+      const locked = await menuItems(await boot([], true), 'db');
+
+      expect(locked).not.toContain('delete');
+      expect(locked).not.toContain('duplicate');
+      expect(locked.filter((name) => name.startsWith('database-'))).toEqual(['database-open-as-page', 'database-open-in-new-tab']);
     });
 
     it('the agent cannot add a property or a view, like on a locked database', async () => {

@@ -231,6 +231,41 @@ describe('view filter undo', () => {
     expect(chipText()).not.toContain('no');
   }, 10000);
 
+  // notion-motion.md Round 66 §3: "ab", an ignored ⌘Z, "cd" with short gaps is one step.
+  it('keeps one typing run across an undo key the open popover ignores', async () => {
+    const blok = await make();
+
+    await addFilter('x');
+    // A write redraws the popover: each key goes to the field now drawn.
+    const field = (): HTMLInputElement => {
+      const input = q('database-filter-value');
+
+      if (!(input instanceof HTMLInputElement)) throw new Error('no value input');
+
+      return input;
+    };
+    const key = (text: string): void => {
+      field().value = text;
+      field().dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    key('ab');
+    field().dispatchEvent(new KeyboardEvent('keydown', { key: 'z', code: 'KeyZ', metaKey: true, ctrlKey: true, bubbles: true, cancelable: true }));
+    expect(field().value).toBe('ab');
+    key('abcd');
+    await new Promise(resolve => {
+      setTimeout(resolve, 1500);
+    });
+    await escape();
+    expect(chipText()).toContain('abcd');
+
+    blok.history.undo();
+    await quiet();
+
+    expect(chips()).toHaveLength(1);
+    expect(chipText()).not.toContain('ab');
+  }, 10000);
+
   it('takes typed text still in its run when the undo key comes before the pause', async () => {
     await make();
 

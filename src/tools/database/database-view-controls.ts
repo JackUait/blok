@@ -6,7 +6,7 @@ import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { propertyGlyph } from './database-property-types';
 import type { I18n } from '../../../types';
 import type { History, HistoryValue, HistoryValueChange } from '../../../types/api/history';
-import { DatabasePanel, panelRow } from './database-panel';
+import { DatabasePanel, historyKeyStaysInPanel, panelRow } from './database-panel';
 import { isHistoryKey } from './database-keyboard';
 import { PersonalViewEdits } from './database-view-state';
 import type { ViewStateFallback } from './database-view-state';
@@ -657,9 +657,12 @@ export class DatabaseViewControls {
     if (!samePersonal(run.before, run.after)) this.recordSorts(run.viewId, run.before, run.after);
   }
 
-  /** Window capture: before the editor's own undo key handler on the document. */
+  /**
+   * Window capture: before the editor's own undo key handler on the document.
+   * A key the open popover ignores keeps the run (notion-motion.md Round 66 §3).
+   */
   private readonly endTypingRunOnHistoryKey = (event: KeyboardEvent): void => {
-    if (isHistoryKey(event)) this.endTypingRun();
+    if (isHistoryKey(event) && !historyKeyStaysInPanel(event.target)) this.endTypingRun();
   };
 
   /**

@@ -80,6 +80,21 @@ const keepsNativeUndo = (target: EventTarget | null): boolean =>
   || (target instanceof HTMLInputElement && !['checkbox', 'radio', 'button', 'submit', 'reset', 'range', 'color', 'file'].includes(target.type))
   || (target instanceof Element && target.closest('[contenteditable]:not([contenteditable="false"])') !== null);
 
+/** Each panel by its element, for {@link historyKeyStaysInPanel}. */
+const panels = new WeakMap<Element, DatabasePanel>();
+
+/**
+ * True when a history key pressed at `target` walks no editor history: the panel
+ * it is in ignores the key, or the key goes to a text field there, which keeps
+ * its native undo (core walks no history from a text field).
+ */
+export const historyKeyStaysInPanel = (target: EventTarget | null): boolean => {
+  const element = target instanceof Element ? target.closest('[data-blok-database-panel]') : null;
+  const panel = element === null ? undefined : panels.get(element);
+
+  return panel !== undefined && (panel.ignoringHistoryKeys || keepsNativeUndo(target));
+};
+
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex="0"]';
 
 /**
@@ -103,6 +118,7 @@ export class DatabasePanel {
     this.stack = [options.root];
     this.element = document.createElement('div');
     this.element.setAttribute('data-blok-database-panel', '');
+    panels.set(this.element, this);
     this.element.setAttribute('data-blok-testid', options.testId);
     this.element.style.width = `${options.width}px`;
     if (options.docked === true) this.element.setAttribute('data-docked', '');
@@ -128,6 +144,11 @@ export class DatabasePanel {
       onEscape: () => this.back(true),
       onDismiss: () => this.finish(),
     });
+  }
+
+  /** The undo and redo keys walk no history from this panel's page now shown. */
+  get ignoringHistoryKeys(): boolean {
+    return this.ignoresHistoryKeys || this.stack[this.stack.length - 1]?.ignoresHistoryKeys === true;
   }
 
   get depth(): number {
@@ -288,9 +309,7 @@ export class DatabasePanel {
 
   private readonly handleKeydown = (event: KeyboardEvent): void => {
     // The panel is a keyboard owner: core walks history after the key bubbles unless it is prevented.
-    const ignores = this.ignoresHistoryKeys || this.stack[this.stack.length - 1]?.ignoresHistoryKeys === true;
-
-    if (ignores && isHistoryKey(event) && !keepsNativeUndo(event.target)) {
+    if (this.ignoringHistoryKeys && isHistoryKey(event) && !keepsNativeUndo(event.target)) {
       event.preventDefault();
 
       return;

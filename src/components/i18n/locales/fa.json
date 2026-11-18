@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "آیا مطمئنید؟ همه صفحه‌های این گروه به سطل زباله منتقل می‌شوند.",
   "tools.database.trashDatabaseConfirm": "پایگاه داده به سطل زباله منتقل شود؟",
   "tools.database.trashDatabaseConfirmDescription": "همه صفحه‌ها به سطل زباله منتقل می‌شوند",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} منبع داده و همه صفحه‌های آن به سطل زباله منتقل می‌شوند",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} منبع داده و همه صفحه‌های آن‌ها به سطل زباله منتقل می‌شوند",
   "tools.database.hiddenGroups": "گروه‌های پنهان",
   "tools.database.deleteCard": "حذف کارت",
   "tools.database.editCardTitle": "ویرایش عنوان",

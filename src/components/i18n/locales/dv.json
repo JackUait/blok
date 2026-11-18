@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "ޔަޤީންތޯ؟ މި ގްރޫޕްގައިވާ ހުރިހާ ޞަފްޙާއެއް ކުނިފޮށިއަށް ބަދަލުކުރެވޭނެ.",
   "tools.database.trashDatabaseConfirm": "ޑޭޓާބޭސް ކުނިފޮށިއަށް ބަދަލުކުރަންތޯ؟",
   "tools.database.trashDatabaseConfirmDescription": "ހުރިހާ ޞަފްޙާއެއް ކުނިފޮށިއަށް ބަދަލުކުރެވޭނެ",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} ޑޭޓާ ސޯސާއި އޭގެ ހުރިހާ ޞަފްޙާއެއް ކުނިފޮށިއަށް ބަދަލުކުރެވޭނެ",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} ޑޭޓާ ސޯސާއި އެއިގެ ހުރިހާ ޞަފްޙާއެއް ކުނިފޮށިއަށް ބަދަލުކުރެވޭނެ",
   "tools.database.hiddenGroups": "ފޮރުވިފައިވާ ގްރޫޕްތައް",
   "tools.database.deleteCard": "ކާޑު ފޮހެލާ",
   "tools.database.editCardTitle": "ނަން ބަދަލުކުރޭ",

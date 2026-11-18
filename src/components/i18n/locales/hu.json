@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "Biztos benne? A csoportban lévő összes oldal a kukába kerül.",
   "tools.database.trashDatabaseConfirm": "Áthelyezi az adatbázist a kukába?",
   "tools.database.trashDatabaseConfirmDescription": "Az összes oldal a kukába kerül",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} adatforrás és összes oldala a kukába kerül",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} adatforrás és összes oldaluk a kukába kerül",
   "tools.database.hiddenGroups": "Rejtett csoportok",
   "tools.database.deleteCard": "Kártya törlése",
   "tools.database.editCardTitle": "Cím szerkesztése",

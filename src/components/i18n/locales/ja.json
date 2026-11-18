@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "よろしいですか？このグループ内のすべてのページがゴミ箱に移動されます。",
   "tools.database.trashDatabaseConfirm": "データベースをゴミ箱に移動しますか？",
   "tools.database.trashDatabaseConfirmDescription": "すべてのページがゴミ箱に移動されます",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} 件のデータソースとそのすべてのページがゴミ箱に移動されます",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} 件のデータソースとそのすべてのページがゴミ箱に移動されます",
   "tools.database.hiddenGroups": "非表示のグループ",
   "tools.database.deleteCard": "カードを削除",
   "tools.database.editCardTitle": "タイトルを編集",

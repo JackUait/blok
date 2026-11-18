@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "Anda yakin? Semua halaman di dalam grup ini akan dipindahkan ke sampah.",
   "tools.database.trashDatabaseConfirm": "Pindahkan basis data ke sampah?",
   "tools.database.trashDatabaseConfirmDescription": "Semua halaman akan dipindahkan ke sampah",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} sumber data dan semua halamannya akan dipindahkan ke sampah",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} sumber data dan semua halamannya akan dipindahkan ke sampah",
   "tools.database.hiddenGroups": "Grup tersembunyi",
   "tools.database.deleteCard": "Hapus kartu",
   "tools.database.editCardTitle": "Ubah judul",

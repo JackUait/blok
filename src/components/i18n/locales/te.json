@@ -417,6 +417,8 @@
   "tools.database.groupTrashConfirm": "మీరు ఖచ్చితంగా అనుకుంటున్నారా? ఈ సమూహంలోని అన్ని పేజీలు ట్రాష్‌కు తరలించబడతాయి.",
   "tools.database.trashDatabaseConfirm": "డేటాబేస్‌ను ట్రాష్‌కు తరలించాలా?",
   "tools.database.trashDatabaseConfirmDescription": "అన్ని పేజీలు ట్రాష్‌కు తరలించబడతాయి",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} డేటా మూలం మరియు దాని అన్ని పేజీలు ట్రాష్‌కు తరలించబడతాయి",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} డేటా మూలాలు మరియు వాటి అన్ని పేజీలు ట్రాష్‌కు తరలించబడతాయి",
   "tools.database.hiddenGroups": "దాచిన సమూహాలు",
   "tools.database.emptyColumn": "కార్డ్‌లు లేవు",
   "tools.database.rowTitlePlaceholder": "కొత్త పేజీ",

@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "Վստա՞հ եք։ Այս խմբի բոլոր էջերը կտեղափոխվեն աղբարկղ։",
   "tools.database.trashDatabaseConfirm": "Տեղափոխե՞լ տվյալների բազան աղբարկղ",
   "tools.database.trashDatabaseConfirmDescription": "Բոլոր էջերը կտեղափոխվեն աղբարկղ",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} տվյալների աղբյուր և նրա բոլոր էջերը կտեղափոխվեն աղբարկղ",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} տվյալների աղբյուր և դրանց բոլոր էջերը կտեղափոխվեն աղբարկղ",
   "tools.database.hiddenGroups": "Թաքցված խմբեր",
   "tools.database.deleteCard": "Ջնջել քարտը",
   "tools.database.editCardTitle": "Խմբագրել վերնագիրը",

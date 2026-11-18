@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "Weet je het zeker? Alle pagina's in deze groep worden naar de prullenbak verplaatst.",
   "tools.database.trashDatabaseConfirm": "Database naar de prullenbak verplaatsen?",
   "tools.database.trashDatabaseConfirmDescription": "Alle pagina's worden naar de prullenbak verplaatst",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} gegevensbron en alle pagina's ervan worden naar de prullenbak verplaatst",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} gegevensbronnen en al hun pagina's worden naar de prullenbak verplaatst",
   "tools.database.hiddenGroups": "Verborgen groepen",
   "tools.database.deleteCard": "Kaart verwijderen",
   "tools.database.editCardTitle": "Titel bewerken",

@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "დარწმუნებული ხართ? ამ ჯგუფის ყველა გვერდი ნაგავში გადავა.",
   "tools.database.trashDatabaseConfirm": "გადავიტანოთ მონაცემთა ბაზა ნაგავში?",
   "tools.database.trashDatabaseConfirmDescription": "ყველა გვერდი ნაგავში გადავა",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} მონაცემთა წყარო და მისი ყველა გვერდი ნაგავში გადავა",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} მონაცემთა წყარო და მათი ყველა გვერდი ნაგავში გადავა",
   "tools.database.hiddenGroups": "დამალული ჯგუფები",
   "tools.database.deleteCard": "ბარათის წაშლა",
   "tools.database.editCardTitle": "სათაურის რედაქტირება",

@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "Είστε βέβαιοι; Όλες οι σελίδες αυτής της ομάδας θα μετακινηθούν στον κάδο.",
   "tools.database.trashDatabaseConfirm": "Μετακίνηση της βάσης δεδομένων στον κάδο;",
   "tools.database.trashDatabaseConfirmDescription": "Όλες οι σελίδες θα μετακινηθούν στον κάδο",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} πηγή δεδομένων και όλες οι σελίδες της θα μετακινηθούν στον κάδο",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} πηγές δεδομένων και όλες οι σελίδες τους θα μετακινηθούν στον κάδο",
   "tools.database.hiddenGroups": "Κρυφές ομάδες",
   "tools.database.deleteCard": "Διαγραφή κάρτας",
   "tools.database.editCardTitle": "Επεξεργασία τίτλου",

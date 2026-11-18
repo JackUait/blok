@@ -432,6 +432,8 @@
   "tools.database.groupTrashConfirm": "Итгэлтэй байна уу? Энэ бүлгийн бүх хуудас хогийн сав руу зөөгдөнө.",
   "tools.database.trashDatabaseConfirm": "Мэдээллийн санг хогийн сав руу зөөх үү?",
   "tools.database.trashDatabaseConfirmDescription": "Бүх хуудас хогийн сав руу зөөгдөнө",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} өгөгдлийн эх сурвалж болон түүний бүх хуудас хогийн сав руу зөөгдөнө",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} өгөгдлийн эх сурвалж болон тэдгээрийн бүх хуудас хогийн сав руу зөөгдөнө",
   "tools.database.hiddenGroups": "Нуусан бүлгүүд",
   "tools.database.deleteCard": "Карт устгах",
   "tools.database.editCardTitle": "Гарчиг засах",

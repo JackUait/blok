@@ -432,6 +432,8 @@
   "tools.database.groupTrashConfirm": "دڵنیایت؟ هەموو پەڕەکانی ناو ئەم گرووپە دەگوازرێنەوە بۆ زبڵدان.",
   "tools.database.trashDatabaseConfirm": "داتابەیس بگوازرێتەوە بۆ زبڵدان؟",
   "tools.database.trashDatabaseConfirmDescription": "هەموو پەڕەکان دەگوازرێنەوە بۆ زبڵدان",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} سەرچاوەی داتا و هەموو پەڕەکانی دەگوازرێنەوە بۆ زبڵدان",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} سەرچاوەی داتا و هەموو پەڕەکانیان دەگوازرێنەوە بۆ زبڵدان",
   "tools.database.hiddenGroups": "گرووپە شاراوەکان",
   "tools.database.deleteCard": "سڕینەوەی کارت",
   "tools.database.editCardTitle": "دەستکاریکردنی ناونیشان",

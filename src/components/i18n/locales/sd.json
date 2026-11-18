@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "ڇا توهان کي پڪ آهي؟ هن گروپ جا سڀ صفحا ڪچري ۾ منتقل ڪيا ويندا.",
   "tools.database.trashDatabaseConfirm": "ڇا ڊيٽابيس ڪچري ۾ منتقل ڪجي؟",
   "tools.database.trashDatabaseConfirmDescription": "سڀ صفحا ڪچري ۾ منتقل ڪيا ويندا",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} ڊيٽا ماخذ ۽ ان جا سڀ صفحا ڪچري ۾ منتقل ڪيا ويندا",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} ڊيٽا ماخذ ۽ انهن جا سڀ صفحا ڪچري ۾ منتقل ڪيا ويندا",
   "tools.database.hiddenGroups": "لڪايل گروپ",
   "tools.database.deleteCard": "ڪارڊ ختم ڪريو",
   "tools.database.editCardTitle": "عنوان تبديل ڪريو",

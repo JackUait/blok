@@ -432,6 +432,8 @@
   "tools.database.groupTrashConfirm": "Дали сте сигурни? Сите страници во оваа група ќе бидат преместени во корпа.",
   "tools.database.trashDatabaseConfirm": "Да се премести базата на податоци во корпа?",
   "tools.database.trashDatabaseConfirmDescription": "Сите страници ќе бидат преместени во корпа",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} извор на податоци и сите негови страници ќе бидат преместени во корпа",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} извори на податоци и сите нивни страници ќе бидат преместени во корпа",
   "tools.database.hiddenGroups": "Скриени групи",
   "tools.database.deleteCard": "Избриши картичка",
   "tools.database.editCardTitle": "Уреди наслов",

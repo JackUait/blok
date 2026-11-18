@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "क्या आप निश्चित हैं? इस समूह के सभी पेज ट्रैश में ले जाए जाएँगे।",
   "tools.database.trashDatabaseConfirm": "डेटाबेस को ट्रैश में ले जाएं?",
   "tools.database.trashDatabaseConfirmDescription": "सभी पेज ट्रैश में ले जाए जाएँगे",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} डेटा स्रोत और उसके सभी पेज ट्रैश में ले जाए जाएँगे",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} डेटा स्रोत और उनके सभी पेज ट्रैश में ले जाए जाएँगे",
   "tools.database.hiddenGroups": "छिपे हुए समूह",
   "tools.database.deleteCard": "कार्ड हटाएं",
   "tools.database.editCardTitle": "शीर्षक संपादित करें",

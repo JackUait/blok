@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "کیا آپ کو یقین ہے؟ اس گروپ کے تمام صفحات ردی کی ٹوکری میں منتقل کر دیے جائیں گے۔",
   "tools.database.trashDatabaseConfirm": "ڈیٹابیس کو ردی کی ٹوکری میں منتقل کریں؟",
   "tools.database.trashDatabaseConfirmDescription": "تمام صفحات ردی کی ٹوکری میں منتقل کر دیے جائیں گے",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} ڈیٹا ماخذ اور اس کے تمام صفحات ردی کی ٹوکری میں منتقل کر دیے جائیں گے",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} ڈیٹا ماخذ اور ان کے تمام صفحات ردی کی ٹوکری میں منتقل کر دیے جائیں گے",
   "tools.database.hiddenGroups": "چھپے ہوئے گروپس",
   "tools.database.deleteCard": "کارڈ حذف کریں",
   "tools.database.editCardTitle": "عنوان میں ترمیم کریں",

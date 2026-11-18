@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "Oletko varma? Kaikki tämän ryhmän sivut siirretään roskakoriin.",
   "tools.database.trashDatabaseConfirm": "Siirretäänkö tietokanta roskakoriin?",
   "tools.database.trashDatabaseConfirmDescription": "Kaikki sivut siirretään roskakoriin",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} tietolähde ja kaikki sen sivut siirretään roskakoriin",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} tietolähdettä ja kaikki niiden sivut siirretään roskakoriin",
   "tools.database.hiddenGroups": "Piilotetut ryhmät",
   "tools.database.deleteCard": "Poista kortti",
   "tools.database.editCardTitle": "Muokkaa otsikkoa",

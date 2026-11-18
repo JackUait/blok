@@ -417,6 +417,8 @@
   "tools.database.groupTrashConfirm": "እርግጠኛ ነዎት? በዚህ ቡድን ውስጥ ያሉ ሁሉም ገጾች ወደ መጣያ ይወሰዳሉ።",
   "tools.database.trashDatabaseConfirm": "የውሂብ ጎታውን ወደ መጣያ ይውሰዱ?",
   "tools.database.trashDatabaseConfirmDescription": "ሁሉም ገጾች ወደ መጣያ ይወሰዳሉ",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} የውሂብ ምንጭ እና ሁሉም ገጾቹ ወደ መጣያ ይወሰዳሉ",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} የውሂብ ምንጮች እና ሁሉም ገጾቻቸው ወደ መጣያ ይወሰዳሉ",
   "tools.database.hiddenGroups": "የተደበቁ ቡድኖች",
   "tools.database.emptyColumn": "ካርዶች የሉም",
   "tools.database.rowTitlePlaceholder": "አዲስ ገጽ",

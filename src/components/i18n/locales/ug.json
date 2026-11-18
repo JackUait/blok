@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "راستتىنلا جەزىملەشتۈرەمسىز؟ بۇ گۇرۇپپىدىكى بارلىق بەتلەر ئەخلەت چېلىكىگە يۆتكىلىدۇ.",
   "tools.database.trashDatabaseConfirm": "ساندان ئەخلەت چېلىكىگە يۆتكەلسۇنمۇ؟",
   "tools.database.trashDatabaseConfirmDescription": "بارلىق بەتلەر ئەخلەت چېلىكىگە يۆتكىلىدۇ",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} سانلىق مەلۇمات مەنبەسى ۋە ئۇنىڭ بارلىق بەتلىرى ئەخلەت چېلىكىگە يۆتكىلىدۇ",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} سانلىق مەلۇمات مەنبەسى ۋە ئۇلارنىڭ بارلىق بەتلىرى ئەخلەت چېلىكىگە يۆتكىلىدۇ",
   "tools.database.hiddenGroups": "يوشۇرۇلغان گۇرۇپپىلار",
   "tools.database.deleteCard": "كارتىنى ئۆچۈرۈش",
   "tools.database.editCardTitle": "ماۋزۇنى تەھرىرلەش",

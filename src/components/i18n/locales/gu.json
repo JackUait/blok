@@ -417,6 +417,8 @@
   "tools.database.groupTrashConfirm": "શું તમને ખાતરી છે? આ જૂથની અંદરના બધા પૃષ્ઠો કચરાપેટીમાં ખસેડવામાં આવશે.",
   "tools.database.trashDatabaseConfirm": "ડેટાબેઝને કચરાપેટીમાં ખસેડીએ?",
   "tools.database.trashDatabaseConfirmDescription": "બધા પૃષ્ઠો કચરાપેટીમાં ખસેડવામાં આવશે",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} ડેટા સ્રોત અને તેના બધા પૃષ્ઠો કચરાપેટીમાં ખસેડવામાં આવશે",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} ડેટા સ્રોતો અને તેમના બધા પૃષ્ઠો કચરાપેટીમાં ખસેડવામાં આવશે",
   "tools.database.hiddenGroups": "છુપાયેલા જૂથો",
   "tools.database.emptyColumn": "કોઈ કાર્ડ નથી",
   "tools.database.rowTitlePlaceholder": "નવું પૃષ્ઠ",

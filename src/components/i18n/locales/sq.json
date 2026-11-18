@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "Je i sigurt? Të gjitha faqet në këtë grup do të zhvendosen në kosh.",
   "tools.database.trashDatabaseConfirm": "Të zhvendoset baza e të dhënave në kosh?",
   "tools.database.trashDatabaseConfirmDescription": "Të gjitha faqet do të zhvendosen në kosh",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} burim të dhënash dhe të gjitha faqet e tij do të zhvendosen në kosh",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} burime të dhënash dhe të gjitha faqet e tyre do të zhvendosen në kosh",
   "tools.database.hiddenGroups": "Grupet e fshehura",
   "tools.database.deleteCard": "Fshi kartën",
   "tools.database.editCardTitle": "Ndrysho titullin",

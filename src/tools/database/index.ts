@@ -2707,15 +2707,21 @@ export class DatabaseTool implements BlockTool {
 
   /**
    * The block menu's Delete asks first (notion-motion.md Round 65 §1). A linked
-   * view has no pages of its own, so it does not ask.
+   * view has no pages of its own, so a selection of only linked views does not ask.
+   * Two or more data sources are counted in the text (Round 67 §2).
+   * @param blockIds - the top blocks the delete removes
    */
-  public confirmDelete(): Promise<boolean> {
-    if (this.linked) return Promise.resolve(true);
+  public confirmDelete(blockIds: string[] = [this.block.id]): Promise<boolean> {
+    const sources = blockIds.reduce((sum, id) => sum + (this.dashboardOwner(id)?.dataSourceCount() ?? 0), 0);
+
+    if (sources === 0) return Promise.resolve(true);
     const t = (key: string): string => this.api.i18n.t(key);
 
     return openDatabaseConfirm({
       title: t('tools.database.trashDatabaseConfirm'),
-      description: t('tools.database.trashDatabaseConfirmDescription'),
+      description: sources > 1
+        ? this.api.i18n.t('tools.database.trashDataSourcesConfirmDescription', { count: sources })
+        : t('tools.database.trashDatabaseConfirmDescription'),
       confirmLabel: t('tools.database.tableMoveToTrash'),
       cancelLabel: t('tools.database.layoutCancel'),
       destructive: true,
@@ -2724,6 +2730,13 @@ export class DatabaseTool implements BlockTool {
       trash: true,
       directionSource: this.element,
     });
+  }
+
+  /** This database and its second sources; 0 for a linked view, which has none of its own. */
+  private dataSourceCount(): number {
+    if (this.linked) return 0;
+
+    return 1 + this.api.blocks.getChildren(this.block.id).filter((child) => child.name === this.block.name).length;
   }
 
   /**

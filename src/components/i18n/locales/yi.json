@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "ביסטו זיכער? אַלע זײַטן אין דער גרופּע וועלן אַריבערגעפֿירט ווערן אין מיסט.",
   "tools.database.trashDatabaseConfirm": "אַריבערפֿירן דעם דאַטאַבאַנק אין מיסט?",
   "tools.database.trashDatabaseConfirmDescription": "אַלע זײַטן וועלן אַריבערגעפֿירט ווערן אין מיסט",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} דאַטן־מקור און אַלע זײַנע זײַטן וועלן אַריבערגעפֿירט ווערן אין מיסט",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} דאַטן־מקורים און אַלע זייערע זײַטן וועלן אַריבערגעפֿירט ווערן אין מיסט",
   "tools.database.hiddenGroups": "באַהאַלטענע גרופּעס",
   "tools.database.deleteCard": "אויסמעקן קאַרטל",
   "tools.database.editCardTitle": "רעדאַקטירן טיטל",

@@ -432,6 +432,8 @@
   "tools.database.groupTrashConfirm": "Adakah anda pasti? Semua halaman dalam kumpulan ini akan dialihkan ke sampah.",
   "tools.database.trashDatabaseConfirm": "Alihkan pangkalan data ke sampah?",
   "tools.database.trashDatabaseConfirmDescription": "Semua halaman akan dialihkan ke sampah",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} sumber data dan semua halamannya akan dialihkan ke sampah",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} sumber data dan semua halamannya akan dialihkan ke sampah",
   "tools.database.hiddenGroups": "Kumpulan tersembunyi",
   "tools.database.deleteCard": "Padam kad",
   "tools.database.editCardTitle": "Sunting tajuk",

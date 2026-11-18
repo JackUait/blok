@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "คุณแน่ใจหรือไม่? หน้าทั้งหมดในกลุ่มนี้จะถูกย้ายไปถังขยะ",
   "tools.database.trashDatabaseConfirm": "ย้ายฐานข้อมูลไปถังขยะหรือไม่?",
   "tools.database.trashDatabaseConfirmDescription": "หน้าทั้งหมดจะถูกย้ายไปถังขยะ",
+  "tools.database.trashDataSourcesConfirmDescription_one": "แหล่งข้อมูล {count} แหล่งและทุกหน้าในนั้นจะถูกย้ายไปถังขยะ",
+  "tools.database.trashDataSourcesConfirmDescription_other": "แหล่งข้อมูล {count} แหล่งและทุกหน้าในนั้นจะถูกย้ายไปถังขยะ",
   "tools.database.hiddenGroups": "กลุ่มที่ซ่อน",
   "tools.database.deleteCard": "ลบการ์ด",
   "tools.database.editCardTitle": "แก้ไขชื่อ",

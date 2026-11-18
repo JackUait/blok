@@ -398,4 +398,51 @@ describe('the database block menu in core', () => {
 
     expect(block(instance, 'db').selected).toBe(true);
   });
+
+  describe('the trash question for a selection of databases (notion-motion.md Round 67 §2)', () => {
+    /** Selects the blocks, presses Backspace and returns the dialog's description. */
+    const ask = async (instance: Core, ids: string[]): Promise<string | null | undefined> => {
+      ids.forEach((id) => instance.moduleInstances.BlockSelection.selectBlock(block(instance, id)));
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+
+      return vi.waitFor(() => {
+        const found = document.querySelector('[data-blok-database-confirm-description]');
+
+        if (found === null) throw new Error('no dialog');
+
+        return found.textContent;
+      });
+    };
+
+    it('counts the data sources of two databases', async () => {
+      const instance = await boot([...databaseBlocks('a', ['a1']), ...databaseBlocks('b', ['b1'])]);
+
+      expect(await ask(instance, ['a', 'b'])).toBe('2 data sources and all of their pages will be moved to Trash');
+    });
+
+    it('counts a second data source inside a database', async () => {
+      const second = databaseBlocks('src2', ['s1']).map((entry) => entry.id === 'src2' ? { ...entry, parent: 'a' } : entry);
+      const first = databaseBlocks('a', ['a1']);
+
+      first[0].content = ['a1', 'src2'];
+      const instance = await boot([...first, ...second]);
+
+      expect(await ask(instance, ['a'])).toBe('2 data sources and all of their pages will be moved to Trash');
+    });
+
+    it('keeps "All pages" for one database with one source', async () => {
+      const instance = await boot(databaseBlocks('a', ['a1']));
+
+      expect(await ask(instance, ['a'])).toBe('All pages will be moved to Trash');
+    });
+
+    it('asks when a linked view comes first in a selection that holds a database', async () => {
+      const instance = await boot([
+        { id: 'linked', type: 'database', data: { title: '', source: { databaseId: 'a' }, views: [], activeViewId: '' } },
+        ...databaseBlocks('a', ['a1']),
+      ]);
+
+      expect(await ask(instance, ['linked', 'a'])).toBe('All pages will be moved to Trash');
+    });
+  });
 });

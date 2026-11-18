@@ -417,6 +417,8 @@
   "tools.database.groupTrashConfirm": "আপনি কি নিশ্চিত? এই গোষ্ঠীর সমস্ত পৃষ্ঠা ট্র্যাশে সরানো হবে।",
   "tools.database.trashDatabaseConfirm": "ডেটাবেস ট্র্যাশে সরাবেন?",
   "tools.database.trashDatabaseConfirmDescription": "সমস্ত পৃষ্ঠা ট্র্যাশে সরানো হবে",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count}টি ডেটা সোর্স এবং এর সমস্ত পৃষ্ঠা ট্র্যাশে সরানো হবে",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count}টি ডেটা সোর্স এবং সেগুলোর সমস্ত পৃষ্ঠা ট্র্যাশে সরানো হবে",
   "tools.database.hiddenGroups": "লুকানো গোষ্ঠী",
   "tools.database.emptyColumn": "কোনো কার্ড নেই",
   "tools.database.rowTitlePlaceholder": "নতুন পৃষ্ঠা",

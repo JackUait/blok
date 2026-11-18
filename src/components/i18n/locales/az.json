@@ -417,6 +417,8 @@
   "tools.database.groupTrashConfirm": "Əminsiniz? Bu qrupdakı bütün səhifələr zibil qutusuna köçürüləcək.",
   "tools.database.trashDatabaseConfirm": "Verilənlər bazası zibil qutusuna köçürülsün?",
   "tools.database.trashDatabaseConfirmDescription": "Bütün səhifələr zibil qutusuna köçürüləcək",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} verilənlər mənbəyi və onun bütün səhifələri zibil qutusuna köçürüləcək",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} verilənlər mənbəyi və onların bütün səhifələri zibil qutusuna köçürüləcək",
   "tools.database.hiddenGroups": "Gizli qruplar",
   "tools.database.emptyColumn": "Kart yoxdur",
   "tools.database.rowTitlePlaceholder": "Yeni səhifə",

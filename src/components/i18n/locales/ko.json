@@ -432,6 +432,8 @@
   "tools.database.groupTrashConfirm": "계속하시겠습니까? 이 그룹 안의 모든 페이지가 휴지통으로 이동됩니다.",
   "tools.database.trashDatabaseConfirm": "데이터베이스를 휴지통으로 이동할까요?",
   "tools.database.trashDatabaseConfirmDescription": "모든 페이지가 휴지통으로 이동됩니다",
+  "tools.database.trashDataSourcesConfirmDescription_one": "데이터 소스 {count}개와 모든 페이지가 휴지통으로 이동됩니다",
+  "tools.database.trashDataSourcesConfirmDescription_other": "데이터 소스 {count}개와 모든 페이지가 휴지통으로 이동됩니다",
   "tools.database.hiddenGroups": "숨겨진 그룹",
   "tools.database.deleteCard": "카드 삭제",
   "tools.database.editCardTitle": "제목 편집",

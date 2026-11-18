@@ -187,8 +187,10 @@ export interface BlockTool extends BaseTool {
    * cut, the block menu's Delete on a selection of several blocks, the API
    * and redo. Typing over a selection that holds the block does nothing, and
    * a paste lands after it instead of replacing it.
+   * @param blockIds - the top blocks the delete removes, this one among
+   *   them, so one question can describe the whole selection
    */
-  confirmDelete?(): boolean | Promise<boolean>;
+  confirmDelete?(blockIds: string[]): boolean | Promise<boolean>;
 
   /**
    * Ids of blocks under this one that are its content, such as a database's

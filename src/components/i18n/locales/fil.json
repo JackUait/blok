@@ -417,6 +417,8 @@
   "tools.database.groupTrashConfirm": "Sigurado ka ba? Ililipat sa basurahan ang lahat ng page sa grupong ito.",
   "tools.database.trashDatabaseConfirm": "Ilipat ang database sa basurahan?",
   "tools.database.trashDatabaseConfirmDescription": "Ililipat sa basurahan ang lahat ng page",
+  "tools.database.trashDataSourcesConfirmDescription_one": "Ililipat sa basurahan ang {count} data source at lahat ng page nito",
+  "tools.database.trashDataSourcesConfirmDescription_other": "Ililipat sa basurahan ang {count} data source at lahat ng page ng mga ito",
   "tools.database.hiddenGroups": "Mga nakatagong grupo",
   "tools.database.emptyColumn": "Walang mga card",
   "tools.database.rowTitlePlaceholder": "Bagong pahina",

@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "Сигурни ли сте? Всички страници в тази група ще бъдат преместени в кошчето.",
   "tools.database.trashDatabaseConfirm": "Да се премести ли базата данни в кошчето?",
   "tools.database.trashDatabaseConfirmDescription": "Всички страници ще бъдат преместени в кошчето",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} източник на данни и всички негови страници ще бъдат преместени в кошчето",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} източника на данни и всички техни страници ще бъдат преместени в кошчето",
   "tools.database.hiddenGroups": "Скрити групи",
   "tools.database.deleteCard": "Изтрий карта",
   "tools.database.editCardTitle": "Редактирай заглавието",

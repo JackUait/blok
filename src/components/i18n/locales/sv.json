@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "Är du säker? Alla sidor i den här gruppen flyttas till papperskorgen.",
   "tools.database.trashDatabaseConfirm": "Flytta databasen till papperskorgen?",
   "tools.database.trashDatabaseConfirmDescription": "Alla sidor flyttas till papperskorgen",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} datakälla och alla dess sidor flyttas till papperskorgen",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} datakällor och alla deras sidor flyttas till papperskorgen",
   "tools.database.hiddenGroups": "Dolda grupper",
   "tools.database.deleteCard": "Ta bort kort",
   "tools.database.editCardTitle": "Redigera titel",

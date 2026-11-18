@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "Emin misiniz? Bu gruptaki tüm sayfalar çöp kutusuna taşınacak.",
   "tools.database.trashDatabaseConfirm": "Veritabanı çöp kutusuna taşınsın mı?",
   "tools.database.trashDatabaseConfirmDescription": "Tüm sayfalar çöp kutusuna taşınacak",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} veri kaynağı ve tüm sayfaları çöp kutusuna taşınacak",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} veri kaynağı ve tüm sayfaları çöp kutusuna taşınacak",
   "tools.database.hiddenGroups": "Gizli gruplar",
   "tools.database.deleteCard": "Kartı sil",
   "tools.database.editCardTitle": "Başlığı düzenle",

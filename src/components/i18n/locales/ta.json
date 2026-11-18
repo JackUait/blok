@@ -417,6 +417,8 @@
   "tools.database.groupTrashConfirm": "நிச்சயமாகவா? இந்தக் குழுவில் உள்ள அனைத்துப் பக்கங்களும் குப்பைக்கு நகர்த்தப்படும்.",
   "tools.database.trashDatabaseConfirm": "தரவுத்தளத்தைக் குப்பைக்கு நகர்த்தவா?",
   "tools.database.trashDatabaseConfirmDescription": "அனைத்துப் பக்கங்களும் குப்பைக்கு நகர்த்தப்படும்",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} தரவு மூலமும் அதன் அனைத்துப் பக்கங்களும் குப்பைக்கு நகர்த்தப்படும்",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} தரவு மூலங்களும் அவற்றின் அனைத்துப் பக்கங்களும் குப்பைக்கு நகர்த்தப்படும்",
   "tools.database.hiddenGroups": "மறைக்கப்பட்ட குழுக்கள்",
   "tools.database.emptyColumn": "அட்டைகள் இல்லை",
   "tools.database.rowTitlePlaceholder": "புதிய பக்கம்",

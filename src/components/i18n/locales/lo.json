@@ -437,6 +437,8 @@
   "tools.database.groupTrashConfirm": "ທ່ານແນ່ໃຈບໍ່? ທຸກໜ້າໃນກຸ່ມນີ້ຈະຖືກຍ້າຍໄປຖັງຂີ້ເຫຍື້ອ.",
   "tools.database.trashDatabaseConfirm": "ຍ້າຍຖານຂໍ້ມູນໄປຖັງຂີ້ເຫຍື້ອບໍ່?",
   "tools.database.trashDatabaseConfirmDescription": "ທຸກໜ້າຈະຖືກຍ້າຍໄປຖັງຂີ້ເຫຍື້ອ",
+  "tools.database.trashDataSourcesConfirmDescription_one": "ແຫຼ່ງຂໍ້ມູນ {count} ແຫຼ່ງ ແລະ ທຸກໜ້າຂອງມັນຈະຖືກຍ້າຍໄປຖັງຂີ້ເຫຍື້ອ",
+  "tools.database.trashDataSourcesConfirmDescription_other": "ແຫຼ່ງຂໍ້ມູນ {count} ແຫຼ່ງ ແລະ ທຸກໜ້າຂອງພວກມັນຈະຖືກຍ້າຍໄປຖັງຂີ້ເຫຍື້ອ",
   "tools.database.hiddenGroups": "ກຸ່ມທີ່ເຊື່ອງໄວ້",
   "tools.database.emptyColumn": "ບໍ່ມີບັດ",
   "tools.database.rowTitlePlaceholder": "ໜ້າໃໝ່",

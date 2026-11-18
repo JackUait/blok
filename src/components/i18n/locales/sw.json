@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "Una uhakika? Kurasa zote ndani ya kikundi hiki zitahamishiwa kwenye tupio.",
   "tools.database.trashDatabaseConfirm": "Hamishia hifadhidata kwenye tupio?",
   "tools.database.trashDatabaseConfirmDescription": "Kurasa zote zitahamishiwa kwenye tupio",
+  "tools.database.trashDataSourcesConfirmDescription_one": "Chanzo {count} cha data na kurasa zake zote zitahamishiwa kwenye tupio",
+  "tools.database.trashDataSourcesConfirmDescription_other": "Vyanzo {count} vya data na kurasa zake zote zitahamishiwa kwenye tupio",
   "tools.database.hiddenGroups": "Vikundi vilivyofichwa",
   "tools.database.deleteCard": "Futa kadi",
   "tools.database.editCardTitle": "Hariri kichwa",

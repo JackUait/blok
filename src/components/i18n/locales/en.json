@@ -447,6 +447,8 @@
   "tools.database.groupTrashConfirm": "Are you sure? All pages inside this group will be moved to Trash.",
   "tools.database.trashDatabaseConfirm": "Move database to Trash?",
   "tools.database.trashDatabaseConfirmDescription": "All pages will be moved to Trash",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} data source and all of its pages will be moved to Trash",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} data sources and all of their pages will be moved to Trash",
   "tools.database.hiddenGroups": "Hidden groups",
   "tools.database.emptyColumn": "No cards",
   "tools.database.rowTitlePlaceholder": "New page",

@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "确定吗？此分组中的所有页面都将移至回收站。",
   "tools.database.trashDatabaseConfirm": "要将数据库移至回收站吗？",
   "tools.database.trashDatabaseConfirmDescription": "所有页面都将移至回收站",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} 个数据源及其所有页面都将移至回收站",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} 个数据源及其所有页面都将移至回收站",
   "tools.database.hiddenGroups": "已隐藏的分组",
   "tools.database.deleteCard": "删除卡片",
   "tools.database.editCardTitle": "编辑标题",

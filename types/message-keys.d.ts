@@ -2514,6 +2514,8 @@ export type BlokMessageKey =
   | 'tools.database.titlePlaceholder'
   | 'tools.database.toolbarLabel'
   | 'tools.database.toolbarNew'
+  | 'tools.database.trashDataSourcesConfirmDescription_one'
+  | 'tools.database.trashDataSourcesConfirmDescription_other'
   | 'tools.database.trashDatabaseConfirm'
   | 'tools.database.trashDatabaseConfirmDescription'
   | 'tools.database.turnIntoPage'

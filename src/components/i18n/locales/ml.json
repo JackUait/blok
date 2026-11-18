@@ -437,6 +437,8 @@
   "tools.database.groupTrashConfirm": "ഉറപ്പാണോ? ഈ ഗ്രൂപ്പിലെ എല്ലാ പേജുകളും ട്രാഷിലേക്ക് നീക്കും.",
   "tools.database.trashDatabaseConfirm": "ഡാറ്റാബേസ് ട്രാഷിലേക്ക് നീക്കണോ?",
   "tools.database.trashDatabaseConfirmDescription": "എല്ലാ പേജുകളും ട്രാഷിലേക്ക് നീക്കും",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} ഡാറ്റാ ഉറവിടവും അതിലെ എല്ലാ പേജുകളും ട്രാഷിലേക്ക് നീക്കും",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} ഡാറ്റാ ഉറവിടങ്ങളും അവയിലെ എല്ലാ പേജുകളും ട്രാഷിലേക്ക് നീക്കും",
   "tools.database.hiddenGroups": "മറച്ച ഗ്രൂപ്പുകൾ",
   "tools.database.emptyColumn": "കാർഡുകളില്ല",
   "tools.database.rowTitlePlaceholder": "പുതിയ പേജ്",

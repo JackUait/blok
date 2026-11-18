@@ -417,6 +417,8 @@
   "tools.database.groupTrashConfirm": "ඔබට විශ්වාසද? මෙම සමූහයේ සියලුම පිටු කුණු බඳුනට ගෙන යනු ඇත.",
   "tools.database.trashDatabaseConfirm": "දත්ත සමුදාය කුණු බඳුනට ගෙන යන්නද?",
   "tools.database.trashDatabaseConfirmDescription": "සියලුම පිටු කුණු බඳුනට ගෙන යනු ඇත",
+  "tools.database.trashDataSourcesConfirmDescription_one": "දත්ත මූලාශ්‍ර {count} සහ එහි සියලුම පිටු කුණු බඳුනට ගෙන යනු ඇත",
+  "tools.database.trashDataSourcesConfirmDescription_other": "දත්ත මූලාශ්‍ර {count} සහ ඒවායේ සියලුම පිටු කුණු බඳුනට ගෙන යනු ඇත",
   "tools.database.hiddenGroups": "සැඟවූ සමූහ",
   "tools.database.emptyColumn": "කාඩ්පත් නැත",
   "tools.database.rowTitlePlaceholder": "නව පිටුව",

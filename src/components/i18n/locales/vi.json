@@ -412,6 +412,8 @@
   "tools.database.groupTrashConfirm": "Bạn có chắc không? Tất cả các trang trong nhóm này sẽ được chuyển vào thùng rác.",
   "tools.database.trashDatabaseConfirm": "Chuyển cơ sở dữ liệu vào thùng rác?",
   "tools.database.trashDatabaseConfirmDescription": "Tất cả các trang sẽ được chuyển vào thùng rác",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} nguồn dữ liệu và tất cả các trang của nó sẽ được chuyển vào thùng rác",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} nguồn dữ liệu và tất cả các trang của chúng sẽ được chuyển vào thùng rác",
   "tools.database.hiddenGroups": "Nhóm đã ẩn",
   "tools.database.deleteCard": "Xóa thẻ",
   "tools.database.editCardTitle": "Chỉnh sửa tiêu đề",

@@ -417,6 +417,8 @@
   "tools.database.groupTrashConfirm": "តើអ្នកប្រាកដទេ? ទំព័រទាំងអស់នៅក្នុងក្រុមនេះនឹងត្រូវផ្លាស់ទីទៅធុងសំរាម។",
   "tools.database.trashDatabaseConfirm": "ផ្លាស់ទីមូលដ្ឋានទិន្នន័យទៅធុងសំរាម?",
   "tools.database.trashDatabaseConfirmDescription": "ទំព័រទាំងអស់នឹងត្រូវផ្លាស់ទីទៅធុងសំរាម",
+  "tools.database.trashDataSourcesConfirmDescription_one": "ប្រភពទិន្នន័យ {count} និងទំព័រទាំងអស់របស់វានឹងត្រូវផ្លាស់ទីទៅធុងសំរាម",
+  "tools.database.trashDataSourcesConfirmDescription_other": "ប្រភពទិន្នន័យ {count} និងទំព័រទាំងអស់របស់វានឹងត្រូវផ្លាស់ទីទៅធុងសំរាម",
   "tools.database.hiddenGroups": "ក្រុមដែលបានលាក់",
   "tools.database.emptyColumn": "គ្មានកាត",
   "tools.database.rowTitlePlaceholder": "ទំព័រថ្មី",

@@ -47,7 +47,7 @@ export const askBeforeDelete = async (Blok: Modules, asker: Block, keep: Block[]
 
   asking.add(BlockManager);
   try {
-    const confirmed = await asker.confirmDelete();
+    const confirmed = await asker.confirmDelete(selectionRoots(keep).map((block) => block.id));
 
     await new Promise((resolve) => {
       setTimeout(resolve, 0);

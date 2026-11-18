@@ -299,7 +299,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2251 + 146 + 599 + 11 closure for all 3007 keys', () => {
+  it('rebuilds a disjoint 2251 + 146 + 601 + 11 closure for all 3009 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -313,7 +313,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(3007);
+    expect(lifecycle.size).toBe(3009);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -704,7 +704,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -1: tools.database.groupStatusGroup is now called by literal (see executable-literal).
       // +1: tools.database.changeCover lost its literal caller; it shipped in 2.1.0, so it stays.
       // +1: tools.database.turnIntoPage, via the database block menu's prefix.
-      'registered-namespace-compatible': 599,
+      // +2: trashDataSourcesConfirmDescription_one/_other, the database Delete prompt's plural text for 2+ data sources.
+      'registered-namespace-compatible': 601,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
       // +2: tools.database.rowLastEditedBy and rowWordCount, above.

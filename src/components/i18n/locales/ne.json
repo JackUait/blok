@@ -437,6 +437,8 @@
   "tools.database.groupTrashConfirm": "के तपाईं निश्चित हुनुहुन्छ? यस समूहभित्रका सबै पृष्ठहरू रद्दीटोकरीमा सारिनेछन्।",
   "tools.database.trashDatabaseConfirm": "डेटाबेस रद्दीटोकरीमा सार्ने?",
   "tools.database.trashDatabaseConfirmDescription": "सबै पृष्ठहरू रद्दीटोकरीमा सारिनेछन्",
+  "tools.database.trashDataSourcesConfirmDescription_one": "{count} डेटा स्रोत र यसका सबै पृष्ठहरू रद्दीटोकरीमा सारिनेछन्",
+  "tools.database.trashDataSourcesConfirmDescription_other": "{count} डेटा स्रोतहरू र तिनका सबै पृष्ठहरू रद्दीटोकरीमा सारिनेछन्",
   "tools.database.hiddenGroups": "लुकाइएका समूहहरू",
   "tools.database.emptyColumn": "कुनै कार्ड छैन",
   "tools.database.rowTitlePlaceholder": "नयाँ पृष्ठ",

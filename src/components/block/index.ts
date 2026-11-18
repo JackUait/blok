@@ -589,15 +589,18 @@ export class Block extends EventsDispatcher<BlockEvents> {
     return isFunction((this.toolInstance as unknown as Record<string, unknown>).confirmDelete);
   }
 
-  /** The tool's answer to its delete question; yes when it asks nothing or the question fails. */
-  public async confirmDelete(): Promise<boolean> {
+  /**
+   * The tool's answer to its delete question; yes when it asks nothing or the question fails.
+   * @param blockIds - the top blocks the delete removes, this one among them
+   */
+  public async confirmDelete(blockIds: string[] = [this.id]): Promise<boolean> {
     const method = (this.toolInstance as unknown as Record<string, unknown>).confirmDelete;
 
     if (!isFunction(method)) {
       return true;
     }
     try {
-      const answer: unknown = await method.call(this.toolInstance);
+      const answer: unknown = await method.call(this.toolInstance, blockIds);
 
       return answer !== false;
     } catch (e) {

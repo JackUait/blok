@@ -3642,6 +3642,8 @@ export class DatabaseTool implements BlockTool {
       this.destroyed || (capture.origin !== 'undo' && capture.origin !== 'redo') || capture.relocation !== undefined ||
       native?.type !== 'database-row' || !native.parent.present || native.parent.value !== this.dataId
     ) return;
+    // A linked view's source is still missing while undo brings it back: its rows return with it, not on their own.
+    if (this.linked && this.sourceMissing()) return;
     const restored = capture.origin === 'undo' && capture.type === 'add';
 
     if (!restored && (capture.type !== 'update' || !capture.changes.some((change) => change.path[0] === 'properties'))) return;

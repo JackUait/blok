@@ -474,3 +474,72 @@ describe('row selection after undo', () => {
     expect(picked('board')).toEqual([]);
   });
 });
+
+describe('row selection after undo in a linked view', () => {
+  const linkedDoc = (): OutputBlockData[] => [
+    ...doc(),
+    {
+      id: 'lk',
+      type: 'database',
+      data: {
+        source: { databaseId: 'db' },
+        schema: [{ id: 'stub', name: 'Name', type: 'title', position: 'a0' }],
+        views: [{ id: 'lv', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'lv',
+      },
+    },
+  ];
+  const linkedPicked = (): string[] => [...document.querySelectorAll('[data-blok-id="lk"] [data-blok-database-table-row][aria-selected="true"]')]
+    .map((el) => el.getAttribute('data-row-id') ?? '');
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+  });
+
+  afterEach(() => {
+    editor?.destroy();
+    editor = undefined;
+    holder?.remove();
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  const makeLinked = async (): Promise<TestEditor> => {
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
+      data: { blocks: linkedDoc() },
+    } as never) as unknown as TestEditor;
+    await editor.isReady;
+    await quiet();
+
+    return editor;
+  };
+
+  it('selects no rows when undo brings its deleted source back', async () => {
+    const blok = await makeLinked();
+
+    await deleteRow(blok, 'db');
+    expect(document.querySelectorAll('[data-blok-id="lk"] [data-blok-database-table-row]')).toHaveLength(0);
+
+    blok.history.undo();
+    await quiet();
+
+    expect(document.querySelectorAll('[data-blok-id="lk"] [data-blok-database-table-row]')).toHaveLength(3);
+    expect(linkedPicked()).toEqual([]);
+  });
+
+  it('still selects a row whose own delete is undone', async () => {
+    const blok = await makeLinked();
+
+    await deleteRow(blok, 'r2');
+    blok.history.undo();
+    await quiet();
+
+    expect(linkedPicked()).toEqual(['r2']);
+  });
+});

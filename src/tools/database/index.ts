@@ -6360,8 +6360,11 @@ export class DatabaseTool implements BlockTool {
       ...this.commentBadgeLever(),
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),
+        // notion-motion.md Round 70 §3: "New page" opens the row in the view's peek.
         addRow: (groupKey) => {
-          this.addTableRow(groupKey);
+          const rowId = this.addTableRow(groupKey);
+
+          if (rowId !== null) this.handleRowClick(rowId);
         },
         moveRow: (result) => this.handleTableRowDrop(result),
         loadMore: (groupKey) => {

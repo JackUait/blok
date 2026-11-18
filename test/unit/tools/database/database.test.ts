@@ -6497,6 +6497,39 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
+    // notion-motion.md Round 70 §3 "Gallery New page click": the new row opens in a centre peek, caret in its title.
+    it('opens the new row from "New page" in the view\'s peek, title focused', () => {
+      const drawerOf = (t: DatabaseTool): { openRowId: string | null; openMode: string } | null =>
+        (t as unknown as { cardDrawer: { openRowId: string | null; openMode: string } | null }).cardDrawer;
+      const clickNew = (view: Partial<DatabaseViewConfig>): { tool: DatabaseTool; newId: string } => {
+        const children = rowsWithDates();
+        const { tool, element, options } = galleryTool(view, children);
+
+        vi.mocked(options.api.blocks.insertAt).mockImplementation((_type, data, placement) => {
+          const row = data as DatabaseRowData;
+          const id = (placement as { id: string }).id;
+
+          children.push(createMockRowBlock({ id, properties: row.properties, position: row.position }));
+
+          return { id } as unknown as BlockAPI;
+        });
+        queryByData(element, 'data-blok-database-gallery-new')?.click();
+
+        return { tool, newId: children.at(-1)?.id ?? '' };
+      };
+      const center = clickNew({});
+
+      expect(drawerOf(center.tool)).toMatchObject({ openRowId: center.newId, openMode: 'center' });
+      expect(center.newId).not.toBe('row-2');
+      expect(document.activeElement?.hasAttribute('data-blok-database-drawer-title')).toBe(true);
+      center.tool.destroy();
+
+      const side = clickNew({ openPagesIn: 'side' });
+
+      expect(drawerOf(side.tool)).toMatchObject({ openRowId: side.newId, openMode: 'side' });
+      side.tool.destroy();
+    });
+
     it('shows the load limit, then more on "Load more"', () => {
       const many = Array.from({ length: 12 }, (_, i) =>
         createMockRowBlock({ id: `row-${i}`, properties: { 'prop-title': `Row ${i}` }, position: `a${String(i).padStart(2, '0')}` }));

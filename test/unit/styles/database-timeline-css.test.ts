@@ -249,11 +249,14 @@ describe('database timeline styles', () => {
     expect(ruleBody('[dir="rtl"] [data-blok-database-timeline-link-handle] svg')).toContain('transform: scaleX(-1)');
   });
 
-  // notion-motion.md Round 71 §3 "Dependency dot": a frame log shows it fading in over 200ms ease-out, with a pointer cursor.
-  // A drag still hides it at once.
-  it('fades the connector in over 200ms on bar hover, with a pointer cursor', () => {
+  // notion-motion.md Round 72 §2 "Dependency dot": full opacity in the first frame, no transition on it or its parents.
+  // Notion's fade-out is unread, so leaving keeps the 200ms fade. A drag still hides it at once.
+  it('shows the connector at once on bar hover and fades it out over 200ms, with a pointer cursor', () => {
     const handle = ruleBody('[data-blok-database-timeline-link-handle]');
+    const shown = ruleBody('[data-blok-database-timeline-bar]:hover [data-blok-database-timeline-link-handle]');
 
+    expect(shown).toContain('transition: none');
+    expect(ruleBody('[data-blok-database-timeline][data-dragging="link"] [data-blok-database-timeline-link-handle]')).toBe(shown);
     expect(handle).toContain('transition: opacity 0.2s ease-out');
     expect(handle).toContain('cursor: pointer');
     expect(handle).not.toContain('crosshair');

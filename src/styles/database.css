@@ -20155,14 +20155,16 @@ button[data-blok-database-feed-reaction]:hover,
   translate: 0 -50%;
   border-radius: 50%;
   opacity: 0;
-  /* notion-motion.md Round 71 §3: fades in over 200ms ease-out, pointer cursor. */
   cursor: pointer;
+  /* Leaving fades out; Notion's fade-out is unread (notion-motion.md Round 72 §2). */
   transition: opacity 0.2s ease-out;
 }
 
 [data-blok-database-timeline-bar]:hover [data-blok-database-timeline-link-handle],
 [data-blok-database-timeline][data-dragging="link"] [data-blok-database-timeline-link-handle] {
   opacity: 1;
+  /* notion-motion.md Round 72 §2: Notion's dot is at full opacity in the first frame. */
+  transition: none;
 }
 
 /* findings C22: the zoom menu's rows are 28px. */

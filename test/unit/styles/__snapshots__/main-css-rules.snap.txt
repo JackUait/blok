@@ -22389,6 +22389,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-database-timeline-bar]:hover [data-blok-database-timeline-link-handle], [data-blok-database-timeline][data-dragging="link"] [data-blok-database-timeline-link-handle] {
   opacity: 1;
+  transition: none;
 }
 
 [data-blok-item-name^="database-timeline-zoom-"] {

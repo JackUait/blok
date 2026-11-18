@@ -3907,6 +3907,14 @@ span[data-blok-slash-search] {
   display: none;
 }
 
+[data-blok-popover-scroller] {
+  scrollbar-width: none;
+}
+
+[data-blok-popover-scroller]::-webkit-scrollbar {
+  display: none;
+}
+
 [data-blok-popover-items]:has(~ [data-blok-popover-scrollbar]:not([hidden])) {
   padding-right: var(--blok-space-1);
 }

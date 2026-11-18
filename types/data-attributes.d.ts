@@ -214,6 +214,8 @@ export const DATA_ATTR: {
   readonly popoverContainer: 'data-blok-popover-container';
   /** Popover items list */
   readonly popoverItems: 'data-blok-popover-items';
+  /** An item's own scroll area inside the popover items: the popover scrollbar tracks it, and what sits above it stays put */
+  readonly popoverScroller: 'data-blok-popover-scroller';
   /** Custom, engine-independent scrollbar thumb overlaid on the popover items */
   readonly popoverScrollbar: 'data-blok-popover-scrollbar';
   /** Stamped on the custom scrollbar thumb while it is being dragged (keeps it revealed) */

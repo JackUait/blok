@@ -644,6 +644,7 @@ export class LinkInlineTool implements InlineTool {
     options.hidden = true;
 
     options.className = 'pt-1';
+    options.setAttribute(DATA_ATTR.popoverScroller, '');
     options.append(...[this.nodes.recent, this.nodes.headings, this.nodes.kinds].filter((node) => node !== null));
 
     return options;

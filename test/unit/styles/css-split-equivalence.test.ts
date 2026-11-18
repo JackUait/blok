@@ -1935,8 +1935,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const TOC_NO_SCROLL_ANCHOR_BYTES = 459;
     // popover-animation.css + colors.css: the block menu's quiet look and its four tokens (measured growth of both files).
     const BLOCK_MENU_QUIET_BYTES = 4_325;
-    // link-picker.css + colors.css: the link field's shelf of recent links and heading outline, and its three tokens (measured growth).
-    const LINK_PICKER_SHELF_BYTES = 5_311;
+    // link-picker.css + colors.css + slash-search.css: the link field's shelf, heading outline, three tokens, and the declared-scroller rules (measured growth).
+    const LINK_PICKER_SHELF_BYTES = 5_518;
     // file.css: the object on a file card — pages, editor tab, filmstrip, record, folder, punch card (measured file.css growth).
     const FILE_CARD_OBJECT_BYTES = 27_626;
     // emoji-picker.css: the database icon pickers' keyboard highlight (measured emoji-picker.css growth).

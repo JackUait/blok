@@ -307,6 +307,14 @@ test.describe('link field: shelf of recent links', () => {
 
     expect(await options.evaluate((list) => list.scrollHeight > list.clientHeight)).toBe(true);
 
+    // No native scrollbar lane beside the shelf: the popover draws its own thumb.
+    const thumb = page.locator('[data-blok-popover-scrollbar]').last();
+    const thumbAtTop = await thumb.evaluate((element) => element.style.transform);
+
+    await expect(options).toHaveCSS('scrollbar-width', 'none');
+    expect(await options.evaluate((list) => list.offsetWidth - list.clientWidth)).toBe(0);
+    await expect(thumb).toBeVisible();
+
     for (let step = 0; step < 10; step++) {
       await input.press('ArrowDown');
     }
@@ -322,6 +330,7 @@ test.describe('link field: shelf of recent links', () => {
     expect(lastBox.y + lastBox.height).toBeLessThanOrEqual(listBox.y + listBox.height + 0.5);
     expect(await box(input)).toEqual(before);
     expect(before.y + before.height).toBeLessThanOrEqual(listBox.y + 0.5);
+    expect(await thumb.evaluate((element) => element.style.transform)).not.toBe(thumbAtTop);
     expect(await page.getByTestId('popover-items').last().evaluate((items) => items.scrollTop)).toBe(0);
   });
 });

@@ -1593,6 +1593,8 @@ describe('LinkInlineTool', () => {
 
       expect(input).toHaveAttribute('role', 'combobox');
       expect(input).toHaveAttribute('aria-controls', listbox?.id);
+      // The lists scroll under the field, and the popover draws their scrollbar.
+      expect(listbox?.hasAttribute('data-blok-popover-scroller')).toBe(true);
       expect(input).toHaveAttribute('aria-expanded', 'true');
       expect(recentRows(itemWrapper)[0]).toHaveAttribute('role', 'option');
       expect(itemWrapper.querySelectorAll('[data-link-recent] button')).toHaveLength(0);

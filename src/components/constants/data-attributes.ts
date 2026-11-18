@@ -229,6 +229,8 @@ export const DATA_ATTR = {
   popoverContainer: 'data-blok-popover-container',
   /** Popover items list */
   popoverItems: 'data-blok-popover-items',
+  /** An item's own scroll area inside the popover items: the popover scrollbar tracks it, and what sits above it stays put */
+  popoverScroller: 'data-blok-popover-scroller',
   /** Custom, engine-independent scrollbar thumb overlaid on the popover items */
   popoverScrollbar: 'data-blok-popover-scrollbar',
   /** Stamped on the custom scrollbar thumb while it is being dragged (keeps it revealed) */

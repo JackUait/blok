@@ -454,6 +454,64 @@ describe('PopoverDesktop', () => {
 
       expect(instance.nodes.scrollbarThumb.style.transform).toBe('translateY(140px)');
     });
+
+    it('tracks a scroller an item declares inside the list, so what sits above it stays put', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const scroller = document.createElement('div');
+
+      scroller.setAttribute('data-blok-popover-scroller', '');
+      instance.nodes.items.append(scroller);
+      Object.defineProperty(scroller, 'offsetParent', { configurable: true, get: () => instance.nodes.items });
+      Object.defineProperty(instance.nodes.items, 'offsetParent', { configurable: true, get: () => instance.nodes.popoverContainer });
+
+      // The list itself does not overflow; the scroller inside it does.
+      stubScrollMetrics(instance.nodes.items, { clientHeight: 300, scrollHeight: 300, scrollTop: 0, offsetTop: 8 });
+      stubScrollMetrics(scroller, { clientHeight: 200, scrollHeight: 400, scrollTop: 200, offsetTop: 40 });
+      instance.updateScrollbar();
+
+      // Thumb 100 tall at the end of its 100px travel, under the 8px + 40px above the scroller.
+      expect(instance.nodes.scrollbarThumb.hidden).toBe(false);
+      expect(instance.nodes.scrollbarThumb.style.height).toBe('100px');
+      expect(instance.nodes.scrollbarThumb.style.transform).toBe('translateY(148px)');
+    });
+
+    it('moves the thumb when the declared scroller scrolls', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const scroller = document.createElement('div');
+      const metrics = { clientHeight: 200, scrollHeight: 400, scrollTop: 0, offsetTop: 0 };
+
+      scroller.setAttribute('data-blok-popover-scroller', '');
+      instance.nodes.items.append(scroller);
+      stubScrollMetrics(instance.nodes.items, { clientHeight: 300, scrollHeight: 300, scrollTop: 0 });
+      stubScrollMetrics(scroller, metrics);
+      instance.updateScrollbar();
+
+      expect(instance.nodes.scrollbarThumb.style.transform).toBe('translateY(0px)');
+
+      metrics.scrollTop = 100;
+      scroller.dispatchEvent(new Event('scroll'));
+
+      expect(instance.nodes.scrollbarThumb.style.transform).toBe('translateY(50px)');
+      expect(instance.nodes.items).toHaveAttribute('data-blok-scrolling');
+    });
+
+    it('ignores a declared scroller that is hidden and goes back to the list', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const scroller = document.createElement('div');
+
+      scroller.setAttribute('data-blok-popover-scroller', '');
+      scroller.hidden = true;
+      instance.nodes.items.append(scroller);
+      stubScrollMetrics(instance.nodes.items, { clientHeight: 200, scrollHeight: 400, scrollTop: 0 });
+      stubScrollMetrics(scroller, { clientHeight: 0, scrollHeight: 0, scrollTop: 0 });
+      instance.updateScrollbar();
+
+      expect(instance.nodes.scrollbarThumb.hidden).toBe(false);
+      expect(instance.nodes.scrollbarThumb.style.height).toBe('100px');
+    });
   });
 
   describe('setTriggerItemPosition', () => {

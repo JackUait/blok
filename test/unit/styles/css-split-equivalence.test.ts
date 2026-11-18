@@ -1863,6 +1863,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R162_BYTES = 887;
     // Lane r164: Round 67 §3 calendar card Edit property editor (38px, no motion), §1 22px emoji icon button. Net database.css growth against origin/main.
     const DATABASE_R164_BYTES = 699;
+    // Lane r165: Round 67 §1 Duplicate submenu (275x65, 28px rows, opacity fade) and the Move to Trash row (no Del, neutral hover). Net database.css growth against origin/main.
+    const DATABASE_R165_BYTES = 1904;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2476,6 +2478,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R159_BYTES
       + DATABASE_R162_BYTES
       + DATABASE_R164_BYTES
+      + DATABASE_R165_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

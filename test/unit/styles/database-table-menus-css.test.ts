@@ -806,7 +806,39 @@ describe('database block menu', () => {
   it('leaves a phone its 44px touch rows: every block-menu rule sits in the desktop query', () => {
     const count = (css: string): number => css.split("[data-blok-popover-custom-class~='blok-database-block-menu']").length - 1;
 
-    expect(count(desktop)).toBe(2);
+    expect(count(desktop)).toBe(7);
     expect(count(database)).toBe(count(desktop));
+  });
+
+  // notion-motion.md Round 67 §1: Duplicate's submenu is 275 wide with 28px rows, and fades in over 200ms with no scale.
+  const SUB = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-block-menu'][data-blok-testid='block-tunes-popover'] > [data-blok-popover][data-blok-nested='true'] > [data-blok-popover-container]";
+
+  it('gives Duplicate\'s submenu Notion\'s 275px width', () => {
+    expect(rule(SUB)).toContain('width: 275px');
+  });
+
+  it('fades Duplicate\'s submenu in over 200ms ease, with no scale', () => {
+    expect(rule(SUB)).toContain('transition: opacity 200ms ease');
+    expect(rule(SUB)).toContain('transform: none');
+  });
+
+  it('gives Duplicate\'s submenu 28px rows 29 apart', () => {
+    const subRow = `${SUB} > [data-blok-popover-items] > [data-blok-popover-item]`;
+
+    expect(rule(subRow)).toContain('min-height: 28px');
+    expect(rule(subRow)).toContain('padding-block: 0');
+    // 4 + 28 + 1 + 28 + 4 = Notion's 65.
+    expect(rule(`${subRow}:last-child`)).toContain('margin-block-end: 0');
+  });
+
+  // notion-motion.md Round 67 §1: Notion's Move to Trash row shows no shortcut, and its hover fill is the neutral one.
+  const TRASH = `${ITEMS} > [data-blok-item-name='delete']`;
+
+  it('hides the Move to Trash row\'s Del label', () => {
+    expect(rule(`${TRASH} [data-blok-popover-item-secondary-title]`)).toContain('display: none');
+  });
+
+  it('fills a hovered Move to Trash row with the neutral hover token, never red', () => {
+    expect(rule(TRASH)).toContain('--blok-item-destructive-hover-bg: var(--blok-database-popover-hover)');
   });
 });

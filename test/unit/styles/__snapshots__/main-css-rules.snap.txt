@@ -4328,6 +4328,10 @@ span[data-blok-slash-search] {
   height: 16px;
 }
 
+[data-blok-emoji-picker] [data-emoji-highlighted] {
+  background: var(--blok-item-focus-bg);
+}
+
 [@media (hover: hover)] [data-blok-emoji-picker] :is([data-emoji-picker-header] button:not([data-emoji-picker-skin-tone] button), [data-emoji-native], [data-emoji-picker-empty] button):hover {
   background: var(--blok-item-hover-bg);
 }

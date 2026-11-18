@@ -484,6 +484,11 @@
   height: 16px;
 }
 
+/* Focus stays in the search field while the arrow keys move this (the filterKeys option). */
+[data-blok-emoji-picker] [data-emoji-highlighted] {
+  background: var(--blok-item-focus-bg);
+}
+
 @media (hover: hover) {
   /* Skin-tone segments sit in the header but keep their own colours on hover. */
   [data-blok-emoji-picker] :is([data-emoji-picker-header] button:not([data-emoji-picker-skin-tone] button), [data-emoji-native], [data-emoji-picker-empty] button):hover {

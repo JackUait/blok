@@ -480,6 +480,31 @@ describe('the database block menu in core', () => {
       expect(block(instance, 'db').selected).toBe(true);
     });
 
+    // notion-motion.md Round 69 §1: after the rebuild focus is on the page and the first row is filled.
+    it('the rebuilt menu has focus on the page and its first row filled, and keys still work', async () => {
+      const instance = await boot([...databaseBlocks('db', ['r1']), ...databaseBlocks('other', ['o1'])]);
+      const rows = await openMenu(instance, 'db');
+
+      rows.find((row) => row.getAttribute('data-blok-item-name') === 'database-lock')?.click();
+      await vi.waitFor(() => expect(currentRows()).not.toContain('database-lock'));
+      await quiet();
+
+      const items = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-blok-testid="block-tunes-popover"] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-item-name]')];
+      const filled = (): string[] => items().filter((row) => row.getAttribute('data-blok-focused') === 'true').map((row) => row.getAttribute('data-blok-item-name') ?? '?');
+
+      expect(document.body).toHaveFocus();
+      expect(filled()).toEqual([items()[0].getAttribute('data-blok-item-name')]);
+      expect(instance.moduleInstances.BlockSettings.opened).toBe(true);
+      expect(block(instance, 'db').selected).toBe(true);
+
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      expect(filled()).toEqual([items()[1].getAttribute('data-blok-item-name')]);
+
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+      await quiet();
+      expect(instance.moduleInstances.BlockManager.getBlockById('db')).toBeDefined();
+    });
+
     it('Enter on Lock database rebuilds it too, and the menu stays open', async () => {
       const instance = await boot([...databaseBlocks('db', ['r1']), ...databaseBlocks('other', ['o1'])]);
       await openMenu(instance, 'db');

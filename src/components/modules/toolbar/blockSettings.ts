@@ -179,6 +179,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   /** Opens the open menu again, with the same block and anchor. */
   private reopenMenu: () => void = () => undefined;
 
+  /** The next open puts the cursor on its first row and leaves focus on the page, not in its search. */
+  private cursorOnFirstRow = false;
+
   /** True during an Escape press, so its close keeps the block selected (Notion U109). */
   private escapePressed = false;
 
@@ -272,6 +275,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     this.reopenMenu = () => void this.open(block, anchor, options);
+    const cursorOnFirstRow = this.cursorOnFirstRow;
+
+    this.cursorOnFirstRow = false;
 
     /**
      * Set isOpening flag BEFORE async operations to prevent toolbar from moving
@@ -443,6 +449,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
        * in its pre-open state, then announce the state change.
        */
       this.popover.show();
+      if (cursorOnFirstRow) {
+        // Queued after show()'s own microtask, which focuses the search.
+        const popover = this.popover;
+
+        queueMicrotask(() => this.putCursorOnFirstRow(popover));
+      }
       this.attachFlipperKeydownListener(block);
 
       /** Tell to subscribers that block settings is opened */
@@ -1363,8 +1375,31 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         return;
       }
       this.close();
+      // notion-motion.md Round 69 §1: Notion's rebuilt menu has focus on the page and its first row filled.
+      this.cursorOnFirstRow = true;
       reopen();
     }, 0);
+  }
+
+  /**
+   * Leaves the search and puts the keyboard cursor on the menu's first row.
+   * @param popover - the menu this was asked for; a later one is left alone
+   */
+  private putCursorOnFirstRow(popover: PopoverDesktop | PopoverMobile): void {
+    if (this.popover !== popover || !(popover instanceof PopoverDesktop)) {
+      return;
+    }
+    const element = popover.getElement();
+    const active = document.activeElement;
+
+    if (active instanceof HTMLElement && element.contains(active)) {
+      active.blur();
+    }
+    const first = element.querySelector(`[${DATA_ATTR.popoverItems}] > [${DATA_ATTR.itemName}]:not([${DATA_ATTR.hidden}])`)?.getAttribute(DATA_ATTR.itemName);
+
+    if (first !== null && first !== undefined) {
+      popover.focusItemByName(first);
+    }
   }
 
   /**

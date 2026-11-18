@@ -1144,8 +1144,11 @@ export class DatabaseTableGrid {
       const [dr, rawDc] = step;
       const dc = rtl ? -rawDc : rawDc;
 
+      // notion-motion.md Round 71 §6: Cmd+Shift+Down runs the range to the last row. Other Cmd+arrows are unmeasured.
+      const toLastRow = event.key === 'ArrowDown' && (event.metaKey || event.ctrlKey);
+
       if (event.shiftKey) {
-        this.state.selection = { ...selection, focus: this.offset(selection.focus, dr, dc) };
+        this.state.selection = { ...selection, focus: this.offset(selection.focus, toLastRow ? this.rowIds().length : dr, dc) };
       } else {
         const next = this.offset(selection.anchor, dr, dc);
 

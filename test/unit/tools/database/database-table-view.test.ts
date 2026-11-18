@@ -1344,6 +1344,17 @@ describe('DatabaseTableView', () => {
       expect([...root.querySelectorAll('[data-blok-database-table-row][aria-selected="true"]')].map((el) => el.getAttribute('data-row-id'))).toEqual(['r1', 'r2']);
     });
 
+    // notion-motion.md Round 71 §6: Cmd+Shift+Down on a selected cell runs the range to the last row.
+    it.each([{ metaKey: true }, { ctrlKey: true }])('Cmd+Shift+Down runs the range from the selected cell to the last row (%o)', (mod) => {
+      const { root } = mount({ rows: [row('r1', 'Alpha'), row('r2', 'Beta'), row('r3', 'Gamma'), row('r4', 'Delta')] });
+
+      selectCell(root, 'r1', 'p-notes');
+      press(grid(root), 'ArrowDown', { shiftKey: true, ...mod });
+
+      expect(selectedCells(root).sort()).toEqual(['r1/p-notes', 'r2/p-notes', 'r3/p-notes', 'r4/p-notes']);
+      expect(anchorCell(root)).toBe('r1/p-notes');
+    });
+
     // notion-motion.md Round 30 §4: Shift+click on another cell selects that row; it does not extend a range.
     it('Shift+click on a cell selects its row, not a range', () => {
       const { root } = mount();

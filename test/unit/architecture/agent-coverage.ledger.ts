@@ -349,7 +349,6 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:image/image-fullscreen': exempt('view-only', 'Opens the image in a lightbox; the document does not change.'),
   'menu:image/image-download': exempt('view-only', VIEW_ONLY_DOWNLOAD),
   'menu:image/image-copy-url': exempt('clipboard', COPY_URL),
-  'menu:list/list-style-*': fld('list.style'),
   'menu:quote/quote-size-default': fld('quote.size'),
   'menu:quote/quote-size-large': fld('quote.size'),
   'menu:bookmark/bookmark-open-original': exempt('view-only', OPEN_ORIGINAL),

@@ -2440,13 +2440,13 @@
         }
       },
       "list": {
-        "description": "Bulleted, numbered, and to-do (checklist) lists with unlimited nesting. Each list item is a separate block. The toolbox shows three entries by default, one for each style. You can convert items between styles from the block settings menu.",
+        "description": "Bulleted, numbered, and to-do (checklist) lists with unlimited nesting. Each list item is a separate block. The toolbox shows three entries by default, one for each style. You can convert items between styles with \"Turn into\" in the block menu.",
         "options": {
           "defaultStyle": {
             "description": "The list style used when inserting a new list block."
           },
           "styles": {
-            "description": "Restrict which styles are available in the block settings conversion menu."
+            "description": "Restrict which list styles \"Turn into\" offers."
           },
           "toolboxStyles": {
             "description": "Restrict which list styles appear as separate toolbox entries."

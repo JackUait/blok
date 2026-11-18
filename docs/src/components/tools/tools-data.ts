@@ -184,7 +184,7 @@ const editor = new Blok({
     type: 'block',
     title: 'List',
     description:
-      'Bulleted, numbered, and to-do (checklist) lists with unlimited nesting. Each list item is a separate block. The toolbox shows three entries by default, one for each style. You can convert items between styles from the block settings menu.',
+      'Bulleted, numbered, and to-do (checklist) lists with unlimited nesting. Each list item is a separate block. The toolbox shows three entries by default, one for each style. You can convert items between styles with "Turn into" in the block menu.',
     importExample: `import { List } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -197,7 +197,7 @@ const editor = new Blok({
         option: 'styles',
         type: 'ListStyle[]',
         default: '["unordered","ordered","checklist"]',
-        description: 'Restrict which styles are available in the block settings conversion menu.',
+        description: 'Restrict which list styles "Turn into" offers.',
       },
       {
         option: 'toolboxStyles',

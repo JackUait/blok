@@ -269,6 +269,8 @@ class DateEditor {
       content: this.root,
       // research/22 §4: Notion's picker is 248 wide.
       minWidth: '248px',
+      // notion-motion.md Round 68 §4: at a right-click point, above it when it fits there and not below.
+      point: this.ctx.atPoint === true,
       onEscape: () => {
         if (this.menu !== null) {
           this.closeMenu(true);

@@ -112,6 +112,8 @@ class SelectEditor {
       content: this.root,
       // Notion: 300 wide beside a 200px cell (research/08:306); status is 240 (feel/findings-table T17).
       minWidth: coverMinWidth(anchor, ctx.coverCell, property.type === 'status' ? 240 : 300),
+      // notion-motion.md Round 68 §4: 300 wide at a right-click point, above it near the window's bottom.
+      point: ctx.atPoint === true,
       onEscape: () => this.finish(true),
       onDismiss: () => this.finish(false),
     });

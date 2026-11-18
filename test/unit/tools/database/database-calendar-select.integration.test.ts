@@ -145,8 +145,15 @@ describe('DatabaseTool — calendar event selection (research/22 §1)', () => {
   });
 
   describe('Edit property › Text (notion-motion.md Round 67 §3)', () => {
-    const NOTE_SCHEMA: PropertyDefinition[] = [...SCHEMA, { id: 'note', name: 'Note', type: 'text', position: 'a2' }];
-    const noteDoc = (): Doc => makeDoc([fakeRow('delta', 'db', { title: 'Delta', due: '2026-10-20', note: 'Short note' }, 'a0')]);
+    const NOTE_SCHEMA: PropertyDefinition[] = [
+      ...SCHEMA,
+      { id: 'note', name: 'Note', type: 'text', position: 'a2' },
+      { id: 'kind', name: 'Kind', type: 'select', position: 'a3', config: { options: [{ id: 'red', label: 'Red', color: 'red', position: 'a0' }] } },
+      { id: 'cost', name: 'Cost', type: 'number', position: 'a4' },
+      { id: 'done', name: 'Done', type: 'checkbox', position: 'a5' },
+      { id: 'site', name: 'Site', type: 'url', position: 'a6' },
+    ];
+    const noteDoc = (): Doc => makeDoc([fakeRow('delta', 'db', { title: 'Delta', due: '2026-10-20', note: 'Short note', cost: 1234.5, done: false }, 'a0')]);
 
     const editNoteFromMenu = (el: HTMLElement, propertyId = 'note'): void => {
       eventOf(el, 'delta').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
@@ -184,10 +191,42 @@ describe('DatabaseTool — calendar event selection (research/22 §1)', () => {
       expect(selected(el)).toEqual(['delta']);
     });
 
+    // notion-motion.md Round 68 §4: Select, Date and Number open alone at the point too.
+    it.each([
+      ['kind', '[data-blok-database-cell-editor] input'],
+      ['due', '[data-blok-database-date-editor]'],
+      ['cost', '[data-blok-database-cell-editor] input'],
+    ])('%s opens alone at the right-click point, not the row page', (propertyId, editor) => {
+      const { el } = buildTool(noteDoc(), {}, tableData(NOTE_SCHEMA, { type: 'calendar' }));
+
+      editNoteFromMenu(el, propertyId);
+
+      expect(document.querySelector('[data-blok-database-drawer], [data-blok-database-peek]')).toBeNull();
+      expect(document.querySelector(editor)).not.toBeNull();
+      const point = document.querySelector<HTMLElement>('[data-blok-database-edit-point]');
+
+      expect([point?.style.left, point?.style.top]).toEqual(['299px', '120px']);
+      expect(document.querySelector('[data-blok-popover-custom-class~="blok-database-point-editor"]')).not.toBeNull();
+    });
+
+    // notion-motion.md Round 68 §4: Checkbox opens no editor; the card stays selected.
+    it('Checkbox toggles and opens nothing', () => {
+      const doc = noteDoc();
+      const { el } = buildTool(doc, {}, tableData(NOTE_SCHEMA, { type: 'calendar' }));
+
+      editNoteFromMenu(el, 'done');
+
+      expect(document.querySelector('[data-blok-database-drawer], [data-blok-database-peek]')).toBeNull();
+      expect(document.querySelector('[data-blok-database-cell-editor]')).toBeNull();
+      expect(document.querySelector('[data-blok-database-edit-point]')).toBeNull();
+      expect(doc.rows.get('delta')?.data.properties.done).toBe(true);
+      expect(selected(el)).toEqual(['delta']);
+    });
+
     it('a type not measured yet still opens on the row page', () => {
       const { el } = buildTool(noteDoc(), {}, tableData(NOTE_SCHEMA, { type: 'calendar' }));
 
-      editNoteFromMenu(el, 'due');
+      editNoteFromMenu(el, 'site');
 
       expect(document.querySelector('[data-blok-database-edit-point]')).toBeNull();
       expect(selected(el)).toEqual(['delta']);

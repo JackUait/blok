@@ -96,7 +96,7 @@ export interface CellContext {
   coverCell?: boolean | 'value';
   /**
    * The anchor is a zero-size point: the editor opens with its top-left on it,
-   * or above it when it would not fit below. Text editors only.
+   * or above it when it would not fit below. Text, number, select and date editors.
    */
   atPoint?: boolean;
   /**

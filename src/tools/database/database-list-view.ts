@@ -904,6 +904,28 @@ export const pointerAnchor = (rowEl: HTMLElement, event: Pick<MouseEvent, 'clien
   return point;
 };
 
+/**
+ * Edit property › from a right-click: the types Notion opens alone at the click point, by view
+ * (notion-motion.md Round 67 §3, Round 68 §4). A checkbox opens nothing: it toggles. The rest keep the row page or the cell.
+ */
+const POINT_EDIT_TYPES: Record<'calendar' | 'board' | 'table', readonly PropertyDefinition['type'][]> = {
+  calendar: ['text', 'number', 'select', 'date', 'checkbox'],
+  board: ['number', 'select'],
+  table: ['number', 'select', 'date'],
+};
+
+export const editsAtPoint = (view: keyof typeof POINT_EDIT_TYPES, type: PropertyDefinition['type'] | undefined): boolean =>
+  type !== undefined && POINT_EDIT_TYPES[view].includes(type);
+
+/** Edit property ›'s anchor: 1px left of the click (notion-motion.md Round 67 §3, Round 68 §4). The caller removes it. */
+export const editPointAnchor = (rowEl: HTMLElement, event: Pick<MouseEvent, 'clientX' | 'clientY'>): HTMLElement => {
+  const point = pointerAnchor(rowEl, { clientX: event.clientX - 1, clientY: event.clientY });
+
+  point.setAttribute('data-blok-database-edit-point', '');
+
+  return point;
+};
+
 // A feed card is not listed: Notion opens the database block's menu there, not the row menu (notion-motion.md Round 60 §4).
 const POINTER_MENU_ROWS = [
   '[data-blok-database-list-row]',

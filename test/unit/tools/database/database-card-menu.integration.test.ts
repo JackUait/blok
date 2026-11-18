@@ -487,6 +487,60 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     expect(document.querySelector('[data-blok-database-cell-editor] textarea, [data-blok-database-cell-editor] input')).not.toBeNull();
   });
 
+  // notion-motion.md Round 68 §4: from a right-click, Select and Number open alone at the click point in Board and
+  // Table, x = click x - 1, not on the row page or over the column's cell. Table Date too.
+  describe('Edit property › from a right-click', () => {
+    const POINT_SCHEMA = [
+      ...BOARD_SCHEMA,
+      { id: 'cost', name: 'Cost', type: 'number' as const, position: 'a4' },
+      { id: 'due', name: 'Due', type: 'date' as const, position: 'a5' },
+    ];
+    const pointRow = (): Doc => makeDoc([fakeRow('a', 'db', { title: 'Alpha beta', status: 'o1', cost: 1234.5, due: '2026-10-15' }, 'a0')]);
+
+    const editFromRightClick = (el: HTMLElement, type: 'board' | 'table', propertyId: string): void => {
+      rowEl(el, type).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 700, clientY: 424 }));
+      itemByTitle('tools.database.tableEditProperty').click();
+      menuItem(`database-row-edit-property-${propertyId}`)?.click();
+    };
+
+    it.each([
+      ['board', 'status', '[data-blok-database-cell-editor] input'],
+      ['board', 'cost', '[data-blok-database-cell-editor] input'],
+      ['table', 'status', '[data-blok-database-cell-editor] input'],
+      ['table', 'cost', '[data-blok-database-cell-editor] input'],
+      ['table', 'due', '[data-blok-database-date-editor]'],
+    ] as const)('%s: %s opens at the click point', (type, propertyId, editor) => {
+      const { el } = buildTool(pointRow(), {}, tableData(POINT_SCHEMA, { type, ...(type === 'board' ? { groupBy: 'status' } : {}) }));
+
+      editFromRightClick(el, type, propertyId);
+
+      expect(document.querySelector('[data-blok-database-drawer], [data-blok-database-peek]')).toBeNull();
+      expect(document.querySelector(editor)).not.toBeNull();
+      const point = document.querySelector<HTMLElement>('[data-blok-database-edit-point]');
+
+      expect([point?.style.left, point?.style.top]).toEqual(['699px', '424px']);
+      expect(document.querySelector('[data-blok-popover-custom-class~="blok-database-point-editor"]')).not.toBeNull();
+    });
+
+    it.each(['board', 'table'] as const)('%s: Escape closes it and takes the point away', (type) => {
+      const { el } = buildTool(pointRow(), {}, tableData(POINT_SCHEMA, { type, ...(type === 'board' ? { groupBy: 'status' } : {}) }));
+
+      editFromRightClick(el, type, 'cost');
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(document.querySelector('[data-blok-database-cell-editor]')).toBeNull();
+      expect(document.querySelector('[data-blok-database-edit-point]')).toBeNull();
+    });
+
+    it('a board Text, not measured yet, still opens on the row page', () => {
+      const { el } = buildTool(pointRow(), {}, tableData(POINT_SCHEMA, { type: 'board', groupBy: 'status' }));
+
+      editFromRightClick(el, 'board', 'notes');
+
+      expect(document.querySelector('[data-blok-database-edit-point]')).toBeNull();
+    });
+  });
+
   // notion-motion.md Round 42 §2: a card that shows only Name still has Edit property ›, and it lists every
   // property, not the shown ones. Created time and ID were not in Notion's list.
   it('Edit property › lists every property on a card that shows only Name', () => {

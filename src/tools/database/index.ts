@@ -76,7 +76,7 @@ import { groupCalculationHint, groupCalculationItems, groupCalculationText } fro
 import { optionColorOf, type OptionColor } from './cells/option-colors';
 import { DatabaseBoardView } from './database-board-view';
 import type { BoardLane } from './database-board-view';
-import { DatabaseListView, pointerAnchor, pointerMenuPlacement } from './database-list-view';
+import { DatabaseListView, editPointAnchor, editsAtPoint, pointerAnchor, pointerMenuPlacement } from './database-list-view';
 import { DatabaseTableView, createTableState } from './database-table-view';
 import { DatabaseGalleryView } from './database-gallery-view';
 import type { GalleryGroup } from './database-gallery-view';
@@ -10469,14 +10469,19 @@ export class DatabaseTool implements BlockTool {
 
   /**
    * A card's Edit property ›: the row page opens, then that value's editor.
-   * notion-motion.md Round 67 §3: a calendar card's Text opens alone at the right-click point, 1px left of it.
+   * From a right-click on a calendar or board card, a measured type opens alone at the click point (`editsAtPoint`).
    * Other types and views, and a menu opened with no pointer, are unmeasured.
    */
   private editRowProperty(rowId: string, propertyId: string, card?: HTMLElement, pointer?: Pick<MouseEvent, 'clientX' | 'clientY'>): void {
-    if (card?.matches('[data-blok-database-calendar-event]') === true && pointer !== undefined && this.model.getProperty(propertyId)?.type === 'text') {
-      const point = pointerAnchor(card, { clientX: pointer.clientX - 1, clientY: pointer.clientY });
+    const type = this.model.getProperty(propertyId)?.type;
+    const atPoint = card !== undefined && pointer !== undefined && (
+      (card.matches('[data-blok-database-calendar-event]') && editsAtPoint('calendar', type))
+      || (card.matches('[data-blok-database-board] [data-blok-database-card]') && editsAtPoint('board', type))
+    );
 
-      point.setAttribute('data-blok-database-edit-point', '');
+    if (atPoint) {
+      const point = editPointAnchor(card, pointer);
+
       this.editCardProperty(rowId, propertyId, point, () => point.remove(), undefined, true);
 
       return;

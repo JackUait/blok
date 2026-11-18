@@ -46,7 +46,7 @@ import { propertyTypeMeta } from './database-property-types';
 import type { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import { pointerMenuPlacement } from './database-list-view';
+import { editPointAnchor, editsAtPoint, pointerMenuPlacement } from './database-list-view';
 import { menuFrom, pointerFrom, type MovePickerFrom } from './database-move-picker';
 import {
   IconPlayerPlay,
@@ -2320,9 +2320,11 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       onEditIcon: () => handlers.editRowIcon(rowId),
       onEditProperty: (propertyId) => {
         const ref = { rowId, propertyId };
+        const type = this.columns.find((c) => c.property.id === propertyId)?.property.type;
 
         this.selectCell(ref);
-        this.grid?.openEditor(ref);
+        // notion-motion.md Round 68 §4: from a right-click, a measured type opens at the click point, not over the cell.
+        this.grid?.openEditor(ref, undefined, rowEl !== null && pointer !== undefined && editsAtPoint('table', type) ? editPointAnchor(rowEl, pointer) : undefined);
       },
       onOpenIn: (mode) => handlers.openRow(rowId, mode),
       onCopyLink: () => handlers.copyRowLink(rowId),

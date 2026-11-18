@@ -276,13 +276,16 @@ export class DatabaseTableGrid {
   }
 
   /** Open a cell's editor; `initialText` replaces its value. */
-  openEditor(ref: CellRef, initialText?: string): void {
+  /** `point`: a zero-size anchor the editor opens at instead of over the cell; removed when it closes. */
+  openEditor(ref: CellRef, initialText?: string, point?: HTMLElement): void {
     const property = this.columns.find((p) => p.id === ref.propertyId);
-    const anchor = this.cellEl(ref);
+    const anchor = point ?? this.cellEl(ref);
     const row = this.rows.get(ref.rowId);
 
     // notion-spec-2 §19.6: an ID cell, like every value no one types, opens nothing.
     if (this.readOnly || property === undefined || anchor === null || row === undefined || isReadOnlyType(property.type)) {
+      point?.remove();
+
       return;
     }
     this.editor?.close();
@@ -297,7 +300,7 @@ export class DatabaseTableGrid {
       ...this.cellContext,
       i18n: this.i18n,
       readOnly: false,
-      coverCell: true,
+      ...(point === undefined ? { coverCell: true } : { atPoint: true }),
       tabCloses: true,
       options: property.config?.options ?? [],
       ...(reminder !== undefined ? { reminder } : {}),
@@ -316,6 +319,7 @@ export class DatabaseTableGrid {
       },
       onClose: () => {
         closed.done = true;
+        point?.remove();
         this.editorClosed(ref, closed.committed);
       },
     });
@@ -323,6 +327,7 @@ export class DatabaseTableGrid {
     this.editor = handle.isOpen ? handle : null;
     // No editor opened and none closed (no people source, a type this client lacks): nothing will call onClose.
     if (!handle.isOpen && !closed.done) {
+      point?.remove();
       this.state.editing = false;
       window.removeEventListener('keydown', this.recordKey, true);
     }

@@ -13,9 +13,6 @@ const parseNumberEntry = (text: string, property: PropertyDefinition, locale: st
   return parsed === undefined ? null : { kind: 'commit', value: parsed };
 };
 
-/** database.css: 38px tall and no entrance motion. */
-const POINT_EDITOR_CLASS = 'blok-database-point-editor';
-
 /** research/16 §4: Notion's url, email and phone editors. */
 const INPUT_TYPES: Partial<Record<PropertyDefinition['type'], string>> = { url: 'url', email: 'email', phone: 'tel' };
 
@@ -95,7 +92,7 @@ export const openTextEditor = (
     content,
     minWidth: coverMinWidth(anchor, ctx.coverCell, 240),
     // notion-motion.md Round 67 §3: the top on the point; above it, its bottom there, when the window's 12px margin would cut it.
-    ...(ctx.atPoint === true ? { gap: 0, flip: true, surfaceClass: POINT_EDITOR_CLASS } : {}),
+    point: ctx.atPoint === true,
     onEscape: () => finish(!escapeCancels && escapeCommits(property.type) ? resolve() ?? { kind: 'cancel' } : { kind: 'cancel' }),
     onDismiss: () => finish(resolve() ?? { kind: 'cancel' }, false),
   });

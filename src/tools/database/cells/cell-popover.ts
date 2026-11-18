@@ -35,6 +35,11 @@ export interface CellPopoverOptions {
   aside?: { side: 'left' | 'right'; gap: number; flip?: boolean };
   /** Opens above the anchor, `gap` over it, when it fits there and not below. */
   flip?: boolean;
+  /**
+   * The anchor is a zero-size point: the top-left on it, or above it, its bottom there, when only that fits.
+   * No entrance motion (database.css).
+   */
+  point?: boolean;
   /** The gap to the window's top and bottom, when it is not the usual 12. */
   verticalMargin?: number;
   /** Under the anchor, its end edge on the anchor's end edge. */
@@ -53,6 +58,8 @@ const CELL_EDITOR_CLASS = 'blok-database-cell-editor';
 const VALUE_EDITOR_CLASS = 'blok-database-value-editor';
 /** research/08 Motion: a table cell editor mounts at its final size, with no fade (database.css). */
 const TABLE_EDITOR_CLASS = 'blok-database-table-cell-editor';
+/** notion-motion.md Round 67 §3: an editor at a right-click point (database.css). */
+const POINT_EDITOR_CLASS = 'blok-database-point-editor';
 /** On the anchor while its editor is open. */
 const EDITOR_OPEN_ATTR = 'data-blok-database-editor-open';
 
@@ -198,13 +205,13 @@ export class CellPopover {
       autoFocusFirstItem: false,
       // Fades out like the database menus; an editor with no motion (database.css) still goes at once.
       animateClose: true,
-      class: [CELL_EDITOR_CLASS, ...(panel === true ? [PANEL_CLASS] : []), ...(docked !== undefined && docked !== false ? [DOCKED_CLASS] : []), ...(docked === 'page' ? [DOCKED_PAGE_CLASS] : []), ...(cover === 'value' ? [VALUE_EDITOR_CLASS] : []), ...(cover === true ? [TABLE_EDITOR_CLASS] : []), ...(this.options.surfaceClass !== undefined ? [this.options.surfaceClass] : [])].join(' '),
+      class: [CELL_EDITOR_CLASS, ...(panel === true ? [PANEL_CLASS] : []), ...(docked !== undefined && docked !== false ? [DOCKED_CLASS] : []), ...(docked === 'page' ? [DOCKED_PAGE_CLASS] : []), ...(cover === 'value' ? [VALUE_EDITOR_CLASS] : []), ...(cover === true ? [TABLE_EDITOR_CLASS] : []), ...(this.options.point === true ? [POINT_EDITOR_CLASS] : []), ...(this.options.surfaceClass !== undefined ? [this.options.surfaceClass] : [])].join(' '),
       ...(this.options.minWidth !== undefined ? { minWidth: this.options.minWidth } : {}),
     };
     const { aside, beside, besideOf, besideFlipWidth } = this.options;
     const below = (): ReturnType<typeof fitPlacement> | ReturnType<typeof besidePlacement> => (beside !== undefined
       ? besidePlacement(besideOf ?? anchor, beside, besideFlipWidth)
-      : fitPlacement(anchor, this.options.gap, this.options.flip, this.options.verticalMargin, this.options.positionContext));
+      : fitPlacement(anchor, this.options.point === true ? 0 : this.options.gap, this.options.point === true || this.options.flip === true, this.options.verticalMargin, this.options.positionContext));
     const fit = aside !== undefined ? asidePlacement(aside) : below();
     const coverOrFit = cover === true || cover === 'value' ? coverPlacement(anchor, cover === 'value', cover === true && this.options.below === true) : fit;
     const docks = {

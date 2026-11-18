@@ -640,7 +640,7 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       const grid = el.querySelector<HTMLElement>('[role="grid"]');
       const nameCell = el.querySelector<HTMLElement>('[data-row-id="a"] [role="gridcell"][data-property-id="title"]');
 
-      expect(document.activeElement).toBe(grid);
+      expect(grid).toHaveFocus();
       expect(grid?.getAttribute('aria-activedescendant')).toBe(nameCell?.id);
     });
 
@@ -668,7 +668,7 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
 
       expect(selectedRow(el)).toBeNull();
       expect(nameSelected(el)).toBe(true);
-      expect(document.activeElement).toBe(grid);
+      expect(grid).toHaveFocus();
     });
 
     it('lets Escape select the row again once the cell selection moves', async () => {

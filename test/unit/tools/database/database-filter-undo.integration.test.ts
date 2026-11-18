@@ -235,16 +235,19 @@ describe('view filter undo', () => {
    * notion-motion.md Round 67 §5: the value saves after ~200 ms of idle, and a step takes
    * every save within 700 ms of its first. Keys at a steady gap, read back step by step.
    */
+  const typeValue = (value: string): void => {
+    const input = q('database-filter-value');
+
+    if (!(input instanceof HTMLInputElement)) throw new Error('no value input');
+    input.value = value;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  };
   const typeRun = async (gap: number, text: string): Promise<void> => {
     await addFilter('x');
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     try {
       for (let i = 1; i <= text.length; i++) {
-        const input = q('database-filter-value');
-
-        if (!(input instanceof HTMLInputElement)) throw new Error('no value input');
-        input.value = text.slice(0, i);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
+        typeValue(text.slice(0, i));
         vi.advanceTimersByTime(gap);
       }
       vi.advanceTimersByTime(2000);

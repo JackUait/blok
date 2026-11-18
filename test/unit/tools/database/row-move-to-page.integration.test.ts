@@ -546,7 +546,7 @@ describe('row menu › Move to › Workspace tree', () => {
 
     const notes = treeRows().find((row) => row.querySelector('.truncate')?.textContent === 'Notes');
 
-    expect(document.activeElement).toBe(notes);
+    expect(notes).toHaveFocus();
     expect(tab.defaultPrevented).toBe(true);
     expect(treeTitles()).toEqual(['Home', 'Notes']);
     expect(page.children).not.toHaveBeenCalledWith('w-home');

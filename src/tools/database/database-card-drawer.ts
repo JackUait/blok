@@ -2085,8 +2085,11 @@ export class DatabaseCardDrawer {
 
     // Notion empties the peek, runs its close slide while the page widens, then shows the full page.
     if (drawer === null || !fromSide || !drawer.hasAttribute('data-open') || prefersReducedMotion()) {
+      const wasFull = this.mode === 'full';
+
       this.switchMode('full');
-      if (fromSide) this.focusTitleEnd();
+      // notion-motion.md Round 72 §4: the centre peek lands with the caret at the end of the title too.
+      if (!wasFull) this.focusTitleEnd();
 
       return;
     }
@@ -2108,7 +2111,7 @@ export class DatabaseCardDrawer {
     });
   }
 
-  /** notion-motion.md Round 71 §5: the full page opens with the caret at the end of the title. */
+  /** notion-motion.md Round 71 §5, Round 72 §4: the full page opens with the caret at the end of the title. */
   private focusTitleEnd(): void {
     const title = this.drawer?.querySelector<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
 

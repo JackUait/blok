@@ -339,6 +339,25 @@ describe('DatabaseCardDrawer shell', () => {
       vi.unstubAllGlobals();
     });
 
+    // notion-motion.md Round 72 §4: from a centre peek too, the full page opens with the caret at the end of the title.
+    it('puts the caret at the end of the title when the full page opens from a centre peek', () => {
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      drawer.open(ROW, 'center');
+      const title = q<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
+      const expand = q('[data-blok-database-peek-expand]');
+
+      title?.setSelectionRange(1, 1);
+      expand?.focus();
+      expand?.click();
+
+      expect(document.querySelector('[data-blok-database-drawer]')?.getAttribute('data-peek-mode')).toBe('full');
+      expect(title).toHaveFocus();
+      expect(title?.selectionStart).toBe('Card'.length);
+      expect(title?.selectionEnd).toBe('Card'.length);
+      drawer.destroy();
+    });
+
     it('waits for the panel\'s own slide, not a fade inside it', () => {
       const { drawer, panel } = openSide();
 

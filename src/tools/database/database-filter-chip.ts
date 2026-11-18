@@ -1096,6 +1096,7 @@ export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, fi
     root: pages.root(),
     testId: 'database-filter-popover',
     width: listed ? LIST_FILTER_WIDTH : VALUE_FIELD_FILTER_WIDTH,
+    ignoresHistoryKeys: true,
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
     gap: CHIP_POPOVER_GAP,
     // notion-motion.md Round 23 §1 (r23-flipH-*.raw): at most half the window tall, 8 from its top and bottom. Below the

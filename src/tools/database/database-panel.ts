@@ -1,6 +1,7 @@
 import { IconArrowDiagonal, IconArrowLeftSmall, IconCheck, IconChevronLeft, IconChevronRight, IconCross, IconMenu } from '../../components/icons';
 import { CellPopover } from './cells/cell-popover';
 import { hide as hideTooltip } from '../../components/utils/tooltip';
+import { isHistoryKey } from './database-keyboard';
 
 /**
  * One screen of a paged panel. `build` runs again on every refresh, so it
@@ -52,6 +53,11 @@ export interface DatabasePanelOptions {
   halfWindow?: boolean;
   /** Under the anchor, its end edge on the anchor's end edge. */
   alignEnd?: boolean;
+  /**
+   * The undo and redo keys walk no history while it is open (notion-motion.md Round 64 §2,
+   * Round 65 §2: Notion's filter popovers). A text field keeps its native undo. Its flyouts inherit it.
+   */
+  ignoresHistoryKeys?: boolean;
   /** `escape` is true when Escape closed the first page. */
   onClose?: (escape: boolean) => void;
 }
@@ -65,6 +71,12 @@ const dockOf = (anchor: HTMLElement): { docked: true } | { docked: 'page'; dockR
 
   return wrapper?.hasAttribute('data-blok-database-page') === true && row !== null ? { docked: 'page', dockRow: row } : { docked: true };
 };
+
+/** A field with its own text undo; core leaves its history keys to it (keyboard.ts isTextEntry). */
+const keepsNativeUndo = (target: EventTarget | null): boolean =>
+  target instanceof HTMLTextAreaElement
+  || (target instanceof HTMLInputElement && !['checkbox', 'radio', 'button', 'submit', 'reset', 'range', 'color', 'file'].includes(target.type))
+  || (target instanceof Element && target.closest('[contenteditable]:not([contenteditable="false"])') !== null);
 
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex="0"]';
 
@@ -81,9 +93,11 @@ export class DatabasePanel {
   /** Flyouts opened over this panel: they close with it. */
   private readonly owned = new Set<DatabasePanel>();
   private closed = false;
+  private ignoresHistoryKeys: boolean;
 
   constructor(options: DatabasePanelOptions) {
     this.options = options;
+    this.ignoresHistoryKeys = options.ignoresHistoryKeys === true;
     this.stack = [options.root];
     this.element = document.createElement('div');
     this.element.setAttribute('data-blok-database-panel', '');
@@ -140,6 +154,11 @@ export class DatabasePanel {
   /** Closes `child` when this panel closes. */
   own(child: DatabasePanel): void {
     this.owned.add(child);
+    if (this.ignoresHistoryKeys) child.ignoreHistoryKeys();
+  }
+
+  private ignoreHistoryKeys(): void {
+    this.ignoresHistoryKeys = true;
   }
 
   push(page: PanelPage): void {
@@ -266,6 +285,12 @@ export class DatabasePanel {
   }
 
   private readonly handleKeydown = (event: KeyboardEvent): void => {
+    // The panel is a keyboard owner: core walks history after the key bubbles unless it is prevented.
+    if (this.ignoresHistoryKeys && isHistoryKey(event) && !keepsNativeUndo(event.target)) {
+      event.preventDefault();
+
+      return;
+    }
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
     // A control with its own arrow keys (a calendar grid) took the key.
     if (event.defaultPrevented) return;

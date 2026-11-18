@@ -169,6 +169,166 @@ describe('view filter undo', () => {
     expect(chips()).toHaveLength(0);
   });
 
+  /**
+   * notion-motion.md Round 65 §2: keys 160ms apart, "no", a pause, "te". A 300ms pause
+   * keeps one step; 500ms splits it after "no". The run ends after an idle gap.
+   */
+  const typeWithPause = async (pause: number): Promise<HTMLInputElement> => {
+    await addFilter('x');
+    const input = q('database-filter-value');
+
+    if (!(input instanceof HTMLInputElement)) throw new Error('no value input');
+    const wait = (ms: number): Promise<void> => new Promise(resolve => {
+      setTimeout(resolve, ms);
+    });
+    const key = (text: string): void => {
+      input.value = text;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    key('n');
+    await wait(160);
+    key('no');
+    await wait(160 + pause);
+    key('not');
+    await wait(160);
+    key('note');
+    await wait(1500);
+    await escape();
+
+    return input;
+  };
+  const chipText = (): string => chips()[0]?.textContent ?? '';
+
+  it('keeps typing with a 300ms pause in one step', async () => {
+    const blok = await make();
+
+    await typeWithPause(300);
+    expect(chipText()).toContain('note');
+
+    blok.history.undo();
+    await quiet();
+
+    expect(chips()).toHaveLength(1);
+    expect(chipText()).not.toContain('no');
+  }, 10000);
+
+  it('splits typing after a 500ms pause, at the pause', async () => {
+    const blok = await make();
+
+    await typeWithPause(500);
+
+    blok.history.undo();
+    await quiet();
+
+    expect(chipText()).toContain('no');
+    expect(chipText()).not.toContain('note');
+
+    blok.history.undo();
+    await quiet();
+
+    expect(chips()).toHaveLength(1);
+    expect(chipText()).not.toContain('no');
+  }, 10000);
+
+  it('takes typed text still in its run when the undo key comes before the pause', async () => {
+    await make();
+
+    await addFilter('x');
+    const input = q('database-filter-value');
+
+    if (!(input instanceof HTMLInputElement)) throw new Error('no value input');
+    input.value = 'ab';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await escape();
+    expect(order()).toEqual(['r1']);
+
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', code: 'KeyZ', metaKey: true, ctrlKey: true, bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(order()).toEqual(['r1', 'r2']);
+    expect(chips()).toHaveLength(1);
+  });
+
+  const openAdvanced = async (): Promise<HTMLInputElement> => {
+    click('database-toolbar-filter');
+    click('database-filter-picker-advanced');
+    await quiet();
+    const input = document.querySelector('[data-blok-database-filter-rule-value]');
+
+    if (!(input instanceof HTMLInputElement)) throw new Error('no rule value input');
+
+    return input;
+  };
+  const advancedChip = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-database-filter-bar] [data-blok-testid="database-advanced-pill"]');
+  const typeRule = async (texts: string[]): Promise<void> => {
+    for (const text of texts) {
+      const input = document.querySelector('[data-blok-database-filter-rule-value]');
+
+      if (!(input instanceof HTMLInputElement)) throw new Error('no rule value input');
+      input.focus();
+      input.value = text;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      await new Promise(resolve => {
+        setTimeout(resolve, 50);
+      });
+    }
+    await quiet();
+  };
+
+  // notion-motion.md Round 65 §2: typing "Al" in an advanced rule is one step; the next undo removes the filter.
+  it('undoes typed advanced rule text as one step before the filter', async () => {
+    const blok = await make();
+
+    await openAdvanced();
+    await typeRule(['A', 'Al']);
+    await escape();
+    expect(order()).toEqual(['r1']);
+
+    blok.history.undo();
+    await quiet();
+    expect(order()).toEqual(['r1', 'r2']);
+    expect(advancedChip()).not.toBeNull();
+
+    blok.history.undo();
+    await quiet();
+    expect(advancedChip()).toBeNull();
+  });
+
+  // notion-motion.md Round 65 §2: with a filter popover open, the undo key changes nothing.
+  it('ignores the undo key while the advanced filter popover is open', async () => {
+    await make();
+
+    await openAdvanced();
+    await typeRule(['A', 'Al']);
+    const button = document.querySelector<HTMLElement>('[data-blok-testid="database-advanced-filter"] [data-blok-database-filter-rule-button]');
+
+    if (button === null) throw new Error('no rule button');
+    button.focus();
+    button.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', code: 'KeyZ', metaKey: true, ctrlKey: true, bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(order()).toEqual(['r1']);
+    expect(document.querySelector<HTMLInputElement>('[data-blok-database-filter-rule-value]')?.value).toBe('Al');
+  });
+
+  it('ignores the undo key while a filter value popover is open', async () => {
+    await make();
+
+    await addFilter('c');
+    click('database-filter-checkbox-true');
+    await quiet();
+    const option = q('database-filter-checkbox-true');
+
+    if (option === null) throw new Error('no option');
+    option.focus();
+    option.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', code: 'KeyZ', metaKey: true, ctrlKey: true, bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(order()).toEqual(['r1']);
+    expect(chips()).toHaveLength(1);
+  });
+
   it('keeps the saved document free of personal filters', async () => {
     const blok = await make();
 

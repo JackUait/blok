@@ -3425,9 +3425,13 @@ export class DatabaseTool implements BlockTool {
   /** A host undo or redo: an open editor's draft is written as its own step first, so the walk cannot drop it. */
   private readonly commitDraftsBeforeHistory = ({ commit }: HistoryDraftsCommitPayload): void => {
     const open = [...this.openCellEditors].filter((editor) => editor.isOpen);
+    const controls = this.viewControls?.typingRunOpen === true ? this.viewControls : null;
 
-    if (this.destroyed || open.length === 0) return;
-    commit(() => open.forEach((editor) => editor.close()));
+    if (this.destroyed || (open.length === 0 && controls === null)) return;
+    commit(() => {
+      open.forEach((editor) => editor.close());
+      controls?.endTypingRun();
+    });
   };
 
   /**

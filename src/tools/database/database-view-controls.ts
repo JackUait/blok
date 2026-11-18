@@ -7,6 +7,7 @@ import { propertyGlyph } from './database-property-types';
 import type { I18n } from '../../../types';
 import type { History, HistoryValue, HistoryValueChange } from '../../../types/api/history';
 import { DatabasePanel, panelRow } from './database-panel';
+import { isHistoryKey } from './database-keyboard';
 import { PersonalViewEdits } from './database-view-state';
 import type { ViewStateFallback } from './database-view-state';
 import { editorLocale } from './cells/date-format';
@@ -122,6 +123,12 @@ const sortSteps = new Map<string, { viewId: string; personal: PersonalViewPatch 
 /** Names this block's sort tokens in the document. Per browser: a peer must not share the key. */
 const SORT_UNDO_ID_KEY = 'sort-undo-id';
 
+/**
+ * notion-motion.md Round 65 §2: typed filter text is one step until typing pauses. Keys 160 ms
+ * apart kept one step over a 460 ms gap and split over a 660 ms one; this sits between.
+ */
+const TYPING_RUN_IDLE_MS = 560;
+
 /** The controls now drawn for each key: a rebuilt tool replays steps the old one wrote. A block's widgets share its key. */
 const liveSortControls = new Map<string, Set<DatabaseViewControls>>();
 
@@ -209,6 +216,8 @@ export class DatabaseViewControls {
   /** An undo or redo is writing the sorts: that write is not a new step. */
   private replayingSorts = false;
   private undoId: string | null = null;
+  /** Typed filter text not yet an undo step: it becomes one when typing pauses. */
+  private typingRun: { viewId: string; before: PersonalViewPatch; after: PersonalViewPatch; timer: ReturnType<typeof setTimeout> } | null = null;
   private destroyed = false;
 
   constructor(host: ViewControlsHost) {
@@ -514,6 +523,7 @@ export class DatabaseViewControls {
   }
 
   destroy(): void {
+    this.endTypingRun();
     this.destroyed = true;
     if (this.sortHistory !== null) liveSortControls.get(this.sortHistory.key)?.delete(this);
     this.endSearchClose();
@@ -611,15 +621,53 @@ export class DatabaseViewControls {
     const before = this.personal.get(viewId);
 
     this.personal.replace(viewId, next);
-    if (!this.replayingSorts && !samePersonal(before, next)) this.recordSorts(viewId, before, next, options.typing === true);
+    if (this.replayingSorts) return;
+    const run = this.typingRun;
+
+    if (options.typing === true && run?.viewId === viewId) {
+      clearTimeout(run.timer);
+      run.after = next;
+      run.timer = setTimeout(() => this.endTypingRun(), TYPING_RUN_IDLE_MS);
+
+      return;
+    }
+    this.endTypingRun();
+    if (samePersonal(before, next)) return;
+    if (options.typing !== true) {
+      this.recordSorts(viewId, before, next);
+
+      return;
+    }
+    this.typingRun = { viewId, before, after: next, timer: setTimeout(() => this.endTypingRun(), TYPING_RUN_IDLE_MS) };
+    window.addEventListener('keydown', this.endTypingRunOnHistoryKey, true);
   }
+
+  get typingRunOpen(): boolean {
+    return this.typingRun !== null;
+  }
+
+  /** The open typing run becomes its step. An undo or redo calls it first, so the walk takes the typed text. */
+  endTypingRun(): void {
+    const run = this.typingRun;
+
+    if (run === null) return;
+    this.typingRun = null;
+    clearTimeout(run.timer);
+    window.removeEventListener('keydown', this.endTypingRunOnHistoryKey, true);
+    if (!samePersonal(run.before, run.after)) this.recordSorts(run.viewId, run.before, run.after);
+  }
+
+  /** Window capture: before the editor's own undo key handler on the document. */
+  private readonly endTypingRunOnHistoryKey = (event: KeyboardEvent): void => {
+    if (isHistoryKey(event)) this.endTypingRun();
+  };
 
   /**
    * notion-motion.md Round 63 §1: a sort change is one undo step; Round 64 §2: a filter's
    * add and its value are one step each. Both are personal (D4), so the document holds
    * only a token and this browser keeps what it stands for.
    */
-  private recordSorts(viewId: string, before: PersonalViewPatch, after: PersonalViewPatch, typing: boolean): void {
+  private recordSorts(viewId: string, before: PersonalViewPatch, after: PersonalViewPatch): void {
     const value = this.sortValue();
 
     if (value === undefined) return;
@@ -636,8 +684,7 @@ export class DatabaseViewControls {
     const token = nanoid();
 
     sortSteps.set(token, { viewId, personal: after });
-    // Typed filter text joins one run, as typing in a block does. Notion's own split is unmeasured.
-    value.set(token, typing ? { typing: true } : undefined);
+    value.set(token);
   }
 
   /** One key per block: each token names its view. */

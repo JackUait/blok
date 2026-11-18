@@ -1355,6 +1355,61 @@ describe('DatabaseTableView', () => {
       expect(anchorCell(root)).toBe('r1/p-notes');
     });
 
+    // notion-motion.md Round 72 §3: every Cmd arrow runs to the edge of the table.
+    describe('Cmd+arrows on a selected cell', () => {
+      const rows = [row('r1', 'Alpha'), row('r2', 'Beta'), row('r3', 'Gamma'), row('r4', 'Delta')];
+
+      it.each([
+        ['ArrowUp', 'r3', 'p-amount', 'r1/p-amount'],
+        ['ArrowDown', 'r2', 'p-amount', 'r4/p-amount'],
+        ['ArrowLeft', 'r2', 'p-amount', 'r2/p-title'],
+        ['ArrowRight', 'r2', 'p-notes', 'r2/p-done'],
+      ])('Cmd+%s moves the selected cell to the edge', (key, rowId, propertyId, expected) => {
+        const { root } = mount({ rows });
+
+        selectCell(root, rowId, propertyId);
+        press(grid(root), key, { metaKey: true });
+
+        expect(selectedCells(root)).toEqual([expected]);
+        expect(anchorCell(root)).toBe(expected);
+      });
+
+      it.each([
+        ['ArrowUp', 'r3', 'p-notes', ['r1/p-notes', 'r2/p-notes', 'r3/p-notes']],
+        ['ArrowLeft', 'r2', 'p-amount', ['r2/p-amount', 'r2/p-notes', 'r2/p-title']],
+        ['ArrowRight', 'r2', 'p-notes', ['r2/p-amount', 'r2/p-done', 'r2/p-notes', 'r2/p-stage']],
+      ])('Cmd+Shift+%s runs the range to the edge and keeps the anchor', (key, rowId, propertyId, expected) => {
+        const { root } = mount({ rows });
+
+        selectCell(root, rowId, propertyId);
+        press(grid(root), key, { metaKey: true, shiftKey: true });
+
+        expect(selectedCells(root).sort()).toEqual(expected);
+        expect(anchorCell(root)).toBe(`${rowId}/${propertyId}`);
+      });
+
+      it('Ctrl+Right moves to the last column as Cmd+Right does', () => {
+        const { root } = mount({ rows });
+
+        selectCell(root, 'r2', 'p-notes');
+        press(grid(root), 'ArrowRight', { ctrlKey: true });
+
+        expect(selectedCells(root)).toEqual(['r2/p-done']);
+      });
+
+      // Notion scrolls the table to its last column.
+      it('Cmd+Shift+Right scrolls the last column into view', () => {
+        const { root } = mount({ rows });
+        const scrolled = vi.fn();
+
+        cell(root, 'r2', 'p-done').scrollIntoView = scrolled;
+        selectCell(root, 'r2', 'p-notes');
+        press(grid(root), 'ArrowRight', { metaKey: true, shiftKey: true });
+
+        expect(scrolled).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+      });
+    });
+
     // notion-motion.md Round 30 §4: Shift+click on another cell selects that row; it does not extend a range.
     it('Shift+click on a cell selects its row, not a range', () => {
       const { root } = mount();

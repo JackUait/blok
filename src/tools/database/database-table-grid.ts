@@ -1141,14 +1141,13 @@ export class DatabaseTableGrid {
 
     if (step !== undefined) {
       event.preventDefault();
-      const [dr, rawDc] = step;
-      const dc = rtl ? -rawDc : rawDc;
-
-      // notion-motion.md Round 71 §6: Cmd+Shift+Down runs the range to the last row. Other Cmd+arrows are unmeasured.
-      const toLastRow = event.key === 'ArrowDown' && (event.metaKey || event.ctrlKey);
+      // notion-motion.md Round 72 §3: every Cmd arrow, with or without Shift, runs to the edge; offset() clamps.
+      const reach = event.metaKey || event.ctrlKey ? Math.max(this.rowIds().length, this.columnIds().length) : 1;
+      const dr = step[0] * reach;
+      const dc = (rtl ? -step[1] : step[1]) * reach;
 
       if (event.shiftKey) {
-        this.state.selection = { ...selection, focus: this.offset(selection.focus, toLastRow ? this.rowIds().length : dr, dc) };
+        this.state.selection = { ...selection, focus: this.offset(selection.focus, dr, dc) };
       } else {
         const next = this.offset(selection.anchor, dr, dc);
 

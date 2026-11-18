@@ -2,7 +2,8 @@
  * A selected block whose tool says it is locked (BlockTool.isLocked), like a
  * locked database, ignores Backspace, Delete, Cmd+D and Cmd+Shift+D, and a
  * drag from its handle draws no drop line and does not move it
- * (notion-motion.md Round 68 §1). A cut still removes it, as in Notion.
+ * (notion-motion.md Round 68 §1). Cmd+Shift+Up/Down do not move it either
+ * (Round 69 §1). A cut still removes it, as in Notion.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -108,6 +109,10 @@ const press = (key: string, init: KeyboardEventInit = {}): KeyboardEvent => {
 /** Cmd+D on a Mac, Ctrl+D elsewhere: both modifiers, as the shortcut reads either. */
 const duplicateKey = (shiftKey = false): KeyboardEvent =>
   press(shiftKey ? 'D' : 'd', { code: 'KeyD', metaKey: true, ctrlKey: true, shiftKey });
+
+/** Cmd+Shift+Up or Down on a Mac, Ctrl+Shift elsewhere. */
+const moveKey = (direction: 'Up' | 'Down'): KeyboardEvent =>
+  press(`Arrow${direction}`, { code: `Arrow${direction}`, metaKey: true, ctrlKey: true, shiftKey: true });
 
 /** Drags `id` by a handle and releases on the bottom half of `targetId`; returns whether a drop line showed. */
 const dragOnto = async (instance: Core, id: string, targetId: string): Promise<boolean> => {
@@ -216,6 +221,75 @@ describe('a selected locked block', () => {
     await quiet();
 
     expect(instance.moduleInstances.BlockManager.blocks.filter((candidate) => candidate.name === 'locked')).toHaveLength(2);
+  });
+
+  it.each(['Up', 'Down'] as const)('ignores Cmd+Shift+%s: it stays in place and selected', async (direction) => {
+    const instance = await boot();
+
+    select(instance, 'lk');
+    const event = moveKey(direction);
+
+    await quiet();
+
+    expect(ids(instance)).toEqual(['p1', 'lk', 'child', 'p2']);
+    expect(selectedIds(instance)).toEqual(['lk']);
+    // The browser must not take the key either: it would extend a text selection.
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('still moves with Cmd+Shift+Up once unlocked', async () => {
+    lock.on = false;
+    const instance = await boot();
+
+    select(instance, 'lk');
+    moveKey('Up');
+    await quiet();
+
+    expect(ids(instance).indexOf('lk')).toBeLessThan(ids(instance).indexOf('p1'));
+  });
+
+  it('a paragraph below it still moves above it with Cmd+Shift+Up', async () => {
+    const instance = await boot();
+
+    select(instance, 'p2');
+    moveKey('Up');
+    await quiet();
+
+    expect(ids(instance).indexOf('p2')).toBeLessThan(ids(instance).indexOf('lk'));
+    expect(block(instance, 'p2').parentId).toBeNull();
+  });
+
+  // Notion's mixed case is unread (Round 69 §1): nothing moves, as Backspace and Cmd+D there.
+  it('a selection of it and a paragraph does not move with Cmd+Shift+Down', async () => {
+    const instance = await boot();
+
+    select(instance, 'p1', 'lk');
+    moveKey('Down');
+    await quiet();
+
+    expect(ids(instance)).toEqual(['p1', 'lk', 'child', 'p2']);
+    expect(selectedIds(instance)).toEqual(['p1', 'lk']);
+  });
+
+  it('a caret in it, unlocked, moves it with Cmd+Shift+Down', async () => {
+    lock.on = false;
+    const instance = await boot();
+
+    instance.moduleInstances.BlockManager.currentBlock = block(instance, 'lk');
+    block(instance, 'lk').holder.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', metaKey: true, ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(ids(instance).indexOf('lk')).toBeGreaterThan(ids(instance).indexOf('p2'));
+  });
+
+  it('a caret in it does not move it with Cmd+Shift+Down', async () => {
+    const instance = await boot();
+
+    instance.moduleInstances.BlockManager.currentBlock = block(instance, 'lk');
+    block(instance, 'lk').holder.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', metaKey: true, ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(ids(instance)).toEqual(['p1', 'lk', 'child', 'p2']);
   });
 
   it('a cut still removes it, as Notion\'s cut did', async () => {

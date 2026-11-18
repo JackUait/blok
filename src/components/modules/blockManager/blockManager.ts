@@ -47,6 +47,7 @@ import type { BlocksStore, BlockMutationEventDetailWithoutTarget, ComposeBlockOp
 import { BlockYjsSync } from './yjs-sync';
 import { carriesReadOnly } from '../../utils/read-only-blocks';
 import { selectionRoots } from '../../utils/selection-roots';
+import { holdsLockedRoot } from '../../utils/delete-confirm';
 import { captureDataKeySnapshot, type DataKeySnapshot } from '../yjs/document-store';
 import { agentAttribution, type Attribution } from '../../../shared/agent/attribution';
 import { REPARENT_IN_PLACE } from '../../utils/index-move-neighbours';
@@ -2191,7 +2192,7 @@ export class BlockManager extends Module {
 
     const selectedBlocks = this.selectedBlocksForMove();
 
-    if (this.movesReadOnly(selectedBlocks)) {
+    if (this.movesReadOnly(selectedBlocks) || this.movesLocked(selectedBlocks)) {
       return;
     }
 
@@ -2213,7 +2214,7 @@ export class BlockManager extends Module {
 
     const selectedBlocks = this.selectedBlocksForMove();
 
-    if (this.movesReadOnly(selectedBlocks)) {
+    if (this.movesReadOnly(selectedBlocks) || this.movesLocked(selectedBlocks)) {
       return;
     }
 
@@ -2231,6 +2232,18 @@ export class BlockManager extends Module {
    */
   private movesReadOnly(selectedBlocks: Block[] | undefined): boolean {
     return (selectedBlocks ?? [this.currentBlock]).some((block) => carriesReadOnly(block, (id) => this.getBlockById(id)));
+  }
+
+  /**
+   * Whether a keyboard move would carry a locked block (BlockTool.isLocked).
+   * Notion leaves a locked database in place (notion-motion.md Round 69 §1);
+   * a block may still move past it.
+   * @param selectedBlocks - the block selection, or undefined for the current block
+   */
+  private movesLocked(selectedBlocks: Block[] | undefined): boolean {
+    const blocks = selectedBlocks ?? (this.currentBlock === undefined ? [] : [this.currentBlock]);
+
+    return holdsLockedRoot(selectionRoots(blocks));
   }
 
   /**

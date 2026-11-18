@@ -8313,8 +8313,8 @@ button[data-blok-database-board-lane-count]:hover {
 
 [data-blok-database-list-row-add] svg {
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-list-row-handle] svg {
@@ -14485,8 +14485,8 @@ a[data-blok-database-comment-mention-chip] {
 
 [data-blok-database-table-row-add] svg {
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-table-row-handle] svg {
@@ -14503,10 +14503,17 @@ a[data-blok-database-comment-mention-chip] {
   height: 16px;
   margin-inline: var(--blok-space-2-5);
   border: 1px solid var(--blok-database-checkbox-border);
-  border-radius: var(--blok-radius-control-sm);
   opacity: 0;
   cursor: pointer;
   transition: background-color 200ms ease-out, opacity 200ms ease;
+}
+
+[data-blok-database-table-row-checkbox] {
+  border-radius: var(--blok-radius-checkbox);
+}
+
+[data-blok-database-table-select-all] {
+  border-radius: var(--blok-radius-control-sm);
 }
 
 [data-blok-database-table-row]:hover > [data-blok-database-table-gutter] > [data-blok-database-table-row-checkbox]:not(:hover, [aria-checked="true"]) {

@@ -4461,11 +4461,11 @@ button[data-blok-database-board-lane-count]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
-/* Notion's "+" is 14x14 (rowhover.png); the 20-unit glyph reaches that at 24px. */
+/* notion-motion.md Round 69 §4: Notion's 20 svg; the 12-unit plus inks Notion's 12x12 at it. */
 [data-blok-database-list-row-add] svg {
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 /* IconRowGrip is Notion's 8x16 grip at 20px, one unit per pixel. It overflows its 18px button. */
@@ -11368,11 +11368,11 @@ a[data-blok-database-comment-mention-chip] {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
-/* Notion's "+" is 14x14 (rowhover.png); the 20-unit glyph reaches that at 24px. */
+/* notion-motion.md Round 69 §4: Notion's 20 svg; the 12-unit plus inks Notion's 12x12 at it. */
 [data-blok-database-table-row-add] svg {
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 /* IconRowGrip is Notion's 8x16 grip at 20px, one unit per pixel. It overflows its 18px button. */
@@ -11392,10 +11392,18 @@ a[data-blok-database-comment-mention-chip] {
   /* notion-spec-2 §24.3: 10px from the table edge, so the slot is 36 wide. */
   margin-inline: var(--blok-space-2-5);
   border: 1px solid var(--blok-database-checkbox-border);
-  border-radius: var(--blok-radius-control-sm);
   opacity: 0;
   cursor: pointer;
   transition: background-color 200ms ease-out, opacity 200ms ease;
+}
+
+/* notion-motion.md Round 69 §4: Notion's row checkbox is r3. The header box is unmeasured. */
+[data-blok-database-table-row-checkbox] {
+  border-radius: var(--blok-radius-checkbox);
+}
+
+[data-blok-database-table-select-all] {
+  border-radius: var(--blok-radius-control-sm);
 }
 
 /* notion-spec-2 §24.3: 0.7 on row hover, 1 under the pointer or once picked. Header hover is unmeasured and keeps 1. */

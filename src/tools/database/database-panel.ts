@@ -19,6 +19,8 @@ export interface PanelPage {
   name?: string;
   /** The panel's width becomes a floor on this page: it grows to its widest row. */
   fitContent?: boolean;
+  /** The undo and redo keys walk no history while this page shows, as {@link DatabasePanelOptions.ignoresHistoryKeys}. */
+  ignoresHistoryKeys?: boolean;
   build: (panel: DatabasePanel) => HTMLElement[];
 }
 
@@ -286,7 +288,9 @@ export class DatabasePanel {
 
   private readonly handleKeydown = (event: KeyboardEvent): void => {
     // The panel is a keyboard owner: core walks history after the key bubbles unless it is prevented.
-    if (this.ignoresHistoryKeys && isHistoryKey(event) && !keepsNativeUndo(event.target)) {
+    const ignores = this.ignoresHistoryKeys || this.stack[this.stack.length - 1]?.ignoresHistoryKeys === true;
+
+    if (ignores && isHistoryKey(event) && !keepsNativeUndo(event.target)) {
       event.preventDefault();
 
       return;

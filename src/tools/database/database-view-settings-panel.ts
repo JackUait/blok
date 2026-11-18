@@ -1709,6 +1709,8 @@ export class ViewSettingsPages {
     return {
       title: this.t('settingsPropertyVisibility'),
       name: 'properties',
+      // notion-motion.md Round 64 §2: Notion's ⌘Z does nothing while this page is open.
+      ignoresHistoryKeys: true,
       build: (panel) => {
         const search = panelInput({
           value: state.query,

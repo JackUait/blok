@@ -1017,6 +1017,30 @@ describe('view settings panel', () => {
         expect(hiddenIds()).not.toContain('due');
       });
 
+      // notion-motion.md Round 64 §2, Round 66 §3: with Property visibility open, ⌘Z does nothing.
+      it('takes the undo key away from the editor while it is open', () => {
+        harness({ properties: [{ id: 'due', visible: true }] }).open('properties');
+        const press = new KeyboardEvent('keydown', { key: 'z', code: 'KeyZ', metaKey: true, ctrlKey: true, bubbles: true, cancelable: true });
+
+        eye('due')?.dispatchEvent(press);
+
+        expect(press.defaultPrevented).toBe(true);
+      });
+
+      // Only this page is measured; the other settings pages keep the undo key.
+      it('gives the undo key back on the page it returns to', () => {
+        harness().open('root');
+        click('database-settings-properties');
+        click('database-panel-back');
+        const row = document.querySelector<HTMLElement>('[data-blok-testid="database-view-settings"] [data-blok-database-panel-row]');
+        const press = new KeyboardEvent('keydown', { key: 'z', code: 'KeyZ', metaKey: true, ctrlKey: true, bubbles: true, cancelable: true });
+
+        row?.dispatchEvent(press);
+
+        expect(row).not.toBeNull();
+        expect(press.defaultPrevented).toBe(false);
+      });
+
       it('keeps focus on the eye after its row changes section', () => {
         const h = harness({ properties: [{ id: 'due', visible: true }] });
 

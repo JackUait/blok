@@ -424,6 +424,22 @@ test.describe('timeline', () => {
     expect(box.height).toBeCloseTo(6.6, 0);
   });
 
+  test('the table toggle keeps focus after the redraw, with a ring only from the keyboard', async ({ page }) => {
+    await mount(page, blocks({ type: 'timeline' }));
+    const toggle = page.locator('[data-blok-database-timeline-table-toggle]');
+    const ringOn = (): Promise<boolean> => toggle.evaluate((el) => el === document.activeElement && el.matches(':focus-visible'));
+
+    await toggle.click();
+    await expect(page.locator('[data-blok-database-timeline-table]')).toBeVisible();
+    await expect(toggle).toBeFocused();
+    expect(await ringOn()).toBe(false);
+
+    await page.keyboard.press('Enter');
+    await expect(page.locator('[data-blok-database-timeline-table]')).toHaveCount(0);
+    await expect(toggle).toBeFocused();
+    expect(await ringOn()).toBe(true);
+  });
+
   test('the table panel toggles and lists its own properties', async ({ page }) => {
     await mount(page, blocks({ type: 'timeline', tableProperties: [{ id: 'p-due', visible: true }] }));
 

@@ -860,6 +860,33 @@ test.describe('calendar', () => {
     await expect(day(page, '2026-10-09')).toHaveAttribute('data-today', '');
   });
 
+  test('next and Today keep focus after the redraw, with a ring only from the keyboard', async ({ page }) => {
+    await mount(page, blocks({ type: 'calendar' }));
+    const ringOn = (selector: string): Promise<boolean> => page.locator(selector).evaluate((el) => el === document.activeElement && el.matches(':focus-visible'));
+    const next = '[data-blok-database-calendar-next]';
+    const today = '[data-blok-database-calendar-today]';
+
+    await page.locator(next).click();
+    await expect(day(page, '2026-11-15')).toHaveCount(1);
+    await expect(page.locator(next)).toBeFocused();
+    expect(await ringOn(next)).toBe(false);
+
+    await page.locator(today).click();
+    await expect(day(page, '2026-10-09')).toHaveCount(1);
+    await expect(page.locator(today)).toBeFocused();
+    expect(await ringOn(today)).toBe(false);
+
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await expect(page.locator(today)).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(page.locator(next)).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(day(page, '2026-11-15')).toHaveCount(1);
+    await expect(page.locator(next)).toBeFocused();
+    expect(await ringOn(next)).toBe(true);
+  });
+
   test.describe('selection (research/22 §1)', () => {
     const SAME_DAY: RowSeed[] = [
       ...ROWS,

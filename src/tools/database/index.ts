@@ -504,6 +504,35 @@ const BACKLINKS_SETTLE_MS = 300;
  * The description is drawn with innerHTML, and saved data, undo, a peer and
  * an agent's block.update all reach it unsanitized: only inline marks survive.
  */
+interface ButtonKey { selector: string; index: number }
+
+/** The focused button inside `root`, named by its empty `data-blok-database-*` markers so a redraw can find its twin. */
+const focusedButtonKey = (root: Element | null | undefined): ButtonKey | null => {
+  const button = document.activeElement;
+
+  if (!(button instanceof HTMLButtonElement) || root?.contains(button) !== true) return null;
+  const markers = [...button.attributes]
+    .filter((attr) => attr.name.startsWith('data-blok-database-') && attr.value === '')
+    .map((attr) => `[${attr.name}]`);
+
+  if (markers.length === 0) return null;
+  const selector = `button${markers.join('')}`;
+
+  return { selector, index: [...root.querySelectorAll(selector)].indexOf(button) };
+};
+
+/**
+ * Puts focus back on the redrawn twin. Only when focus fell to <body> with the old
+ * button: a redraw that focused something itself keeps it. Programmatic focus keeps
+ * the modality of the gesture, so a click shows no ring.
+ */
+const refocusButton = (root: Element, key: ButtonKey | null): void => {
+  if (key === null || (document.activeElement !== null && document.activeElement !== document.body)) return;
+  const twin = root.querySelectorAll<HTMLElement>(key.selector)[key.index];
+
+  twin?.focus({ preventScroll: true });
+};
+
 const cleanDescription = (value: unknown): string =>
   typeof value === 'string' ? cleanHtml(value, { ...INLINE_TEXT_SANITIZE }) : '';
 
@@ -14158,6 +14187,7 @@ export class DatabaseTool implements BlockTool {
     const savedScrollLeft = oldBoardArea?.scrollLeft ?? 0;
     const formDraft = this.view instanceof DatabaseFormView ? this.view.captureDraft() : undefined;
     const titleDraft = this.view instanceof DatabaseBoardView ? this.view.captureTitleDraft() : null;
+    const focusedButton = focusedButtonKey(oldBoardWrapper);
 
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
@@ -14202,5 +14232,6 @@ export class DatabaseTool implements BlockTool {
     this.wireView(newBoardWrapper);
     this.controls.refresh();
     this.propertyMenu?.followLiveHeader();
+    refocusButton(newBoardWrapper, focusedButton);
   }
 }

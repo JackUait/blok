@@ -4,6 +4,7 @@
  * @module BlockShortcuts
  */
 import { Shortcut } from '../../utils/shortcut';
+import { isInsideKeyboardOwner } from '../blockEvents/utils/keyboard';
 
 /**
  * Shortcut handler callbacks
@@ -72,10 +73,12 @@ export class BlockShortcuts {
       this.registerTimeout = null;
 
       // A handler that answers false did nothing, so the browser keeps the key.
-      const definitions: Array<{ name: string; handler: () => boolean | void }> = [
+      // A move from a tool's own keyboard-owner subtree would carry its host block,
+      // so it waits for a block selection (notion-motion.md Round 70 §2).
+      const definitions: Array<{ name: string; handler: () => boolean | void; ownerStandsDown?: true }> = [
         // Move block up/down: Cmd/Ctrl+Shift+Arrow.
-        { name: 'CMD+SHIFT+UP', handler: this.handlers.onMoveUp },
-        { name: 'CMD+SHIFT+DOWN', handler: this.handlers.onMoveDown },
+        { name: 'CMD+SHIFT+UP', handler: this.handlers.onMoveUp, ownerStandsDown: true },
+        { name: 'CMD+SHIFT+DOWN', handler: this.handlers.onMoveDown, ownerStandsDown: true },
         // Copy selection as Markdown: Cmd/Ctrl+Shift+C.
         { name: 'CMD+SHIFT+C', handler: this.handlers.onCopyAsMarkdown },
         // Duplicate block(s): Cmd/Ctrl+D.
@@ -83,11 +86,14 @@ export class BlockShortcuts {
         { name: 'CMD+SHIFT+D', handler: this.handlers.onDuplicateWithoutContent },
       ];
 
-      for (const { name, handler } of definitions) {
+      for (const { name, handler, ownerStandsDown } of definitions) {
         this.shortcuts.push(new Shortcut({
           name,
           on: document,
           callback: (event: KeyboardEvent) => {
+            if (ownerStandsDown === true && isInsideKeyboardOwner(event.target) && !this.holdsSelectedBlock()) {
+              return;
+            }
             if (!this.shouldHandleShortcut(event) || handler() === false) {
               return;
             }
@@ -135,5 +141,9 @@ export class BlockShortcuts {
     }
 
     return this.wrapper.querySelector('[data-blok-selected="true"], [data-blok-navigation-focused="true"]') !== null;
+  }
+
+  private holdsSelectedBlock(): boolean {
+    return this.wrapper.querySelector('[data-blok-selected="true"]') !== null;
   }
 }

@@ -521,6 +521,23 @@ describe('the database block menu in core', () => {
     });
   });
 
+  // notion-motion.md Round 70 §2: Notion moves nothing; Blok moved the whole unlocked database.
+  it.each(['Down', 'Up'] as const)('Cmd+Shift+%s on a focused row checkbox leaves the database in place', async (direction) => {
+    const instance = await boot([{ id: 'p0', type: 'paragraph', data: { text: 'before' } }, ...databaseBlocks('db', ['r1']), { id: 'p', type: 'paragraph', data: { text: 'after' } }]);
+    const topLevel = (): string[] => instance.moduleInstances.BlockManager.blocks.filter((candidate) => candidate.parentId === null).map((candidate) => candidate.id);
+    const checkbox = block(instance, 'db').holder.querySelector<HTMLElement>('[data-blok-database-table-row-checkbox]');
+
+    if (checkbox === null) throw new Error('no row checkbox');
+    checkbox.click();
+    checkbox.focus();
+    instance.moduleInstances.BlockManager.currentBlock = block(instance, 'db');
+    checkbox.dispatchEvent(new KeyboardEvent('keydown', { key: `Arrow${direction}`, code: `Arrow${direction}`, metaKey: true, ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(topLevel()).toEqual(['p0', 'db', 'p']);
+    expect(checkbox.getAttribute('aria-checked')).toBe('true');
+  });
+
   it('Backspace and Cmd+D on a selected locked database do nothing', async () => {
     const locked = databaseBlocks('db', ['r1']);
 

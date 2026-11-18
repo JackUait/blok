@@ -39392,6 +39392,10 @@ textarea[data-blok-field] {
   border-radius: var(--blok-radius-control);
 }
 
+[data-blok-element]:has(> [data-blok-element-content] > [data-blok-toc]) {
+  overflow-anchor: none;
+}
+
 [data-blok-toc][data-filled] {
   padding-inline: var(--blok-toc-pad);
 }

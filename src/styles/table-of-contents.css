@@ -16,6 +16,17 @@
   border-radius: var(--blok-radius-control);
 }
 
+/*
+  The list changes height whenever a heading anywhere on the page changes.
+  While its tail is on screen the browser anchors the scroll position to it,
+  so the text being read jumps by a row. Off, the browser anchors below it.
+  On the holder, not the nav: with only a child excluded, the browser anchors
+  to the holder itself and nothing changes.
+*/
+[data-blok-element]:has(> [data-blok-element-content] > [data-blok-toc]) {
+  overflow-anchor: none;
+}
+
 /* A background fill needs room around the entries. */
 [data-blok-toc][data-filled] {
   padding-inline: var(--blok-toc-pad);

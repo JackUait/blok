@@ -1909,6 +1909,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const VIDEO_HANDLE_CLEARANCE_BYTES = 1_364;
     // presence.css: anonymous faces redrawn as ink drawings, each stored twice — at rest and in hover motion (measured presence.css growth).
     const PRESENCE_INK_FACES_BYTES = 4_973;
+    // table-of-contents.css: the block is never the browser's scroll anchor (measured table-of-contents.css growth).
+    const TOC_NO_SCROLL_ANCHOR_BYTES = 459;
     // file.css: the object on a file card — pages, editor tab, filmstrip, record, folder, punch card (measured file.css growth).
     const FILE_CARD_OBJECT_BYTES = 27_626;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
@@ -2494,7 +2496,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + VIDEO_CAPSULE_SHEET_BYTES
       + VIDEO_TIER_GLIDE_BYTES
       + VIDEO_HANDLE_CLEARANCE_BYTES
-      + PRESENCE_INK_FACES_BYTES;
+      + PRESENCE_INK_FACES_BYTES
+      + TOC_NO_SCROLL_ANCHOR_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

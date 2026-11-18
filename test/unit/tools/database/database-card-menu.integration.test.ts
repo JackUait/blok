@@ -494,8 +494,10 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       ...BOARD_SCHEMA,
       { id: 'cost', name: 'Cost', type: 'number' as const, position: 'a4' },
       { id: 'due', name: 'Due', type: 'date' as const, position: 'a5' },
+      { id: 'done', name: 'Done', type: 'checkbox' as const, position: 'a6' },
+      { id: 'site', name: 'Site', type: 'url' as const, position: 'a7' },
     ];
-    const pointRow = (): Doc => makeDoc([fakeRow('a', 'db', { title: 'Alpha beta', status: 'o1', cost: 1234.5, due: '2026-10-15' }, 'a0')]);
+    const pointRow = (): Doc => makeDoc([fakeRow('a', 'db', { title: 'Alpha beta', status: 'o1', cost: 1234.5, due: '2026-10-15', notes: 'Short note', done: true }, 'a0')]);
 
     const editFromRightClick = (el: HTMLElement, type: 'board' | 'table', propertyId: string): void => {
       rowEl(el, type).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 700, clientY: 424 }));
@@ -509,6 +511,10 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       ['table', 'status', '[data-blok-database-cell-editor] input'],
       ['table', 'cost', '[data-blok-database-cell-editor] input'],
       ['table', 'due', '[data-blok-database-date-editor]'],
+      // Round 69 §2: Board Text and Date, and Table Text, open at the point too.
+      ['board', 'notes', '[data-blok-database-cell-editor] textarea'],
+      ['board', 'due', '[data-blok-database-date-editor]'],
+      ['table', 'notes', '[data-blok-database-cell-editor] textarea'],
     ] as const)('%s: %s opens at the click point', (type, propertyId, editor) => {
       const { el } = buildTool(pointRow(), {}, tableData(POINT_SCHEMA, { type, ...(type === 'board' ? { groupBy: 'status' } : {}) }));
 
@@ -532,12 +538,25 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       expect(document.querySelector('[data-blok-database-edit-point]')).toBeNull();
     });
 
-    it('a board Text, not measured yet, still opens on the row page', () => {
+    it('a board URL, not measured yet, still opens on the row page', () => {
       const { el } = buildTool(pointRow(), {}, tableData(POINT_SCHEMA, { type: 'board', groupBy: 'status' }));
 
-      editFromRightClick(el, 'board', 'notes');
+      editFromRightClick(el, 'board', 'site');
 
       expect(document.querySelector('[data-blok-database-edit-point]')).toBeNull();
+    });
+
+    // Round 69 §2: a board Checkbox flips with no editor and no row page; the menus close and nothing is picked.
+    it('board: Checkbox flips the value and closes the menus', () => {
+      const doc = pointRow();
+      const { el } = buildTool(doc, {}, tableData(POINT_SCHEMA, { type: 'board', groupBy: 'status' }));
+
+      editFromRightClick(el, 'board', 'done');
+
+      expect(doc.rows.get('a')?.data.properties.done).toBe(false);
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+      expect(document.querySelector('[data-blok-database-drawer], [data-blok-database-peek], [data-blok-database-cell-editor]')).toBeNull();
+      expect(el.querySelector('[data-blok-database-card-picked]')).toBeNull();
     });
   });
 

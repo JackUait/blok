@@ -10513,6 +10513,12 @@ export class DatabaseTool implements BlockTool {
       const point = editPointAnchor(card, pointer);
 
       this.editCardProperty(rowId, propertyId, point, () => point.remove(), undefined, true);
+      // notion-motion.md Round 69 §2: a checkbox flips with no editor, so nothing else closes the menus.
+      // The calendar card takes focus; the redraw replaced `card`. Notion's board moves no focus.
+      if (type === 'checkbox') this.cardMenuPopover?.hide();
+      if (type === 'checkbox' && card.matches('[data-blok-database-calendar-event]')) {
+        this.boardContainer?.querySelector<HTMLElement>(`[data-blok-database-calendar-event][data-row-id="${CSS.escape(rowId)}"]`)?.focus({ preventScroll: true });
+      }
 
       return;
     }

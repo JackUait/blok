@@ -906,12 +906,12 @@ export const pointerAnchor = (rowEl: HTMLElement, event: Pick<MouseEvent, 'clien
 
 /**
  * Edit property › from a right-click: the types Notion opens alone at the click point, by view
- * (notion-motion.md Round 67 §3, Round 68 §4). A checkbox opens nothing: it toggles. The rest keep the row page or the cell.
+ * (notion-motion.md Round 67 §3, Round 68 §4, Round 69 §2). A checkbox opens nothing: it toggles. The rest keep the row page or the cell.
  */
 const POINT_EDIT_TYPES: Record<'calendar' | 'board' | 'table', readonly PropertyDefinition['type'][]> = {
   calendar: ['text', 'number', 'select', 'date', 'checkbox'],
-  board: ['number', 'select'],
-  table: ['number', 'select', 'date'],
+  board: ['text', 'number', 'select', 'date', 'checkbox'],
+  table: ['text', 'number', 'select', 'date'],
 };
 
 export const editsAtPoint = (view: keyof typeof POINT_EDIT_TYPES, type: PropertyDefinition['type'] | undefined): boolean =>

@@ -223,6 +223,17 @@ describe('DatabaseTool — calendar event selection (research/22 §1)', () => {
       expect(selected(el)).toEqual(['delta']);
     });
 
+    // notion-motion.md Round 69 §2: the row menu and its submenu close, and focus goes to the card.
+    it('Checkbox closes the menus and focuses the card', () => {
+      const { el } = buildTool(noteDoc(), {}, tableData(NOTE_SCHEMA, { type: 'calendar' }));
+
+      editNoteFromMenu(el, 'done');
+
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+      expect(eventOf(el, 'delta')).toHaveFocus();
+      expect(selected(el)).toEqual(['delta']);
+    });
+
     it('a type not measured yet still opens on the row page', () => {
       const { el } = buildTool(noteDoc(), {}, tableData(NOTE_SCHEMA, { type: 'calendar' }));
 

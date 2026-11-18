@@ -855,6 +855,8 @@ export class DatabaseViewControls {
 
   /** Escape hands focus back to the button that opened the panel (findings K03), as Add view does. */
   private panelClosed(anchor: HTMLElement, escape = false, opener: HTMLElement = anchor): void {
+    // A closed popover takes no more typing: its text becomes a step before any later edit.
+    this.endTypingRun();
     anchor.removeAttribute('data-popover-open');
     this.panel = null;
     if (escape && opener.isConnected) opener.focus();

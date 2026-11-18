@@ -250,6 +250,31 @@ describe('view filter undo', () => {
     expect(chips()).toHaveLength(1);
   });
 
+  it('records typed text when its popover closes, before an edit made right after', async () => {
+    const blok = await make();
+
+    await addFilter('x');
+    const input = q('database-filter-value');
+
+    if (!(input instanceof HTMLInputElement)) throw new Error('no value input');
+    input.value = 'ab';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await escape();
+    const block = blok.blocks.getById('r1');
+
+    if (block === null) throw new Error('no r1');
+    const data = (await block.save())?.data as { properties: Record<string, unknown> };
+
+    await blok.blocks.update('r1', { ...data, properties: { ...data.properties, t: 'Edited' } });
+    await quiet();
+
+    blok.history.undo();
+    await quiet();
+
+    expect(document.querySelector('[data-blok-database-table-row][data-row-id="r1"]')?.textContent).toContain('Alpha');
+    expect(order()).toEqual(['r1']);
+  });
+
   const openAdvanced = async (): Promise<HTMLInputElement> => {
     click('database-toolbar-filter');
     click('database-filter-picker-advanced');

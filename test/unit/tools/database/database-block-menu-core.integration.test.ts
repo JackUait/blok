@@ -422,6 +422,56 @@ describe('the database block menu in core', () => {
     expect(order).toEqual(expect.arrayContaining(['database-edit-icon', 'database-lock', 'database-rename', 'duplicate', 'move-to', 'delete']));
   });
 
+  // notion-motion.md Round 68 §1: Notion rebuilds the open menu at once when it is locked from there.
+  describe('locking from the open menu', () => {
+    const currentRows = (): string[] => names([...document.querySelectorAll<HTMLElement>('[data-blok-testid="block-tunes-popover"] > [data-blok-popover-container] > [data-blok-popover-items] > :is([data-blok-item-name], [data-blok-popover-item-separator])')]);
+    const lockedOnly = ['database-edit-icon', 'database-lock', 'database-rename', 'database-merge-csv', 'duplicate', 'move-to', 'delete'];
+
+    it('a click on Lock database rebuilds the menu as the locked one', async () => {
+      const instance = await boot([...databaseBlocks('db', ['r1']), ...databaseBlocks('other', ['o1'])]);
+      const rows = await openMenu(instance, 'db');
+
+      rows.find((row) => row.getAttribute('data-blok-item-name') === 'database-lock')?.click();
+
+      await vi.waitFor(() => expect(currentRows()).not.toContain('database-lock'));
+      lockedOnly.forEach((name) => expect(currentRows()).not.toContain(name));
+      expect(currentRows()).toEqual(expect.arrayContaining(['database-open-as-page', 'copy-link']));
+      expect(instance.moduleInstances.BlockSettings.opened).toBe(true);
+      expect(block(instance, 'db').selected).toBe(true);
+    });
+
+    it('Enter on Lock database rebuilds it too, and the menu stays open', async () => {
+      const instance = await boot([...databaseBlocks('db', ['r1']), ...databaseBlocks('other', ['o1'])]);
+      await openMenu(instance, 'db');
+      const popover = Reflect.get(instance.moduleInstances.BlockSettings, 'popover') as { focusItemByName(name: string): boolean };
+
+      expect(popover.focusItemByName('database-lock')).toBe(true);
+      document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+      await vi.waitFor(() => expect(currentRows()).not.toContain('database-lock'));
+      await quiet();
+      expect(instance.moduleInstances.BlockSettings.opened).toBe(true);
+      expect(currentRows()).toEqual(expect.arrayContaining(['database-open-as-page', 'copy-link']));
+      expect(block(instance, 'db').selected).toBe(true);
+    });
+  });
+
+  it('Backspace and Cmd+D on a selected locked database do nothing', async () => {
+    const locked = databaseBlocks('db', ['r1']);
+
+    locked[0].data = { ...locked[0].data, schema: [{ ...schema[0], databaseLocked: true }] };
+    const instance = await boot(locked);
+
+    instance.moduleInstances.BlockSelection.selectBlock(block(instance, 'db'));
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', code: 'KeyD', metaKey: true, bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(document.querySelector('[role="dialog"], [role="alertdialog"]')).toBeNull();
+    expect(instance.moduleInstances.BlockManager.blocks.filter((candidate) => candidate.name === 'database')).toHaveLength(1);
+    expect(block(instance, 'db').selected).toBe(true);
+  });
+
   // notion-motion.md Round 67 §2: Notion keeps the database selected while its trash dialog is open.
   it('keeps the database selected while the menu\'s trash dialog is open', async () => {
     const instance = await boot(databaseBlocks('db', ['r1']));

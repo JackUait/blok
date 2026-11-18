@@ -176,6 +176,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   /** Blocks the open menu acts on. */
   private menuBlocks: Block[] = [];
 
+  /** Opens the open menu again, with the same block and anchor. */
+  private reopenMenu: () => void = () => undefined;
+
   /** True during an Escape press, so its close keeps the block selected (Notion U109). */
   private escapePressed = false;
 
@@ -267,6 +270,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     if (block === undefined) {
       return;
     }
+
+    this.reopenMenu = () => void this.open(block, anchor, options);
 
     /**
      * Set isOpening flag BEFORE async operations to prevent toolbar from moving
@@ -1311,8 +1316,16 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           // The press cleared the block selection and left no cursor in the menu.
           // Notion keeps the block selected and moves focus to the switch (U161).
           onActivate: (item: PopoverItemParams, event?: PointerEvent): void => {
+            const lockedBefore = blocks.length === 1 && blocks[0].toolLocked;
+
             toggle(item, event);
             blocks.filter((block) => block.holder.isConnected).forEach((block) => this.Blok.BlockSelection.selectBlock(block));
+            // A lock changes which rows the menu has: Notion rebuilds it at once (notion-motion.md Round 68 §1).
+            if (blocks.length === 1 && blocks[0].toolLocked !== lockedBefore) {
+              this.rebuildSoon();
+
+              return;
+            }
             if (this.popover instanceof PopoverDesktop) {
               this.popover.focusItemByName(tune.name);
             }
@@ -1334,6 +1347,24 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         },
       };
     });
+  }
+
+  /**
+   * Rebuilds the open menu a task later: the popover still refreshes the
+   * pressed row after its handler returns, and the key that pressed it is
+   * still on its way.
+   */
+  private rebuildSoon(): void {
+    const popover = this.popover;
+    const reopen = this.reopenMenu;
+
+    window.setTimeout(() => {
+      if (this.popover !== popover || popover === null) {
+        return;
+      }
+      this.close();
+      reopen();
+    }, 0);
   }
 
   /**

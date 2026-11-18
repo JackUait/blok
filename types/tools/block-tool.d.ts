@@ -226,7 +226,10 @@ export interface BlockTool extends BaseTool {
   /**
    * True while the user has locked this block, like a locked database. Its
    * block menu then leaves out Duplicate, Move to and Delete; Copy link and
-   * the tool's own items stay. Asked each time the menu opens. A throw
+   * the tool's own items stay. Asked each time the menu opens, and again
+   * after a menu switch runs: a change rebuilds the open menu. While it is
+   * selected, Backspace, Delete, Cmd+D and Cmd+Shift+D do nothing, and a
+   * drag from its handle offers no drop. A cut still removes it. A throw
    * counts as true.
    */
   isLocked?(): boolean;

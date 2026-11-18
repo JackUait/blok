@@ -185,6 +185,7 @@ const savedData: Record<string, Record<string, unknown>> = {
     hideDataSourceTitles: true,
     description: 'Sprint <b>goals</b>',
     icon: { glyph: 'check', color: 'green' },
+    emoji: '🚀',
     starter: 'tasks',
     deletedProperties: { p2: { id: 'p2', name: 'Size', type: 'number', position: 'a1', deletedAt: 1000, deletedBy: 'u1' } },
   })).save(contentElement('')),

@@ -719,7 +719,7 @@ describe('database permissions reach core block actions', () => {
   });
 
   describe('without editStructure', () => {
-    it('the block menu matches a locked database: delete and duplicate stay, lock and rename go', async () => {
+    it('the block menu matches a locked database: delete and duplicate stay, edit icon, lock and rename go', async () => {
       const denied = await menuItems(await boot(['editStructure']), 'db');
 
       if (core !== undefined) await destroyCore(core);
@@ -730,9 +730,9 @@ describe('database permissions reach core block actions', () => {
 
       expect(coreItems(denied)).toEqual(coreItems(locked));
       expect(denied).toContain('delete');
-      // Only a writer of the structure can lock, unlock or rename it.
-      expect(denied.filter((name) => name.startsWith('database-'))).toEqual(['database-open-as-page']);
-      expect(locked.filter((name) => name.startsWith('database-'))).toEqual(['database-lock', 'database-rename', 'database-open-as-page']);
+      // Only a writer of the structure can change its icon, lock, unlock or rename it.
+      expect(denied.filter((name) => name.startsWith('database-'))).toEqual(['database-open-as-page', 'database-open-in-new-tab']);
+      expect(locked.filter((name) => name.startsWith('database-'))).toEqual(['database-edit-icon', 'database-lock', 'database-rename', 'database-open-as-page', 'database-open-in-new-tab']);
     });
 
     it('the agent cannot add a property or a view, like on a locked database', async () => {

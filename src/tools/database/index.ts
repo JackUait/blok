@@ -359,6 +359,8 @@ const iconOf = (data: Partial<DatabaseData> | undefined): DatabaseIcon | undefin
     : undefined;
 };
 
+const emojiOf = (data: Partial<DatabaseData> | undefined): string => (typeof data?.emoji === 'string' ? data.emoji.trim() : '');
+
 const starterOf = (data: Partial<DatabaseData> | undefined): StarterId | undefined =>
   DATABASE_STARTERS.find((starter) => starter.id === data?.starter)?.id;
 
@@ -505,7 +507,7 @@ const BACKLINKS_SETTLE_MS = 300;
 const cleanDescription = (value: unknown): string =>
   typeof value === 'string' ? cleanHtml(value, { ...INLINE_TEXT_SANITIZE }) : '';
 
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'description', 'schema', 'views', 'activeViewId', 'deletedProperties', 'source', 'automations', 'hideDataSourceTitles', 'fullPage', INITIAL_VIEW_KEY, LINK_PICKER_KEY, ALONE_SKIPS_PANEL_KEY]);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['emoji', 'title', 'description', 'schema', 'views', 'activeViewId', 'deletedProperties', 'source', 'automations', 'hideDataSourceTitles', 'fullPage', INITIAL_VIEW_KEY, LINK_PICKER_KEY, ALONE_SKIPS_PANEL_KEY]);
 
 const sourceRefOf = (data: DatabaseData | undefined): DatabaseSourceRef | undefined => {
   const source = data?.source as unknown;
@@ -717,6 +719,9 @@ export class DatabaseTool implements BlockTool {
   /** The description field, drawn only on a full-page database. */
   private descriptionElement: HTMLElement | null = null;
   private databaseIcon: DatabaseIcon | undefined;
+  /** The emoji Edit icon picked; it takes the place of `databaseIcon`. */
+  private databaseEmoji = '';
+  private iconPicker: EmojiPicker | null = null;
   /** The Suggested template this database was made from (research/27 §1). */
   private starter: StarterId | undefined;
   private iconElement: HTMLElement | null = null;
@@ -901,6 +906,7 @@ export class DatabaseTool implements BlockTool {
     this.fullPage = data?.fullPage === true;
     this.description = cleanDescription(data?.description);
     this.databaseIcon = iconOf(data);
+    this.databaseEmoji = emojiOf(data);
     this.starter = starterOf(data);
     this.savedAutomations = structuredClone(data?.automations);
     const initialView = (data as Record<string, unknown> | undefined)?.[INITIAL_VIEW_KEY];
@@ -2601,11 +2607,12 @@ export class DatabaseTool implements BlockTool {
     }
   }
 
-  /** research/27:42: the icon a template gave, before the title. */
+  /** research/27:42: the icon a template gave, or the emoji Edit icon picked, before the title. */
   private paintDatabaseIcon(): void {
     const icon = this.databaseIcon;
+    const emoji = this.databaseEmoji;
 
-    if (icon === undefined || this.titleRowElement === null || this.titleElement === null) {
+    if ((icon === undefined && emoji === '') || this.titleRowElement === null || this.titleElement === null) {
       this.iconElement?.remove();
       this.iconElement = null;
 
@@ -2613,9 +2620,14 @@ export class DatabaseTool implements BlockTool {
     }
     const el = this.iconElement ?? document.createElement('span');
 
-    el.setAttribute('data-blok-database-icon', icon.color);
+    // "emoji" matches no tile colour rule, so an emoji gets no tile.
+    el.setAttribute('data-blok-database-icon', emoji !== '' ? 'emoji' : icon?.color ?? 'gray');
     el.setAttribute('aria-hidden', 'true');
-    el.innerHTML = ICON_GLYPHS[icon.glyph];
+    if (emoji !== '') {
+      el.textContent = emoji;
+    } else if (icon !== undefined) {
+      el.innerHTML = ICON_GLYPHS[icon.glyph];
+    }
     if (el.nextElementSibling !== this.titleElement) this.titleRowElement.insertBefore(el, this.titleElement);
     this.iconElement = el;
   }
@@ -2738,6 +2750,13 @@ export class DatabaseTool implements BlockTool {
       closeOnActivate: true,
       onActivate: (): void => void this.turnIntoPage(),
     }];
+    const editIcon: MenuConfigItem[] = !this.titleEditable() || this.dataSourceTitlesHidden ? [] : [{
+      icon: IconEmojiSmile,
+      title: this.api.i18n.t('tools.database.tableEditIcon'),
+      name: 'database-edit-icon',
+      closeOnActivate: true,
+      onActivate: (): void => this.openIconPicker(),
+    }];
     // No closeOnActivate: core keeps the menu open and the block selected, as for a switch.
     const lock: MenuConfigItem[] = this.structureDenied ? [] : [{
       icon: IconLock,
@@ -2787,9 +2806,33 @@ export class DatabaseTool implements BlockTool {
       },
     }];
 
-    return [[...turnIntoPage, ...lock, ...rename, ...merge], [...openAsPage, ...openInNewTab]]
+    return [[...turnIntoPage, ...editIcon, ...lock, ...rename, ...merge], [...openAsPage, ...openInNewTab]]
       .filter((group) => group.length > 0)
       .flatMap((group, index) => index === 0 ? group : [{ type: PopoverItemType.Separator }, ...group]);
+  }
+
+  /** Edit icon: the emoji picker the row pages use. A pick or Remove is one change. */
+  private openIconPicker(): void {
+    const anchor = this.iconElement ?? this.titleElement;
+
+    if (anchor === null || !this.titleEditable()) return;
+    const write = (emoji: string): void => {
+      this.databaseEmoji = emoji;
+      this.databaseIcon = undefined;
+      // A glyph icon this tool could not draw is kept in `unknown`; a new choice replaces it.
+      delete this.unknown.icon;
+      this.paintDatabaseIcon();
+      this.block.dispatchChange();
+    };
+    const handlers = { onSelect: (native: string): void => write(native), onRemove: (): void => write('') };
+
+    if (this.iconPicker === null) {
+      this.iconPicker = new EmojiPicker({ ...handlers, i18n: this.api.i18n, locale: this.api.i18n.getLocale?.() ?? 'en' });
+    }
+    const element = this.iconPicker.getElement();
+
+    if (!element.isConnected) document.body.appendChild(element);
+    void this.iconPicker.open(anchor, undefined, { ...handlers, current: this.databaseEmoji });
   }
 
   /** A database's children are rows, sources and tabs: a page link put there would be turned into a row. */
@@ -3050,6 +3093,7 @@ export class DatabaseTool implements BlockTool {
       ...(this.fullPage ? { fullPage: true } : {}),
       ...(description !== '' ? { description } : {}),
       ...(this.databaseIcon !== undefined ? { icon: { ...this.databaseIcon } } : {}),
+      ...(this.databaseEmoji !== '' ? { emoji: this.databaseEmoji } : {}),
       ...(this.starter !== undefined ? { starter: this.starter } : {}),
       title: currentTitle,
       activeViewId: this.activeViewId,
@@ -3128,6 +3172,9 @@ export class DatabaseTool implements BlockTool {
     this.reactionPicker?.close();
     this.reactionPicker?.getElement().remove();
     this.reactionPicker = null;
+    this.iconPicker?.close();
+    this.iconPicker?.getElement().remove();
+    this.iconPicker = null;
     this.stopComments?.();
     this.remoteWatch?.stop();
     this.remoteWatch = null;
@@ -3219,6 +3266,7 @@ export class DatabaseTool implements BlockTool {
     this.description = cleanDescription(data.description);
     this.syncDescription();
     this.databaseIcon = iconOf(data);
+    this.databaseEmoji = emojiOf(data);
     this.starter = starterOf(data);
     this.paintDatabaseIcon();
     this.savedAutomations = structuredClone(data.automations);

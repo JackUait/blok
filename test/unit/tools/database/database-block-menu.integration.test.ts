@@ -117,15 +117,15 @@ describe('the database block menu', () => {
   it('lists Notion\'s rows Blok backs, in Notion\'s order and groups', async () => {
     const instance = await boot();
 
-    expect(layout(toolItems(instance))).toEqual(['database-lock', 'database-rename', 'database-merge-csv', '|', 'database-open-as-page', 'database-open-in-new-tab']);
-    expect(toolItems(instance).map(entry => entry.title)).toEqual(['Lock database', 'Rename', 'Merge with CSV', undefined, 'Open as page', 'Open in new tab']);
+    expect(layout(toolItems(instance))).toEqual(['database-edit-icon', 'database-lock', 'database-rename', 'database-merge-csv', '|', 'database-open-as-page', 'database-open-in-new-tab']);
+    expect(toolItems(instance).map(entry => entry.title)).toEqual(['Edit icon', 'Lock database', 'Rename', 'Merge with CSV', undefined, 'Open as page', 'Open in new tab']);
   });
 
   it('puts Turn into page first when a page host is there', async () => {
     const instance = await boot({ page: true });
 
     expect(layout(toolItems(instance))[0]).toBe('database-turn-into-page');
-    expect(layout(toolItems(instance))[1]).toBe('database-lock');
+    expect(layout(toolItems(instance))[1]).toBe('database-edit-icon');
   });
 
   it('Lock database is a switch: it toggles in place and saves the lock', async () => {

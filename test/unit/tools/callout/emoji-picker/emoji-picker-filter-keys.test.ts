@@ -119,13 +119,64 @@ describe('EmojiPicker — keys stay in the search field', () => {
     expect(input).toHaveFocus();
   });
 
-  it('leaves ← and → to the caret once the field has text', async () => {
+  // notion-motion.md Round 69 §3: with "smi" typed, Notion's ← → move the highlight and the caret stays.
+  it('moves the highlight with ← and → once the field has text', async () => {
     const { el, input } = await setup();
 
     type(input, 'face');
 
-    expect(press(input, 'ArrowRight').defaultPrevented).toBe(false);
+    expect(press(input, 'ArrowRight').defaultPrevented).toBe(true);
+    expect(highlighted(el)).toEqual([FACES[1].native]);
+    expect(press(input, 'ArrowLeft').defaultPrevented).toBe(true);
     expect(highlighted(el)).toEqual([FACES[0].native]);
+  });
+
+  it('leaves Shift + arrows to the field, to select text', async () => {
+    const { el, input } = await setup();
+
+    type(input, 'face');
+    const event = new KeyboardEvent('keydown', { key: 'ArrowLeft', shiftKey: true, bubbles: true, cancelable: true });
+
+    input.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+    expect(highlighted(el)).toEqual([FACES[0].native]);
+  });
+
+  const cells = (el: HTMLElement): HTMLElement[] => [...el.querySelectorAll<HTMLElement>('[data-emoji-native]')];
+
+  // notion-motion.md Round 69 §3: hovering moves Notion's one fill; → goes on from it; it stays when the pointer leaves.
+  it('moves the one highlight to the cell under the pointer', async () => {
+    const { el, input } = await setup();
+    const third = cells(el)[3];
+
+    fireEvent.pointerMove(third, { clientX: 40, clientY: 10 });
+    expect(highlighted(el)).toEqual([FACES[3].native]);
+    expect(input).toHaveFocus();
+    expect(el.querySelector(`[id="${input.getAttribute('aria-activedescendant') ?? ''}"]`)).toBe(third);
+
+    press(input, 'ArrowRight');
+    expect(highlighted(el)).toEqual([FACES[4].native]);
+
+    fireEvent.pointerLeave(third.closest('[data-emoji-picker-body]') ?? third);
+    expect(highlighted(el)).toEqual([FACES[4].native]);
+  });
+
+  // Chrome replays a pointer move when the grid scrolls under a still pointer; that must not take the highlight.
+  it('ignores a pointer move that did not move the pointer', async () => {
+    const { el, input } = await setup();
+
+    fireEvent.pointerMove(cells(el)[3], { clientX: 40, clientY: 10 });
+    press(input, 'ArrowDown');
+    fireEvent.pointerMove(cells(el)[5], { clientX: 40, clientY: 10 });
+
+    expect(highlighted(el)).toEqual([FACES[11].native]);
+  });
+
+  it('marks the picker so the grid has no hover fill of its own', async () => {
+    const { el } = await setup();
+
+    expect(el.hasAttribute('data-emoji-picker-filter-keys')).toBe(true);
+    expect(cells(el).every(cell => !/hover:bg-/.test(cell.className))).toBe(true);
   });
 
   it('picks the highlighted emoji on Enter and closes', async () => {
@@ -186,6 +237,27 @@ describe('EmojiPicker — keys stay in the search field', () => {
     expect(highlighted(el)).toEqual([]);
     expect(input.hasAttribute('aria-activedescendant')).toBe(false);
     expect(document.activeElement?.getAttribute('data-emoji-native')).toBe(FACES[0].native);
+  });
+
+  it('takes a per-open height, and falls back to the size option', async () => {
+    const { picker, el } = await setup({ filterKeys: true, size: { width: 408, height: 356 } });
+    const anchor = document.createElement('button');
+
+    document.body.append(anchor);
+    picker.close();
+    await picker.open(anchor, undefined, { onSelect: vi.fn(), onRemove: vi.fn(), height: 390 });
+    expect(el.style.height).toBe('390px');
+    picker.close();
+    await picker.open(anchor, undefined, { onSelect: vi.fn(), onRemove: vi.fn() });
+    expect(el.style.height).toBe('356px');
+  });
+
+  it('keeps hover out of the highlight without the option', async () => {
+    const { el } = await setup({});
+
+    fireEvent.pointerMove(cells(el)[3], { clientX: 40, clientY: 10 });
+    expect(highlighted(el)).toEqual([]);
+    expect(el.hasAttribute('data-emoji-picker-filter-keys')).toBe(false);
   });
 
   it('takes a fixed box from the size option, and keeps the viewport clamp', async () => {

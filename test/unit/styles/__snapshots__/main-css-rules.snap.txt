@@ -4386,7 +4386,7 @@ span[data-blok-slash-search] {
   background: var(--blok-item-focus-bg);
 }
 
-[@media (hover: hover)] [data-blok-emoji-picker] :is([data-emoji-picker-header] button:not([data-emoji-picker-skin-tone] button), [data-emoji-native], [data-emoji-picker-empty] button):hover {
+[@media (hover: hover)] [data-blok-emoji-picker] :is([data-emoji-picker-header] button:not([data-emoji-picker-skin-tone] button), [data-emoji-native]:not([data-emoji-picker-filter-keys] *), [data-emoji-picker-empty] button):hover {
   background: var(--blok-item-hover-bg);
 }
 

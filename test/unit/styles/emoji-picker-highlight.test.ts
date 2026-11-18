@@ -26,4 +26,24 @@ describe('emoji picker keyboard highlight', () => {
     // --blok-item-focus-bg is held gray by selected-state-neutral.test.ts.
     expect(found).toEqual([{ background: 'var(--blok-item-focus-bg)', media: false }]);
   });
+
+  // notion-motion.md Round 69 §3: hover moves Notion's one fill, so these pickers paint no second, hover-only fill.
+  it('gives no emoji cell a hover fill in a picker that keeps the keys in the field', () => {
+    const cellHoverSelectors: string[] = [];
+
+    postcss.parse(readMainCss()).walkRules(rule => {
+      let paints = false;
+
+      rule.walkDecls(/^background/, () => {
+        paints = true;
+      });
+      if (!paints) return;
+      cellHoverSelectors.push(...rule.selectors.filter(selector => selector.includes('[data-emoji-native]') && selector.includes(':hover')));
+    });
+
+    expect(cellHoverSelectors.length).toBeGreaterThan(0);
+    for (const selector of cellHoverSelectors) {
+      expect(selector).toContain('[data-emoji-native]:not([data-emoji-picker-filter-keys] *)');
+    }
+  });
 });

@@ -212,6 +212,10 @@ export class EmojiPicker {
   private _highlighted: HTMLButtonElement | null = null;
   /** The stage names the highlight only after a key moved it, so it opens on the current icon. */
   private _stageOnHighlight = false;
+  /** The box height from the size option, used when an open names none. */
+  private _height: number | undefined;
+  /** Where the last pointer move was: a scroll under a still pointer replays one. */
+  private _pointerAt = '';
   private _localeData: EmojiLocaleData | null = null;
   private _localeLoad: Promise<void> | null = null;
   private _hasKeywords = false;
@@ -301,7 +305,13 @@ export class EmojiPicker {
     this._nav = nav;
     this._announcer = announcer;
 
+    if (this._filterKeys) {
+      this._element.setAttribute('data-emoji-picker-filter-keys', '');
+      body.addEventListener('pointermove', (event) => this.highlightUnderPointer(event));
+    }
+
     if (options.size !== undefined) {
+      this._height = options.size.height;
       this._element.style.width = `${options.size.width}px`;
       this._element.style.maxWidth = 'calc(100vw - 16px)';
       this._element.style.height = `${options.size.height}px`;
@@ -353,12 +363,13 @@ export class EmojiPicker {
    * @param anchorRect - overrides `anchor`'s own bounding rect for positioning
    * (inline mode: the anchor is the block's contentEditable, but the true
    * anchor point is the ":" character's rect inside it)
-   * @param handlers - replaces the constructor's callbacks, for a picker shared by several blocks
+   * @param handlers - replaces the constructor's callbacks, for a picker shared by several blocks;
+   *   `height` overrides the size option's height for this open
    */
   public async open(
     anchor: HTMLElement,
     anchorRect?: DOMRect,
-    handlers?: Pick<EmojiPickerOptions, 'onSelect' | 'onRemove'> & { current?: string; removable?: boolean }
+    handlers?: Pick<EmojiPickerOptions, 'onSelect' | 'onRemove'> & { current?: string; removable?: boolean; height?: number }
   ): Promise<void> {
     const active = document.activeElement;
 
@@ -368,6 +379,9 @@ export class EmojiPicker {
     }
 
     this._current = handlers?.current ?? '';
+    const height = handlers?.height ?? this._height;
+
+    if (height !== undefined) this._element.style.height = `${height}px`;
     if (this._removeButton !== null) this._removeButton.hidden = handlers?.removable === false;
 
     // Focus inside the picker means it is being reopened for another anchor:
@@ -1027,7 +1041,7 @@ export class EmojiPicker {
     this.focusEmoji(Math.max(0, Math.min(this._emojiButtons.length - 1, index + step)));
   }
 
-  /** Arrows move the highlight, Enter picks it. ← → move the caret once the field has text: Notion was read with it empty. */
+  /** Arrows move the highlight, Enter picks it. Modified arrows stay the field's, to select text. */
   private handleFilterKeydown(event: KeyboardEvent): void {
     const current = this._highlighted;
 
@@ -1049,7 +1063,7 @@ export class EmojiPicker {
       return;
     }
 
-    if (sideways && this._filterInput.value !== '') {
+    if (event.shiftKey || event.altKey || event.metaKey || event.ctrlKey) {
       return;
     }
 
@@ -1110,7 +1124,21 @@ export class EmojiPicker {
     return otherCells[Math.min(start + column, otherCells.length - 1)] as HTMLButtonElement;
   }
 
-  private setHighlight(button: HTMLButtonElement | null): void {
+  /** The pointer moves the one highlight, as Notion's (notion-motion.md Round 69 §3). */
+  private highlightUnderPointer(event: PointerEvent): void {
+    const at = `${event.clientX},${event.clientY}`;
+    const moved = at !== this._pointerAt;
+    const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-emoji-native]') : null;
+
+    this._pointerAt = at;
+    if (!moved || button === null || button === this._highlighted) {
+      return;
+    }
+    this.setHighlight(button, false);
+    this._stageOnHighlight = true;
+  }
+
+  private setHighlight(button: HTMLButtonElement | null, scroll = true): void {
     if (this._highlighted !== null) {
       this._highlighted.removeAttribute('data-emoji-highlighted');
       this._highlighted.removeAttribute('id');
@@ -1127,7 +1155,7 @@ export class EmojiPicker {
     button.setAttribute('data-emoji-highlighted', '');
     button.setAttribute('id', this._highlightId);
     this._filterInput.setAttribute('aria-activedescendant', this._highlightId);
-    button.scrollIntoView?.({ block: 'nearest', behavior: 'instant' });
+    if (scroll) button.scrollIntoView?.({ block: 'nearest', behavior: 'instant' });
   }
 
   /** Back to the first cell after every render: a reopen reuses the old buttons. */
@@ -2218,7 +2246,8 @@ export class EmojiPicker {
       btn.className = [
         'aspect-square flex items-center justify-center',
         'text-[1.25rem] leading-none cursor-pointer',
-        'hover:bg-neutral-100 theme-dark:hover:bg-neutral-800',
+        // A filterKeys picker's one fill follows the pointer (highlightUnderPointer).
+        this._filterKeys ? '' : 'hover:bg-neutral-100 theme-dark:hover:bg-neutral-800',
         'transition-transform duration-75',
       ].join(' ');
       btn.addEventListener('click', () => {

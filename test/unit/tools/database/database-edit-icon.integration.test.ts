@@ -14,7 +14,7 @@ import type { OutputBlockData, OutputData } from '../../../../types';
 interface PickerCall {
   anchor: HTMLElement;
   rect: DOMRect | undefined;
-  handlers: { onSelect: (native: string) => void; onRemove: () => void; current?: string; removable?: boolean };
+  handlers: { onSelect: (native: string) => void; onRemove: () => void; current?: string; removable?: boolean; height?: number };
 }
 
 const pickers = vi.hoisted(() => ({ opened: [] as unknown[], options: [] as unknown[] }));
@@ -242,6 +242,19 @@ describe('the database block menu\'s Edit icon', () => {
     expect(lastPicker().anchor).toBe(icon);
     expect(lastPicker().rect).toBeUndefined();
     expect(lastPicker().handlers.current).toBe('🚀');
+  });
+
+  // notion-motion.md Round 69 §3: from the icon the grid is one row taller (390); from the menu it stays 356.
+  it('opens 390 tall from the icon and 356 from the menu, on every open', async () => {
+    const instance = await boot(database({ emoji: '🚀' }));
+    const icon = holder?.querySelector<HTMLElement>('[data-blok-database-icon]');
+
+    icon?.click();
+    expect(lastPicker().handlers.height).toBe(390);
+    editIcon(instance);
+    expect(lastPicker().handlers.height).toBe(356);
+    icon?.click();
+    expect(lastPicker().handlers.height).toBe(390);
   });
 
   it('a linked view has no Edit icon: its title is the source\'s', async () => {

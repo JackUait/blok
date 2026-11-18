@@ -2895,6 +2895,8 @@ export class DatabaseTool implements BlockTool {
     if (!element.isConnected) document.body.appendChild(element);
     void this.iconPicker.open(anchor, handle, {
       ...handlers,
+      // notion-motion.md Round 69 §3: one grid row taller from the icon than from the menu.
+      height: from !== undefined ? 390 : 356,
       current: this.databaseEmoji,
       removable: this.databaseEmoji !== '' || this.databaseIcon !== undefined,
     });

@@ -1176,7 +1176,7 @@ test.describe('property and row menus', () => {
       await page.keyboard.press(key);
       await expect(chevron).toBeFocused();
       await expect(chevron).toHaveAttribute('aria-expanded', 'true');
-      expect(await highlighted.allTextContents()).toEqual(before);
+      await expect(highlighted).toHaveText(before);
     }
     await page.keyboard.press('Space');
     await expect(chevron).toHaveAttribute('aria-expanded', 'false');

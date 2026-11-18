@@ -375,7 +375,9 @@ describe('row selection after undo', () => {
     data.schema.push({ id: 'd', name: 'Date', type: 'date', position: 'a2' });
     data.views[0] = { ...data.views[0], type: 'calendar' };
     blocks.slice(1).forEach((block) => {
-      (block.data as { properties: Record<string, unknown> }).properties.d = today;
+      const rowData = block.data as { properties: Record<string, unknown> };
+
+      rowData.properties.d = today;
     });
     editor = new Blok({
       holder,

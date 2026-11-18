@@ -15995,6 +15995,14 @@ button[data-blok-database-table-group-count]:hover {
   height: 15px;
 }
 
+[data-blok-database-icon="emoji"] {
+  position: relative;
+  inset-inline-start: -1px;
+  inline-size: 22px;
+  block-size: 22px;
+  margin-inline-end: 6px;
+}
+
 [data-blok-database-icon="green"] {
   background-color: var(--blok-database-starter-tile-green-bg);
   color: var(--blok-database-starter-tile-green-ink);

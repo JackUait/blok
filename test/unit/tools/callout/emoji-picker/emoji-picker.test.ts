@@ -68,6 +68,38 @@ describe('EmojiPicker', () => {
     document.documentElement.style.overflow = '';
   });
 
+  // notion-motion.md Round 67 §1: the database's Edit icon picker sits centred under the handle or icon, 4px down.
+  it('centres itself under the anchor when asked', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en', centred: true });
+    const el = picker.getElement();
+
+    container.appendChild(el);
+    el.getBoundingClientRect = (): DOMRect => new DOMRect(0, 0, 400, 300);
+    await picker.open(container, new DOMRect(516, 228, 18, 24));
+
+    expect([el.style.left, el.style.top]).toEqual(['325px', '256px']);
+    picker.close();
+  });
+
+  // notion-motion.md Round 67 §1: the database picker offers Remove only once an icon is set.
+  it('hides Remove when the host says there is nothing to remove', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en' });
+    const remove = (): HTMLElement | null => picker.getElement().querySelector('[data-emoji-picker-remove]');
+
+    container.appendChild(picker.getElement());
+    await picker.open(container, undefined, { onSelect: vi.fn(), onRemove: vi.fn(), removable: false });
+    expect(remove()?.hidden).toBe(true);
+    picker.close();
+    await picker.open(container, undefined, { onSelect: vi.fn(), onRemove: vi.fn(), removable: true });
+    expect(remove()?.hidden).toBe(false);
+    picker.close();
+    await picker.open(container);
+    expect(remove()?.hidden).toBe(false);
+    picker.close();
+  });
+
   it('uses fixed positioning so it stays in place when the page scrolls', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en' });

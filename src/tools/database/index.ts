@@ -724,7 +724,7 @@ export class DatabaseTool implements BlockTool {
   private iconPicker: EmojiPicker | null = null;
   /** The Suggested template this database was made from (research/27 §1). */
   private starter: StarterId | undefined;
-  private iconElement: HTMLElement | null = null;
+  private iconElement: HTMLButtonElement | null = null;
   /** The source's name as last read: a deleted source still shows it. */
   private lastSourceTitle = '';
   /** A source in another document, as the host last answered: `null` when it is gone. */
@@ -2618,11 +2618,11 @@ export class DatabaseTool implements BlockTool {
 
       return;
     }
-    const el = this.iconElement ?? document.createElement('span');
+    const el = this.iconElement ?? this.createIconButton();
 
     // "emoji" matches no tile colour rule, so an emoji gets no tile.
     el.setAttribute('data-blok-database-icon', emoji !== '' ? 'emoji' : icon?.color ?? 'gray');
-    el.setAttribute('aria-hidden', 'true');
+    el.disabled = !this.titleEditable();
     if (emoji !== '') {
       el.textContent = emoji;
     } else if (icon !== undefined) {
@@ -2630,6 +2630,17 @@ export class DatabaseTool implements BlockTool {
     }
     if (el.nextElementSibling !== this.titleElement) this.titleRowElement.insertBefore(el, this.titleElement);
     this.iconElement = el;
+  }
+
+  /** notion-motion.md Round 67 §1: the icon is a button that opens the picker under itself. */
+  private createIconButton(): HTMLButtonElement {
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.setAttribute('aria-label', this.api.i18n.t('tools.database.tableEditIcon'));
+    button.addEventListener('click', () => this.openIconPicker(button));
+
+    return button;
   }
 
   private createTitleElement(): HTMLElement {
@@ -2811,11 +2822,19 @@ export class DatabaseTool implements BlockTool {
       .flatMap((group, index) => index === 0 ? group : [{ type: PopoverItemType.Separator }, ...group]);
   }
 
-  /** Edit icon: the emoji picker the row pages use. A pick or Remove is one change. */
-  private openIconPicker(): void {
-    const anchor = this.iconElement ?? this.titleElement;
+  /**
+   * Edit icon: the emoji picker the row pages use. A pick or Remove is one change.
+   * notion-motion.md Round 67 §1: centred under the ⋮⋮ handle from the menu, or under the icon when it is clicked.
+   * A menu opened with no handle shown keeps the icon or title as anchor: unmeasured.
+   */
+  private openIconPicker(from?: HTMLElement): void {
+    const anchor = from ?? this.iconElement ?? this.titleElement;
 
     if (anchor === null || !this.titleEditable()) return;
+    // Read now: the handle hides once the menu closes.
+    const handle = from !== undefined ? undefined : [...this.block.holder.closest(`[${DATA_ATTR.editor}]`)?.querySelectorAll<HTMLElement>(`[${DATA_ATTR.settingsToggler}]`) ?? []]
+      .map((el) => el.getBoundingClientRect())
+      .find((rect) => rect.width > 0);
     const write = (emoji: string): void => {
       this.databaseEmoji = emoji;
       this.databaseIcon = undefined;
@@ -2827,12 +2846,16 @@ export class DatabaseTool implements BlockTool {
     const handlers = { onSelect: (native: string): void => write(native), onRemove: (): void => write('') };
 
     if (this.iconPicker === null) {
-      this.iconPicker = new EmojiPicker({ ...handlers, i18n: this.api.i18n, locale: this.api.i18n.getLocale?.() ?? 'en' });
+      this.iconPicker = new EmojiPicker({ ...handlers, i18n: this.api.i18n, locale: this.api.i18n.getLocale?.() ?? 'en', centred: true });
     }
     const element = this.iconPicker.getElement();
 
     if (!element.isConnected) document.body.appendChild(element);
-    void this.iconPicker.open(anchor, undefined, { ...handlers, current: this.databaseEmoji });
+    void this.iconPicker.open(anchor, handle, {
+      ...handlers,
+      current: this.databaseEmoji,
+      removable: this.databaseEmoji !== '' || this.databaseIcon !== undefined,
+    });
   }
 
   /** A database's children are rows, sources and tabs: a page link put there would be turned into a row. */

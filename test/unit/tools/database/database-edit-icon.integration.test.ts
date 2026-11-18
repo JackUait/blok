@@ -13,22 +13,27 @@ import type { OutputBlockData, OutputData } from '../../../../types';
 
 interface PickerCall {
   anchor: HTMLElement;
-  handlers: { onSelect: (native: string) => void; onRemove: () => void; current?: string };
+  rect: DOMRect | undefined;
+  handlers: { onSelect: (native: string) => void; onRemove: () => void; current?: string; removable?: boolean };
 }
 
-const pickers = vi.hoisted(() => ({ opened: [] as unknown[] }));
+const pickers = vi.hoisted(() => ({ opened: [] as unknown[], options: [] as unknown[] }));
 
 vi.mock('../../../../src/tools/callout/emoji-picker', () => ({
   prefetchEmojiPickerData: vi.fn(),
   EmojiPicker: class {
     private readonly element = document.createElement('div');
 
+    constructor(options: unknown) {
+      pickers.options.push(options);
+    }
+
     getElement(): HTMLElement {
       return this.element;
     }
 
-    open(anchor: HTMLElement, _rect: undefined, handlers: PickerCall['handlers']): Promise<void> {
-      pickers.opened.push({ anchor, handlers });
+    open(anchor: HTMLElement, rect: DOMRect | undefined, handlers: PickerCall['handlers']): Promise<void> {
+      pickers.opened.push({ anchor, rect, handlers });
 
       return Promise.resolve();
     }
@@ -120,6 +125,7 @@ describe('the database block menu\'s Edit icon', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     pickers.opened.length = 0;
+    pickers.options.length = 0;
   });
 
   afterEach(() => {
@@ -192,6 +198,43 @@ describe('the database block menu\'s Edit icon', () => {
     await boot(database({ icon: { glyph: 'check', color: 'green' } }));
 
     expect(holder?.querySelector('[data-blok-database-icon]')?.getAttribute('data-blok-database-icon')).toBe('green');
+  });
+
+  // notion-motion.md Round 67 §1: centred under the ⋮⋮ handle, 4px below it.
+  it('opens centred under the block\'s ⋮⋮ handle', async () => {
+    const instance = await boot();
+    const handle = [...document.querySelectorAll<HTMLElement>('[data-blok-settings-toggler]')].at(-1);
+
+    if (handle === undefined) throw new Error('no handle');
+    handle.getBoundingClientRect = (): DOMRect => new DOMRect(516, 228, 18, 24);
+    editIcon(instance);
+
+    expect(pickers.options.at(-1)).toMatchObject({ centred: true });
+    expect(lastPicker().rect).toEqual(new DOMRect(516, 228, 18, 24));
+  });
+
+  // notion-motion.md Round 67 §1: Remove shows only once there is an icon.
+  it('offers Remove only when the database has an icon', async () => {
+    editIcon(await boot());
+    expect(lastPicker().handlers.removable).toBe(false);
+    editIcon(await boot(database({ emoji: '🚀' })));
+    expect(lastPicker().handlers.removable).toBe(true);
+    editIcon(await boot(database({ icon: { glyph: 'check', color: 'green' } })));
+    expect(lastPicker().handlers.removable).toBe(true);
+  });
+
+  // notion-motion.md Round 67 §1: the icon is a button that opens the picker under itself.
+  it('clicking the icon opens the picker under it', async () => {
+    await boot(database({ emoji: '🚀' }));
+    const icon = holder?.querySelector<HTMLElement>('[data-blok-database-icon]');
+
+    expect(icon?.tagName).toBe('BUTTON');
+    expect(icon).toHaveAccessibleName('Edit icon');
+    icon?.click();
+
+    expect(lastPicker().anchor).toBe(icon);
+    expect(lastPicker().rect).toBeUndefined();
+    expect(lastPicker().handlers.current).toBe('🚀');
   });
 
   it('a linked view has no Edit icon: its title is the source\'s', async () => {

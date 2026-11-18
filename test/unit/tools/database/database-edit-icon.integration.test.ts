@@ -213,6 +213,13 @@ describe('the database block menu\'s Edit icon', () => {
     expect(lastPicker().rect).toEqual(new DOMRect(516, 228, 18, 24));
   });
 
+  // notion-motion.md Round 67 §1: 408x356 from the menu; focus stays in Filter while arrows move a highlight.
+  it('opens at Notion\'s size, with the arrow keys kept in the search field', async () => {
+    editIcon(await boot());
+
+    expect(pickers.options.at(-1)).toMatchObject({ filterKeys: true, size: { width: 408, height: 356 } });
+  });
+
   // notion-motion.md Round 67 §1: Remove shows only once there is an icon.
   it('offers Remove only when the database has an icon', async () => {
     editIcon(await boot());

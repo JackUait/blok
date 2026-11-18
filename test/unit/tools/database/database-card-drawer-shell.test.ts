@@ -155,6 +155,27 @@ describe('DatabaseCardDrawer shell', () => {
       drawer.destroy();
     });
 
+    // notion-motion.md Round 68 §3: 408x390, centred under the icon, focus kept in Filter.
+    it('opens the page icon picker at Notion\'s size, centred under the icon', async () => {
+      vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
+      const drawer = new DatabaseCardDrawer(createOptions({ i18n: i18n(), onIconChange: vi.fn() }));
+
+      drawer.open(ROW, 'side');
+      const anchor = q('[data-blok-database-drawer-icon], [data-blok-database-drawer-add-icon]');
+
+      if (anchor === null) throw new Error('no icon anchor');
+      anchor.getBoundingClientRect = (): DOMRect => new DOMRect(840, 80, 36, 36);
+      drawer.editIcon();
+      const picker = q('[data-blok-emoji-picker]');
+
+      expect(picker?.style.width).toBe('408px');
+      expect(picker?.style.height).toBe('390px');
+      // jsdom lays the picker out 0 wide, so centred puts its left edge on the icon's centre (840 + 18).
+      await vi.waitFor(() => expect(picker?.style.left).toBe('858px'));
+      expect(q('[data-blok-emoji-picker] input')?.getAttribute('aria-activedescendant')).not.toBeNull();
+      drawer.destroy();
+    });
+
     it('stays in the top layer while the side peek slides out', () => {
       const drawer = new DatabaseCardDrawer(createOptions());
 

@@ -1871,7 +1871,8 @@ export class DatabaseCardDrawer {
     };
 
     if (this.emojiPicker === null) {
-      this.emojiPicker = new EmojiPicker({ ...handlers, i18n, locale: i18n.getLocale() });
+      // notion-motion.md Round 68 §3: 408x390 centred under the icon; focus stays in Filter.
+      this.emojiPicker = new EmojiPicker({ ...handlers, i18n, locale: i18n.getLocale(), centred: true, filterKeys: true, size: { width: 408, height: 390 } });
     }
     const element = this.emojiPicker.getElement();
 

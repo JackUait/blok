@@ -2866,7 +2866,15 @@ export class DatabaseTool implements BlockTool {
     const handlers = { onSelect: (native: string): void => write(native), onRemove: (): void => write('') };
 
     if (this.iconPicker === null) {
-      this.iconPicker = new EmojiPicker({ ...handlers, i18n: this.api.i18n, locale: this.api.i18n.getLocale?.() ?? 'en', centred: true });
+      // notion-motion.md Round 67 §1: 408x356 from the menu; focus stays in Filter.
+      this.iconPicker = new EmojiPicker({
+        ...handlers,
+        i18n: this.api.i18n,
+        locale: this.api.i18n.getLocale?.() ?? 'en',
+        centred: true,
+        filterKeys: true,
+        size: { width: 408, height: 356 },
+      });
     }
     const element = this.iconPicker.getElement();
 

@@ -146,6 +146,8 @@
   "tools.table.comfortableText": "Rahat mətn",
   "blockSettings.delete": "Sil",
   "blockSettings.duplicate": "Dublikatını çıxar",
+  "blockSettings.duplicateWithContent": "Məzmunla dublikatını çıxar",
+  "blockSettings.duplicateWithoutContent": "Məzmunsuz dublikatını çıxar",
   "blockSettings.copyLink": "Bloka keçid kopyala",
   "blockSettings.copyPageLink": "Keçidi kopyala",
   "blockSettings.moveToTrash": "Zibil qutusuna köçür",

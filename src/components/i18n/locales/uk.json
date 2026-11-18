@@ -116,6 +116,8 @@
   "tools.list.placeholder": "Список",
   "blockSettings.delete": "Видалити",
   "blockSettings.duplicate": "Дублювати",
+  "blockSettings.duplicateWithContent": "Дублювати з вмістом",
+  "blockSettings.duplicateWithoutContent": "Дублювати без вмісту",
   "blockSettings.copyLink": "Копіювати посилання на блок",
   "blockSettings.copyPageLink": "Копіювати посилання",
   "blockSettings.moveToTrash": "Перемістити в кошик",

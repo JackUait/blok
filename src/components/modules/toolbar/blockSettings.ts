@@ -851,34 +851,61 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
      * is duplicated; for a single block we duplicate the menu's own block.
      */
     const duplicateSelected = hasMultipleBlocksSelected ? [...selectedBlocks] : [];
-    const duplicateItem: MenuConfigItem = {
-      icon: IconCopy,
-      title: this.Blok.I18n.t('blockSettings.duplicate'),
-      name: 'duplicate',
-      secondaryLabel: beautifyShortcut('CMD+D'),
-      closeOnActivate: true,
-      onActivate: () => {
-        const { BlockSelection, DragManager, Toolbar } = this.Blok;
+    const duplicate = (leaveOut: string[]): void => {
+      const { BlockSelection, DragManager, Toolbar } = this.Blok;
 
-        // A selected source makes the duplicate select its copies, as in Notion.
-        if (duplicateSelected.length > 1) {
-          BlockSelection.clearSelection();
-          duplicateSelected.forEach((selected) => BlockSelection.selectBlock(selected));
-        } else {
-          BlockSelection.selectBlock(currentBlock);
+      // A selected source makes the duplicate select its copies, as in Notion.
+      if (duplicateSelected.length > 1) {
+        BlockSelection.clearSelection();
+        duplicateSelected.forEach((selected) => BlockSelection.selectBlock(selected));
+      } else {
+        BlockSelection.selectBlock(currentBlock);
+      }
+
+      // The menu's restored caret can leave its field focused under the selected copy.
+      void (leaveOut.length === 0 ? DragManager?.duplicateBlocksInPlace(currentBlock) : DragManager?.duplicateBlocksInPlace(currentBlock, { leaveOut }))?.then((copies) => {
+        if (copies.some((copy) => copy.selected)) {
+          this.releaseFocus();
+          this.letGoOnFocus(copies);
         }
+      });
 
-        // The menu's restored caret can leave its field focused under the selected copy.
-        void DragManager?.duplicateBlocksInPlace(currentBlock).then((copies) => {
-          if (copies.some((copy) => copy.selected)) {
-            this.releaseFocus();
-            this.letGoOnFocus(copies);
-          }
-        });
-
-        Toolbar.close();
-      },
+      Toolbar.close();
     };
+    // A block with content (a database's rows) gets Notion's two-row submenu, without icons.
+    const content = hasMultipleBlocksSelected ? [] : currentBlock.contentBlockIds();
+    const duplicateItem: MenuConfigItem = content.length === 0
+      ? {
+        icon: IconCopy,
+        title: this.Blok.I18n.t('blockSettings.duplicate'),
+        name: 'duplicate',
+        secondaryLabel: beautifyShortcut('CMD+D'),
+        closeOnActivate: true,
+        onActivate: () => duplicate([]),
+      }
+      : {
+        icon: IconCopy,
+        title: this.Blok.I18n.t('blockSettings.duplicate'),
+        name: 'duplicate',
+        children: {
+          items: [
+            {
+              title: this.Blok.I18n.t('blockSettings.duplicateWithContent'),
+              name: 'duplicate-with-content',
+              secondaryLabel: beautifyShortcut('CMD+D'),
+              closeOnActivate: true,
+              onActivate: () => duplicate([]),
+            },
+            {
+              title: this.Blok.I18n.t('blockSettings.duplicateWithoutContent'),
+              name: 'duplicate-without-content',
+              secondaryLabel: beautifyShortcut('CMD+SHIFT+D'),
+              closeOnActivate: true,
+              onActivate: () => duplicate(content),
+            },
+          ],
+        },
+      };
 
     // A block standing for something else (a page) copies that thing's link.
     // Decided from the declaration alone: asking for the link calls the host's

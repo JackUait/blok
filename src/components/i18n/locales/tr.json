@@ -116,6 +116,8 @@
   "tools.list.placeholder": "Liste",
   "blockSettings.delete": "Sil",
   "blockSettings.duplicate": "Çoğalt",
+  "blockSettings.duplicateWithContent": "İçerikle çoğalt",
+  "blockSettings.duplicateWithoutContent": "İçerik olmadan çoğalt",
   "blockSettings.copyLink": "Blok bağlantısını kopyala",
   "blockSettings.copyPageLink": "Bağlantıyı kopyala",
   "blockSettings.moveToTrash": "Çöp kutusuna taşı",

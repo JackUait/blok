@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "Pohodlný text",
   "blockSettings.delete": "Smazat",
   "blockSettings.duplicate": "Duplikovat",
+  "blockSettings.duplicateWithContent": "Duplikovat s obsahem",
+  "blockSettings.duplicateWithoutContent": "Duplikovat bez obsahu",
   "blockSettings.copyLink": "Kopírovat odkaz na blok",
   "blockSettings.copyPageLink": "Kopírovat odkaz",
   "blockSettings.moveToTrash": "Přesunout do koše",

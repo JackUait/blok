@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "ارامه متن",
   "blockSettings.delete": "ړنګ کړئ",
   "blockSettings.duplicate": "کاپي جوړه کړئ",
+  "blockSettings.duplicateWithContent": "له منځپانګې سره کاپي جوړه کړئ",
+  "blockSettings.duplicateWithoutContent": "له منځپانګې پرته کاپي جوړه کړئ",
   "blockSettings.copyLink": "بلاک ته لینک کاپي کړئ",
   "blockSettings.copyPageLink": "لینک کاپي کړئ",
   "blockSettings.moveToTrash": "کثافاتو ته ولېږدوئ",

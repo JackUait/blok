@@ -104,6 +104,8 @@
   "tools.list.placeholder": "सूची",
   "blockSettings.delete": "मेटाउनुहोस्",
   "blockSettings.duplicate": "नक्कल बनाउनुहोस्",
+  "blockSettings.duplicateWithContent": "सामग्रीसहित नक्कल बनाउनुहोस्",
+  "blockSettings.duplicateWithoutContent": "सामग्रीबिना नक्कल बनाउनुहोस्",
   "blockSettings.copyLink": "ब्लकको लिङ्क प्रतिलिपि गर्नुहोस्",
   "blockSettings.copyPageLink": "लिङ्क प्रतिलिपि गर्नुहोस्",
   "blockSettings.moveToTrash": "रद्दीटोकरीमा सार्नुहोस्",

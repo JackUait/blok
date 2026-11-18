@@ -146,6 +146,8 @@
   "tools.table.comfortableText": "Maluwag na teksto",
   "blockSettings.delete": "Burahin",
   "blockSettings.duplicate": "Gumawa ng kopya",
+  "blockSettings.duplicateWithContent": "Gumawa ng kopya kasama ang nilalaman",
+  "blockSettings.duplicateWithoutContent": "Gumawa ng kopya nang walang nilalaman",
   "blockSettings.copyLink": "Kopyahin ang link sa block",
   "blockSettings.copyPageLink": "Kopyahin ang link",
   "blockSettings.moveToTrash": "Ilipat sa basurahan",

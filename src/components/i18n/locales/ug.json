@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "كەڭرى تېكىست",
   "blockSettings.delete": "ئۆچۈرۈش",
   "blockSettings.duplicate": "كۆپەيتىش",
+  "blockSettings.duplicateWithContent": "مەزمۇنى بىلەن كۆپەيتىش",
+  "blockSettings.duplicateWithoutContent": "مەزمۇنسىز كۆپەيتىش",
   "blockSettings.copyLink": "بۆلەككە ئۇلانما كۆچۈرۈش",
   "blockSettings.copyPageLink": "ئۇلانمىنى كۆچۈر",
   "blockSettings.moveToTrash": "ئەخلەت چېلىكىگە يۆتكەش",

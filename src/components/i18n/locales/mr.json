@@ -104,6 +104,8 @@
   "tools.list.placeholder": "यादी",
   "blockSettings.delete": "हटवा",
   "blockSettings.duplicate": "प्रत बनवा",
+  "blockSettings.duplicateWithContent": "मजकुरासह प्रत बनवा",
+  "blockSettings.duplicateWithoutContent": "मजकुराशिवाय प्रत बनवा",
   "blockSettings.copyLink": "ब्लॉकची लिंक कॉपी करा",
   "blockSettings.copyPageLink": "दुवा कॉपी करा",
   "blockSettings.moveToTrash": "कचरापेटीत हलवा",

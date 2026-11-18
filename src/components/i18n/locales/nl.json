@@ -122,6 +122,8 @@
   "tools.toggle.ariaLabelExpand": "Uitklappen",
   "blockSettings.delete": "Verwijderen",
   "blockSettings.duplicate": "Dupliceren",
+  "blockSettings.duplicateWithContent": "Dupliceren met inhoud",
+  "blockSettings.duplicateWithoutContent": "Dupliceren zonder inhoud",
   "blockSettings.copyLink": "Link naar blok kopiëren",
   "blockSettings.copyPageLink": "Link kopiëren",
   "blockSettings.moveToTrash": "Naar prullenbak verplaatsen",

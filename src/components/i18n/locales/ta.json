@@ -146,6 +146,8 @@
   "tools.table.comfortableText": "இடைவெளியுள்ள உரை",
   "blockSettings.delete": "நீக்கு",
   "blockSettings.duplicate": "நகலெடு",
+  "blockSettings.duplicateWithContent": "உள்ளடக்கத்துடன் நகலெடு",
+  "blockSettings.duplicateWithoutContent": "உள்ளடக்கம் இல்லாமல் நகலெடு",
   "blockSettings.copyLink": "தொகுதிக்கான இணைப்பை நகலெடு",
   "blockSettings.copyPageLink": "இணைப்பை நகலெடு",
   "blockSettings.moveToTrash": "குப்பைக்கு நகர்த்து",

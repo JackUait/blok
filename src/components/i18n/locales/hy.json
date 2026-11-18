@@ -122,6 +122,8 @@
   "tools.toggle.ariaLabelExpand": "Ծավալել",
   "blockSettings.delete": "Ջնջել",
   "blockSettings.duplicate": "Կրկնօրինակել",
+  "blockSettings.duplicateWithContent": "Կրկնօրինակել բովանդակությամբ",
+  "blockSettings.duplicateWithoutContent": "Կրկնօրինակել առանց բովանդակության",
   "blockSettings.copyLink": "Պատճենել բլոկի հղումը",
   "blockSettings.copyPageLink": "Պատճենել հղումը",
   "blockSettings.moveToTrash": "Տեղափոխել աղբարկղ",

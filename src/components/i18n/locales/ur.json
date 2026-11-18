@@ -116,6 +116,8 @@
   "tools.list.placeholder": "فہرست",
   "blockSettings.delete": "حذف کریں",
   "blockSettings.duplicate": "نقل بنائیں",
+  "blockSettings.duplicateWithContent": "مواد کے ساتھ نقل بنائیں",
+  "blockSettings.duplicateWithoutContent": "مواد کے بغیر نقل بنائیں",
   "blockSettings.copyLink": "بلاک کا لنک کاپی کریں",
   "blockSettings.copyPageLink": "لنک کاپی کریں",
   "blockSettings.moveToTrash": "ردی کی ٹوکری میں منتقل کریں",

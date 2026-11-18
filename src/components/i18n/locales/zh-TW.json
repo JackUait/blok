@@ -160,6 +160,8 @@
   "tools.table.placementBottomRight": "右下",
   "blockSettings.delete": "刪除",
   "blockSettings.duplicate": "建立副本",
+  "blockSettings.duplicateWithContent": "建立副本（含內容）",
+  "blockSettings.duplicateWithoutContent": "建立副本（不含內容）",
   "blockSettings.lastEdited": "上次編輯",
   "blockSettings.lastEditedBy": "上次由 {name} 編輯",
   "blockSettings.copyLink": "複製區塊連結",

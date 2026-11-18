@@ -116,6 +116,8 @@
   "tools.list.placeholder": "Saraksts",
   "blockSettings.delete": "Dzēst",
   "blockSettings.duplicate": "Dublēt",
+  "blockSettings.duplicateWithContent": "Dublēt ar saturu",
+  "blockSettings.duplicateWithoutContent": "Dublēt bez satura",
   "blockSettings.copyLink": "Kopēt saiti uz bloku",
   "blockSettings.copyPageLink": "Kopēt saiti",
   "blockSettings.moveToTrash": "Pārvietot uz atkritni",

@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "Teks nyaman",
   "blockSettings.delete": "Hapus",
   "blockSettings.duplicate": "Gandakan",
+  "blockSettings.duplicateWithContent": "Gandakan dengan konten",
+  "blockSettings.duplicateWithoutContent": "Gandakan tanpa konten",
   "blockSettings.copyLink": "Salin tautan ke blok",
   "blockSettings.copyPageLink": "Salin tautan",
   "blockSettings.moveToTrash": "Pindahkan ke sampah",

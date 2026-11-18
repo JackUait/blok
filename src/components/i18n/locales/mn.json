@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "Ердийн хэмжээтэй текст",
   "blockSettings.delete": "Устгах",
   "blockSettings.duplicate": "Хувилах",
+  "blockSettings.duplicateWithContent": "Агуулгатай нь хувилах",
+  "blockSettings.duplicateWithoutContent": "Агуулгагүйгээр хувилах",
   "blockSettings.copyLink": "Блокийн холбоосыг хуулах",
   "blockSettings.copyPageLink": "Холбоос хуулах",
   "blockSettings.moveToTrash": "Хогийн сав руу зөөх",

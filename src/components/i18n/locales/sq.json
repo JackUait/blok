@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "Tekst i rehatshëm",
   "blockSettings.delete": "Fshi",
   "blockSettings.duplicate": "Dyfisho",
+  "blockSettings.duplicateWithContent": "Dyfisho me përmbajtjen",
+  "blockSettings.duplicateWithoutContent": "Dyfisho pa përmbajtjen",
   "blockSettings.copyLink": "Kopjo lidhjen e bllokut",
   "blockSettings.copyPageLink": "Kopjo lidhjen",
   "blockSettings.moveToTrash": "Zhvendos në kosh",

@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "Tekst standardowy",
   "blockSettings.delete": "Usuń",
   "blockSettings.duplicate": "Duplikuj",
+  "blockSettings.duplicateWithContent": "Duplikuj z zawartością",
+  "blockSettings.duplicateWithoutContent": "Duplikuj bez zawartości",
   "blockSettings.copyLink": "Kopiuj link do bloku",
   "blockSettings.copyPageLink": "Kopiuj link",
   "blockSettings.moveToTrash": "Przenieś do kosza",

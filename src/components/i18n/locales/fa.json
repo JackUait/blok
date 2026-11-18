@@ -122,6 +122,8 @@
   "tools.toggle.ariaLabelExpand": "گسترش",
   "blockSettings.delete": "حذف",
   "blockSettings.duplicate": "تکثیر",
+  "blockSettings.duplicateWithContent": "تکثیر با محتوا",
+  "blockSettings.duplicateWithoutContent": "تکثیر بدون محتوا",
   "blockSettings.copyLink": "کپی لینک بلوک",
   "blockSettings.copyPageLink": "کپی پیوند",
   "blockSettings.moveToTrash": "انتقال به سطل زباله",

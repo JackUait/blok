@@ -46,6 +46,7 @@ import { BlockShortcuts } from './shortcuts';
 import type { BlocksStore, BlockMutationEventDetailWithoutTarget, ComposeBlockOptions, DerivedSource, InsertBlockOptions, InsertInsideParentOptions, PlannedConvert } from './types';
 import { BlockYjsSync } from './yjs-sync';
 import { carriesReadOnly } from '../../utils/read-only-blocks';
+import { selectionRoots } from '../../utils/selection-roots';
 import { captureDataKeySnapshot, type DataKeySnapshot } from '../yjs/document-store';
 import { agentAttribution, type Attribution } from '../../../shared/agent/attribution';
 import { REPARENT_IN_PLACE } from '../../utils/index-move-neighbours';
@@ -685,6 +686,7 @@ export class BlockManager extends Module {
         onMoveDown: this.moveCurrentBlockDown.bind(this),
         onCopyAsMarkdown: () => void this.Blok.BlockSelection.copySelectedBlocksAsMarkdown(),
         onDuplicate: this.duplicateCurrentBlock.bind(this),
+        onDuplicateWithoutContent: this.duplicateSelectedWithoutContent.bind(this),
       }
     );
   }
@@ -2281,6 +2283,23 @@ export class BlockManager extends Module {
     }
 
     void this.Blok.DragManager?.duplicateBlocksInPlace(anchor);
+  }
+
+  /**
+   * Notion's Cmd/Ctrl+Shift+D: copies the one selected block without its
+   * content (a database without its rows). False when there is no such block.
+   */
+  public duplicateSelectedWithoutContent(): boolean {
+    // A selected database may carry its selected rows: count roots only.
+    const roots = selectionRoots(this.Blok.BlockSelection.selectedBlocks);
+    const content = roots.length === 1 ? roots[0].contentBlockIds() : [];
+
+    if (this.Blok.DragManager?.isDragging === true || content.length === 0) {
+      return false;
+    }
+    void this.Blok.DragManager?.duplicateBlocksInPlace(roots[0], { leaveOut: content });
+
+    return true;
   }
 
   /**

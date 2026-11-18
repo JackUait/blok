@@ -104,6 +104,8 @@
   "tools.list.placeholder": "ලැයිස්තුව",
   "blockSettings.delete": "මකන්න",
   "blockSettings.duplicate": "අනුපිටපත",
+  "blockSettings.duplicateWithContent": "අන්තර්ගතය සමඟ අනුපිටපත",
+  "blockSettings.duplicateWithoutContent": "අන්තර්ගතය නොමැතිව අනුපිටපත",
   "blockSettings.copyLink": "බ්ලොක් එකට සබැඳිය පිටපත් කරන්න",
   "blockSettings.copyPageLink": "සබැඳිය පිටපත් කරන්න",
   "blockSettings.moveToTrash": "කුණු බඳුනට ගෙන යන්න",

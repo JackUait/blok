@@ -98,6 +98,7 @@ vi.mock('../../../../../src/components/i18n', () => ({
 }));
 
 const createBlock = (blockMenu: { titled: boolean; trash: boolean; lead?: string[] } = { titled: false, trash: false }): Block => ({
+  contentBlockIds: (): string[] => [],
   getTunes: vi.fn(() => ({ commonTunes: [] })),
   getActiveToolboxEntry: vi.fn(async () => undefined),
   name: 'page',

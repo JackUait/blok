@@ -146,6 +146,8 @@
   "tools.table.comfortableText": "സൗകര്യപ്രദമായ ടെക്സ്റ്റ്",
   "blockSettings.delete": "ഇല്ലാതാക്കുക",
   "blockSettings.duplicate": "പകർപ്പുണ്ടാക്കുക",
+  "blockSettings.duplicateWithContent": "ഉള്ളടക്കത്തോടെ പകർപ്പുണ്ടാക്കുക",
+  "blockSettings.duplicateWithoutContent": "ഉള്ളടക്കമില്ലാതെ പകർപ്പുണ്ടാക്കുക",
   "blockSettings.copyLink": "ബ്ലോക്കിലേക്കുള്ള ലിങ്ക് പകർത്തുക",
   "blockSettings.copyPageLink": "ലിങ്ക് പകർത്തുക",
   "blockSettings.moveToTrash": "ട്രാഷിലേക്ക് നീക്കുക",

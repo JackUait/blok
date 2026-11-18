@@ -146,6 +146,8 @@
   "tools.table.comfortableText": "អត្ថបទធម្មតា",
   "blockSettings.delete": "លុប",
   "blockSettings.duplicate": "ស្ទួន",
+  "blockSettings.duplicateWithContent": "ស្ទួនជាមួយមាតិកា",
+  "blockSettings.duplicateWithoutContent": "ស្ទួនដោយគ្មានមាតិកា",
   "blockSettings.copyLink": "ចម្លងតំណទៅប្លុក",
   "blockSettings.copyPageLink": "ចម្លងតំណ",
   "blockSettings.moveToTrash": "ផ្លាស់ទីទៅធុងសំរាម",

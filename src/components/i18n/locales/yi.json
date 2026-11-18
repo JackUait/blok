@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "באַקוועמער טעקסט",
   "blockSettings.delete": "אויסמעקן",
   "blockSettings.duplicate": "דופּליקירן",
+  "blockSettings.duplicateWithContent": "דופּליקירן מיט אינהאַלט",
+  "blockSettings.duplicateWithoutContent": "דופּליקירן אָן אינהאַלט",
   "blockSettings.copyLink": "קאָפּירן לינק צום בלאָק",
   "blockSettings.copyPageLink": "קאָפּיר לינק",
   "blockSettings.moveToTrash": "אַריבערפֿירן אין מיסט",

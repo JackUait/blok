@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "دەقی فراوان",
   "blockSettings.delete": "سڕینەوە",
   "blockSettings.duplicate": "دووبارەکردنەوە",
+  "blockSettings.duplicateWithContent": "دووبارەکردنەوە لەگەڵ ناوەڕۆک",
+  "blockSettings.duplicateWithoutContent": "دووبارەکردنەوە بەبێ ناوەڕۆک",
   "blockSettings.copyLink": "کۆپیکردنی لینکی بلۆک",
   "blockSettings.copyPageLink": "لەبەرگرتنەوەی بەستەر",
   "blockSettings.moveToTrash": "گواستنەوە بۆ زبڵدان",

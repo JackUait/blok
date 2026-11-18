@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "Обычный текст",
   "blockSettings.delete": "Удалить",
   "blockSettings.duplicate": "Дублировать",
+  "blockSettings.duplicateWithContent": "Дублировать с содержимым",
+  "blockSettings.duplicateWithoutContent": "Дублировать без содержимого",
   "blockSettings.copyLink": "Копировать ссылку на блок",
   "blockSettings.copyPageLink": "Копировать ссылку",
   "blockSettings.moveToTrash": "Переместить в корзину",

@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "여유로운 텍스트",
   "blockSettings.delete": "삭제",
   "blockSettings.duplicate": "복제",
+  "blockSettings.duplicateWithContent": "콘텐츠와 함께 복제",
+  "blockSettings.duplicateWithoutContent": "콘텐츠 없이 복제",
   "blockSettings.copyLink": "블록 링크 복사",
   "blockSettings.copyPageLink": "링크 복사",
   "blockSettings.moveToTrash": "휴지통으로 이동",

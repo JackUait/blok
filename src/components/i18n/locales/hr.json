@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "Prozračan tekst",
   "blockSettings.delete": "Obriši",
   "blockSettings.duplicate": "Dupliciraj",
+  "blockSettings.duplicateWithContent": "Dupliciraj sa sadržajem",
+  "blockSettings.duplicateWithoutContent": "Dupliciraj bez sadržaja",
   "blockSettings.copyLink": "Kopiraj poveznicu na blok",
   "blockSettings.copyPageLink": "Kopiraj poveznicu",
   "blockSettings.moveToTrash": "Premjesti u smeće",

@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "Văn bản thoải mái",
   "blockSettings.delete": "Xóa",
   "blockSettings.duplicate": "Nhân bản",
+  "blockSettings.duplicateWithContent": "Nhân bản cùng nội dung",
+  "blockSettings.duplicateWithoutContent": "Nhân bản không kèm nội dung",
   "blockSettings.copyLink": "Sao chép liên kết đến khối",
   "blockSettings.copyPageLink": "Sao chép liên kết",
   "blockSettings.moveToTrash": "Chuyển vào thùng rác",

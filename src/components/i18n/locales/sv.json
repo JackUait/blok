@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "Luftig text",
   "blockSettings.delete": "Ta bort",
   "blockSettings.duplicate": "Duplicera",
+  "blockSettings.duplicateWithContent": "Duplicera med innehåll",
+  "blockSettings.duplicateWithoutContent": "Duplicera utan innehåll",
   "blockSettings.copyLink": "Kopiera blockets länk",
   "blockSettings.copyPageLink": "Kopiera länk",
   "blockSettings.moveToTrash": "Flytta till papperskorgen",

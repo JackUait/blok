@@ -110,6 +110,8 @@
   "tools.toggle.ariaLabelExpand": "Proširi",
   "blockSettings.delete": "Obriši",
   "blockSettings.duplicate": "Dupliciraj",
+  "blockSettings.duplicateWithContent": "Dupliciraj sa sadržajem",
+  "blockSettings.duplicateWithoutContent": "Dupliciraj bez sadržaja",
   "blockSettings.copyLink": "Kopiraj vezu na blok",
   "blockSettings.copyPageLink": "Kopiraj vezu",
   "blockSettings.moveToTrash": "Premjesti u smeće",

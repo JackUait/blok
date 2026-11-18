@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "ゆったりしたテキスト",
   "blockSettings.delete": "削除",
   "blockSettings.duplicate": "複製",
+  "blockSettings.duplicateWithContent": "コンテンツごと複製",
+  "blockSettings.duplicateWithoutContent": "コンテンツなしで複製",
   "blockSettings.copyLink": "ブロックへのリンクをコピー",
   "blockSettings.copyPageLink": "リンクをコピー",
   "blockSettings.moveToTrash": "ゴミ箱に移動",

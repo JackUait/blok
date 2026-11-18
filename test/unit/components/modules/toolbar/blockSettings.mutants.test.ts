@@ -146,6 +146,7 @@ type BlockStub = {
   selected: boolean;
   createdAt: number;
   lastEditedAt?: number;
+  contentBlockIds?: () => string[];
   lastEditedBy: string | null;
   data: Promise<BlockToolData>;
   exportDataAsString: Mock<() => Promise<string>>;
@@ -180,6 +181,7 @@ const createBlockStub = (overrides: Partial<BlockStub> = {}): BlockStub => {
     lastEditedBy: null,
     data: Promise.resolve({}),
     exportDataAsString: vi.fn(async () => 'exported'),
+    contentBlockIds: (): string[] => [],
     getTunes: vi.fn(() => ({ commonTunes: [] as MenuConfigItem[] })),
     getActiveToolboxEntry: vi.fn(async () => undefined),
     // A rich-text source: the merge convert reads it to translate each export.
@@ -544,6 +546,7 @@ describe('BlockSettings — mutation coverage', () => {
       let capturedContext: BlockTuneRenderContext | undefined;
 
       const block = createBlockStub({
+        contentBlockIds: (): string[] => [],
         getTunes: vi.fn((context: BlockTuneRenderContext) => {
           capturedContext = context;
           seenDuringRender = context.getPopoverElement();
@@ -690,6 +693,7 @@ describe('BlockSettings — mutation coverage', () => {
 
     it('clears the opening flag when building the menu throws', async () => {
       const block = createBlockStub({
+        contentBlockIds: (): string[] => [],
         getTunes: vi.fn(() => {
           throw new Error('tune render blew up');
         }),
@@ -889,6 +893,7 @@ describe('BlockSettings — mutation coverage', () => {
     };
 
     const tunedBlock = (overrides: Partial<BlockStub> = {}): BlockStub => createBlockStub({
+      contentBlockIds: (): string[] => [],
       getTunes: vi.fn(() => ({
         toolTunes: [{ name: 'tool-tune', title: 'Tool tune' }] as MenuConfigItem[],
         commonTunes: [
@@ -949,6 +954,7 @@ describe('BlockSettings — mutation coverage', () => {
       getConvertibleToolsForBlockMock.mockResolvedValue([asTool(headerTool)]);
 
       const items = await openWith(createBlockStub({
+        contentBlockIds: (): string[] => [],
         getTunes: vi.fn(() => ({
           toolTunes: [] as MenuConfigItem[],
           commonTunes: [{ name: 'delete', title: 'Delete' }] as MenuConfigItem[],
@@ -970,6 +976,7 @@ describe('BlockSettings — mutation coverage', () => {
       getConvertibleToolsForBlockMock.mockResolvedValue([]);
 
       const items = await openWith(createBlockStub({
+        contentBlockIds: (): string[] => [],
         getTunes: vi.fn(() => ({ commonTunes: [{ name: 'delete', title: 'Delete' }] as MenuConfigItem[] })),
       }));
 
@@ -980,6 +987,7 @@ describe('BlockSettings — mutation coverage', () => {
       getConvertibleToolsForBlockMock.mockResolvedValue([]);
 
       const items = await openWith(createBlockStub({
+        contentBlockIds: (): string[] => [],
         getTunes: vi.fn(() => ({
           commonTunes: [{ name: 'move-up', title: 'Move up' }] as MenuConfigItem[],
         })),
@@ -993,6 +1001,7 @@ describe('BlockSettings — mutation coverage', () => {
       getConvertibleToolsForBlockMock.mockResolvedValue([asTool(headerTool)]);
 
       const items = await openWith(tunedBlock({
+        contentBlockIds: (): string[] => [],
         getTunes: vi.fn(() => ({
           toolTunes: [{ name: 'tool-tune', title: 'Tool tune' }] as MenuConfigItem[],
           commonTunes: [
@@ -1107,6 +1116,7 @@ describe('BlockSettings — mutation coverage', () => {
 
   describe('duplicate', () => {
     const duplicateBlock = (): BlockStub => createBlockStub({
+      contentBlockIds: (): string[] => [],
       getTunes: vi.fn(() => ({ commonTunes: [{ name: 'delete', title: 'Delete' }] as MenuConfigItem[] })),
     });
 
@@ -1952,6 +1962,7 @@ describe('BlockSettings — mutation coverage', () => {
       getConvertibleToolsForBlockMock.mockResolvedValue([]);
 
       const block = createBlockStub({
+        contentBlockIds: (): string[] => [],
         getTunes: vi.fn(() => ({
           commonTunes: [{ name: 'delete', title: 'Delete', onActivate: onDelete }] as MenuConfigItem[],
         })),

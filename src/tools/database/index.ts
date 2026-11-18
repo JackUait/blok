@@ -2703,6 +2703,20 @@ export class DatabaseTool implements BlockTool {
     });
   }
 
+  /**
+   * "Duplicate without content" leaves these out: the rows of this database
+   * and of its second sources (notion-motion.md Round 66 §1). Templates stay
+   * with the set-up. A linked view has no rows of its own, so no submenu.
+   */
+  public contentBlockIds(): string[] {
+    if (this.linked || this.readOnly) return [];
+    const sources = this.api.blocks.getChildren(this.block.id).filter((child) => child.name === this.block.name);
+
+    return [this.block.id, ...sources.map((source) => source.id)].flatMap((id) => this.api.blocks.getChildren(id)
+      .filter((child) => child.name === 'database-row' && !isTemplateData(child.preservedData as { template?: unknown }))
+      .map((child) => child.id));
+  }
+
   /** Called by a row this client deleted on its own; the row's backend copy goes too. */
   rowDeleted({ rowId }: { rowId: string }): void {
     if (this.destroyed || this.linked || this.readOnly || this.movingOut) return;
@@ -2759,7 +2773,21 @@ export class DatabaseTool implements BlockTool {
       onActivate: open,
     }];
 
-    return [[...turnIntoPage, ...lock, ...rename, ...merge], openAsPage]
+    // Same link as a row's New tab: a `#<id>?full` hash opens the full page on load.
+    // A host that opens full pages itself gives no link.
+    const openInNewTab: MenuConfigItem[] = open === undefined || this.config.openFullPage !== undefined ? [] : [{
+      icon: IconArrowDiagonal,
+      title: this.api.i18n.t('tools.file.previewOpenInNewTab'),
+      name: 'database-open-in-new-tab',
+      closeOnActivate: true,
+      onActivate: (): void => {
+        const href = safeHref(`${window.location.href.split('#')[0]}#${encodeURIComponent(this.block.id)}?full`);
+
+        if (href !== null) window.open(href, '_blank', 'noopener');
+      },
+    }];
+
+    return [[...turnIntoPage, ...lock, ...rename, ...merge], [...openAsPage, ...openInNewTab]]
       .filter((group) => group.length > 0)
       .flatMap((group, index) => index === 0 ? group : [{ type: PopoverItemType.Separator }, ...group]);
   }

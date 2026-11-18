@@ -46,6 +46,7 @@ const createSettings = (data: Partial<HeaderData> = {}, locale: 'en' | 'ru' = 'e
     id: 'section', name: 'header', holder, parentId: null,
     get pluginsContent() { return holder.firstElementChild; },
     createdAt: 0, lastEditedAt: 0,
+    contentBlockIds: (): string[] => [],
     getTunes: () => ({ commonTunes: [], toolTunes: header.renderSettings() }),
     getActiveToolboxEntry: async () => ({ title: 'Heading 2' }),
     save: async () => ({ data: header.save(holder) }),

@@ -146,6 +146,8 @@
   "tools.table.comfortableText": "ಆರಾಮದಾಯಕ ಪಠ್ಯ",
   "blockSettings.delete": "ಅಳಿಸಿ",
   "blockSettings.duplicate": "ನಕಲು ಮಾಡಿ",
+  "blockSettings.duplicateWithContent": "ವಿಷಯದೊಂದಿಗೆ ನಕಲು ಮಾಡಿ",
+  "blockSettings.duplicateWithoutContent": "ವಿಷಯವಿಲ್ಲದೆ ನಕಲು ಮಾಡಿ",
   "blockSettings.copyLink": "ಬ್ಲಾಕ್‌ಗೆ ಲಿಂಕ್ ನಕಲಿಸಿ",
   "blockSettings.copyPageLink": "ಲಿಂಕ್ ನಕಲಿಸಿ",
   "blockSettings.moveToTrash": "ಅನುಪಯುಕ್ತಕ್ಕೆ ಸರಿಸಿ",

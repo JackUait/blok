@@ -31,6 +31,41 @@ const databaseBlocks = (id: string, rows: string[]): OutputBlockData[] => [
   ...rows.map((row, index) => ({ id: row, type: 'database-row', parent: id, data: { properties: { t: row }, position: `a${index}` } })),
 ];
 
+/** A database with a filter, a sort, a manual row order and a template, beside a paragraph. */
+const setUpDatabase = (): OutputBlockData[] => [
+  {
+    id: 'db', type: 'database', content: ['r1', 'r2', 'tpl'],
+    data: {
+      title: 'Tasks',
+      schema,
+      views: [
+        { ...viewOf('v1'), filters: [{ id: 'f1', propertyId: 't', operator: 'contains', value: 'note' }], sorts: [{ propertyId: 't', direction: 'desc' }], rowOrder: { r1: 'a1', r2: 'a0' } },
+        { ...viewOf('v2'), name: 'Board', type: 'board' },
+      ],
+      activeViewId: 'v1',
+    },
+  },
+  { id: 'r1', type: 'database-row', parent: 'db', data: { properties: { t: 'Alpha note' }, position: 'a0' } },
+  { id: 'r2', type: 'database-row', parent: 'db', data: { properties: { t: 'Beta note' }, position: 'a1' } },
+  { id: 'tpl', type: 'database-row', parent: 'db', data: { properties: { t: 'Template' }, position: 'a2', template: true } },
+  { id: 'p', type: 'paragraph', data: { text: 'after' } },
+];
+
+/** Opens Duplicate's submenu and returns its rows. */
+const duplicateSubmenu = async (instance: Core, id: string): Promise<HTMLElement[]> => {
+  const rows = await openMenu(instance, id);
+
+  rows.find((row) => row.getAttribute('data-blok-item-name') === 'duplicate')?.click();
+
+  return vi.waitFor(() => {
+    const found = [...document.querySelectorAll<HTMLElement>('[data-blok-item-name^="duplicate-with"]')];
+
+    if (found.length === 0) throw new Error('no Duplicate submenu');
+
+    return found;
+  });
+};
+
 const boot = async (blocks: OutputBlockData[]): Promise<Core> => {
   holder = document.createElement('div');
   document.body.appendChild(holder);
@@ -129,6 +164,138 @@ describe('the database block menu in core', () => {
     await quiet();
 
     expect(show).not.toHaveBeenCalled();
+  });
+
+  it('Duplicate opens Notion\'s submenu: with content, then without content', async () => {
+    const instance = await boot(setUpDatabase());
+    const rows = await duplicateSubmenu(instance, 'db');
+
+    expect(rows.map((row) => row.getAttribute('data-blok-item-name'))).toEqual(['duplicate-with-content', 'duplicate-without-content']);
+    expect(rows.map((row) => row.querySelector('[data-blok-testid="popover-item-title"]')?.textContent)).toEqual(['Duplicate with content', 'Duplicate without content']);
+    expect(rows.every((row) => row.querySelector('[data-blok-testid="popover-item-secondary-title"]') !== null)).toBe(true);
+  });
+
+  it('Duplicate without content copies views, columns, filter and sort but no rows, and selects the copy', async () => {
+    const instance = await boot(setUpDatabase());
+    const before = (await instance.moduleInstances.Saver.save())?.blocks.map((saved) => saved.id) ?? [];
+
+    (await duplicateSubmenu(instance, 'db')).find((row) => row.getAttribute('data-blok-item-name') === 'duplicate-without-content')?.click();
+
+    const copy = await vi.waitFor(() => {
+      const found = instance.moduleInstances.BlockManager.blocks.find((candidate) => candidate.name === 'database' && candidate.id !== 'db');
+
+      if (found === undefined) throw new Error('no copy yet');
+
+      return found;
+    });
+    const saved = (await instance.moduleInstances.Saver.save())?.blocks ?? [];
+    const copyData = saved.find((entry) => entry.id === copy.id)?.data as { views: DatabaseViewConfig[]; schema: PropertyDefinition[] };
+    const copyRows = saved.filter((entry) => entry.parent === copy.id && entry.type === 'database-row');
+
+    expect(copyRows.filter((row) => (row.data as { template?: boolean }).template !== true)).toEqual([]);
+    expect(copyData.views.map((view) => view.type)).toEqual(['table', 'board']);
+    expect(copyData.views[0].filters).toHaveLength(1);
+    expect(copyData.views[0].sorts).toHaveLength(1);
+    expect(copyData.schema.map((property) => property.name)).toEqual(['Name']);
+    // No id of the original's rows stays in the copy.
+    expect(JSON.stringify(saved.filter((entry) => !before.includes(entry.id ?? '')))).not.toMatch(/"r1"|"r2"/);
+    await vi.waitFor(() => expect(copy.selected).toBe(true));
+    expect(block(instance, 'db').selected).toBe(false);
+    expect(saved.filter((entry) => entry.parent === 'db')).toHaveLength(3);
+  });
+
+  it('Duplicate without content puts the copy after the original\'s rows, not between it and them', async () => {
+    const instance = await boot([...databaseBlocks('db', ['r1', 'r2']), { id: 'p', type: 'paragraph', data: { text: 'after' } }]);
+
+    (await duplicateSubmenu(instance, 'db')).find((row) => row.getAttribute('data-blok-item-name') === 'duplicate-without-content')?.click();
+
+    const copy = await vi.waitFor(() => {
+      const found = instance.moduleInstances.BlockManager.blocks.find((candidate) => candidate.name === 'database' && candidate.id !== 'db');
+
+      if (found === undefined) throw new Error('no copy yet');
+
+      return found;
+    });
+
+    expect(instance.moduleInstances.BlockManager.blocks.map((entry) => entry.id)).toEqual(['db', 'r1', 'r2', copy.id, 'p']);
+    expect(copy.contentIds).toEqual([]);
+  });
+
+  it('Duplicate with content copies the rows too', async () => {
+    const instance = await boot(setUpDatabase());
+
+    (await duplicateSubmenu(instance, 'db')).find((row) => row.getAttribute('data-blok-item-name') === 'duplicate-with-content')?.click();
+
+    const copy = await vi.waitFor(() => {
+      const found = instance.moduleInstances.BlockManager.blocks.find((candidate) => candidate.name === 'database' && candidate.id !== 'db');
+
+      if (found === undefined) throw new Error('no copy yet');
+
+      return found;
+    });
+
+    expect(copy.contentIds).toHaveLength(3);
+  });
+
+  it('a linked view\'s Duplicate has no submenu, as in Notion', async () => {
+    const instance = await boot([...setUpDatabase(), { id: 'linked', type: 'database', data: { title: '', source: { databaseId: 'db' }, views: [], activeViewId: '' } }]);
+    const rows = await openMenu(instance, 'linked');
+    const duplicate = rows.find((row) => row.getAttribute('data-blok-item-name') === 'duplicate');
+
+    duplicate?.click();
+    await quiet();
+
+    expect(document.querySelector('[data-blok-item-name="duplicate-without-content"]')).toBeNull();
+  });
+
+  it('Cmd+Shift+D on a selected database duplicates it without content', async () => {
+    const instance = await boot(setUpDatabase());
+
+    instance.moduleInstances.BlockSelection.selectBlock(block(instance, 'db'));
+    const event = new KeyboardEvent('keydown', { key: 'D', code: 'KeyD', metaKey: true, shiftKey: true, bubbles: true, cancelable: true });
+
+    document.body.dispatchEvent(event);
+
+    const copy = await vi.waitFor(() => {
+      const found = instance.moduleInstances.BlockManager.blocks.find((candidate) => candidate.name === 'database' && candidate.id !== 'db');
+
+      if (found === undefined) throw new Error('no copy yet');
+
+      return found;
+    });
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(copy.contentIds).toEqual(copy.contentIds.filter((id) => instance.moduleInstances.BlockManager.getBlockById(id)?.preservedData.template === true));
+  });
+
+  it('Cmd+Shift+D also works when the selection holds the database\'s rows with it', async () => {
+    const instance = await boot(setUpDatabase());
+
+    ['db', 'r1', 'r2', 'tpl'].forEach((id) => instance.moduleInstances.BlockSelection.selectBlock(block(instance, id)));
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'D', code: 'KeyD', metaKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+
+    const copy = await vi.waitFor(() => {
+      const found = instance.moduleInstances.BlockManager.blocks.find((candidate) => candidate.name === 'database' && candidate.id !== 'db');
+
+      if (found === undefined) throw new Error('no copy yet');
+
+      return found;
+    });
+
+    expect(copy.contentIds).toHaveLength(1);
+  });
+
+  it('Cmd+Shift+D on a selected paragraph is left to the browser', async () => {
+    const instance = await boot(setUpDatabase());
+
+    instance.moduleInstances.BlockSelection.selectBlock(block(instance, 'p'));
+    const event = new KeyboardEvent('keydown', { key: 'D', code: 'KeyD', metaKey: true, shiftKey: true, bubbles: true, cancelable: true });
+
+    document.body.dispatchEvent(event);
+    await quiet();
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(instance.moduleInstances.BlockManager.blocks.filter((candidate) => candidate.name === 'paragraph')).toHaveLength(1);
   });
 
   it('has no Move to when the only pages are its own rows', async () => {

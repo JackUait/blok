@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "Удобен текст",
   "blockSettings.delete": "Изтрий",
   "blockSettings.duplicate": "Дублирай",
+  "blockSettings.duplicateWithContent": "Дублирай със съдържанието",
+  "blockSettings.duplicateWithoutContent": "Дублирай без съдържанието",
   "blockSettings.copyLink": "Копирай връзка към блока",
   "blockSettings.copyPageLink": "Копирай връзката",
   "blockSettings.moveToTrash": "Премести в кошчето",

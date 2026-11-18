@@ -122,6 +122,8 @@
   "tools.toggle.ariaLabelExpand": "Laajenna",
   "blockSettings.delete": "Poista",
   "blockSettings.duplicate": "Monista",
+  "blockSettings.duplicateWithContent": "Monista sisällön kanssa",
+  "blockSettings.duplicateWithoutContent": "Monista ilman sisältöä",
   "blockSettings.copyLink": "Kopioi lohkon linkki",
   "blockSettings.copyPageLink": "Kopioi linkki",
   "blockSettings.moveToTrash": "Siirrä roskakoriin",

@@ -116,6 +116,8 @@
   "tools.list.placeholder": "รายการ",
   "blockSettings.delete": "ลบ",
   "blockSettings.duplicate": "ทำซ้ำ",
+  "blockSettings.duplicateWithContent": "ทำซ้ำพร้อมเนื้อหา",
+  "blockSettings.duplicateWithoutContent": "ทำซ้ำโดยไม่มีเนื้อหา",
   "blockSettings.copyLink": "คัดลอกลิงก์ไปยังบล็อก",
   "blockSettings.copyPageLink": "คัดลอกลิงก์",
   "blockSettings.moveToTrash": "ย้ายไปถังขยะ",

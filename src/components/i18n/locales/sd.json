@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "عام متن",
   "blockSettings.delete": "ختم ڪريو",
   "blockSettings.duplicate": "نقل ٺاهيو",
+  "blockSettings.duplicateWithContent": "مواد سان نقل ٺاهيو",
+  "blockSettings.duplicateWithoutContent": "مواد کان سواءِ نقل ٺاهيو",
   "blockSettings.copyLink": "بلاڪ ڏانهن لنڪ ڪاپي ڪريو",
   "blockSettings.copyPageLink": "لنڪ ڪاپي ڪريو",
   "blockSettings.moveToTrash": "ڪچري ۾ منتقل ڪريو",

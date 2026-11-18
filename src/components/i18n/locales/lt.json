@@ -116,6 +116,8 @@
   "tools.list.placeholder": "Sąrašas",
   "blockSettings.delete": "Ištrinti",
   "blockSettings.duplicate": "Dubliuoti",
+  "blockSettings.duplicateWithContent": "Dubliuoti su turiniu",
+  "blockSettings.duplicateWithoutContent": "Dubliuoti be turinio",
   "blockSettings.copyLink": "Kopijuoti nuorodą į bloką",
   "blockSettings.copyPageLink": "Kopijuoti nuorodą",
   "blockSettings.moveToTrash": "Perkelti į šiukšlinę",

@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "Maandishi yenye nafasi",
   "blockSettings.delete": "Futa",
   "blockSettings.duplicate": "Rudufu",
+  "blockSettings.duplicateWithContent": "Rudufu pamoja na maudhui",
+  "blockSettings.duplicateWithoutContent": "Rudufu bila maudhui",
   "blockSettings.copyLink": "Nakili kiungo cha kizuizi",
   "blockSettings.copyPageLink": "Nakili kiungo",
   "blockSettings.moveToTrash": "Hamishia kwenye tupio",

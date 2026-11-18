@@ -117,8 +117,8 @@ describe('the database block menu', () => {
   it('lists Notion\'s rows Blok backs, in Notion\'s order and groups', async () => {
     const instance = await boot();
 
-    expect(layout(toolItems(instance))).toEqual(['database-lock', 'database-rename', 'database-merge-csv', '|', 'database-open-as-page']);
-    expect(toolItems(instance).map(entry => entry.title)).toEqual(['Lock database', 'Rename', 'Merge with CSV', undefined, 'Open as page']);
+    expect(layout(toolItems(instance))).toEqual(['database-lock', 'database-rename', 'database-merge-csv', '|', 'database-open-as-page', 'database-open-in-new-tab']);
+    expect(toolItems(instance).map(entry => entry.title)).toEqual(['Lock database', 'Rename', 'Merge with CSV', undefined, 'Open as page', 'Open in new tab']);
   });
 
   it('puts Turn into page first when a page host is there', async () => {
@@ -191,6 +191,35 @@ describe('the database block menu', () => {
     await settle();
 
     expect(window.location.hash).toBe('#db?full');
+  });
+
+  it('Open in new tab opens the database\'s full-page link in a new tab', async () => {
+    const instance = await boot();
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+
+    item(instance, 'database-open-in-new-tab').onActivate?.();
+
+    expect(open).toHaveBeenCalledExactlyOnceWith(`${window.location.href.split('#')[0]}#db?full`, '_blank', 'noopener');
+    expect(window.location.hash).toBe('');
+  });
+
+  it('has no Open in new tab when the host opens full pages itself: there is no link to open', async () => {
+    holder?.remove();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+    const instance = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: { class: DatabaseTool, config: { openFullPage: () => undefined } }, 'database-row': DatabaseRowTool },
+      data: { blocks: structuredClone(database()) },
+    } as never) as unknown as Runtime;
+
+    editor = instance;
+    await instance.isReady;
+    await settle();
+
+    expect(layout(toolItems(instance))).toContain('database-open-as-page');
+    expect(layout(toolItems(instance))).not.toContain('database-open-in-new-tab');
   });
 
   it('takes a 265px menu with 28px rows, like Notion\'s (notion-motion.md Round 65 §1)', () => {

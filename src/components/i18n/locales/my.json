@@ -146,6 +146,8 @@
   "tools.table.comfortableText": "သက်တောင့်သက်သာ စာသား",
   "blockSettings.delete": "ဖျက်ရန်",
   "blockSettings.duplicate": "မိတ္တူပွားရန်",
+  "blockSettings.duplicateWithContent": "အကြောင်းအရာနှင့်အတူ မိတ္တူပွားရန်",
+  "blockSettings.duplicateWithoutContent": "အကြောင်းအရာမပါဘဲ မိတ္တူပွားရန်",
   "blockSettings.copyLink": "ဘလောက်သို့ လင့်ခ်ကူးယူရန်",
   "blockSettings.copyPageLink": "လင့်ခ်ကူးယူရန်",
   "blockSettings.moveToTrash": "အမှိုက်ပုံးသို့ ရွှေ့ရန်",

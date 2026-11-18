@@ -122,6 +122,8 @@
   "tools.toggle.ariaLabelExpand": "विस्तृत करें",
   "blockSettings.delete": "हटाएं",
   "blockSettings.duplicate": "प्रतिलिपि बनाएँ",
+  "blockSettings.duplicateWithContent": "सामग्री सहित प्रतिलिपि बनाएँ",
+  "blockSettings.duplicateWithoutContent": "सामग्री के बिना प्रतिलिपि बनाएँ",
   "blockSettings.copyLink": "ब्लॉक का लिंक कॉपी करें",
   "blockSettings.copyPageLink": "लिंक कॉपी करें",
   "blockSettings.moveToTrash": "ट्रैश में ले जाएं",

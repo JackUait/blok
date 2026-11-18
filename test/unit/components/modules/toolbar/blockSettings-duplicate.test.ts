@@ -102,6 +102,7 @@ vi.mock('../../../../../src/components/i18n', () => ({
 }));
 
 const createBlock = (): Block => ({
+  contentBlockIds: (): string[] => [],
   getTunes: vi.fn(() => ({ commonTunes: [] })),
   getActiveToolboxEntry: vi.fn(async () => undefined),
   name: 'paragraph',

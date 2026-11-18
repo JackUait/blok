@@ -116,6 +116,8 @@
   "tools.list.placeholder": "Listă",
   "blockSettings.delete": "Șterge",
   "blockSettings.duplicate": "Duplică",
+  "blockSettings.duplicateWithContent": "Duplică cu conținut",
+  "blockSettings.duplicateWithoutContent": "Duplică fără conținut",
   "blockSettings.copyLink": "Copiază linkul blocului",
   "blockSettings.copyPageLink": "Copiază linkul",
   "blockSettings.moveToTrash": "Mută în coșul de gunoi",

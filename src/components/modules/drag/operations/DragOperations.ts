@@ -4,7 +4,7 @@
 
 import { nanoid } from 'nanoid';
 import type { BlockOrigin } from '../../../../../types';
-import { mintDatabaseRefIds, mintDatabaseViewIds, remapDatabaseRefs, remapDatabaseViewIds } from '../../../../shared/database/linked-source';
+import { mintDatabaseRefIds, mintDatabaseViewIds, remapDatabaseRefs, remapDatabaseViewIds, withoutRowOrderOf } from '../../../../shared/database/linked-source';
 import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../../../shared/page-reference';
 import { BlockToolAPI } from '../../../block';
 import type { Block } from '../../../block';
@@ -43,6 +43,8 @@ export interface DuplicatePreparation {
   baseInsertIndex: number;
   /** null when pre-save stale guards aborted or post-save liveTargetIndex was -1. */
   aborted: boolean;
+  /** Blocks under a copied block that stay behind ("Duplicate without content"). */
+  leftOut?: ReadonlySet<string>;
 }
 
 export interface BlockManagerAdapter {
@@ -303,7 +305,7 @@ export class DragOperations {
     // A block the resolver maps is inserted as what it returned. One insert per
     // result either way: callers pair duplicatedBlocks with sortedBlocks by index.
     const duplicatedBlocks = prep.validResults.map(({ saved, toolName, link }, index) => {
-      const data = link?.data ?? remapDatabaseRefs(toolName, remapDatabaseViewIds(toolName, prep.sortedBlocks[index].id, structuredClone(saved.data), copiedViewIds), copiedRefIds);
+      const data = link?.data ?? withoutRowOrderOf(toolName, remapDatabaseRefs(toolName, remapDatabaseViewIds(toolName, prep.sortedBlocks[index].id, structuredClone(saved.data), copiedViewIds), copiedRefIds), prep.leftOut);
       const id = copiedRefIds.get(prep.sortedBlocks[index].id);
       const text = data.text;
 

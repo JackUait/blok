@@ -23,6 +23,7 @@ const createSettings = (commonTunes: MenuConfigItem[], toolTunes: MenuConfigItem
   const block = {
     id: 'section', name: 'custom-heading', parentId: null, holder, pluginsContent: content,
     createdAt: 0, lastEditedAt: 0,
+    contentBlockIds: (): string[] => [],
     getTunes: () => ({ commonTunes, toolTunes }),
     getActiveToolboxEntry: async () => ({ title: 'Custom title', icon: '<svg></svg>' }),
     save: async () => ({ data: { text: 'Section' } }),

@@ -110,6 +110,8 @@
   "tools.toggle.ariaLabelExpand": "ዘርጋ",
   "blockSettings.delete": "ሰርዝ",
   "blockSettings.duplicate": "አባዛ",
+  "blockSettings.duplicateWithContent": "ከይዘት ጋር አባዛ",
+  "blockSettings.duplicateWithoutContent": "ያለ ይዘት አባዛ",
   "blockSettings.copyLink": "ወደ ብሎክ አገናኝ ቅዳ",
   "blockSettings.copyPageLink": "አገናኝ ቅዳ",
   "blockSettings.moveToTrash": "ወደ መጣያ ውሰድ",

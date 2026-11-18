@@ -110,6 +110,8 @@
   "tools.toggle.ariaLabelExpand": "প্রসারিত করুন",
   "blockSettings.delete": "মুছুন",
   "blockSettings.duplicate": "প্রতিলিপি",
+  "blockSettings.duplicateWithContent": "বিষয়বস্তু সহ প্রতিলিপি",
+  "blockSettings.duplicateWithoutContent": "বিষয়বস্তু ছাড়া প্রতিলিপি",
   "blockSettings.copyLink": "ব্লকের লিঙ্ক কপি করুন",
   "blockSettings.copyPageLink": "লিঙ্ক কপি করুন",
   "blockSettings.moveToTrash": "ট্র্যাশে সরান",

@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "Kényelmes szöveg",
   "blockSettings.delete": "Törlés",
   "blockSettings.duplicate": "Megkettőzés",
+  "blockSettings.duplicateWithContent": "Megkettőzés tartalommal",
+  "blockSettings.duplicateWithoutContent": "Megkettőzés tartalom nélkül",
   "blockSettings.copyLink": "Blokkra mutató hivatkozás másolása",
   "blockSettings.copyPageLink": "Hivatkozás másolása",
   "blockSettings.moveToTrash": "Áthelyezés a kukába",

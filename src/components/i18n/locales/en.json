@@ -160,6 +160,8 @@
   "tools.table.placementBottomRight": "Bottom right",
   "blockSettings.delete": "Delete",
   "blockSettings.duplicate": "Duplicate",
+  "blockSettings.duplicateWithContent": "Duplicate with content",
+  "blockSettings.duplicateWithoutContent": "Duplicate without content",
   "blockSettings.lastEdited": "Last edited",
   "blockSettings.lastEditedBy": "Last edited by {name}",
   "blockSettings.copyLink": "Copy link to block",

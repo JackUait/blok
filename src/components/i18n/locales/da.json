@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "Luftig tekst",
   "blockSettings.delete": "Slet",
   "blockSettings.duplicate": "Dupliker",
+  "blockSettings.duplicateWithContent": "Dupliker med indhold",
+  "blockSettings.duplicateWithoutContent": "Dupliker uden indhold",
   "blockSettings.copyLink": "Kopiér link til blok",
   "blockSettings.copyPageLink": "Kopiér link",
   "blockSettings.moveToTrash": "Flyt til papirkurven",

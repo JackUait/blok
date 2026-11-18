@@ -197,6 +197,27 @@ export const remapDatabaseRefs = <T>(type: string, data: T, ids: ReadonlyMap<str
 };
 
 /**
+ * `data` without the left-out rows in any view's manual order, so a database
+ * copied without its rows names none of the original's. The same object when
+ * nothing is left out.
+ * @param type - the block's tool name
+ * @param data - the block's data
+ * @param leftOut - ids of the blocks the copy left behind
+ */
+export const withoutRowOrderOf = <T>(type: string, data: T, leftOut: ReadonlySet<string> | undefined): T => {
+  if (leftOut === undefined || leftOut.size === 0 || !rowOrdersOf(type, data).some((order) => Object.keys(order).some((rowId) => leftOut.has(rowId)))) return data;
+  const next = cloneRecord(data as Record<string, unknown>) as T;
+
+  for (const view of isFields(next) ? fieldsIn(next.views) : []) {
+    if (isFields(view.rowOrder)) {
+      view.rowOrder = Object.fromEntries(Object.entries(view.rowOrder).filter(([rowId]) => !leftOut.has(rowId)));
+    }
+  }
+
+  return next;
+};
+
+/**
  * New view ids for each copied database, by its original block id. Personal
  * view state and `#view-<id>` links are keyed by view id, so a copy that kept
  * them would share both with the original. View ids repeat across blocks, so

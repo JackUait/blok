@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "Mugav tekst",
   "blockSettings.delete": "Kustuta",
   "blockSettings.duplicate": "Dubleeri",
+  "blockSettings.duplicateWithContent": "Dubleeri koos sisuga",
+  "blockSettings.duplicateWithoutContent": "Dubleeri ilma sisuta",
   "blockSettings.copyLink": "Kopeeri ploki link",
   "blockSettings.copyPageLink": "Kopeeri link",
   "blockSettings.moveToTrash": "Teisalda prügikasti",

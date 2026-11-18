@@ -116,6 +116,8 @@
   "tools.list.placeholder": "სია",
   "blockSettings.delete": "წაშლა",
   "blockSettings.duplicate": "დუბლირება",
+  "blockSettings.duplicateWithContent": "დუბლირება შიგთავსით",
+  "blockSettings.duplicateWithoutContent": "დუბლირება შიგთავსის გარეშე",
   "blockSettings.copyLink": "ბლოკის ბმულის კოპირება",
   "blockSettings.copyPageLink": "ბმულის კოპირება",
   "blockSettings.moveToTrash": "ნაგავში გადატანა",

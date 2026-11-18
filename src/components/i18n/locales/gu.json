@@ -110,6 +110,8 @@
   "tools.toggle.ariaLabelExpand": "વિસ્તૃત કરો",
   "blockSettings.delete": "કાઢી નાખો",
   "blockSettings.duplicate": "નકલ બનાવો",
+  "blockSettings.duplicateWithContent": "સામગ્રી સાથે નકલ બનાવો",
+  "blockSettings.duplicateWithoutContent": "સામગ્રી વિના નકલ બનાવો",
   "blockSettings.copyLink": "બ્લોકની લિંક કૉપી કરો",
   "blockSettings.copyPageLink": "લિંક કૉપિ કરો",
   "blockSettings.moveToTrash": "કચરાપેટીમાં ખસેડો",

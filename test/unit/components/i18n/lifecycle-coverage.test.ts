@@ -299,7 +299,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2249 + 146 + 599 + 11 closure for all 3005 keys', () => {
+  it('rebuilds a disjoint 2251 + 146 + 599 + 11 closure for all 3007 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -313,7 +313,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(3005);
+    expect(lifecycle.size).toBe(3007);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -584,7 +584,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: Move to's Workspace section calls tools.database.moveToWorkspace by literal.
       // -1: the database block menu now reads tools.database.turnIntoPage through its tools.database. prefix (see registered-namespace-compatible).
       // +2: the database block's Delete prompt calls trashDatabaseConfirm and its description by literal.
-      'executable-literal': 2249,
+      // +2: Duplicate's submenu calls blockSettings.duplicateWithContent and duplicateWithoutContent by literal.
+      'executable-literal': 2251,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

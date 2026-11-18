@@ -104,6 +104,8 @@
   "tools.list.placeholder": "జాబితా",
   "blockSettings.delete": "తొలగించు",
   "blockSettings.duplicate": "నకలు చేయండి",
+  "blockSettings.duplicateWithContent": "కంటెంట్‌తో నకలు చేయండి",
+  "blockSettings.duplicateWithoutContent": "కంటెంట్ లేకుండా నకలు చేయండి",
   "blockSettings.copyLink": "బ్లాక్‌కు లింక్ కాపీ చేయి",
   "blockSettings.copyPageLink": "లింక్‌ను కాపీ చేయి",
   "blockSettings.moveToTrash": "ట్రాష్‌కు తరలించు",

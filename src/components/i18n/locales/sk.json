@@ -116,6 +116,8 @@
   "tools.list.placeholder": "Zoznam",
   "blockSettings.delete": "Odstrániť",
   "blockSettings.duplicate": "Duplikovať",
+  "blockSettings.duplicateWithContent": "Duplikovať s obsahom",
+  "blockSettings.duplicateWithoutContent": "Duplikovať bez obsahu",
   "blockSettings.copyLink": "Kopírovať odkaz na blok",
   "blockSettings.copyPageLink": "Kopírovať odkaz",
   "blockSettings.moveToTrash": "Presunúť do koša",

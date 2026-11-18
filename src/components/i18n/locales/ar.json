@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "نص مريح",
   "blockSettings.delete": "حذف",
   "blockSettings.duplicate": "تكرار",
+  "blockSettings.duplicateWithContent": "تكرار مع المحتوى",
+  "blockSettings.duplicateWithoutContent": "تكرار بدون المحتوى",
   "blockSettings.copyLink": "نسخ رابط الكتلة",
   "blockSettings.copyPageLink": "نسخ الرابط",
   "blockSettings.moveToTrash": "نقل إلى سلة المهملات",

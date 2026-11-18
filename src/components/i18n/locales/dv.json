@@ -122,6 +122,8 @@
   "tools.toggle.ariaLabelExpand": "ފުޅާ ކުރޭ",
   "blockSettings.delete": "ފޮހެލާ",
   "blockSettings.duplicate": "ކޮޕީ ހަދާ",
+  "blockSettings.duplicateWithContent": "ތެރޭގައިވާ އެއްޗެހިތަކާއެކު ކޮޕީ ހަދާ",
+  "blockSettings.duplicateWithoutContent": "ތެރޭގައިވާ އެއްޗެހި ނުލައި ކޮޕީ ހަދާ",
   "blockSettings.copyLink": "ބްލޮކަށް ލިންކް ކޮޕީކުރޭ",
   "blockSettings.copyPageLink": "ލިންކް ކޮޕީކުރޭ",
   "blockSettings.moveToTrash": "ކުނިފޮށިއަށް ބަދަލުކުރޭ",

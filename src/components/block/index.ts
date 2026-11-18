@@ -607,6 +607,24 @@ export class Block extends EventsDispatcher<BlockEvents> {
     }
   }
 
+  /** The blocks under this one that "Duplicate without content" leaves out; [] when none or the call throws. */
+  public contentBlockIds(): string[] {
+    const method = (this.toolInstance as unknown as Record<string, unknown>).contentBlockIds;
+
+    if (!isFunction(method)) {
+      return [];
+    }
+    try {
+      const ids: unknown = method.call(this.toolInstance);
+
+      return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [];
+    } catch (e) {
+      log(`Error during 'contentBlockIds' call: ${e instanceof Error ? e.message : String(e)}`, 'error');
+
+      return [];
+    }
+  }
+
   /** The tool's buttons for the page header row; [] when it has none or the call throws. */
   public pageHeaderActions(): PageHeaderAction[] {
     const method = (this.toolInstance as unknown as Record<string, unknown>).pageHeaderActions;

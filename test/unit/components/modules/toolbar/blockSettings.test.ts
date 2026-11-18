@@ -168,6 +168,7 @@ type EventsDispatcherMock = {
 };
 
 const createBlock = (): Block => ({
+  contentBlockIds: (): string[] => [],
   getTunes: vi.fn(() => ({
     commonTunes: [],
   })),

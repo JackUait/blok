@@ -158,6 +158,8 @@
   "tools.table.comfortableText": "טקסט נוח",
   "blockSettings.delete": "מחק",
   "blockSettings.duplicate": "שכפל",
+  "blockSettings.duplicateWithContent": "שכפל עם התוכן",
+  "blockSettings.duplicateWithoutContent": "שכפל בלי התוכן",
   "blockSettings.copyLink": "העתק קישור לבלוק",
   "blockSettings.copyPageLink": "העתק קישור",
   "blockSettings.moveToTrash": "העבר לאשפה",

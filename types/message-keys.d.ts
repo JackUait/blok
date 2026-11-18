@@ -151,6 +151,8 @@ export type BlokMessageKey =
   | 'blockSettings.delete'
   | 'blockSettings.dragToMove'
   | 'blockSettings.duplicate'
+  | 'blockSettings.duplicateWithContent'
+  | 'blockSettings.duplicateWithoutContent'
   | 'blockSettings.lastEdited'
   | 'blockSettings.lastEditedBy'
   | 'blockSettings.menuShortcutMac'

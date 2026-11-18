@@ -122,6 +122,8 @@
   "tools.toggle.ariaLabelExpand": "Ανάπτυξη",
   "blockSettings.delete": "Διαγραφή",
   "blockSettings.duplicate": "Διπλότυπο",
+  "blockSettings.duplicateWithContent": "Διπλότυπο με περιεχόμενο",
+  "blockSettings.duplicateWithoutContent": "Διπλότυπο χωρίς περιεχόμενο",
   "blockSettings.copyLink": "Αντιγραφή συνδέσμου μπλοκ",
   "blockSettings.copyPageLink": "Αντιγραφή συνδέσμου",
   "blockSettings.moveToTrash": "Μετακίνηση στον κάδο",

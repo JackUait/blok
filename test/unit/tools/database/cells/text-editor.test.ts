@@ -527,4 +527,59 @@ describe('checkbox cell', () => {
       expect(editorRoot()?.style.minHeight).toBe('');
     });
   });
+
+  // notion-motion.md Round 75 §2: on macOS Home and End move the caret to the visual line's start and end.
+  // The textarea's own macOS Home/End only scroll, so the editor moves the caret itself there.
+  describe('Home and End in a Text editor', () => {
+    const MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)';
+    const LINUX = 'Mozilla/5.0 (X11; Linux x86_64)';
+
+    const stubModify = (): ReturnType<typeof vi.fn> => {
+      const modify = vi.fn();
+
+      Object.defineProperty(Selection.prototype, 'modify', { value: modify, configurable: true, writable: true });
+
+      return modify;
+    };
+
+    afterEach(() => {
+      Reflect.deleteProperty(Selection.prototype, 'modify');
+    });
+
+    it.each([
+      ['Home', 'backward'],
+      ['End', 'forward'],
+    ])('on macOS %s moves the caret to the %s line boundary', (key, direction) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC);
+      const modify = stubModify();
+
+      openCellEditor(makeProperty('text'), 'hello', makeAnchor(), makeEditorContext());
+      const event = press(field(), key);
+
+      expect(modify).toHaveBeenCalledWith('move', direction, 'lineboundary');
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it.each(['Home', 'End'])('off macOS %s is left to the browser', (key) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(LINUX);
+      const modify = stubModify();
+
+      openCellEditor(makeProperty('text'), 'hello', makeAnchor(), makeEditorContext());
+      const event = press(field(), key);
+
+      expect(modify).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('on macOS leaves Shift+Home to the browser', () => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC);
+      const modify = stubModify();
+
+      openCellEditor(makeProperty('text'), 'hello', makeAnchor(), makeEditorContext());
+      const event = press(field(), 'Home', { shiftKey: true });
+
+      expect(modify).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    });
+  });
 });

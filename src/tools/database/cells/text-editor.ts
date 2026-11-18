@@ -1,3 +1,4 @@
+import { getUserOS } from '../../../components/utils/browser';
 import type { PropertyDefinition, PropertyValue } from '../types';
 import { CellPopover, coverMinHeight, coverMinWidth } from './cell-popover';
 import { resolveLocale } from './date-format';
@@ -140,6 +141,17 @@ export const openTextEditor = (
     if (event.key === 'Tab' && ctx.tabCloses === true && header === undefined && footer === undefined) {
       event.preventDefault();
       finish(resolve() ?? { kind: 'cancel' });
+
+      return;
+    }
+    // notion-motion.md Round 75 §2: Notion moves to the visual line's edge; macOS Home/End only scroll a textarea.
+    // Other platforms already move the caret, and modifier chords were not measured.
+    const edge = ({ Home: 'backward', End: 'forward' } as const)[event.key as 'Home' | 'End'];
+    const bare = !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey;
+
+    if (edge !== undefined && bare && property.type === 'text' && getUserOS().mac) {
+      event.preventDefault();
+      window.getSelection()?.modify('move', edge, 'lineboundary');
 
       return;
     }

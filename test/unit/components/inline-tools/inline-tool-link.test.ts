@@ -254,11 +254,11 @@ describe('LinkInlineTool', () => {
     expect(config.children.width).toBeUndefined();
   });
 
-  it('opens the link field below the inline toolbar, not beside it', () => {
+  it('leaves the link field placement to the inline toolbar, which drops it over the card', () => {
     const { tool } = createTool();
     const config = tool.render() as unknown as { children: { placement?: string } };
 
-    expect(config.children.placement).toBe('below');
+    expect(config.children.placement).toBeUndefined();
   });
 
   it('stretches the input to fill the popover width instead of a fixed pixel width', () => {

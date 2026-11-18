@@ -233,9 +233,9 @@ export abstract class PopoverItem {
 
   /**
    * Where the children popover opens: beside the parent popover (default),
-   * below it, as a dropdown on the item's value, or under the item.
+   * below it, as a dropdown on the item's value, under the item, or over the parent.
    */
-  public get childrenPlacement(): 'beside' | 'below' | 'dropdown' | 'under' {
+  public get childrenPlacement(): 'beside' | 'below' | 'dropdown' | 'under' | 'over' {
     if (this.params === undefined || !('children' in this.params)) {
       return 'beside';
     }

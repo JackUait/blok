@@ -62,13 +62,15 @@ export interface PopoverItemChildren {
    * Where the children popover opens relative to the parent popover.
    * 'beside' (default) opens it next to the parent, vertically centered on
    * the trigger item; 'below' opens it under the parent with left edges
-   * aligned (e.g. the inline toolbar's link field); 'dropdown' opens it under
+   * aligned; 'dropdown' opens it under
    * the item's value, or over it when there is no room under it, like a
    * select. A 'dropdown' list opens on click or a key, never on hover, and
    * moving the pointer over other rows leaves it open. 'under' opens it right
-   * under the item, its end edge on the item's end edge.
+   * under the item, its end edge on the item's end edge. 'over' opens it 4px
+   * under the item, start edges together, covering the parent's items below
+   * (the inline toolbar's default: its color picker and link field).
    */
-  placement?: 'beside' | 'below' | 'dropdown' | 'under';
+  placement?: 'beside' | 'below' | 'dropdown' | 'under' | 'over';
 
   /**
    * Where a 'beside' popover sits on the vertical axis: 'center' (default)

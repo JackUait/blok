@@ -306,9 +306,6 @@ export class LinkInlineTool implements InlineTool {
       isActive: () => !!this.selection.findParentTag('A'),
       children: {
         hideChevron: true,
-        // The link field reads as a continuation of the toolbar, so it opens
-        // under the toolbar card instead of beside it.
-        placement: 'below',
         items: [
           {
             type: PopoverItemType.Html,

@@ -90,7 +90,7 @@ export class PopoverInline extends PopoverDesktop {
       {
         ...params,
         items: params.items.map(item => 'children' in item && item.children !== undefined
-          ? { ...item, children: { ...item.children, placement: item.children.placement ?? 'below' } }
+          ? { ...item, children: { ...item.children, placement: item.children.placement ?? 'over' } }
           : item),
         flipper: inlineFlipper,
       },

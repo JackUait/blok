@@ -1161,7 +1161,7 @@ describe('LinkInlineTool — mutation coverage', () => {
 
       expect(harness.menu.name).toBe('link');
       expect(harness.menu.children.hideChevron).toBe(true);
-      expect(harness.menu.children.placement).toBe('below');
+      expect(harness.menu.children.placement).toBeUndefined();
     });
 
     it('reports itself active only inside an anchor', () => {

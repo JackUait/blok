@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "حال ہی میں استعمال کیے گئے",
+  "tools.colorPicker.backgroundColor": "پس منظر کا رنگ",
   "tools.colorPicker.color.gray": "سرمئی",
   "tools.colorPicker.color.brown": "بھورا",
   "tools.colorPicker.color.orange": "نارنجی",

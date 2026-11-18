@@ -520,6 +520,7 @@ export type BlokMessageKey =
   | 'tools.code.sideBySide'
   | 'tools.code.suggested'
   | 'tools.code.wrapLines'
+  | 'tools.colorPicker.backgroundColor'
   | 'tools.colorPicker.color.blue'
   | 'tools.colorPicker.color.brown'
   | 'tools.colorPicker.color.gray'

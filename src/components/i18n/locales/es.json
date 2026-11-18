@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "Usados recientemente",
+  "tools.colorPicker.backgroundColor": "Color de fondo",
   "tools.colorPicker.color.gray": "Gris",
   "tools.colorPicker.color.brown": "Marrón",
   "tools.colorPicker.color.orange": "Naranja",

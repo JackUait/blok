@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "Son kullanılanlar",
+  "tools.colorPicker.backgroundColor": "Arka plan rengi",
   "tools.colorPicker.color.gray": "Gri",
   "tools.colorPicker.color.brown": "Kahverengi",
   "tools.colorPicker.color.orange": "Turuncu",

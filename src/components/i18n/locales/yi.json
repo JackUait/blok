@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "לעצטנס געניצט",
+  "tools.colorPicker.backgroundColor": "הינטערגרונט־קאָליר",
   "tools.colorPicker.color.gray": "גרוי",
   "tools.colorPicker.color.brown": "ברוין",
   "tools.colorPicker.color.orange": "אָראַנזש",

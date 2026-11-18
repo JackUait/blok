@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "Нещодавно використані",
+  "tools.colorPicker.backgroundColor": "Колір тла",
   "tools.colorPicker.color.gray": "Сірий",
   "tools.colorPicker.color.brown": "Коричневий",
   "tools.colorPicker.color.orange": "Помаранчевий",

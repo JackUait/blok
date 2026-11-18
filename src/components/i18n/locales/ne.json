@@ -77,6 +77,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
   "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.recentlyUsed": "हालै प्रयोग गरिएका",
+  "tools.colorPicker.backgroundColor": "पृष्ठभूमिको रङ",
   "tools.colorPicker.color.gray": "खैरो",
   "tools.colorPicker.color.brown": "बदामी",
   "tools.colorPicker.color.orange": "सुन्तला",

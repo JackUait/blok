@@ -77,6 +77,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
   "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.recentlyUsed": "မကြာသေးမီက အသုံးပြုထားသော အရောင်များ",
+  "tools.colorPicker.backgroundColor": "နောက်ခံအရောင်",
   "tools.colorPicker.color.gray": "မီးခိုးရောင်",
   "tools.colorPicker.color.brown": "အညိုရောင်",
   "tools.colorPicker.color.orange": "လိမ္မော်ရောင်",

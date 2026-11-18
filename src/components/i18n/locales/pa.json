@@ -77,6 +77,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
   "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.recentlyUsed": "ਹਾਲ ਹੀ ਵਿੱਚ ਵਰਤੇ ਗਏ",
+  "tools.colorPicker.backgroundColor": "ਪਿਛੋਕੜ ਦਾ ਰੰਗ",
   "tools.colorPicker.color.gray": "ਸਲੇਟੀ",
   "tools.colorPicker.color.brown": "ਭੂਰਾ",
   "tools.colorPicker.color.orange": "ਸੰਤਰੀ",

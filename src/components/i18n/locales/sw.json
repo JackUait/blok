@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "Zilizotumika hivi majuzi",
+  "tools.colorPicker.backgroundColor": "Rangi ya mandharinyuma",
   "tools.colorPicker.color.gray": "Kijivu",
   "tools.colorPicker.color.brown": "Kahawia",
   "tools.colorPicker.color.orange": "Chungwa",

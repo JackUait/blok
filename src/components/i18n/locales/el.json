@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "Πρόσφατα χρησιμοποιημένα",
+  "tools.colorPicker.backgroundColor": "Χρώμα φόντου",
   "tools.colorPicker.color.gray": "Γκρι",
   "tools.colorPicker.color.brown": "Καφέ",
   "tools.colorPicker.color.orange": "Πορτοκαλί",

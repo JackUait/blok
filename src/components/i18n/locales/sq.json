@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "Të përdorura së fundmi",
+  "tools.colorPicker.backgroundColor": "Ngjyra e sfondit",
   "tools.colorPicker.color.gray": "Gri",
   "tools.colorPicker.color.brown": "Kafe",
   "tools.colorPicker.color.orange": "Portokalli",

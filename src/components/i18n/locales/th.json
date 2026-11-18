@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "ใช้ล่าสุด",
+  "tools.colorPicker.backgroundColor": "สีพื้นหลัง",
   "tools.colorPicker.color.gray": "สีเทา",
   "tools.colorPicker.color.brown": "สีน้ำตาล",
   "tools.colorPicker.color.orange": "สีส้ม",

@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "Nedávno použité",
+  "tools.colorPicker.backgroundColor": "Farba pozadia",
   "tools.colorPicker.color.gray": "Sivá",
   "tools.colorPicker.color.brown": "Hnedá",
   "tools.colorPicker.color.orange": "Oranžová",

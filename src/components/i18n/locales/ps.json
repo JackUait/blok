@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "په دې وروستیو کې کارول شوي",
+  "tools.colorPicker.backgroundColor": "د شالید رنګ",
   "tools.colorPicker.color.gray": "خړ",
   "tools.colorPicker.color.brown": "نسواري",
   "tools.colorPicker.color.orange": "نارنجي",

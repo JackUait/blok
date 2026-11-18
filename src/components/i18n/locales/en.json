@@ -81,6 +81,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
   "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.recentlyUsed": "Recently used",
+  "tools.colorPicker.backgroundColor": "Background color",
   "tools.colorPicker.color.gray": "Gray",
   "tools.colorPicker.color.brown": "Brown",
   "tools.colorPicker.color.orange": "Orange",

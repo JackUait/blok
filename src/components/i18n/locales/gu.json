@@ -77,6 +77,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "તાજેતરમાં વપરાયેલા",
+  "tools.colorPicker.backgroundColor": "પૃષ્ઠભૂમિનો રંગ",
   "tools.colorPicker.color.gray": "ગ્રે",
   "tools.colorPicker.color.brown": "કથ્થઈ",
   "tools.colorPicker.color.orange": "નારંગી",

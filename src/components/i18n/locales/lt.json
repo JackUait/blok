@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "Neseniai naudotos",
+  "tools.colorPicker.backgroundColor": "Fono spalva",
   "tools.colorPicker.color.gray": "Pilka",
   "tools.colorPicker.color.brown": "Ruda",
   "tools.colorPicker.color.orange": "Oranžinė",

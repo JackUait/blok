@@ -11,6 +11,15 @@ describe('createCellColorPicker', () => {
     getLocale: () => 'en',
   };
 
+  /**
+   * The check span is the row's last child: tile, name, check.
+   */
+  const checkOf = (row: HTMLElement | null): HTMLElement | null => {
+    const check = row?.lastElementChild;
+
+    return check instanceof HTMLElement ? check : null;
+  };
+
   it('renders two sections for Text and Background', () => {
     const { element } = createCellColorPicker({
       i18n: mockI18n,
@@ -121,7 +130,7 @@ describe('createCellColorPicker', () => {
     expect(defaultBtn).toBeNull();
   });
 
-  it('text-color swatches display "A" text, background-color swatches do not', () => {
+  it('text-color tiles display "A" text, background-color tiles do not', () => {
     const { element } = createCellColorPicker({
       i18n: mockI18n,
       onColorSelect: vi.fn(),
@@ -130,12 +139,15 @@ describe('createCellColorPicker', () => {
     const textSwatches = Array.from(element.querySelectorAll('[data-blok-testid^="cell-color-swatch-textColor-"]'));
     const bgSwatches = Array.from(element.querySelectorAll('[data-blok-testid^="cell-color-swatch-backgroundColor-"]'));
 
+    expect(textSwatches).toHaveLength(COLOR_PRESETS.length + 1);
+    expect(bgSwatches).toHaveLength(COLOR_PRESETS.length + 1);
+
     for (const swatch of textSwatches) {
-      expect(swatch.textContent).toBe('A');
+      expect(swatch.firstElementChild?.classList.contains("before:content-['A']")).toBe(true);
     }
 
     for (const swatch of bgSwatches) {
-      expect(swatch.textContent).toBe('');
+      expect(swatch.firstElementChild?.textContent).toBe('');
     }
   });
 
@@ -154,9 +166,10 @@ describe('createCellColorPicker', () => {
       '[data-blok-testid="cell-color-swatch-backgroundColor-default"]'
     );
 
-    // The applied color's swatch carries the solid active ring; Default does not.
-    expect(activeSwatch?.classList.contains('ring-2')).toBe(true);
-    expect(defaultSwatch?.classList.contains('ring-2')).toBe(false);
+    expect(activeSwatch?.getAttribute('aria-pressed')).toBe('true');
+    expect(checkOf(activeSwatch)?.hidden).toBe(false);
+    expect(defaultSwatch?.getAttribute('aria-pressed')).toBe('false');
+    expect(checkOf(defaultSwatch)?.hidden).toBe(true);
   });
 
   it('marks the cell\'s current text color as active in the text section', () => {
@@ -171,7 +184,8 @@ describe('createCellColorPicker', () => {
       `[data-blok-testid="cell-color-swatch-textColor-${COLOR_PRESETS[2].name}"]`
     );
 
-    expect(activeSwatch?.classList.contains('ring-2')).toBe(true);
+    expect(activeSwatch?.getAttribute('aria-pressed')).toBe('true');
+    expect(checkOf(activeSwatch)?.hidden).toBe(false);
   });
 
   it('marks Default as active when the cell has no color set', () => {
@@ -185,10 +199,11 @@ describe('createCellColorPicker', () => {
       '[data-blok-testid="cell-color-swatch-backgroundColor-default"]'
     );
 
-    expect(bgDefault?.classList.contains('ring-2')).toBe(true);
+    expect(bgDefault?.getAttribute('aria-pressed')).toBe('true');
+    expect(checkOf(bgDefault)?.hidden).toBe(false);
   });
 
-  it('swatches in background section show background color', () => {
+  it('tiles in background section show background color', () => {
     const { element } = createCellColorPicker({
       i18n: mockI18n,
       onColorSelect: vi.fn(),
@@ -198,7 +213,6 @@ describe('createCellColorPicker', () => {
       `[data-blok-testid="cell-color-swatch-backgroundColor-${COLOR_PRESETS[0].name}"]`
     );
 
-    // JSDOM normalises hex to rgb(), so just check the property is set
-    expect(firstSwatch?.style.backgroundColor).toBeTruthy();
+    expect(firstSwatch?.firstElementChild).toHaveStyle({ backgroundColor: COLOR_PRESETS[0].bg });
   });
 });

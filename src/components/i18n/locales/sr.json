@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "Недавно коришћене",
+  "tools.colorPicker.backgroundColor": "Боја позадине",
   "tools.colorPicker.color.gray": "Сива",
   "tools.colorPicker.color.brown": "Смеђа",
   "tools.colorPicker.color.orange": "Наранџаста",

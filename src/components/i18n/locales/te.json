@@ -77,6 +77,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "ఇటీవల ఉపయోగించినవి",
+  "tools.colorPicker.backgroundColor": "నేపథ్య రంగు",
   "tools.colorPicker.color.gray": "బూడిద",
   "tools.colorPicker.color.brown": "గోధుమ",
   "tools.colorPicker.color.orange": "నారింజ",

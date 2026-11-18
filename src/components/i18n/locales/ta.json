@@ -77,6 +77,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "சமீபத்தில் பயன்படுத்தியவை",
+  "tools.colorPicker.backgroundColor": "பின்னணி நிறம்",
   "tools.colorPicker.color.gray": "சாம்பல்",
   "tools.colorPicker.color.brown": "பழுப்பு",
   "tools.colorPicker.color.orange": "ஆரஞ்சு",

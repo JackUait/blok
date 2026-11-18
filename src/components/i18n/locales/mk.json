@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "Неодамна користени",
+  "tools.colorPicker.backgroundColor": "Боја на позадината",
   "tools.colorPicker.color.gray": "Сиво",
   "tools.colorPicker.color.brown": "Кафено",
   "tools.colorPicker.color.orange": "Портокалово",

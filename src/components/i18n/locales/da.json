@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{default}{mode}",
   "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.recentlyUsed": "Senest brugte",
+  "tools.colorPicker.backgroundColor": "Baggrundsfarve",
   "tools.colorPicker.color.gray": "Grå",
   "tools.colorPicker.color.brown": "Brun",
   "tools.colorPicker.color.orange": "Orange",

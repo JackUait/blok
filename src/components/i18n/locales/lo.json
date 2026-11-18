@@ -77,6 +77,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.recentlyUsed": "ໃຊ້ຫຼ້າສຸດ",
+  "tools.colorPicker.backgroundColor": "ສີພື້ນຫຼັງ",
   "tools.colorPicker.color.gray": "ສີຂີ້ເຖົ່າ",
   "tools.colorPicker.color.brown": "ສີນ້ຳຕານ",
   "tools.colorPicker.color.orange": "ສີສົ້ມ",

@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.recentlyUsed": "Baru-baru ini digunakan",
+  "tools.colorPicker.backgroundColor": "Warna latar belakang",
   "tools.colorPicker.color.gray": "Abu-abu",
   "tools.colorPicker.color.brown": "Cokelat",
   "tools.colorPicker.color.orange": "Oranye",

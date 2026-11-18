@@ -719,24 +719,24 @@ describe('MarkerInlineTool', () => {
       return firstItem.element;
     }
 
-    it('renders text-mode swatches with a visible background', () => {
+    it('renders text-mode tiles on the popover surface', () => {
       const picker = getPickerElement();
       const swatch = picker.querySelector<HTMLButtonElement>(
         '[data-blok-testid="marker-swatch-color-red"]'
       );
 
       expect(swatch).not.toBeNull();
-      expect(swatch?.style.backgroundColor).not.toBe('');
+      expect(swatch?.querySelector<HTMLElement>('span')?.style.backgroundColor).toBe('var(--blok-popover-bg)');
     });
 
-    it('renders background-mode swatches with their preset background color', () => {
+    it('renders background-mode tiles with their preset background color', () => {
       const picker = getPickerElement();
       const swatch = picker.querySelector<HTMLButtonElement>(
         '[data-blok-testid="marker-swatch-background-color-red"]'
       );
 
       expect(swatch).not.toBeNull();
-      expect(swatch?.style.backgroundColor).toBe('rgb(253, 235, 236)');
+      expect(swatch?.firstElementChild).toHaveStyle({ backgroundColor: 'rgb(253, 235, 236)' });
     });
   });
 
@@ -1294,7 +1294,7 @@ describe('MarkerInlineTool', () => {
   });
 
   describe('swatch cross-section preview is absent', () => {
-    it('text swatch keeps neutral background after a bg color is applied', () => {
+    it('text tile keeps the popover surface after a bg color is applied', () => {
       container.textContent = 'Hello world';
 
       const textNode = container.firstChild!;
@@ -1317,13 +1317,13 @@ describe('MarkerInlineTool', () => {
 
         const yellowTextSwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-color-yellow"]');
 
-        expect(yellowTextSwatch?.style.backgroundColor).toBe('var(--blok-swatch-neutral-bg)');
+        expect(yellowTextSwatch?.querySelector<HTMLElement>('span')?.style.backgroundColor).toBe('var(--blok-popover-bg)');
       } finally {
         document.body.removeChild(pickerEl);
       }
     });
 
-    it('bg swatch label color is unchanged when a text color is applied', () => {
+    it('bg tile fill is unchanged when a text color is applied', () => {
       container.textContent = 'Hello world';
 
       const textNode = container.firstChild!;
@@ -1340,16 +1340,16 @@ describe('MarkerInlineTool', () => {
       document.body.appendChild(pickerEl);
 
       try {
-        const grayBgSwatchBefore = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-background-color-gray"]');
-        const colorBefore = grayBgSwatchBefore?.style.color;
-
+        const grayBg = COLOR_PRESETS.find((preset) => preset.name === 'gray')?.bg;
         const graySwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-color-gray"]');
+
+        expect(grayBg).toBeDefined();
 
         graySwatch?.click();
 
         const grayBgSwatchAfter = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-background-color-gray"]');
 
-        expect(grayBgSwatchAfter?.style.color).toBe(colorBefore);
+        expect(grayBgSwatchAfter?.firstElementChild).toHaveStyle({ backgroundColor: grayBg });
       } finally {
         document.body.removeChild(pickerEl);
       }

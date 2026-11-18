@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
   "tools.colorPicker.recentlyUsed": "تازو استعمال ٿيل",
+  "tools.colorPicker.backgroundColor": "پس منظر جو رنگ",
   "tools.colorPicker.color.gray": "خاڪي",
   "tools.colorPicker.color.brown": "ناسي",
   "tools.colorPicker.color.orange": "نارنگي",

@@ -89,6 +89,7 @@
   "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
   "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.recentlyUsed": "ახლახან გამოყენებული",
+  "tools.colorPicker.backgroundColor": "ფონის ფერი",
   "tools.colorPicker.color.gray": "ნაცრისფერი",
   "tools.colorPicker.color.brown": "ყავისფერი",
   "tools.colorPicker.color.orange": "ნარინჯისფერი",

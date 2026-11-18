@@ -2328,12 +2328,15 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       onCopyLink: () => handlers.copyRowLink(rowId),
       onDuplicate: () => handlers.duplicateRow(rowId),
       // notion-motion.md Round 65 §3: from the ⋮⋮ the picker hangs under the handle.
-      // Round 66 §4: from a right-click, Escape leaves the Name cell selected. The ⋮⋮ case is unmeasured.
+      // Round 66 §4: from a right-click, Escape leaves the Name cell selected; Round 67 §4: and focused. The ⋮⋮ case is unmeasured.
       ...(handlers.openMoveTo !== undefined && handlers.canMoveRow?.() === true ? { onMoveTo: (menu: DOMRect | undefined) => handlers.openMoveTo?.(
         rowId,
         commentAnchor,
         spot ?? (handle === null ? menuFrom(menu, commentAnchor) : { under: handle }),
-        pointer === undefined ? undefined : () => this.selectCell({ rowId, propertyId: this.options.titlePropertyId }),
+        pointer === undefined ? undefined : () => {
+          this.selectCell({ rowId, propertyId: this.options.titlePropertyId });
+          this.grid?.focus({ holdEscape: true });
+        },
       ) } : {}),
       ...rowMenuFooter({
         row: this.allRows().find((row) => row.id === rowId),

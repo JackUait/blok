@@ -627,6 +627,60 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       expect(row()?.getAttribute('aria-selected')).toBe('false');
     });
 
+    // notion-motion.md Round 67 §4: that Escape also focuses the Name cell, so keys act on it.
+    it('focuses the selected Name cell when Escape closes the right-click Move to picker', async () => {
+      const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('table'));
+
+      rowEl(el, 'table').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+      itemByTitle('tools.database.tableMoveTo').click();
+      expect(await moveOptions()).toEqual(['Projects']);
+      document.querySelector('[data-blok-database-move-picker] input')
+        ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      const grid = el.querySelector<HTMLElement>('[role="grid"]');
+      const nameCell = el.querySelector<HTMLElement>('[data-row-id="a"] [role="gridcell"][data-property-id="title"]');
+
+      expect(document.activeElement).toBe(grid);
+      expect(grid?.getAttribute('aria-activedescendant')).toBe(nameCell?.id);
+    });
+
+    const escapeMovePicker = async (el: HTMLElement): Promise<HTMLElement> => {
+      rowEl(el, 'table').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+      itemByTitle('tools.database.tableMoveTo').click();
+      expect(await moveOptions()).toEqual(['Projects']);
+      document.querySelector('[data-blok-database-move-picker] input')
+        ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      const grid = el.querySelector<HTMLElement>('[role="grid"]');
+
+      if (grid === null) throw new Error('no grid');
+
+      return grid;
+    };
+    const selectedRow = (el: HTMLElement): Element | null => el.querySelector('[data-blok-database-table-row][aria-selected="true"]');
+    const nameSelected = (el: HTMLElement): boolean => el.querySelector('[data-row-id="a"] [role="gridcell"][data-property-id="title"]')?.getAttribute('aria-selected') === 'true';
+
+    // notion-motion.md Round 67 §4: a second Escape changes nothing. A third: unmeasured.
+    it('keeps the Name cell on a second Escape after the right-click Move to picker', async () => {
+      const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('table'));
+      const grid = await escapeMovePicker(el);
+
+      press(grid, 'Escape');
+
+      expect(selectedRow(el)).toBeNull();
+      expect(nameSelected(el)).toBe(true);
+      expect(document.activeElement).toBe(grid);
+    });
+
+    it('lets Escape select the row again once the cell selection moves', async () => {
+      const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('table'));
+      const grid = await escapeMovePicker(el);
+
+      press(grid, 'ArrowRight');
+      press(grid, 'Escape');
+
+      expect(selectedRow(el)).not.toBeNull();
+    });
+
     it('two picked rows take no ⌘⇧M: the comment is for one page', () => {
       const open = vi.fn();
       const doc = makeDoc([fakeRow('a', 'db', { title: 'Alpha', status: 'o1' }, 'a0'), fakeRow('b', 'db', { title: 'Beta', status: 'o1' }, 'a1')]);

@@ -179,6 +179,9 @@ export class DatabaseTableGrid {
   private readonly cellContext: Partial<CellContext>;
   private editor: CellEditorHandle | null = null;
   private destroyed = false;
+  /** The selection a held Escape keeps. Any new selection object ends the hold. */
+  private escapeHold: TableSelection | null = null;
+
   /** The key being handled while an editor closes: tells Enter and Escape from an outside press. */
   private keyInFlight: string | null = null;
   /** The new row whose title was just committed; commit clears freshRowId before the editor closes. */
@@ -206,6 +209,7 @@ export class DatabaseTableGrid {
 
   destroy(): void {
     this.destroyed = true;
+    this.escapeHold = null;
     this.root.removeEventListener('keydown', this.handleKeydown);
     this.root.removeEventListener('copy', this.handleCopy);
     this.root.removeEventListener('paste', this.handlePaste);
@@ -439,6 +443,7 @@ export class DatabaseTableGrid {
 
   private readonly handleFocus = (): void => {
     this.state.focused = this.root.contains(document.activeElement);
+    if (!this.state.focused) this.escapeHold = null;
   };
 
   // ─── Geometry ───
@@ -550,6 +555,16 @@ export class DatabaseTableGrid {
     const span = rows.slice(Math.min(a, b), Math.max(a, b) + 1);
 
     this.selectRows(rows.filter((id) => current.includes(id) || span.includes(id)));
+  }
+
+  /**
+   * Gives the grid focus, so keys act on its selected cell. `holdEscape`: the next Escape
+   * leaves that selection as it is (notion-motion.md Round 67 §4, after the Move to picker).
+   */
+  focus(options: { holdEscape?: boolean } = {}): void {
+    this.root.focus({ preventScroll: true });
+    this.state.focused = true;
+    this.escapeHold = options.holdEscape === true ? this.state.selection : null;
   }
 
   selectRows(rowIds: string[]): void {
@@ -1018,6 +1033,14 @@ export class DatabaseTableGrid {
     const selection = this.state.selection;
 
     if (event.key === 'Escape') {
+      const held = this.escapeHold !== null && this.escapeHold === selection;
+
+      this.escapeHold = null;
+      if (held) {
+        event.preventDefault();
+
+        return;
+      }
       this.escape(event);
 
       return;

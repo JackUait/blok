@@ -153,9 +153,9 @@ describe('DatabaseTimelineView', () => {
       // findings C03: an undated item has no lane while the table is hidden.
       expect([...root.querySelectorAll('[data-blok-database-timeline-row]')].map((el) => el.getAttribute('data-row-id'))).toEqual(['r1', 'r2']);
       expect(bars(root).map((el) => el.getAttribute('data-row-id'))).toEqual(['r1', 'r2']);
-      // findings C23: 1.5px in from each day edge.
+      // notion-motion.md Round 71 §3: 2px in from the first day's start and 1px short of the last day's end, as in Hours and Quarter.
       expect(bar(root, 'r2').style.width).toBe(`${3 * width - 3}px`);
-      expect(bar(root, 'r2').style.insetInlineStart).toBe(`${px('2026-10-12') + 1.5}px`);
+      expect(bar(root, 'r2').style.insetInlineStart).toBe(`${px('2026-10-12') + 2}px`);
     });
 
     // notion-motion.md Round 48 A5: in Quarter, Year and 5 Years a bar starts 2px into its span and is max(span - 3, 11) wide.
@@ -1079,7 +1079,7 @@ describe('DatabaseTimelineView', () => {
         rect(canvas(root), 0, 0, timelineWindow(CENTER, 'month').days * 40, 400);
         pointer('pointermove', lane(root), px('2026-10-20') + 20, 390);
 
-        expect(ghost(root)?.style.insetInlineStart).toBe(`${px('2026-10-20') + 1.5}px`);
+        expect(ghost(root)?.style.insetInlineStart).toBe(`${px('2026-10-20') + 2}px`);
         expect(ghost(root)?.style.width).toBe('197px');
         expect(ghost(root)?.getAttribute('data-day')).toBe('2026-10-20');
         expect(range(root)?.style.insetInlineStart).toBe(`${px('2026-10-20')}px`);
@@ -1118,11 +1118,11 @@ describe('DatabaseTimelineView', () => {
         rect(canvas(root), 0, 0, timelineWindow(CENTER, 'day').days * TIMELINE_DAY_WIDTH.day, 400);
         pointer('pointermove', lane(root), slot + 10 * perMinute, 390);
 
-        expect(parseFloat(ghost(root)?.style.insetInlineStart ?? '')).toBeCloseTo(slot + 1.5, 5);
+        expect(parseFloat(ghost(root)?.style.insetInlineStart ?? '')).toBeCloseTo(slot + 2, 5);
         expect(parseFloat(ghost(root)?.style.width ?? '')).toBeCloseTo(180 * perMinute - 3, 5);
 
         pointer('pointermove', lane(root), slot + 20 * perMinute, 390);
-        expect(parseFloat(ghost(root)?.style.insetInlineStart ?? '')).toBeCloseTo(slot + 15 * perMinute + 1.5, 5);
+        expect(parseFloat(ghost(root)?.style.insetInlineStart ?? '')).toBeCloseTo(slot + 15 * perMinute + 2, 5);
 
         pointer('pointermove', lane(root), slot + 10 * perMinute, 390);
         ghost(root)?.click();
@@ -1525,7 +1525,7 @@ describe('DatabaseTimelineView', () => {
       pointer('pointerdown', bar(root, 'r1'), midnight + 300, 50);
       pointer('pointermove', document, midnight + 360, 50);
 
-      expect(parseFloat(bar(root, 'r1').style.insetInlineStart)).toBeCloseTo(midnight + 75 * (TIMELINE_DAY_WIDTH.day / 1440) + 1.5, 5);
+      expect(parseFloat(bar(root, 'r1').style.insetInlineStart)).toBeCloseTo(midnight + 75 * (TIMELINE_DAY_WIDTH.day / 1440) + 2, 5);
       expect(parseFloat(bar(root, 'r1').style.width)).toBeCloseTo(TIMELINE_DAY_WIDTH.day - 3, 5);
 
       pointer('pointerup', document, midnight + 360, 50);

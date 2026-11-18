@@ -130,7 +130,9 @@ export interface DatabaseTimelineViewOptions {
 
 const DRAG_THRESHOLD = 4;
 const DAY_MINUTES = 24 * 60;
-const BAR_INSET = 1.5;
+/** notion-motion.md Round 71 §3: a day-zoom bar starts 2px into its first day and stops 1px short of its last (851.4 in a day from 849.4, 37 wide). */
+const BAR_START = 2;
+const BAR_TRIM = 3;
 /** notion-motion.md Round 53 §1: an Hours bar starts 1.03 after its hour line's pixel; here that pixel is the one after the hour. */
 const HOURS_BAR_START = 2;
 /** notion-motion.md Round 48 A5: Quarter, Year and 5 Years bars start 2px into their span, max(span - 3, 11) wide. */
@@ -1538,12 +1540,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       return { offset: geometry.offset + FAR_BAR_INSET, width: Math.max(geometry.width - FAR_BAR_TRIM, FAR_BAR_MIN) };
     }
 
-    // findings C23: at day-level zooms a bar sits 1.5px in from each day edge (37px of a 40px day). Round 51 §4: Hours is as wide (288.7 of an hour).
+    // Round 51 §4: Hours is as wide (288.7 of an hour).
     if (this.zoom === 'hours') {
-      return { offset: geometry.offset + HOURS_BAR_START, width: geometry.width - 2 * BAR_INSET };
+      return { offset: geometry.offset + HOURS_BAR_START, width: geometry.width - BAR_TRIM };
     }
 
-    return MONTH_IN_TOOLBAR.has(this.zoom) ? { offset: geometry.offset + BAR_INSET, width: geometry.width - 2 * BAR_INSET } : geometry;
+    return MONTH_IN_TOOLBAR.has(this.zoom) ? { offset: geometry.offset + BAR_START, width: geometry.width - BAR_TRIM } : geometry;
   }
 
   private valuesOf(row: DatabaseRow): BarValues {

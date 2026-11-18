@@ -131,7 +131,7 @@ test.describe('timeline', () => {
     const three = await bar(page, 'r2').boundingBox();
 
     expect(one?.height).toBeCloseTo(34, 0);
-    // findings C23: 1.5px in from each day edge.
+    // notion-motion.md Round 71 §3: 2px in from the first day's start, 1px short of the last day's end.
     expect(one?.width).toBeCloseTo(37, 0);
     expect(three?.width).toBeCloseTo(117, 0);
     await expect(bar(page, 'r1')).toHaveCSS('border-radius', '6px');
@@ -586,7 +586,7 @@ test.describe('timeline', () => {
 
     if (first === null || lane === null || scroller === null) throw new Error('no layout');
     // r1 is on Oct 9; a month-zoom day is 40px wide. Oct 14 is 5 days later.
-    const x = first.x - 1.5 + 5 * 40 + 20;
+    const x = first.x - 2 + 5 * 40 + 20;
 
     expect(x).toBeLessThan(scroller.x + scroller.width);
     await page.mouse.move(x, lane.y + lane.height / 2);

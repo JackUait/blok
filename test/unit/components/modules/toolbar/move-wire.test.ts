@@ -182,11 +182,11 @@ describe('MoveWire', () => {
     expect(numberOf(bead, 'r')).toBe(5);
     expect(numberOf(bead, 'cx')).toBeGreaterThan(400);
 
-    advance(260);
+    advance(200);
     await Promise.resolve();
     expect(arrived).not.toHaveBeenCalled();
 
-    advance(300);
+    advance(60);
     await Promise.resolve();
     expect(arrived).toHaveBeenCalledWith(true);
     expect([numberOf(bead, 'cx'), numberOf(bead, 'cy')]).toEqual([350, 214]);

@@ -27,7 +27,7 @@ const REACH = 78;
 const PEG_SPRING = { stiffness: 420, damping: 30 };
 const SLACK_SPRING = { stiffness: 70, damping: 6.5 };
 
-const FLIGHT_MS = 520;
+const FLIGHT_MS = 260;
 const FADE_MS = 200;
 const BUMP_MS = 340;
 

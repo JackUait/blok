@@ -17467,7 +17467,7 @@ input[data-blok-database-picker-search]:focus {
   display: flex;
   flex-direction: column;
   gap: var(--blok-space-3);
-  padding: var(--blok-space-1) var(--blok-space-3) var(--blok-space-3);
+  padding: calc(var(--blok-space-1) + var(--blok-space-2-75)) var(--blok-space-3) var(--blok-space-3);
 }
 
 [data-blok-database-color-rule] {
@@ -17503,6 +17503,10 @@ input[data-blok-database-picker-search]:focus {
 
 [data-blok-database-color-rule-header] [data-blok-database-chip-operator] + [data-blok-database-chip-operator] {
   margin-inline-start: var(--blok-space-1-5);
+}
+
+[data-blok-database-color-rule-quantifier] [data-blok-database-chip-operator-label] {
+  font-weight: 400;
 }
 
 [data-blok-database-color-rule-delete] {
@@ -22999,8 +23003,8 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 [data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name]), textarea, select, [data-blok-database-form-provider-answer]) {
   box-sizing: border-box;
   min-block-size: 38px;
-  padding-block: var(--blok-space-1);
-  padding-inline: var(--blok-space-2);
+  padding-block: calc(var(--blok-space-2-25) - var(--blok-border-width-hairline));
+  padding-inline: calc(var(--blok-space-2-5) - var(--blok-border-width-hairline));
   border: 1px solid var(--blok-database-form-answer-border);
   border-radius: var(--blok-radius-control);
   background-color: transparent;

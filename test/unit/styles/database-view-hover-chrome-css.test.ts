@@ -316,6 +316,15 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(answer).toContain('min-block-size: 38px');
   });
 
+  // notion-motion.md Round 74 §5 (r74-n-form-card.raw): the text sits 9px 10px in from the box's edge; Blok's 1px border is part of that.
+  it('sets the answer text 9px 10px in from the box edge', () => {
+    const answer = ruleBody('[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name]), textarea, select, [data-blok-database-form-provider-answer])');
+
+    expect(answer).toContain('padding-block: calc(var(--blok-space-2-25) - var(--blok-border-width-hairline))');
+    expect(answer).toContain('padding-inline: calc(var(--blok-space-2-5) - var(--blok-border-width-hairline))');
+    expect(answer).toContain('border-radius: var(--blok-radius-control)');
+  });
+
   it('has no rule for the in-card Required checkbox, which is gone', () => {
     expect(database).not.toContain('[data-blok-database-form-required-toggle]');
   });

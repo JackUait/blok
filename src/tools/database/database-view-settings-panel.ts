@@ -3327,8 +3327,8 @@ export class ViewSettingsPages {
         lead.append(headerButton(`database-color-side-${rule.id}`, this.t(part === 'end' ? 'dateEnd' : 'dateStart'), 'database-filter-side-picker', (pick) => (['start', 'end'] as const).map((side) =>
           choice(`database-filter-side-${side}`, this.t(side === 'end' ? 'dateEnd' : 'dateStart'), (part === 'end') === (side === 'end'), { operator: joinOperator(side === 'end' ? 'end' : undefined, inner) }, pick))));
       } else if (isQuantifiedText(property, rule.operator) || isQuantifiedNumber(property, rule.operator)) {
-        lead.append(headerButton(`database-color-quantifier-${rule.id}`, this.ctx.i18n.t(`tools.database.filterOperator.${part ?? 'any'}`).toLocaleLowerCase(), 'database-filter-quantifier-picker', (pick) => quantifierChoices().map((q) =>
-          choice(`database-filter-quantifier-${q.operator}`, this.ctx.i18n.t(q.labelKey), (part ?? 'any') === q.operator, { operator: joinOperator(q.operator, inner) }, pick))));
+        lead.append(marked(headerButton(`database-color-quantifier-${rule.id}`, this.ctx.i18n.t(`tools.database.filterOperator.${part ?? 'any'}`).toLocaleLowerCase(), 'database-filter-quantifier-picker', (pick) => quantifierChoices().map((q) =>
+          choice(`database-filter-quantifier-${q.operator}`, this.ctx.i18n.t(q.labelKey), (part ?? 'any') === q.operator, { operator: joinOperator(q.operator, inner) }, pick))), 'data-blok-database-color-rule-quantifier'));
       }
       lead.append(headerButton(`database-color-operator-${rule.id}`, (opKey === undefined ? rule.operator : this.ctx.i18n.t(opKey)).toLocaleLowerCase(), 'database-filter-operator-picker', (pick) => colorRuleOperatorChoices(property, rule.operator).map((c) =>
         choice(`database-filter-op-${c.operator}`, this.ctx.i18n.t(c.labelKey), menuOperatorOf(rule.operator) === c.operator, quantified(property, operatorPick(property, c.operator, rule)), pick))));
@@ -3527,8 +3527,13 @@ export class ViewSettingsPages {
           icon: IconPlus,
           disabled,
           onClick: () => openFlyout(add, panel, 'database-color-property-picker', COLOR_PROPERTY_FLYOUT_WIDTH, (pick) => this.propertyPicker(queryState(), COLOR_RULE_TYPES, (property) => pick(() => {
-            write([...rules(), { id: nanoid(), propertyId: property.id, ...newColorRule(property, this.ctx.storedType?.(property.id)) }]);
+            const id = nanoid();
+
+            write([...rules(), { id, propertyId: property.id, ...newColorRule(property, this.ctx.storedType?.(property.id)) }]);
             panel.refresh();
+
+            // notion-motion.md Round 74 §4: a new Rollup rule focuses its value input. Other types are unmeasured and keep Add another.
+            return this.ctx.storedType?.(property.id) === 'rollup' ? panel.root.querySelector<HTMLInputElement>(`input[data-blok-testid="${CSS.escape(`database-color-value-${id}`)}"]`) : null;
           })), { gap: COLOR_PROPERTY_FLYOUT_GAP, flip: true }),
         }), cards.length === 0 ? 'data-blok-database-color-new' : 'data-blok-database-color-add-another');
 

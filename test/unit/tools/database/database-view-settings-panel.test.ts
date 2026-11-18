@@ -2714,8 +2714,12 @@ describe('view settings panel', () => {
 
       const rule = add(h, 'hrs');
 
+      // notion-motion.md Round 74 §4: the new rule's value input takes the focus.
+      expect(q(`database-color-value-${rule.id}`)).toHaveFocus();
       expect(rule).toMatchObject({ operator: 'any:equals', value: null, color: 'green' });
       expect(q(`database-color-quantifier-${rule.id}`)?.querySelector('[data-blok-database-chip-operator-label]')?.textContent).toBe('tools.database.filteroperator.any');
+      expect(q(`database-color-quantifier-${rule.id}`)?.hasAttribute('data-blok-database-color-rule-quantifier')).toBe(true);
+      expect(q(`database-color-operator-${rule.id}`)?.hasAttribute('data-blok-database-color-rule-quantifier')).toBe(false);
       expect(q(`database-color-operator-${rule.id}`)?.querySelector('[data-blok-database-chip-operator-label]')?.textContent).toBe('tools.database.filteroperator.numberequals');
       expect(q(`database-color-rule-${rule.id}`)?.querySelector('[data-blok-database-color-rule-prefix]')?.textContent).toBe('=');
       expect(q(`database-color-value-${rule.id}`)).toBeInstanceOf(HTMLInputElement);

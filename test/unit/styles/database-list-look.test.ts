@@ -567,6 +567,12 @@ describe('conditional color page (notion-motion.md Round 20 §4, r20-cc-intro.ra
     expect(ruleBody(database, '[data-blok-database-color-rule-name]')).toContain('color: var(--blok-database-ink-tertiary)');
   });
 
+  // notion-motion.md Round 74 §4 (r74-n-rollup-rule.raw): the card starts 49 under Back, not 38; "any" is 400, "=" stays 500.
+  it('drops the first rule card 11px lower and draws a rollup\'s "any" at 400', () => {
+    expect(ruleBody(database, '[data-blok-database-color-rules]')).toContain('padding: calc(var(--blok-space-1) + var(--blok-space-2-75)) var(--blok-space-3) var(--blok-space-3)');
+    expect(ruleBody(database, '[data-blok-database-color-rule-quantifier] [data-blok-database-chip-operator-label]')).toContain('font-weight: 400');
+  });
+
   // notion-motion.md Round 21 §1 (r21-cc-num-field.raw): a 232x28 box, padding 3px 6px; Number's "=" before the input.
   it('types Text and Number values into a 28-tall box padded 3px 6px', () => {
     const box = ruleBody(database, 'label[data-blok-database-color-rule-box]');

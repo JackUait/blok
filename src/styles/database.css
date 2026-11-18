@@ -14760,12 +14760,12 @@ input[data-blok-database-picker-search]:focus {
 }
 
 /* notion-motion.md Round 20 §4 (r20-cc-list-style.raw): 258-wide filled cards, radius 10, 12px apart.
-   The card's inner padding is unmeasured. */
+   The card's inner padding is unmeasured. Round 74 §4: the first card's head is 49 under Back. */
 [data-blok-database-color-rules] {
   display: flex;
   flex-direction: column;
   gap: var(--blok-space-3);
-  padding: var(--blok-space-1) var(--blok-space-3) var(--blok-space-3);
+  padding: calc(var(--blok-space-1) + var(--blok-space-2-75)) var(--blok-space-3) var(--blok-space-3);
 }
 
 /* r20-cc-list-style.raw: the trash sits 6 down (1 border + 5), the lines 32 apart, the card 100 tall. */
@@ -14807,6 +14807,11 @@ input[data-blok-database-picker-search]:focus {
 
 [data-blok-database-color-rule-header] [data-blok-database-chip-operator] + [data-blok-database-chip-operator] {
   margin-inline-start: var(--blok-space-1-5);
+}
+
+/* notion-motion.md Round 74 §4 (r74-n-rollup-rule.raw): a rollup's "any" is 400; its operator stays 500. */
+[data-blok-database-color-rule-quantifier] [data-blok-database-chip-operator-label] {
+  font-weight: 400;
 }
 
 [data-blok-database-color-rule-delete] {
@@ -20848,12 +20853,12 @@ button[data-blok-database-feed-reaction]:hover,
   font-size: 0.875em;
 }
 
-/* notion-motion.md Round 31 §1: the answer box is 38 tall. */
+/* notion-motion.md Round 31 §1: the answer box is 38 tall. Round 74 §5: its text is 9px 10px in, the border included. */
 [data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name]), textarea, select, [data-blok-database-form-provider-answer]) {
   box-sizing: border-box;
   min-block-size: 38px;
-  padding-block: var(--blok-space-1);
-  padding-inline: var(--blok-space-2);
+  padding-block: calc(var(--blok-space-2-25) - var(--blok-border-width-hairline));
+  padding-inline: calc(var(--blok-space-2-5) - var(--blok-border-width-hairline));
   border: 1px solid var(--blok-database-form-answer-border);
   border-radius: var(--blok-radius-control);
   background-color: transparent;

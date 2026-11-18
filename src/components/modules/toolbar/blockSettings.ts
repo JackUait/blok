@@ -182,6 +182,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   /** The next open puts the cursor on its first row and leaves focus on the page, not in its search. */
   private cursorOnFirstRow = false;
 
+  /** Set by a rebuild: close() keeps the old menu painted, and the next open swaps it with no entrance. */
+  private rebuildInPlace = false;
+
+  /** The old menu a rebuild keeps up until the new one shows. */
+  private retainedPopover: PopoverDesktop | PopoverMobile | null = null;
+
   /** True during an Escape press, so its close keeps the block selected (Notion U109). */
   private escapePressed = false;
 
@@ -239,14 +245,18 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   ): Promise<void> {
     // Read first: an early return below must not leave it set for a later open.
     const cursorOnFirstRow = this.cursorOnFirstRow;
+    const inPlace = this.rebuildInPlace;
 
     this.cursorOnFirstRow = false;
+    this.rebuildInPlace = false;
 
     /**
      * readOnly: { hideControls: true } — no block settings popover at all
      * (covers keyboard shortcut paths; the settings toggler is already gone)
      */
     if (this.Blok.ReadOnly.isControlsHidden) {
+      this.dropRetainedPopover();
+
       return;
     }
 
@@ -276,6 +286,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       : (targetBlock ?? this.Blok.BlockManager.currentBlock);
 
     if (block === undefined) {
+      this.dropRetainedPopover();
+
       return;
     }
 
@@ -450,7 +462,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
        * the trigger. Measure + place the popover while the toolbar is still
        * in its pre-open state, then announce the state change.
        */
-      this.popover.show();
+      // Same task as show(): no frame paints without a menu.
+      this.dropRetainedPopover();
+      this.showPopover(this.popover, inPlace);
       if (cursorOnFirstRow) {
         // Queued after show()'s own microtask, which focuses the search.
         const popover = this.popover;
@@ -463,7 +477,37 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       this.eventsDispatcher.emit(this.events.opened);
     } catch {
       this.isOpening = false;
+      this.dropRetainedPopover();
     }
+  }
+
+  /**
+   * Shows the menu. In place, it skips the entrance fade and scale: Notion's
+   * rebuilt menu is at full size from its first frame (notion-motion.md Round 70 §2).
+   * @param popover - the menu to show
+   * @param inPlace - true when it replaces a menu that was already up
+   */
+  private showPopover(popover: PopoverDesktop | PopoverMobile, inPlace: boolean): void {
+    const container = inPlace ? popover.getElement().querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`) : null;
+
+    container?.style.setProperty('transition', 'none');
+    popover.show();
+    if (container !== null) {
+      // Style must settle in the open state before the transition comes back, or it plays.
+      container.getBoundingClientRect();
+      container.style.removeProperty('transition');
+    }
+  }
+
+  private dropRetainedPopover(): void {
+    const retained = this.retainedPopover;
+
+    if (retained === null) {
+      return;
+    }
+    this.retainedPopover = null;
+    retained.destroy();
+    retained.getElement().remove();
   }
 
   /**
@@ -541,8 +585,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     if (this.popover) {
       this.popover.off(PopoverEvent.Closed, this.onPopoverClose);
-      this.popover.destroy();
-      this.popover.getElement().remove();
+      if (this.rebuildInPlace) {
+        this.retainedPopover = this.popover;
+      } else {
+        this.popover.destroy();
+        this.popover.getElement().remove();
+      }
       this.popover = null;
     }
   };
@@ -1376,6 +1424,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       if (this.popover !== popover || popover === null) {
         return;
       }
+      this.rebuildInPlace = true;
       this.close();
       // notion-motion.md Round 69 §1: Notion's rebuilt menu has focus on the page and its first row filled.
       this.cursorOnFirstRow = true;

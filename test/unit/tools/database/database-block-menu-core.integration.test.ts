@@ -505,6 +505,25 @@ describe('the database block menu in core', () => {
       expect(instance.moduleInstances.BlockManager.getBlockById('db')).toBeDefined();
     });
 
+    // notion-motion.md Round 70 §2: Notion rebuilds in place; Blok's menu blinked out and grew back.
+    it('the old menu stays up until the rebuilt one replaces it', async () => {
+      const instance = await boot([...databaseBlocks('db', ['r1']), ...databaseBlocks('other', ['o1'])]);
+      const rows = await openMenu(instance, 'db');
+      const counts: number[] = [];
+      const observer = new MutationObserver(() => {
+        counts.push(document.querySelectorAll('[data-blok-testid="block-tunes-popover"]').length);
+      });
+
+      observer.observe(document.body, { childList: true, subtree: true });
+      rows.find((row) => row.getAttribute('data-blok-item-name') === 'database-lock')?.click();
+      await vi.waitFor(() => expect(currentRows()).not.toContain('database-lock'));
+      await quiet();
+      observer.disconnect();
+
+      expect(counts).not.toContain(0);
+      expect(document.querySelectorAll('[data-blok-testid="block-tunes-popover"]')).toHaveLength(1);
+    });
+
     it('Enter on Lock database rebuilds it too, and the menu stays open', async () => {
       const instance = await boot([...databaseBlocks('db', ['r1']), ...databaseBlocks('other', ['o1'])]);
       await openMenu(instance, 'db');

@@ -13,7 +13,7 @@ import { canOutdent, getAdoptedSiblings, getIndentTarget } from './structural-si
 import { isChildToolAllowed } from '../../../utils/child-tools';
 import { carriesReadOnly } from '../../../utils/read-only-blocks';
 import { deleteWithTrashToast } from '../../../utils/trash-toast';
-import { askBeforeDelete, deleteAsker, isAskingBeforeDelete } from '../../../utils/delete-confirm';
+import { askBeforeDelete, deleteAsker, isAskingBeforeDelete, selectionHoldsAsker } from '../../../utils/delete-confirm';
 
 const EDITING_HOST_SELECTOR = '[contenteditable]:not([contenteditable="false"])';
 
@@ -518,6 +518,30 @@ export class BlockSelectionKeys extends BlockEventComposer {
   }
 
   /**
+   * A typed character over a selection that holds a block whose tool asks
+   * before it goes does nothing: the selection stays (notion-motion.md Round 67 §2).
+   * Shortcuts and named keys (Enter, Dead) keep their paths.
+   * @param event - the keydown
+   * @returns true when the key was swallowed
+   */
+  public ignoreTypingOverAsker(event: KeyboardEvent): boolean {
+    const { BlockManager, BlockSelection } = this.Blok;
+    const isShortcut = event.metaKey || (event.ctrlKey && !event.altKey);
+    // A text range keeps native typing, as in BlockSelection.clearSelection.
+    const textSelected = SelectionUtils.isSelectionExists && SelectionUtils.isCollapsed === false;
+
+    if (event.key.length !== 1 || isShortcut || event.isComposing || !BlockSelection.anyBlockSelected || textSelected) {
+      return false;
+    }
+    if (!selectionHoldsAsker(BlockManager.blocks)) {
+      return false;
+    }
+    event.preventDefault();
+
+    return true;
+  }
+
+  /**
    * Removes the selected blocks, after any question their tools asked.
    * @param event - the remove key
    */
@@ -794,6 +818,11 @@ export class BlockSelectionKeys extends BlockEventComposer {
    */
   public handleCut(event: ClipboardEvent): void {
     const { BlockSelection, BlockManager, Caret, CrossBlockSelection } = this.Blok;
+
+    // A delete question is open: the selection it keeps must not go another way.
+    if (isAskingBeforeDelete(this.Blok)) {
+      return;
+    }
     const textSelection = CrossBlockSelection.textSelection;
 
     if (textSelection !== null) {

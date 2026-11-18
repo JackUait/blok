@@ -1,6 +1,8 @@
 import type { BlokModules } from '../../types-internal/blok-modules';
 import type { Block } from '../block';
 
+import { selectionRoots } from './selection-roots';
+
 type Modules = Pick<BlokModules, 'BlockManager' | 'BlockSelection'>;
 
 /** Editors with a delete question open, by their BlockManager. */
@@ -19,6 +21,15 @@ export const isAskingBeforeDelete = (Blok: Pick<BlokModules, 'BlockManager'>): b
  * @param roots - the selection roots
  */
 export const deleteAsker = (roots: Block[]): Block | undefined => roots.find((root) => root.asksBeforeDelete);
+
+/**
+ * The selection holds a block whose tool asks before it goes. Typing or
+ * pasting over it then must not replace it: only a delete may remove it,
+ * and a delete asks (notion-motion.md Round 67 §2).
+ * @param blocks - every block, selected or not
+ */
+export const selectionHoldsAsker = (blocks: Block[]): boolean =>
+  deleteAsker(selectionRoots(blocks.filter((block) => block.selected))) !== undefined;
 
 /**
  * Asks `asker` before a delete. After the answer, `keep` is the selection again,

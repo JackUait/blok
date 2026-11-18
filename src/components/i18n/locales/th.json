@@ -408,6 +408,8 @@
   "tools.database.pinnedGroups": "กลุ่มที่ปักหมุด",
   "tools.database.groupMoveToTrash": "ย้ายไปถังขยะ",
   "tools.database.groupTrashConfirm": "คุณแน่ใจหรือไม่? หน้าทั้งหมดในกลุ่มนี้จะถูกย้ายไปถังขยะ",
+  "tools.database.trashDatabaseConfirm": "ย้ายฐานข้อมูลไปถังขยะหรือไม่?",
+  "tools.database.trashDatabaseConfirmDescription": "หน้าทั้งหมดจะถูกย้ายไปถังขยะ",
   "tools.database.hiddenGroups": "กลุ่มที่ซ่อน",
   "tools.database.deleteCard": "ลบการ์ด",
   "tools.database.editCardTitle": "แก้ไขชื่อ",

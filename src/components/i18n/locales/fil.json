@@ -413,6 +413,8 @@
   "tools.database.pinnedGroups": "Mga naka-pin na grupo",
   "tools.database.groupMoveToTrash": "Ilipat sa basurahan",
   "tools.database.groupTrashConfirm": "Sigurado ka ba? Ililipat sa basurahan ang lahat ng page sa grupong ito.",
+  "tools.database.trashDatabaseConfirm": "Ilipat ang database sa basurahan?",
+  "tools.database.trashDatabaseConfirmDescription": "Ililipat sa basurahan ang lahat ng page",
   "tools.database.hiddenGroups": "Mga nakatagong grupo",
   "tools.database.emptyColumn": "Walang mga card",
   "tools.database.rowTitlePlaceholder": "Bagong pahina",

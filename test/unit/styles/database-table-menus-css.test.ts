@@ -781,3 +781,20 @@ describe('toolbar chip divider', () => {
     expect(declared('[data-blok-database-filter-pills] > [data-blok-database-chip-divider]', 'margin-inline')).toEqual(['var(--blok-space-1-5)']);
   });
 });
+
+// notion-motion.md Round 65 §1: the database block's ⋮⋮ menu has 28px rows.
+describe('database block menu', () => {
+  const ITEMS = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-block-menu'][data-blok-testid='block-tunes-popover'] > [data-blok-popover-container] > [data-blok-popover-items]:not([data-blok-hidden])";
+
+  const ROW = `${ITEMS} > [data-blok-popover-item]:not([data-blok-hidden]):not([data-blok-header-level])`;
+
+  it('has 28px rows 29 apart, as Notion', () => {
+    expect(declared(ROW, 'min-height')).toEqual(['28px']);
+    expect(declared(ROW, 'padding-block')).toEqual(['0']);
+    expect(declared(ROW, 'margin-block-end')).toEqual(['var(--blok-space-0-25)']);
+  });
+
+  it('adds no gap before a separator, so a group starts 37 after the last row, as Notion', () => {
+    expect(declared(`${ROW}:has(+ [data-blok-popover-item-separator])`, 'margin-block-end')).toEqual(['0']);
+  });
+});

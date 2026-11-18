@@ -408,6 +408,8 @@
   "tools.database.pinnedGroups": "Kinnitatud rühmad",
   "tools.database.groupMoveToTrash": "Teisalda prügikasti",
   "tools.database.groupTrashConfirm": "Kas olete kindel? Kõik selle rühma lehed teisaldatakse prügikasti.",
+  "tools.database.trashDatabaseConfirm": "Kas teisaldada andmebaas prügikasti?",
+  "tools.database.trashDatabaseConfirmDescription": "Kõik lehed teisaldatakse prügikasti",
   "tools.database.hiddenGroups": "Peidetud rühmad",
   "tools.database.deleteCard": "Kustuta kaart",
   "tools.database.editCardTitle": "Muuda pealkirja",

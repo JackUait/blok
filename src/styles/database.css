@@ -3628,6 +3628,19 @@ button[data-blok-database-board-lane-count]:hover {
   padding-block: 0;
 }
 
+/* notion-motion.md Round 65 §1: the database block's ⋮⋮ menu rows are 28px, 29 apart, and a group starts 37 after
+   the last row's top. Must outrank popover-animation.css's block-menu rows (32px, no margin). */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-block-menu'][data-blok-testid='block-tunes-popover'] > [data-blok-popover-container] > [data-blok-popover-items]:not([data-blok-hidden]) > [data-blok-popover-item]:not([data-blok-hidden]):not([data-blok-header-level]) {
+  min-height: 28px;
+  padding-block: 0;
+  margin-block-end: var(--blok-space-0-25);
+}
+
+/* The separator already gives the 37. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-block-menu'][data-blok-testid='block-tunes-popover'] > [data-blok-popover-container] > [data-blok-popover-items]:not([data-blok-hidden]) > [data-blok-popover-item]:not([data-blok-hidden]):not([data-blok-header-level]):has(+ [data-blok-popover-item-separator]) {
+  margin-block-end: 0;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-container] {
   --max-height: calc(100dvh - 2 * var(--blok-space-3));
 }
@@ -6809,6 +6822,27 @@ button[data-blok-database-layout-pin-name]:focus-visible {
 
 [data-blok-database-confirm-title]:first-child ~ [data-blok-database-confirm-action] + [data-blok-database-confirm-action] {
   margin-top: var(--blok-space-2-25);
+}
+
+/* notion-motion.md Round 65 §1 "Move database to Trash?": title 20-44, body box 44-80, confirm at 88, Cancel at 129. */
+[data-blok-database-confirm-dialog][data-trash] [data-blok-database-confirm-title] {
+  font-weight: 600;
+}
+
+[data-blok-database-confirm-dialog][data-trash] [data-blok-database-confirm-title]:first-child ~ [data-blok-database-confirm-description] {
+  margin-top: 0;
+  padding-bottom: var(--blok-space-3);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+[data-blok-database-confirm-dialog][data-trash] [data-blok-database-confirm-title]:first-child ~ [data-blok-database-confirm-description] + [data-blok-database-confirm-action] {
+  margin-top: var(--blok-space-2);
+}
+
+[data-blok-database-confirm-dialog][data-trash] [data-blok-database-confirm-action="cancel"] {
+  border-color: transparent;
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-confirm-action] {

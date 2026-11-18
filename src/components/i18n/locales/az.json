@@ -413,6 +413,8 @@
   "tools.database.pinnedGroups": "Sabitlənmiş qruplar",
   "tools.database.groupMoveToTrash": "Zibil qutusuna köçür",
   "tools.database.groupTrashConfirm": "Əminsiniz? Bu qrupdakı bütün səhifələr zibil qutusuna köçürüləcək.",
+  "tools.database.trashDatabaseConfirm": "Verilənlər bazası zibil qutusuna köçürülsün?",
+  "tools.database.trashDatabaseConfirmDescription": "Bütün səhifələr zibil qutusuna köçürüləcək",
   "tools.database.hiddenGroups": "Gizli qruplar",
   "tools.database.emptyColumn": "Kart yoxdur",
   "tools.database.rowTitlePlaceholder": "Yeni səhifə",

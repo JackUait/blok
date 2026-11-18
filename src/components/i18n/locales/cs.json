@@ -410,6 +410,8 @@
   "tools.database.pinnedGroups": "Připnuté skupiny",
   "tools.database.groupMoveToTrash": "Přesunout do koše",
   "tools.database.groupTrashConfirm": "Jste si jisti? Všechny stránky v této skupině budou přesunuty do koše.",
+  "tools.database.trashDatabaseConfirm": "Přesunout databázi do koše?",
+  "tools.database.trashDatabaseConfirmDescription": "Všechny stránky budou přesunuty do koše",
   "tools.database.hiddenGroups": "Skryté skupiny",
   "tools.database.deleteCard": "Smazat kartu",
   "tools.database.editCardTitle": "Upravit název",

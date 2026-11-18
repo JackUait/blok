@@ -408,6 +408,8 @@
   "tools.database.pinnedGroups": "Закачени групи",
   "tools.database.groupMoveToTrash": "Премести в кошчето",
   "tools.database.groupTrashConfirm": "Сигурни ли сте? Всички страници в тази група ще бъдат преместени в кошчето.",
+  "tools.database.trashDatabaseConfirm": "Да се премести ли базата данни в кошчето?",
+  "tools.database.trashDatabaseConfirmDescription": "Всички страници ще бъдат преместени в кошчето",
   "tools.database.hiddenGroups": "Скрити групи",
   "tools.database.deleteCard": "Изтрий карта",
   "tools.database.editCardTitle": "Редактирай заглавието",

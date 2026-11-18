@@ -408,6 +408,8 @@
   "tools.database.pinnedGroups": "Kiinnitetyt ryhmät",
   "tools.database.groupMoveToTrash": "Siirrä roskakoriin",
   "tools.database.groupTrashConfirm": "Oletko varma? Kaikki tämän ryhmän sivut siirretään roskakoriin.",
+  "tools.database.trashDatabaseConfirm": "Siirretäänkö tietokanta roskakoriin?",
+  "tools.database.trashDatabaseConfirmDescription": "Kaikki sivut siirretään roskakoriin",
   "tools.database.hiddenGroups": "Piilotetut ryhmät",
   "tools.database.deleteCard": "Poista kortti",
   "tools.database.editCardTitle": "Muokkaa otsikkoa",

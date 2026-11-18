@@ -409,6 +409,8 @@
   "tools.database.pinnedGroups": "Grupuri fixate",
   "tools.database.groupMoveToTrash": "Mută în coșul de gunoi",
   "tools.database.groupTrashConfirm": "Sigur? Toate paginile din acest grup vor fi mutate în coșul de gunoi.",
+  "tools.database.trashDatabaseConfirm": "Muți baza de date în coșul de gunoi?",
+  "tools.database.trashDatabaseConfirmDescription": "Toate paginile vor fi mutate în coșul de gunoi",
   "tools.database.hiddenGroups": "Grupuri ascunse",
   "tools.database.deleteCard": "Șterge card",
   "tools.database.editCardTitle": "Editează titlul",

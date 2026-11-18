@@ -193,6 +193,72 @@ describe('the database block menu', () => {
     expect(window.location.hash).toBe('#db?full');
   });
 
+  it('takes a 265px menu with 28px rows, like Notion\'s (notion-motion.md Round 65 §1)', () => {
+    expect((DatabaseTool as unknown as { blockMenu: unknown }).blockMenu).toEqual({ class: 'blok-database-block-menu', minWidth: '265px' });
+  });
+
+  it('Delete asks first in Notion\'s "Move database to Trash?" dialog, and Cancel keeps it', async () => {
+    const instance = await boot();
+    const block = instance.module.blockManager.blocks.find(candidate => candidate.id === 'db');
+    const answer = block?.confirmDelete();
+    const dialog = await vi.waitFor(() => {
+      const found = document.querySelector('[data-blok-database-confirm-dialog]');
+
+      if (found === null) throw new Error('no dialog');
+
+      return found;
+    });
+    const actions = [...dialog.querySelectorAll<HTMLButtonElement>('[data-blok-database-confirm-action]')];
+
+    expect(dialog.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('Move database to Trash?');
+    expect(dialog.querySelector('[data-blok-database-confirm-description]')?.textContent).toBe('All pages will be moved to Trash');
+    expect(actions.map(action => action.textContent)).toEqual(['Move to Trash', 'Cancel']);
+    expect(actions[0]).toHaveFocus();
+    expect(actions[0].hasAttribute('data-destructive') && actions[0].hasAttribute('data-filled')).toBe(true);
+    expect(dialog.hasAttribute('data-trash')).toBe(true);
+
+    actions[1].click();
+
+    await expect(answer).resolves.toBe(false);
+  });
+
+  it('Move to Trash in the dialog answers yes', async () => {
+    const instance = await boot();
+    const block = instance.module.blockManager.blocks.find(candidate => candidate.id === 'db');
+    const answer = block?.confirmDelete();
+    const confirm = await vi.waitFor(() => {
+      const found = document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-action="confirm"]');
+
+      if (found === null) throw new Error('no dialog');
+
+      return found;
+    });
+
+    confirm.click();
+
+    await expect(answer).resolves.toBe(true);
+  });
+
+  it('a linked view does not ask: it has no pages of its own to trash', async () => {
+    holder?.remove();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+    const instance = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
+      data: { blocks: [...structuredClone(database()), { id: 'linked', type: 'database', data: { title: '', source: { databaseId: 'db' }, views: [], activeViewId: '' } }] },
+    } as never) as unknown as Runtime;
+
+    editor = instance;
+    await instance.isReady;
+    await settle();
+    const linked = instance.module.blockManager.blocks.find(candidate => candidate.id === 'linked');
+
+    await expect(linked?.confirmDelete()).resolves.toBe(true);
+    expect(document.querySelector('[data-blok-database-confirm-dialog]')).toBeNull();
+  });
+
   it('a reader gets none of them', async () => {
     const instance = await boot({ readOnly: true });
 

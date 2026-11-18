@@ -409,6 +409,8 @@
   "tools.database.pinnedGroups": "Grupos fijados",
   "tools.database.groupMoveToTrash": "Mover a la papelera",
   "tools.database.groupTrashConfirm": "¿Seguro? Todas las páginas de este grupo se moverán a la papelera.",
+  "tools.database.trashDatabaseConfirm": "¿Mover la base de datos a la papelera?",
+  "tools.database.trashDatabaseConfirmDescription": "Todas las páginas se moverán a la papelera",
   "tools.database.hiddenGroups": "Grupos ocultos",
   "tools.database.deleteCard": "Eliminar tarjeta",
   "tools.database.editCardTitle": "Editar título",

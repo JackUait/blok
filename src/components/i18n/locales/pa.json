@@ -413,6 +413,8 @@
   "tools.database.pinnedGroups": "ਪਿੰਨ ਕੀਤੇ ਸਮੂਹ",
   "tools.database.groupMoveToTrash": "ਰੱਦੀ ਵਿੱਚ ਭੇਜੋ",
   "tools.database.groupTrashConfirm": "ਕੀ ਤੁਹਾਨੂੰ ਯਕੀਨ ਹੈ? ਇਸ ਸਮੂਹ ਦੇ ਸਾਰੇ ਪੰਨੇ ਰੱਦੀ ਵਿੱਚ ਭੇਜ ਦਿੱਤੇ ਜਾਣਗੇ।",
+  "tools.database.trashDatabaseConfirm": "ਕੀ ਡਾਟਾਬੇਸ ਨੂੰ ਰੱਦੀ ਵਿੱਚ ਭੇਜਣਾ ਹੈ?",
+  "tools.database.trashDatabaseConfirmDescription": "ਸਾਰੇ ਪੰਨੇ ਰੱਦੀ ਵਿੱਚ ਭੇਜ ਦਿੱਤੇ ਜਾਣਗੇ",
   "tools.database.hiddenGroups": "ਲੁਕੇ ਹੋਏ ਸਮੂਹ",
   "tools.database.emptyColumn": "ਕੋਈ ਕਾਰਡ ਨਹੀਂ",
   "tools.database.rowTitlePlaceholder": "ਨਵਾਂ ਪੰਨਾ",

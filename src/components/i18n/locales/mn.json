@@ -428,6 +428,8 @@
   "tools.database.pinnedGroups": "Бэхэлсэн бүлгүүд",
   "tools.database.groupMoveToTrash": "Хогийн сав руу зөөх",
   "tools.database.groupTrashConfirm": "Итгэлтэй байна уу? Энэ бүлгийн бүх хуудас хогийн сав руу зөөгдөнө.",
+  "tools.database.trashDatabaseConfirm": "Мэдээллийн санг хогийн сав руу зөөх үү?",
+  "tools.database.trashDatabaseConfirmDescription": "Бүх хуудас хогийн сав руу зөөгдөнө",
   "tools.database.hiddenGroups": "Нуусан бүлгүүд",
   "tools.database.deleteCard": "Карт устгах",
   "tools.database.editCardTitle": "Гарчиг засах",

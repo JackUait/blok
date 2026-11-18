@@ -408,6 +408,8 @@
   "tools.database.pinnedGroups": "گروه‌های سنجاق‌شده",
   "tools.database.groupMoveToTrash": "انتقال به سطل زباله",
   "tools.database.groupTrashConfirm": "آیا مطمئنید؟ همه صفحه‌های این گروه به سطل زباله منتقل می‌شوند.",
+  "tools.database.trashDatabaseConfirm": "پایگاه داده به سطل زباله منتقل شود؟",
+  "tools.database.trashDatabaseConfirmDescription": "همه صفحه‌ها به سطل زباله منتقل می‌شوند",
   "tools.database.hiddenGroups": "گروه‌های پنهان",
   "tools.database.deleteCard": "حذف کارت",
   "tools.database.editCardTitle": "ویرایش عنوان",

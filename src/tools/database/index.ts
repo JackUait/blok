@@ -636,6 +636,11 @@ export class DatabaseTool implements BlockTool {
     return { allow: ['database-row', 'database', 'tabs', 'database-comment'] };
   }
 
+  /** notion-motion.md Round 65 §1: Notion's database block menu is 265 wide with 28px rows. */
+  public static get blockMenu(): { class: string; minWidth: string } {
+    return { class: 'blok-database-block-menu', minWidth: '265px' };
+  }
+
   /** Deleting a database deletes its rows, sources and comments. Promoting them would drop rows into the parent. */
   public static get deletesChildren(): boolean {
     return true;
@@ -2662,6 +2667,27 @@ export class DatabaseTool implements BlockTool {
     if (movedDatabases.has(this.block.id)) this.movingOut = true;
     if (removal?.deleted !== true || this.linked || this.readOnly || this.movingOut) return;
     [...this.model.getOrderedRows(), ...this.templates].forEach((row) => void this.sync.syncDeleteRow({ rowId: row.id }));
+  }
+
+  /**
+   * The block menu's Delete asks first (notion-motion.md Round 65 §1). A linked
+   * view has no pages of its own, so it does not ask.
+   */
+  public confirmDelete(): Promise<boolean> {
+    if (this.linked) return Promise.resolve(true);
+    const t = (key: string): string => this.api.i18n.t(key);
+
+    return openDatabaseConfirm({
+      title: t('tools.database.trashDatabaseConfirm'),
+      description: t('tools.database.trashDatabaseConfirmDescription'),
+      confirmLabel: t('tools.database.tableMoveToTrash'),
+      cancelLabel: t('tools.database.layoutCancel'),
+      destructive: true,
+      filled: true,
+      focusConfirm: true,
+      trash: true,
+      directionSource: this.element,
+    });
   }
 
   /** Called by a row this client deleted on its own; the row's backend copy goes too. */

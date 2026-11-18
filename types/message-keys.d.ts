@@ -2512,6 +2512,8 @@ export type BlokMessageKey =
   | 'tools.database.titlePlaceholder'
   | 'tools.database.toolbarLabel'
   | 'tools.database.toolbarNew'
+  | 'tools.database.trashDatabaseConfirm'
+  | 'tools.database.trashDatabaseConfirmDescription'
   | 'tools.database.turnIntoPage'
   | 'tools.database.undo'
   | 'tools.database.urlShowFullUrl'

@@ -86,6 +86,8 @@ const cases: Array<{ name: string; views: unknown[]; locked?: boolean; selector:
   { name: 'the calendar\'s next-month button', views: [view('calendar', { calendarBy: 'd' })], selector: '[data-blok-database-calendar-next]' },
   { name: 'the timeline\'s zoom button', views: [view('timeline', { timelineBy: 'd' })], selector: '[data-blok-database-timeline-zoom]' },
   { name: 'a board column\'s menu button', views: [view('board', { groupBy: 'st' })], selector: '[data-blok-database-column-menu]' },
+  { name: 'the "+" add-view button beside the tabs', views: [view('table')], selector: '[data-blok-database-add-view]' },
+  { name: 'the title\'s more button', views: [view('table')], selector: '[data-blok-database-title-more]' },
   { name: 'a feed post\'s more-actions button', views: [view('feed')], selector: '[data-blok-database-feed-more-actions]' },
 ];
 

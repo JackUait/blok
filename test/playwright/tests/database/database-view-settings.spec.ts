@@ -486,6 +486,19 @@ test.describe('database view settings', () => {
     expect(await count()).toBe(before);
   });
 
+  test('Enter on the focused add-view "+" opens its menu once and inserts no block', async ({ page }) => {
+    await mount(page, blocks());
+    const count = (): Promise<number | undefined> => page.evaluate(() => window.blokInstance?.blocks.getBlocksCount());
+    const before = await count();
+
+    await page.locator('[data-blok-database-add-view]').first().focus();
+    await page.keyboard.press('Enter');
+
+    await expect(page.locator('[data-blok-database-view-option="board"]')).toHaveCount(1);
+    await expect(page.locator('[data-blok-database-view-option="board"]')).toBeVisible();
+    expect(await count()).toBe(before);
+  });
+
   test('A1a Active switch reads differently on and off without painting its row', async ({ page }) => {
     await page.evaluate(() => document.documentElement.setAttribute('data-blok-theme', 'light'));
     const data = blocks().map((block) => block.id === 'db-1' ? {

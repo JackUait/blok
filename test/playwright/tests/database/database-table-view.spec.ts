@@ -1165,6 +1165,28 @@ test.describe('property and row menus', () => {
     await expect.poll(angle).toBe(90);
     await expect(treeRow('Home').getByTestId('page-picker-tree-chevron')).toBeFocused();
     expect(await treeRow('Home').getByTestId('page-picker-tree-chevron').evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('none');
+
+    // notion-motion.md Round 66 §4: on the focused chevron the arrows do nothing, and Space and Enter toggle it without picking.
+    const chevron = treeRow('Home').getByTestId('page-picker-tree-chevron');
+    const search = page.getByPlaceholder('Move page to…');
+    const highlighted = page.locator('[data-blok-database-move-picker] [role="option"][aria-selected="true"]');
+    const before = await highlighted.allTextContents();
+
+    for (const key of ['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft']) {
+      await page.keyboard.press(key);
+      await expect(chevron).toBeFocused();
+      await expect(chevron).toHaveAttribute('aria-expanded', 'true');
+      expect(await highlighted.allTextContents()).toEqual(before);
+    }
+    await page.keyboard.press('Space');
+    await expect(chevron).toHaveAttribute('aria-expanded', 'false');
+    await expect(treeRow('Plans')).toHaveCount(0);
+    await expect(search).toHaveValue('');
+    await page.keyboard.press('Enter');
+    await expect(chevron).toHaveAttribute('aria-expanded', 'true');
+    await expect(treeRow('Plans')).toBeVisible();
+    await expect(chevron).toBeFocused();
+    await expect(page.locator('[data-row-id="r1"]')).toBeVisible();
   });
 });
 

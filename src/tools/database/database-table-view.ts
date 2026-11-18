@@ -82,6 +82,8 @@ const OPEN_INSET = 4;
 const FROZEN_STICK_INSET = 30;
 /** notion-motion.md Round 47 §B6: Notion's shadow comes on at 268, 29 after the stick (239). A fit to the measured numbers. */
 const FROZEN_SHADOW_AFTER_STICK = 29;
+/** notion-motion.md Round 65 §3: Notion's row element starts 8 left of its selection halo (531 vs 539). */
+const ROW_HALO_INSET = 8;
 
 /**
  * A narrow title column shows an icon-only OPEN (notion-motion.md Round 27 §2, Round 28 §1): below Notion's 102,
@@ -187,7 +189,7 @@ export interface TableHandlers {
   /** Whether "Move to" has anywhere to send a row. */
   canMoveRow?: () => boolean;
   /** "Move to": opens the picker, placed from `from`, moving with `anchor`. */
-  openMoveTo?: (rowId: string, anchor: HTMLElement, from: MovePickerFrom) => void;
+  openMoveTo?: (rowId: string, anchor: HTMLElement, from: MovePickerFrom, onEscape?: () => void) => void;
   editRowIcon: (rowId: string) => void;
   updateView: (changes: ViewChanges) => void;
   /** The Load more row's ⋯. The tool leaves it out when the view cannot change. */
@@ -2280,7 +2282,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       return true;
     }
     if (handlers.openMoveTo === undefined || this.options.readOnly || handlers.canMoveRow?.() !== true) return false;
-    handlers.openMoveTo(rowId, anchor, { under: anchor });
+    // Blok's row box is Notion's halo box. Notion drops the selection on Escape (Round 65 §3).
+    handlers.openMoveTo(rowId, anchor, { under: anchor, shift: -ROW_HALO_INSET }, () => this.grid?.selectRows([]));
 
     return true;
   }
@@ -2320,7 +2323,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       onOpenIn: (mode) => handlers.openRow(rowId, mode),
       onCopyLink: () => handlers.copyRowLink(rowId),
       onDuplicate: () => handlers.duplicateRow(rowId),
-      ...(handlers.openMoveTo !== undefined && handlers.canMoveRow?.() === true ? { onMoveTo: (menu: DOMRect | undefined) => handlers.openMoveTo?.(rowId, commentAnchor, spot ?? menuFrom(menu, commentAnchor)) } : {}),
+      // notion-motion.md Round 65 §3: from the ⋮⋮ the picker hangs under the handle.
+      ...(handlers.openMoveTo !== undefined && handlers.canMoveRow?.() === true ? { onMoveTo: (menu: DOMRect | undefined) => handlers.openMoveTo?.(rowId, commentAnchor, spot ?? (handle === null ? menuFrom(menu, commentAnchor) : { under: handle })) } : {}),
       ...rowMenuFooter({
         row: this.allRows().find((row) => row.id === rowId),
         titlePropertyId: this.options.titlePropertyId,

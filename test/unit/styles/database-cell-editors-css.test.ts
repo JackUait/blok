@@ -843,19 +843,20 @@ describe('cell editor CSS', () => {
         expect(declared(CHEVRON, 'margin-inline-end')).toEqual(['var(--blok-space-0-75)']);
         expect(declared(CHEVRON, 'border-radius')).toEqual(['var(--blok-radius-control-sm)']);
         expect(declared(CHEVRON, 'color')).toEqual(['var(--blok-database-table-header-icon)']);
-        expect(declared(`${CHEVRON} svg`, 'width')).toEqual(['12px']);
+        // notion-motion.md Round 65 §3: IconChevronRight at 20 paints Notion's 4.5 x 8 open chevron.
+        expect(declared(`${CHEVRON} svg`, 'width')).toEqual(['20px']);
         expect(declared(`${TREE_ROW} [data-blok-testid='page-picker-option-icon']`, 'width')).toEqual(['16px']);
         expect(declared(`${TREE_ROW} [data-blok-testid='page-picker-option-icon']`, 'height')).toEqual(['16px']);
         expect(declared(`${TREE_ROW} [data-blok-testid='page-picker-option-icon']`, 'margin-inline-end')).toEqual(['var(--blok-space-1-75)']);
       });
 
-      // notion-motion.md Round 64 §3: transform 0.2s ease-out, both ways.
+      // page-picker.ts plays the 0.2s turn on `rotate` (Round 65 §3), so no transition is declared.
       it('turns the chevron 90° while the row is open', () => {
-        // The second is the reduced-motion rule.
-        expect(declared(`${CHEVRON} svg`, 'transition')).toEqual(['transform 0.2s ease-out', 'none']);
-        expect(declared(`${MOVE} [data-blok-page-picker-expanded='true'] [data-blok-testid='page-picker-tree-chevron'] svg`, 'transform')).toEqual(['rotate(90deg)']);
+        expect(declared(`${CHEVRON} svg`, 'transition')).toEqual([]);
+        expect(declared(`${MOVE} [data-blok-page-picker-expanded='true'] [data-blok-testid='page-picker-tree-chevron'] svg`, 'rotate')).toEqual(['90deg']);
         expect(declared(`[dir="rtl"] ${CHEVRON} svg`, 'transform')).toEqual(['scaleX(-1)']);
-        expect(declared(`[dir="rtl"] ${MOVE} [data-blok-page-picker-expanded='true'] [data-blok-testid='page-picker-tree-chevron'] svg`, 'transform')).toEqual(['scaleX(-1) rotate(90deg)']);
+        // `rotate` applies after the flip, so the RTL turn is the other way to point down.
+        expect(declared(`[dir="rtl"] ${MOVE} [data-blok-page-picker-expanded='true'] [data-blok-testid='page-picker-tree-chevron'] svg`, 'rotate')).toEqual(['-90deg']);
       });
     });
 

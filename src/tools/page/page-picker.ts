@@ -1,6 +1,7 @@
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconArrowDiagonal, IconPage, IconPlayerPlay, IconPlus, IconTable } from '../../components/icons';
+import { IconArrowDiagonal, IconChevronRight, IconPage, IconPlus, IconTable } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
+import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { SearchInput, SearchInputEvent } from '../../components/utils/popover/components/search-input';
 import { PopoverEvent } from '../../../types/utils/popover/popover-event';
@@ -95,9 +96,9 @@ export interface PagePickerOptions {
    * With `searchField`: a section after the pages while nothing is typed,
    * listing `children(null)` as a tree. A row's chevron shows and hides its
    * `children(pageId)`. ArrowRight and ArrowLeft do not, as in Notion
-   * (notion-motion.md Round 64 §3).
+   * (notion-motion.md Round 64 §3). `open` and `close` name the chevron button.
    */
-  tree?: { label: string; children: (pageId: string | null) => Promise<readonly unknown[]> };
+  tree?: { label: string; open: string; close: string; children: (pageId: string | null) => Promise<readonly unknown[]> };
 }
 
 /** Options for {@link PagePicker.chooseParent}. */
@@ -120,6 +121,11 @@ interface Entry {
 
 /** Joins a tree row's key parts; a page id may hold any other character. */
 const TREE_KEY_JOIN = '\u0000';
+
+/** notion-motion.md Round 65 §3: a chevron turns over 0.2s ease-out. */
+const CHEVRON_TURN = { duration: 200, easing: 'ease-out' } as const;
+
+const CHEVRON_SVG = '[data-blok-testid="page-picker-tree-chevron"] svg';
 
 const skeletonRow = (): HTMLElement => {
   const row = document.createElement('div');
@@ -187,6 +193,11 @@ export class PagePicker {
   private treeLoading = new Set<string | null>();
   /** Bumped on close, so an answer for an earlier opening is dropped. */
   private treeGeneration = 0;
+  /**
+   * Chevrons turning, by page id: the angle they turn from and when they started.
+   * Each render draws new rows, so the turn is replayed on the new glyph from where it is.
+   */
+  private treeTurns = new Map<string, { from: string; at: number }>();
 
   /**
    * @param label - the list's name
@@ -429,6 +440,7 @@ export class PagePicker {
     this.treeOpen = new Set();
     this.treeLoading = new Set();
     this.treeGeneration++;
+    this.treeTurns = new Map();
     document.removeEventListener('pointerdown', this.handleOutsidePointer, true);
     content?.replaceChildren();
     listbox?.removeAttribute('role');
@@ -596,9 +608,18 @@ export class PagePicker {
       this.appendNewPageSection(this.newPage, rows, add);
     }
 
+    const focused = document.activeElement;
+    const focusedChevron = focused instanceof HTMLElement && focused.matches('[data-blok-testid="page-picker-tree-chevron"]')
+      ? this.entries.find((entry) => entry.element.contains(focused))?.key
+      : undefined;
+
     this.entries = entries;
     this.activeIndex = entries.length === 0 ? -1 : Math.min(Math.max(this.activeIndex, this.highlightIdle || this.query !== '' ? 0 : -1), entries.length - 1);
     content.replaceChildren(...rows);
+    if (focusedChevron !== undefined) {
+      this.chevronOf(focusedChevron)?.focus({ preventScroll: true });
+    }
+    this.replayTurns();
     if (this.loading) {
       this.listbox?.setAttribute('aria-busy', 'true');
     } else {
@@ -652,10 +673,11 @@ export class PagePicker {
       const opens = page.kind !== 'database';
       const open = opens && this.treeOpen.has(page.pageId);
 
-      const element = this.buildTreeOption(page, trail.length, opens ? open : null);
+      const key = ['tree', ...trail, page.pageId].join(TREE_KEY_JOIN);
+      const element = this.buildTreeOption(page, trail.length, opens ? open : null, key);
 
       add({
-        key: ['tree', ...trail, page.pageId].join(TREE_KEY_JOIN),
+        key,
         element,
         run: () => this.onChoose !== null ? this.onChoose(page.pageId) : this.pick(page.pageId, element),
         title: page.title || this.fallback,
@@ -698,6 +720,9 @@ export class PagePicker {
   }
 
   private toggleTree(pageId: string): void {
+    const glyph = this.entries.find((entry) => entry.treePageId === pageId)?.element.querySelector(CHEVRON_SVG);
+
+    this.treeTurns.set(pageId, { from: glyph === null || glyph === undefined ? 'none' : getComputedStyle(glyph).rotate, at: performance.now() });
     const active = this.entries[this.activeIndex];
     const row = this.entries.find((entry) => entry.treePageId === pageId && active?.key.startsWith(`${entry.key}${TREE_KEY_JOIN}`));
 
@@ -806,32 +831,69 @@ export class PagePicker {
   }
 
   /** `open` is null for a row that cannot open: it gets no chevron. Tree rows show no path. */
-  private buildTreeOption(page: PickerPage, depth: number, open: boolean | null): HTMLElement {
+  private buildTreeOption(page: PickerPage, depth: number, open: boolean | null, key: string): HTMLElement {
     const option = this.buildPageOption({ ...page, path: undefined });
+    const labels = this.tree;
 
     option.setAttribute('data-blok-page-picker-tree-row', '');
     option.setAttribute('data-blok-page-picker-depth', String(depth));
     option.style.setProperty('--blok-page-picker-depth', String(depth));
-    if (open === null) {
+    if (open === null || labels === null || labels === undefined) {
       return option;
     }
-    const chevron = document.createElement('span');
+    const chevron = document.createElement('button');
     const glyph = document.createElement('template');
 
     option.setAttribute('data-blok-page-picker-expanded', String(open));
     // A trusted constant from the icon module, not user input.
-    glyph.innerHTML = IconPlayerPlay.trim();
-    chevron.setAttribute('aria-hidden', 'true');
+    glyph.innerHTML = IconChevronRight.trim();
+    chevron.type = 'button';
+    // Out of the Tab order: Tab closes the picker.
+    chevron.tabIndex = -1;
+    chevron.setAttribute('aria-label', open ? labels.close : labels.open);
+    chevron.setAttribute('aria-expanded', String(open));
     chevron.setAttribute(DATA_ATTR.testid, 'page-picker-tree-chevron');
     chevron.append(glyph.content);
     chevron.addEventListener('click', (event) => {
       // The row's own click picks the page.
       event.stopPropagation();
       this.toggleTree(page.pageId);
+      // notion-motion.md Round 65 §3: focus goes to the chevron. The row is drawn anew, so focus its new chevron.
+      this.chevronOf(key)?.focus({ preventScroll: true });
     });
     option.prepend(chevron);
 
     return option;
+  }
+
+  private chevronOf(key: string): HTMLElement | null {
+    return this.entries.find((entry) => entry.key === key)?.element.querySelector<HTMLElement>('[data-blok-testid="page-picker-tree-chevron"]') ?? null;
+  }
+
+  /** Plays each turning chevron's turn on its new glyph, from where it has got to. */
+  private replayTurns(): void {
+    const now = performance.now();
+    const moves = !prefersReducedMotion();
+
+    this.treeTurns.forEach((turn, pageId) => {
+      const elapsed = now - turn.at;
+
+      if (!moves || elapsed >= CHEVRON_TURN.duration) {
+        this.treeTurns.delete(pageId);
+
+        return;
+      }
+      this.entries.filter((entry) => entry.treePageId === pageId).forEach(({ element }) => {
+        const glyph = element.querySelector(CHEVRON_SVG);
+
+        if (glyph === null || typeof glyph.animate !== 'function') {
+          return;
+        }
+        const animation = glyph.animate([{ rotate: turn.from }, { rotate: getComputedStyle(glyph).rotate }], CHEVRON_TURN);
+
+        animation.currentTime = elapsed;
+      });
+    });
   }
 
   private buildMoreOption(count: number): HTMLElement {

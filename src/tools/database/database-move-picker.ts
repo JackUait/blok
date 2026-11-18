@@ -22,8 +22,8 @@ export type MovePickerFrom =
   | { pointer: { x: number; y: number; on: HTMLElement; was: DOMRect } }
   /** The row menu's box: its left, 6px below its top. Unmeasured for a ⋮⋮ or ⋯ menu. */
   | { menu: DOMRect }
-  /** Under this element's bottom-left corner. */
-  | { under: HTMLElement };
+  /** Under this element's bottom-left corner, `shift` px further right. */
+  | { under: HTMLElement; shift?: number };
 
 /** A right-click on `on`, for {@link MovePickerFrom}. */
 export const pointerFrom = (on: HTMLElement, event: Pick<MouseEvent, 'clientX' | 'clientY'>): MovePickerFrom => ({
@@ -44,7 +44,7 @@ const cornerOf = (from: MovePickerFrom): DOMRect => {
   if ('menu' in from) return new DOMRect(from.menu.left, from.menu.top + MENU_DROP, 0, 0);
   const box = from.under.getBoundingClientRect();
 
-  return new DOMRect(box.left, box.bottom, 0, 0);
+  return new DOMRect(box.left + (from.shift ?? 0), box.bottom, 0, 0);
 };
 
 export interface MovePickerOptions {
@@ -66,6 +66,8 @@ export interface MovePickerOptions {
   pages: PageConfig | null;
   onDatabase: (databaseId: string) => void;
   onPage: (pageId: string, title: string) => void;
+  /** Escape closed the picker. */
+  onEscape?: () => void;
 }
 
 /**
@@ -121,6 +123,8 @@ export const openMovePicker = (options: MovePickerOptions): PagePicker => {
     ...(host?.children === undefined ? {} : {
       tree: {
         label: t('tools.database.moveToWorkspace'),
+        open: t('tools.database.tableOpen'),
+        close: t('tools.database.close'),
         children: async (pageId: string | null) => {
           const pages = (await visibleChildPages(host, pageId)).filter((page) => !page.pageId.startsWith(DATABASE_KEY));
 
@@ -132,6 +136,10 @@ export const openMovePicker = (options: MovePickerOptions): PagePicker => {
     }),
   });
   picker.getElement()?.setAttribute('data-blok-database-move-picker', '');
+  // Capture: the picker's own Escape handler closes it before the key bubbles here.
+  picker.getElement()?.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !event.isComposing) options.onEscape?.();
+  }, true);
   picker.startSearch('');
   void show('');
 

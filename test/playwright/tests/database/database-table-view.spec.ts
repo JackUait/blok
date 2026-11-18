@@ -836,14 +836,15 @@ test.describe('property and row menus', () => {
     };
 
     // Cleared back to empty, the box is 453 again and keeps 12 from the window's edges.
+    // The box re-places from a ResizeObserver, before paint; a read between the resize and that callback sees the old top.
     const clearInside = async (): Promise<void> => {
       await page.keyboard.press('ControlOrMeta+a');
       await page.keyboard.press('Backspace');
-      await expect.poll(async () => Math.round((await rect(box)).height)).toBe(453);
-      const found = await rect(box);
+      await expect.poll(async () => {
+        const found = await rect(box);
 
-      expect(found.y).toBeGreaterThanOrEqual(12);
-      expect(found.y + found.height).toBeLessThanOrEqual(705);
+        return { height: Math.round(found.height), inside: found.y >= 12 && found.y + found.height <= 705 };
+      }).toEqual({ height: 453, inside: true });
     };
     const bottom = async (): Promise<number> => {
       const found = await rect(box);
@@ -977,19 +978,59 @@ test.describe('property and row menus', () => {
       await expect.poll(async () => Math.round((await pickerBox(page)).y)).toBe(point.y + 1);
     });
 
-    test('⌘⇧P on a selected row keeps the box 12 over the window bottom', async ({ page }) => {
+    // notion-motion.md Round 65 §3: Notion's row starts 8 left of its halo, which is Blok's row box.
+    test('⌘⇧P on a selected row keeps the box 12 over the window bottom, and Escape drops the selection', async ({ page }) => {
       await mount(page, [...blocks(), archiveBlock]);
       await lower(page, 240);
       await row(page, 'r1').hover();
       await row(page, 'r1').locator('[data-blok-database-table-row-handle]').click();
       await expect(openMenu(page).getByPlaceholder('Search actions…')).toBeVisible();
       await page.keyboard.press('Escape');
+      await expect(row(page, 'r1')).toHaveAttribute('aria-selected', 'true');
       await page.keyboard.press('ControlOrMeta+Shift+P');
       const found = await pickerBox(page);
       const rowBox = await row(page, 'r1').boundingBox();
 
+      expect(Math.round(found.x)).toBe(Math.round((rowBox?.x ?? -1) - 8));
       expect(Math.round(found.y + found.height)).toBe(705);
-      expect(Math.round(found.x)).toBe(Math.round(rowBox?.x ?? -1));
+
+      await page.keyboard.press('Escape');
+      await expect(page.getByPlaceholder('Move page to…')).toHaveCount(0);
+      await expect(row(page, 'r1')).toHaveAttribute('aria-selected', 'false');
+    });
+
+    // notion-motion.md Round 65 §3: from the ⋮⋮ the box hangs under the handle, not from the row menu.
+    test('the row ⋮⋮ › Move to opens it under the handle, or 12 over the window bottom', async ({ page }) => {
+      const openFromHandle = async (): Promise<{ x: number; bottom: number }> => {
+        await row(page, 'r1').hover();
+        const handle = row(page, 'r1').locator('[data-blok-database-table-row-handle]');
+
+        await handle.click();
+        await clickSettled(openMenu(page).getByRole('menuitem', { name: 'Move to', exact: true }));
+        // Read when the picker reads it: after the menu has opened and closed.
+        const box = await handle.boundingBox();
+
+        if (box === null) throw new Error('no handle');
+
+        return { x: box.x, bottom: box.y + box.height };
+      };
+
+      await mount(page, [...blocks(), archiveBlock]);
+      const high = await openFromHandle();
+      const under = await pickerBox(page);
+
+      expect(high.bottom + 453).toBeLessThanOrEqual(705);
+      expect(Math.round(under.x)).toBe(Math.round(high.x));
+      expect(Math.round(under.y)).toBe(Math.round(high.bottom));
+
+      await page.keyboard.press('Escape');
+      await lower(page, 240);
+      const low = await openFromHandle();
+      const clamped = await pickerBox(page);
+
+      expect(low.bottom + 453).toBeGreaterThan(705);
+      expect(Math.round(clamped.x)).toBe(Math.round(low.x));
+      expect(Math.round(clamped.y + clamped.height)).toBe(705);
     });
 
     test('the side peek\'s ••• opens it under the button, 12 in from the window\'s right edge', async ({ page }) => {
@@ -1079,17 +1120,51 @@ test.describe('property and row menus', () => {
     expect(Math.round((await rect(treeRow('Home').getByTestId('page-picker-tree-chevron'))).width)).toBe(20);
     expect(Math.round((await rect(treeRow('Home').getByTestId('page-picker-option-icon'))).width)).toBe(16);
 
+    // notion-motion.md Round 65 §3: an open chevron painted 4.5 x 8, not a filled triangle.
+    const glyph = treeRow('Home').locator('[data-blok-testid="page-picker-tree-chevron"] svg');
+    const ink = await glyph.evaluate((svg) => {
+      const path = svg.querySelector('path');
+
+      if (path === null) throw new Error('no path');
+      const box = path.getBoundingClientRect();
+      const stroke = Number.parseFloat(getComputedStyle(path).strokeWidth);
+
+      return { width: box.width + stroke, height: box.height + stroke, fill: getComputedStyle(path).fill };
+    });
+
+    expect(ink.fill).toBe('none');
+    expect(Math.abs(ink.width - 4.5)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(ink.height - 8)).toBeLessThanOrEqual(0.5);
+
+    const angle = (): Promise<number> => glyph.evaluate((element) => {
+      const turn = new DOMMatrix(getComputedStyle(element).transform);
+      const rotate = getComputedStyle(element).rotate;
+
+      return Math.round(Math.atan2(turn.b, turn.a) * 180 / Math.PI) + (rotate === 'none' ? 0 : Number.parseFloat(rotate));
+    });
+    // Round 65 §3: the turn takes 0.2s ease-out, and focus goes to the chevron, with no ring.
+    await page.evaluate(() => {
+      const turns: unknown[] = [];
+      const animate = Element.prototype.animate;
+
+      Object.assign(window, { chevronTurns: turns });
+      Element.prototype.animate = function (this: Element, keyframes, options) {
+        if (this.closest('[data-blok-testid="page-picker-tree-chevron"]') !== null) turns.push({ keyframes, options });
+
+        return animate.call(this, keyframes, options);
+      };
+    });
     await treeRow('Home').getByTestId('page-picker-tree-chevron').click();
     await expect(treeRow('Plans')).toBeVisible();
+    expect((await page.evaluate(() => (window as unknown as { chevronTurns: unknown[] }).chevronTurns))[0]).toEqual({
+      keyframes: [{ rotate: 'none' }, { rotate: '90deg' }],
+      options: { duration: 200, easing: 'ease-out' },
+    });
     expect(await offsets('Plans')).toEqual([28, 51, 74]);
     // The chevron turns down while the row is open.
-    await expect.poll(() => treeRow('Home').locator('[data-blok-testid="page-picker-tree-chevron"] svg')
-      .evaluate((element) => {
-        const turn = new DOMMatrix(getComputedStyle(element).transform);
-
-        return Math.round(Math.atan2(turn.b, turn.a) * 180 / Math.PI);
-      })).toBe(90);
-    await expect(page.getByPlaceholder('Move page to…')).toBeFocused();
+    await expect.poll(angle).toBe(90);
+    await expect(treeRow('Home').getByTestId('page-picker-tree-chevron')).toBeFocused();
+    expect(await treeRow('Home').getByTestId('page-picker-tree-chevron').evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('none');
   });
 });
 

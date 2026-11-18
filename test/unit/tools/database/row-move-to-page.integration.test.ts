@@ -588,6 +588,7 @@ describe('row menu › Move to › Workspace tree', () => {
 
     chevronOf('Home').click();
     await quiet();
+    searchInput()?.focus();
     key('ArrowLeft');
     await quiet();
     expect(treeTitles()).toEqual(['Home', 'Plans', 'Notes']);
@@ -677,6 +678,47 @@ describe('row menu › Move to › Workspace tree', () => {
     await boot(host({ children: vi.fn(async () => { throw new Error('offline'); }) }));
     await openPicker();
     expect(sections()).toEqual(['Suggested']);
+  });
+
+  // notion-motion.md Round 65 §3: the chevron is a button named Open or Close; a click focuses it.
+  it('makes the chevron a button that takes focus on click and keeps it once the children arrive', async () => {
+    const answers: Array<() => void> = [];
+    const page = host({
+      children: vi.fn((pageId: string | null) => (pageId === null
+        ? Promise.resolve(TREE[''])
+        : new Promise<readonly PageResult[]>((resolve) => { answers.push(() => resolve(TREE[pageId] ?? [])); }))),
+    });
+
+    await boot(page);
+    await openPicker();
+    expect(chevronOf('Home').tagName).toBe('BUTTON');
+    expect(chevronOf('Home').getAttribute('aria-label')).toBe('Open');
+    expect(chevronOf('Home').getAttribute('aria-expanded')).toBe('false');
+
+    chevronOf('Home').click();
+    await quiet();
+    expect(chevronOf('Home')).toHaveFocus();
+    answers.shift()?.();
+    await quiet();
+
+    expect(treeTitles()).toEqual(['Home', 'Plans', 'Notes']);
+    expect(chevronOf('Home')).toHaveFocus();
+    expect(chevronOf('Home').getAttribute('aria-label')).toBe('Close');
+    expect(chevronOf('Home').getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('closes the picker on Escape with focus on a chevron, and moves nothing', async () => {
+    const page = host({ children: children() });
+
+    await boot(page);
+    await openPicker();
+    chevronOf('Home').click();
+    await quiet();
+    chevronOf('Home').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(document.querySelector('[data-blok-database-move-picker]')).toBeNull();
+    expect(page.create).not.toHaveBeenCalled();
   });
 
   it('hides the Workspace section while a query is typed', async () => {

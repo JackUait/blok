@@ -8607,7 +8607,7 @@ export class DatabaseTool implements BlockTool {
 
         if (header !== null && writable()) this.openPropertyMenu(propertyId, header, table?.(), context);
       }, 0),
-      openMoveTo: (rowId, anchor, from) => { if (writable()) this.openMoveTo(rowId, anchor, from); },
+      openMoveTo: (rowId, anchor, from, onEscape) => { if (writable()) this.openMoveTo(rowId, anchor, from, onEscape); },
       editRowIcon: (rowId) => { if (writable()) this.editRowIcon(rowId, context); },
       updateView: (changes) => { if (writable()) this.updateActiveView(changes, context); },
       // notion-motion.md Round 29 §1: the Load more row's ⋯. Round 30 §3: a locked database keeps it working.
@@ -13191,7 +13191,7 @@ export class DatabaseTool implements BlockTool {
    * rule (notion-motion.md Round 64 §3). It moves with `anchor`, or with the
    * holder once `anchor` is gone.
    */
-  private openMoveTo(rowId: string, anchor: HTMLElement, from: MovePickerFrom): void {
+  private openMoveTo(rowId: string, anchor: HTMLElement, from: MovePickerFrom, onEscape?: () => void): void {
     if (this.readOnly || this.destroyed) return;
 
     this.movePicker?.picker.close();
@@ -13208,6 +13208,7 @@ export class DatabaseTool implements BlockTool {
         pages: host?.config ?? null,
         onDatabase: (databaseId) => { if (!this.readOnly && !this.destroyed) this.moveRowTo({ rowId, databaseId }); },
         onPage: (pageId, title) => { if (!this.readOnly && !this.destroyed) void this.moveRowToPage({ rowId, pageId, title }); },
+        ...(onEscape === undefined ? {} : { onEscape }),
       });
 
       this.movePicker = { picker, rowId };

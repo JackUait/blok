@@ -148,6 +148,8 @@ describe('database timeline styles', () => {
     expect(dot).toMatch(/inline-size:\s*7px/);
     expect(dot).toMatch(/block-size:\s*7px/);
     expect(dot).toContain('background-color: var(--blok-database-today)');
+    // notion-motion.md Round 65 §4: Notion's dot paints over a bar that starts today; bars are z-index 1.
+    expect(dot).toContain('z-index: 2');
   });
 
   // findings C17: the chip before a cut bar's title, the same 16px chip as the off-screen one.

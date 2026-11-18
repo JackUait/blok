@@ -574,6 +574,13 @@ describe('database row page layout css', () => {
     expect(ruleBody('[data-blok-database-peek-actions] svg')).toContain('width: 22px');
   });
 
+  // notion-motion.md Round 65 §3: the side peek's Close, Switch peek mode, Previous, Next and ••• are radius 6.
+  it('rounds the side peek\'s measured header buttons to 6', () => {
+    const body = ruleBody('[data-peek-mode="side"] :is([data-blok-database-drawer-close], [data-blok-database-peek-mode], [data-blok-database-peek-prev], [data-blok-database-peek-next], [data-blok-database-peek-actions])');
+
+    expect(body).toContain('border-radius: var(--blok-radius-control)');
+  });
+
   // notion-motion.md Round 44 §5: the center peek's ⤢ is 11 x 11 of ink; Keyline's at 22px is 11.3.
   it('draws the center peek\'s expand glyph at Notion\'s ink size', () => {
     const body = ruleBody('[data-peek-mode="center"] [data-blok-database-peek-expand] svg');

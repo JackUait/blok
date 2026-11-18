@@ -2213,6 +2213,11 @@
   }
 }
 
+/* notion-motion.md Round 65 §3: the side peek's Close, Switch peek mode, Previous, Next and ••• are radius 6. */
+[data-peek-mode="side"] :is([data-blok-database-drawer-close], [data-blok-database-peek-mode], [data-blok-database-peek-prev], [data-blok-database-peek-next], [data-blok-database-peek-actions]) {
+  border-radius: var(--blok-radius-control);
+}
+
 [data-blok-database-drawer-close] svg {
   width: 20px;
   height: 20px;
@@ -3064,6 +3069,8 @@
  */
 [data-blok-database-column-count] {
   box-sizing: border-box;
+  /* notion-motion.md Round 65 §5: Notion's "1" chip is 20 wide. */
+  min-inline-size: 20px;
   height: 20px;
   padding: 0 var(--blok-space-1-5);
   border-radius: var(--blok-radius-control-sm);
@@ -16787,10 +16794,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   background-color: var(--blok-database-today);
 }
 
-/* findings C21: a 7px dot where the line meets the header. */
+/* findings C21: a 7px dot where the line meets the header. Round 65 §4: over a bar (z-index 1) that starts today. */
 [data-blok-database-timeline-today-line]::before {
   content: "";
   position: absolute;
+  z-index: 2;
   inset-block-start: -3.5px;
   inset-inline-start: -3px;
   inline-size: 7px;
@@ -20251,11 +20259,11 @@ button[data-blok-database-feed-reaction]:hover,
   color: var(--blok-database-ink);
 }
 
-/* Round 31 §1: the builder edits the name in the card, 24px 700 / 30. */
+/* Round 31 §1: the builder edits the name in the card, 24px 700 / 30. Round 65 §4: Notion's pill is padded 0 10. */
 [data-blok-database-form-question-name] {
   flex: 1;
   min-inline-size: 0;
-  padding: 0;
+  padding: 0 var(--blok-space-2-5);
   border: none;
   background: transparent;
   color: var(--blok-database-ink);
@@ -20269,6 +20277,8 @@ button[data-blok-database-feed-reaction]:hover,
 /* Builder only: the respondent's form has no card (research/19 82-form-preview). research/21 §1k. */
 [data-blok-database-form-question]:has(> [data-blok-database-form-question-header]) {
   padding: var(--blok-space-3);
+  /* notion-motion.md Round 65 §4: the title sits 22 under the card top. */
+  padding-block-start: 22px;
   border-radius: var(--blok-radius-dialog);
   background-color: var(--blok-database-form-question-bg);
   box-shadow: var(--blok-database-form-question-ring) 0 0 0 0, var(--blok-database-form-question-ring) 0 0 0 0.5px inset;
@@ -20622,9 +20632,9 @@ button[data-blok-database-feed-reaction]:hover,
   background: transparent;
   color: var(--blok-database-ink-secondary);
   cursor: pointer;
-  /* notion-motion.md Round 52 §3: card right − 34, top + 10, out of the card's 12 padding. */
+  /* notion-motion.md Round 52 §3: card right − 34, top + 10, out of the card's 22 top padding. */
   align-self: flex-start;
-  margin-block-start: calc(var(--blok-space-0-5) * -1);
+  margin-block-start: calc(var(--blok-space-3) * -1);
   margin-inline-end: calc(var(--blok-space-0-5) * -1);
   /* notion-motion.md Round 34 §6: fades both ways. */
   transition: opacity 0.2s ease;
@@ -20743,7 +20753,8 @@ button[data-blok-database-feed-reaction]:hover,
 
   min-block-size: 48px;
   padding: var(--blok-space-2-5) var(--_blok-form-access-inset);
-  margin-block-end: 34px;
+  /* notion-motion.md Round 65 §4: the first card starts 24 under the bar. */
+  margin-block-end: var(--blok-space-6);
 }
 
 [data-blok-database-form-access] > span:first-child {

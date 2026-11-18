@@ -458,6 +458,17 @@ describe('DatabaseTool — view settings', () => {
       expect(q('database-toolbar-locked')?.hasAttribute('data-blok-database-relock')).toBe(false);
     });
 
+    it('lets this viewer turn on sub-items once unlocked for them, and not before', () => {
+      const { tool, root } = mount({}, {}, { schema: lockedSchema() });
+
+      tool.setSubItemsEnabled(true);
+      expect(tool.save(root).schema.some((p) => p.type === 'relation')).toBe(false);
+      unlockForMe();
+      tool.setSubItemsEnabled(true);
+
+      expect(tool.save(root).schema.some((p) => p.type === 'relation')).toBe(true);
+    });
+
     it('unlocks for everyone from Unlock for everyone', () => {
       const { tool, root } = mount({}, {}, { schema: lockedSchema() });
 

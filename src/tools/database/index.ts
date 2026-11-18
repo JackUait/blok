@@ -969,7 +969,7 @@ export class DatabaseTool implements BlockTool {
     this.hostLevers = new DatabaseHostLevers({
       databaseId: block.id,
       isDestroyed: () => this.destroyed,
-      canTriggerAutomations: () => !this.isLocked(),
+      canTriggerAutomations: () => !this.model.isDatabaseLocked(),
       savedAutomations: () => this.savedAutomations,
       schema: () => this.model.getSchema(),
       rowValues: (rowId) => this.model.getRow(rowId)?.properties,
@@ -8653,7 +8653,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private setRelationPairEnabled(on: boolean, forwardRole: RelationRole, backwardRole: RelationRole, forwardName: string, backwardName: string, forwardLimitOne: boolean): void {
-    if (this.readOnly || this.isLocked()) return;
+    if (this.readOnly || (this.model.isDatabaseLocked() && !this.unlockedForMe)) return;
     const pair = relationPair(this.model.getSchema(), this.dataId, forwardRole, backwardRole);
 
     if (on === (pair !== undefined)) return;

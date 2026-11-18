@@ -60,6 +60,8 @@ export class DragController extends Module {
   private springLoader: ToggleSpringLoader = new ToggleSpringLoader();
   /** The named drop zone (a tab pill) that is the current drop target. */
   private dropZone: HTMLElement | null = null;
+  /** The dragged blocks hold a locked one: no target is offered. */
+  private carriesLock = false;
   private listItemDescendants: ListItemDescendants | null = null;
   private boundHandlers: BoundHandlers | null = null;
   /**
@@ -275,6 +277,9 @@ export class DragController extends Module {
     const blocksToMove = descendants.length > 0
       ? [block, ...descendants]
       : initialBlocks;
+
+    // Notion still lifts a locked database but offers no drop (notion-motion.md Round 68 §1).
+    this.carriesLock = blocksToMove.some((member) => member.toolLocked);
 
     // Create appropriate preview (single or multi-block).
     // For toggles with hierarchy children, use a single-block preview with a badge
@@ -494,7 +499,7 @@ export class DragController extends Module {
         : isMoveTargetValid(blocks, sourceBlocks, dropTarget.block)
     );
 
-    if (!hasValidMoveDestination || this.dropTouchesReadOnly(dropTarget, verticalEdge, sourceBlocks, appendInto)) {
+    if (this.carriesLock || !hasValidMoveDestination || this.dropTouchesReadOnly(dropTarget, verticalEdge, sourceBlocks, appendInto)) {
       this.stateMachine.updateTarget(null, null);
       this.springLoader.update(null);
       return;
@@ -1704,7 +1709,8 @@ export class DragController extends Module {
         return true;
       });
 
-    if (sourceBlocks.length === 0 || this.anyReadOnly(sourceBlocks)) {
+    // A locked block (BlockTool.isLocked) is not copied (notion-motion.md Round 68 §1).
+    if (sourceBlocks.length === 0 || this.anyReadOnly(sourceBlocks) || baseBlocks.some((member) => member.toolLocked)) {
       return [];
     }
 

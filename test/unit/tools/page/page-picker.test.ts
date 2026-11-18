@@ -160,7 +160,7 @@ describe('PagePicker', () => {
 
       picker.open('', anchor, onPick, {
         searchField: { placeholder: 'Search', onQuery: vi.fn() },
-        tree: { label: 'Workspace', children: async (pageId) => (pageId === null ? [{ pageId: 'w1', title: 'Home' }] : []) },
+        tree: { label: 'Workspace', open: 'Open', close: 'Close', children: async (pageId) => (pageId === null ? [{ pageId: 'w1', title: 'Home' }] : []) },
         beforePick,
       });
       picker.setResults([]);

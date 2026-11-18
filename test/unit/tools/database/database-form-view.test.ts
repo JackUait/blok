@@ -1149,7 +1149,7 @@ describe('DatabaseFormView builder answers', () => {
   const addOption = (root: HTMLElement, id: string): HTMLButtonElement | null | undefined =>
     question(root, id)?.querySelector<HTMLButtonElement>('[data-blok-database-form-add-option]');
   const type = (input: HTMLInputElement, value: string): void => {
-    input.value = value;
+    Object.assign(input, { value });
     input.dispatchEvent(new Event('change', { bubbles: true }));
   };
 
@@ -1211,7 +1211,7 @@ describe('DatabaseFormView builder answers', () => {
 
     expect(names(root, 'tags')).toHaveLength(3);
     expect(fresh?.value).toBe('');
-    expect(document.activeElement).toBe(fresh);
+    expect(fresh).toHaveFocus();
     if (fresh !== undefined) type(fresh, 'Green');
 
     expect(changeOptions).toHaveBeenCalledTimes(1);

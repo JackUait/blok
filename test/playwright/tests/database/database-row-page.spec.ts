@@ -710,8 +710,8 @@ test.describe('row page cover', () => {
   }
 
   // notion-motion.md Round 59 §2: no icon and no cover. Centre: row at bar + 32, shown at bar + 46, hidden at bar + 66.
-  // Full page: row at bar + 80, shown at bar + 66. The title 32 under the row in both.
-  for (const [mode, gap, shownAt, hiddenAt] of [['center', 32, 46, 66], ['full', 80, 66, null]] as const) {
+  // Full page: row at bar + 80; Round 74 §2: shown from bar + 2, hidden over the bar (bar - 14). The title 32 under the row in both.
+  for (const [mode, gap, shownAt, hiddenAt] of [['center', 32, 46, 66], ['full', 80, 2, -14]] as const) {
     test(`${mode}: with no icon and no cover the row sits ${gap} under the bar, the title 32 under it`, async ({ page }) => {
       await mount(page, blocks({ openPagesIn: mode }));
       await openRow(page, 'r2');
@@ -734,7 +734,7 @@ test.describe('row page cover', () => {
       };
 
       await at(shownAt, '1');
-      if (hiddenAt !== null) await at(hiddenAt, '0');
+      await at(hiddenAt, '0');
     });
   }
 

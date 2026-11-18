@@ -327,6 +327,57 @@ describe('view overflow list (research/13:81, notion-measure5/51-one-more.json)'
     expect(buttons).not.toContain('opacity: 0');
   });
 
+  // notion-motion.md Round 74 §3: opacity 0 → 1 and scale 0.96 → 1, 200ms ease, from the top-left corner.
+  it('opens with a fade and a 0.96 scale from its top corner, and not under reduced motion', () => {
+    const dropdown = '[data-blok-database-tab-overflow-dropdown]';
+
+    expect(ruleBody(dropdown)).toContain('animation: blok-prop-popover-in 200ms ease backwards');
+    expect(ruleBody(dropdown)).toContain('transform-origin: top left');
+    expect(ruleBody(`${dropdown}[dir="rtl"]`)).toContain('transform-origin: top right');
+    expect(reducedMotion()).toMatch(/\[data-blok-database-tab-overflow-dropdown\][^{]*\{[^}]*animation: none/);
+  });
+
+  // notion-motion.md Round 74 §3: field 12 under the top, rows 12 under the field, New data source 29 after New view (318 tall).
+  it('spaces the search and the rows as Notion\'s 318px menu', () => {
+    const search = ruleBody('[data-blok-database-tab-overflow-dropdown] > [data-blok-field="search"]');
+
+    expect(search).toContain('margin-block: var(--blok-space-2) var(--blok-space-3)');
+    expect(search).not.toContain('margin-bottom');
+    expect(ruleBody('[data-blok-database-tab-overflow-new-second]')).toContain('margin-block-start: var(--blok-space-0-25)');
+  });
+
+  // Round 74 §3: in a 282 row, handle glyph +10, view icon +36, check 16 at -60, ••• in a 24 box at -40.
+  it('lays a row out at Notion\'s offsets', () => {
+    const row = ruleBody('[data-blok-database-tab-overflow-item]');
+
+    expect(row).toContain('min-height: 28px');
+    expect(row).toContain('padding-block: 0');
+    expect(row).toContain('padding-inline: var(--blok-space-2) var(--blok-space-4)');
+    expect(row).toContain('gap: var(--blok-space-2)');
+    expect(ruleBody('[data-blok-database-tab-overflow-handle]')).toContain('width: 20px');
+    expect(ruleBody('[data-blok-database-tab-overflow-menu]')).toContain('width: 24px');
+    expect(ruleBody('[data-blok-database-tab-overflow-menu]')).toContain('height: 24px');
+    expect(ruleBody('[data-blok-database-tab-overflow-check]')).toContain('margin-inline-end: calc(-1 * var(--blok-space-1))');
+    expect(ruleBody('[data-blok-database-tab-overflow-check] svg')).toContain('width: 16px');
+  });
+
+  // Round 74 §3 (foldmenu-4): "New view" and "New data source" text 36 into the row, as the view names' icons.
+  it('starts the new-item rows\' text 36 into the row', () => {
+    const row = ruleBody('[data-blok-database-tab-overflow-new]');
+
+    expect(row).toContain('gap: var(--blok-space-2)');
+    expect(row).toContain('padding: var(--blok-space-1) var(--blok-space-2)');
+  });
+
+  // No blue selected states (CLAUDE.md): the check is primary ink on no fill, the ink of every row.
+  it('draws the current view\'s check in the row ink, with no fill', () => {
+    const check = ruleBody('[data-blok-database-tab-overflow-check]');
+
+    expect(check).toContain('color: var(--blok-database-ink)');
+    expect(ruleBody('[data-blok-database-tab-overflow-item]')).toContain('color: var(--blok-database-ink)');
+    expect(check).not.toMatch(/background/);
+  });
+
   // notion-motion.md Round 38 §5: the menu is capped at 50vh; its list scrolls, with New view in it.
   it('caps the menu at half the window and scrolls its list, not the search', () => {
     expect(ruleBody('[data-blok-database-tab-overflow-dropdown][data-blok-top-layer][popover]')).toContain('max-height: 50vh');
@@ -543,6 +594,18 @@ describe('row page header hover row', () => {
     expect(head).toContain('padding-block: var(--_blok-peek-head-reach) var(--blok-space-1)');
     expect(ruleBody('[data-blok-database-drawer][data-peek-mode="side"]')).toContain('--_blok-peek-head-reach: var(--blok-space-1)');
     expect(ruleBody('[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-content]')).toContain('padding-block-start: var(--blok-space-1)');
+  });
+});
+
+// notion-motion.md Round 74 §2: with no icon and no cover a full page shows the row from just under the 44px bar.
+describe('full page icon row zone (Round 74 §2)', () => {
+  // Only as the content's first child: a template banner above it keeps its clicks.
+  it('lets the head reach up over the content\'s 40px top padding, keeping the row 80 under the bar', () => {
+    const head = ruleBody('[data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-page-head]:first-child:not(:has(> :is([data-blok-database-drawer-cover], [data-blok-database-drawer-icon])))');
+
+    expect(head).toContain('margin-block-start: calc(-1 * var(--blok-space-10))');
+    expect(head).toContain('padding-block-start: calc(2 * var(--blok-space-10))');
+    expect(ruleBody('[data-blok-database-drawer-content]')).toContain('padding: var(--blok-space-10) 60px var(--blok-space-5)');
   });
 });
 

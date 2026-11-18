@@ -2637,7 +2637,8 @@
 
 /*
   notion-motion.md Round 59 §2: with no icon and no cover the row sits 32 under the bar in a centre peek, 80 on a full page.
-  The full page's extra 40 is the head's padding, so the head is hovered from bar + 40 (Notion shows the row at bar + 66).
+  The full page's extra 40 is the head's padding. Round 74 §2: Notion shows the row from just under the bar, so a head
+  that comes first also reaches up over the content's 40 top padding. Behind a template banner it must not cover it.
 */
 [data-blok-database-drawer][data-peek-mode="center"]:not(:has(> [data-blok-database-drawer-content] > [data-blok-database-drawer-page-head] > :is([data-blok-database-drawer-cover], [data-blok-database-drawer-icon]))) {
   --_blok-peek-head-reach: 32px;
@@ -2649,6 +2650,11 @@
 
 [data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-page-head]:not(:has(> :is([data-blok-database-drawer-cover], [data-blok-database-drawer-icon]))) {
   padding-block-start: var(--blok-space-10);
+}
+
+[data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-page-head]:first-child:not(:has(> :is([data-blok-database-drawer-cover], [data-blok-database-drawer-icon]))) {
+  margin-block-start: calc(-1 * var(--blok-space-10));
+  padding-block-start: calc(2 * var(--blok-space-10));
 }
 
 [data-blok-database-drawer]:is([data-peek-mode="side"], [data-peek-mode="center"]) [data-blok-database-drawer-page-head] {
@@ -4151,6 +4157,14 @@ button[data-blok-database-board-lane-count]:hover {
   box-shadow: var(--blok-database-popover-shadow);
   padding: var(--blok-space-1);
   --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1)));
+  /* notion-motion.md Round 74 §3: fade and scale 0.96 → 1, 200ms ease, from the top-left corner.
+     No forward fill: a kept transform would hold the menu's box in a containing block and keep its animation listed. */
+  animation: blok-prop-popover-in 200ms ease backwards;
+  transform-origin: top left;
+}
+
+[data-blok-database-tab-overflow-dropdown][dir="rtl"] {
+  transform-origin: top right;
 }
 
 /* The list opens in the top layer; its reset would drop this width and padding. */
@@ -4281,17 +4295,22 @@ button[data-blok-database-board-lane-count]:hover {
 }
 
 /* Overflow dropdown items */
-/* notion-motion.md Round 29 §4: 258 wide, 16 in from the panel. Fill and radius stay the shared field look. */
+/* notion-motion.md Round 29 §4: 258 wide, 16 in from the panel. Fill and radius stay the shared field look.
+   Round 74 §3: 12 under the menu top (with its 4 padding), the first row 12 under it. */
 [data-blok-database-tab-overflow-dropdown] > [data-blok-field="search"] {
   margin-inline: var(--blok-space-3);
-  margin-bottom: var(--blok-space-1);
+  margin-block: var(--blok-space-2) var(--blok-space-3);
 }
 
+/* Round 74 §3: handle glyph 10 in, view icon 36 in, the 24px ••• box ends 16 before the row end. */
 [data-blok-database-tab-overflow-item] {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-1-5);
-  padding: var(--blok-space-1) var(--blok-space-1-5);
+  gap: var(--blok-space-2);
+  box-sizing: border-box;
+  min-height: 28px;
+  padding-block: 0;
+  padding-inline: var(--blok-space-2) var(--blok-space-4);
   border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   cursor: pointer;
   font-size: 14px;
@@ -4302,6 +4321,19 @@ button[data-blok-database-board-lane-count]:hover {
 
 [data-blok-database-tab-overflow-item][data-dragging] {
   opacity: 0.5;
+}
+
+/* Round 74 §3: a 16px check 4 before the ••• box. Row ink on no fill: selected states are never blue. */
+[data-blok-database-tab-overflow-check] {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-inline-end: calc(-1 * var(--blok-space-1));
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-tab-overflow-check] svg {
+  width: 16px;
+  height: 16px;
 }
 
 [data-blok-database-tab-overflow-item] > span:not([data-blok-database-tab-overflow-name]),
@@ -4339,6 +4371,11 @@ button[data-blok-database-board-lane-count]:hover {
   touch-action: none;
 }
 
+[data-blok-database-tab-overflow-menu] {
+  width: 24px;
+  height: 24px;
+}
+
 [data-blok-database-tab-overflow-handle] svg,
 [data-blok-database-tab-overflow-menu] svg {
   width: 16px;
@@ -4365,11 +4402,12 @@ button[data-blok-database-board-lane-count]:hover {
   color: var(--blok-database-ink-secondary);
 }
 
+/* Round 74 §3: the label 36 into the row (8 + the 20px icon + 8). */
 [data-blok-database-tab-overflow-new] {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-1-5);
-  padding: var(--blok-space-1) var(--blok-space-1-5);
+  gap: var(--blok-space-2);
+  padding: var(--blok-space-1) var(--blok-space-2);
   font-size: 14px;
   color: var(--blok-database-tab-text);
   cursor: pointer;
@@ -4379,6 +4417,11 @@ button[data-blok-database-board-lane-count]:hover {
 
 [data-blok-database-tab-overflow-new]:hover {
   background-color: var(--blok-database-popover-hover);
+}
+
+/* Round 74 §3: New data source starts 29 after New view. */
+[data-blok-database-tab-overflow-new-second] {
+  margin-block-start: var(--blok-space-0-25);
 }
 
 [data-blok-database-tab-overflow-separator] {
@@ -7731,7 +7774,8 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   }
 
   [data-blok-database-property-type-popover],
-  [data-blok-database-property-type-popover][data-blok-closing] {
+  [data-blok-database-property-type-popover][data-blok-closing],
+  [data-blok-database-tab-overflow-dropdown] {
     animation: none;
   }
 }

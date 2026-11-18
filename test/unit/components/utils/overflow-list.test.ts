@@ -85,6 +85,46 @@ describe('OverflowList keyboard (research/21 §2)', () => {
     Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
   });
 
+  // The menu opens at scale 0.96 (database.css), so its box reads short on the first frame.
+  it('places the list by its unscaled height, not the box shrunk by its opening scale', () => {
+    const placeTop = vi.fn((_box: DOMRect, height: number) => height);
+
+    list.close();
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(318);
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 278.4, 305.28));
+    list = make({ placeTop });
+    list.open();
+
+    expect(placeTop).toHaveBeenCalled();
+    expect(placeTop.mock.calls.every(([, height]) => height === 318)).toBe(true);
+  });
+
+  // notion-motion.md Round 74 §3: a checkmark marks the current view; aria-selected already says so.
+  it('puts a hidden-from-readers checkmark on the current row only', () => {
+    const checks = Array.from(document.querySelectorAll(`[${P}-dropdown] [${P}-check]`));
+
+    expect(checks).toHaveLength(1);
+    expect(checks[0].closest('[data-id]')?.getAttribute('data-id')).toBe('b');
+    expect(checks[0].getAttribute('aria-hidden')).toBe('true');
+    expect(checks[0].querySelector('svg')).not.toBeNull();
+  });
+
+  // The ••• button stays last, so the check sits just before it.
+  it('draws the checkmark after the name and before the row menu', () => {
+    const row = document.querySelector(`[${P}-dropdown] [data-id="b"]`);
+    const children = Array.from(row?.children ?? []);
+    const check = children.findIndex((el) => el.hasAttribute(`${P}-check`));
+
+    expect(children[check - 1]?.hasAttribute(`${P}-name`)).toBe(true);
+    list.close();
+    list = make({ onMenu: vi.fn() });
+    list.open();
+    const withMenu = Array.from(document.querySelector(`[${P}-dropdown] [data-id="b"]`)?.children ?? []);
+
+    expect(withMenu.at(-1)?.hasAttribute(`${P}-menu`)).toBe(true);
+    expect(withMenu.at(-2)?.hasAttribute(`${P}-check`)).toBe(true);
+  });
+
   it('focuses the search and highlights the current view, not the first row', () => {
     expect(input()).toHaveFocus();
     expect(highlighted()).toBe('b');

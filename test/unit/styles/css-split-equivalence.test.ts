@@ -1885,6 +1885,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R182_BYTES = 352;
     // Lane r183: Round 74 §4 the colour rule card 11px lower and a rollup's "any" at 400, §5 a text form answer's text 9px 10px in. Net database.css growth against origin/main.
     const DATABASE_R183_BYTES = 726;
+    // Lane r184: Round 74 §3 the "N more…" menu's entrance, spacing, row offsets and checkmark; §2 the full-page icon row zone. Net database.css growth against origin/main.
+    const DATABASE_R184_BYTES = 1812;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2517,6 +2519,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R181_BYTES
       + DATABASE_R182_BYTES
       + DATABASE_R183_BYTES
+      + DATABASE_R184_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

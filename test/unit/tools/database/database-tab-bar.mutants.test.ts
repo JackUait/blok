@@ -1216,8 +1216,8 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       const { dropdown } = openDropdown(views, 'v1');
       const items = Array.from(dropdown.querySelectorAll('[data-blok-database-tab-overflow-item]'));
 
-      // handle, icon slot, name, "•••"
-      expect(items[0].children.length).toBe(4);
+      // handle, icon slot, name, the current view's check, "•••"
+      expect(items[0].children.length).toBe(5);
       expect(items[0].children[1].querySelector('svg')).not.toBeNull();
       expect(items[1].children.length).toBe(4);
       expect(items[1].children[1].innerHTML).toBe('');

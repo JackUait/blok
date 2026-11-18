@@ -1,4 +1,4 @@
-import { IconDotsHorizontal, IconMenu, IconPlus } from '../icons';
+import { IconCheck, IconDotsHorizontal, IconMenu, IconPlus } from '../icons';
 import { DATA_ATTR } from '../constants/data-attributes';
 import { syncPortalDirection } from './portal-direction';
 import { SearchInput, SearchInputEvent } from './popover/components/search-input';
@@ -18,7 +18,7 @@ export interface OverflowListRow {
 export interface OverflowListOptions {
   /** The "N more…" button; the list hangs below it. */
   anchor: HTMLElement;
-  /** Attribute prefix: `<prefix>-dropdown`, `-item`, `-name`, `-handle`, `-menu`, `-separator`, `-new`, `-empty`. */
+  /** Attribute prefix: `<prefix>-dropdown`, `-item`, `-name`, `-check`, `-handle`, `-menu`, `-separator`, `-new`, `-empty`. */
   prefix: string;
   /** The row attribute that carries its id. */
   idAttribute: string;
@@ -162,7 +162,8 @@ export class OverflowList {
       const placeTop = this.options.placeTop;
 
       if (placeTop !== undefined) {
-        dropdown.style.setProperty('top', `${placeTop(anchor.getBoundingClientRect(), dropdown.getBoundingClientRect().height)}px`);
+        // The opening scale shrinks the box; offsetHeight is the layout height (0 in jsdom).
+        dropdown.style.setProperty('top', `${placeTop(anchor.getBoundingClientRect(), dropdown.offsetHeight || dropdown.getBoundingClientRect().height)}px`);
       }
     };
 
@@ -336,6 +337,14 @@ export class OverflowList {
       item.append(handle);
     }
     item.append(iconSpan, nameSpan);
+    if (row.active) {
+      const check = document.createElement('span');
+
+      check.setAttribute(`${prefix}-check`, '');
+      check.setAttribute('aria-hidden', 'true');
+      check.innerHTML = IconCheck;
+      item.append(check);
+    }
     if (!readOnly && onMenu !== undefined) {
       const menu = this.rowButton(`${prefix}-menu`, IconDotsHorizontal, labels.menu);
 

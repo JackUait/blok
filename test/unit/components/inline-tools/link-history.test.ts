@@ -51,7 +51,7 @@ describe('link history', () => {
     recordRecentLink('https://b.com');
     recordRecentLink('https://a.com');
 
-    expect(getRecentLinks()[0]).toEqual({ url: 'https://a.com', title: 'A site' });
+    expect(getRecentLinks()[0]).toEqual({ url: 'https://a.com', title: 'A site', checked: true });
   });
 
   it('stores the title and picture for a recorded link', () => {
@@ -59,8 +59,23 @@ describe('link history', () => {
     updateRecentLinkMeta('https://a.com', { title: 'A site', image: 'https://a.com/cover.png' });
 
     expect(getRecentLinks()).toEqual([
-      { url: 'https://a.com', title: 'A site', image: 'https://a.com/cover.png' },
+      { url: 'https://a.com', title: 'A site', image: 'https://a.com/cover.png', checked: true },
     ]);
+  });
+
+  it('remembers that a link was looked up, even when the page had nothing to give', () => {
+    recordRecentLink('https://a.com');
+    updateRecentLinkMeta('https://a.com', {});
+
+    expect(getRecentLinks()).toEqual([{ url: 'https://a.com', checked: true }]);
+  });
+
+  it('keeps the looked-up mark when the same link is added again', () => {
+    recordRecentLink('https://a.com');
+    updateRecentLinkMeta('https://a.com', { title: 'A' });
+    recordRecentLink('https://a.com/');
+
+    expect(getRecentLinks()).toEqual([{ url: 'https://a.com/', title: 'A', checked: true }]);
   });
 
   it('ignores metadata for a link that already left the history', () => {
@@ -78,7 +93,7 @@ describe('link history', () => {
     recordRecentLink('https://a.com');
     updateRecentLinkMeta('https://a.com', { title: '   ' });
 
-    expect(getRecentLinks()).toEqual([{ url: 'https://a.com' }]);
+    expect(getRecentLinks()).toEqual([{ url: 'https://a.com', checked: true }]);
   });
 
   it('treats www, http(s) and a trailing slash as the same link, keeping what it knew', () => {
@@ -88,7 +103,7 @@ describe('link history', () => {
     recordRecentLink('http://www.youtube.com/');
 
     expect(getRecentLinks()).toEqual([
-      { url: 'http://www.youtube.com/', title: 'YouTube', image: 'https://youtube.com/cover.jpg' },
+      { url: 'http://www.youtube.com/', title: 'YouTube', image: 'https://youtube.com/cover.jpg', checked: true },
       { url: 'https://b.com' },
     ]);
   });

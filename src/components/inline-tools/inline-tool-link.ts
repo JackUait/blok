@@ -195,6 +195,11 @@ export class LinkInlineTool implements InlineTool {
   private activeOptionIndex = -1;
 
   /**
+   * Links with a lookup in flight, so one link is never asked for twice at once.
+   */
+  private lookups = new Set<string>();
+
+  /**
    * Headings of this document, read on every open.
    */
   private headingTargets: HeadingTarget[] = [];
@@ -281,6 +286,7 @@ export class LinkInlineTool implements InlineTool {
     this.nodes.inputWrapper = document.createElement('div');
     // One card width for every state, so the lists never make it jump.
     this.nodes.inputWrapper.className = 'px-1 w-80 mobile:w-auto';
+    this.nodes.inputWrapper.setAttribute('data-link-field', '');
     this.nodes.inputWrapper.append(
       this.nodes.urlLabel,
       this.nodes.input,
@@ -828,6 +834,29 @@ export class LinkInlineTool implements InlineTool {
   }
 
   /**
+   * Draw the shelf again after a lookup answered, keeping the open spine
+   * and the highlighted row where the user left them.
+   */
+  private redrawRecent(): void {
+    const list = this.nodes.recentList;
+
+    if (!list || this.nodes.input?.getAttribute(this.DATA_ATTRIBUTES.inputOpened) !== 'true') {
+      return;
+    }
+
+    const open = Array.from(list.children).findIndex((child) => child.hasAttribute('data-link-recent-open'));
+
+    this.renderRecent();
+
+    const spines = Array.from(list.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
+
+    // The shelf is already on screen: no second entrance.
+    spines.forEach((spine) => spine.style.setProperty('animation', 'none'));
+    this.openRecent(spines[open]);
+    this.setActiveOption(this.activeOptionIndex);
+  }
+
+  /**
    * Open one link on the shelf to full width; the rest stay spines. The
    * last one aimed at stays open when the pointer or the arrows move on.
    * @param spine - the link to open
@@ -1198,16 +1227,33 @@ export class LinkInlineTool implements InlineTool {
 
     recordRecentLink(url);
 
+    if (getRecentLinks()[0]?.checked !== true) {
+      this.lookUp(url);
+    }
+  }
+
+  /**
+   * Ask the unfurl endpoint for a link's title and picture, once.
+   * @param url - a recorded href
+   */
+  private lookUp(url: string): void {
     const unfurl = this.linkConfig.unfurl;
 
-    if (unfurl === undefined || getRecentLinks()[0]?.title !== undefined) {
+    if (unfurl === undefined || this.lookups.has(url)) {
       return;
     }
 
+    this.lookups.add(url);
     new MetadataFetcher(unfurl)
       .fetch(url)
-      .then((meta) => updateRecentLinkMeta(url, { title: meta.title, image: meta.image }))
-      .catch(() => undefined);
+      .then((meta) => {
+        updateRecentLinkMeta(url, { title: meta.title, image: meta.image });
+        this.redrawRecent();
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        this.lookups.delete(url);
+      });
   }
 
   /**
@@ -1342,6 +1388,12 @@ export class LinkInlineTool implements InlineTool {
     // suggestion chip — keep it hidden even though the URL is prefilled.
     this.updateSuggestion(this.nodes.input.value);
     this.renderRecent();
+
+    // A link stored before pictures were kept, or one whose lookup failed, gets its lookup now.
+    if (!this.editing) {
+      getRecentLinks().filter((entry) => entry.checked !== true).forEach((entry) => this.lookUp(entry.url));
+    }
+
     this.headingTargets = this.editing ? [] : this.readHeadings();
     this.headingRows.clear();
     this.nodes.headingList?.replaceChildren();

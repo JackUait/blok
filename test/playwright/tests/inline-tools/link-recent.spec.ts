@@ -121,8 +121,8 @@ test.describe('link field: recent links', () => {
 
   test('walks rows with the arrows, hides the list while typing, and applies a row on click', async ({ page }) => {
     await page.evaluate(() => localStorage.setItem('blok-recent-links', JSON.stringify([
-      { url: 'https://a.example.com/', title: 'Alpha page' },
-      { url: 'https://b.example.com/', title: 'Beta page' },
+      { url: 'https://a.example.com/', title: 'Alpha page', checked: true },
+      { url: 'https://b.example.com/', title: 'Beta page', checked: true },
     ])));
     await createBlok(page, [{ type: 'paragraph', data: { text: 'target' } }]);
 

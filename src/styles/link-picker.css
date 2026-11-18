@@ -129,6 +129,27 @@
   color: var(--blok-link-cover-text);
 }
 
+/* The field stays put: only the lists under it scroll. The popover's own
+   scroller would carry the field away with them. */
+[data-blok-popover-items]:has(> [data-blok-popover-item-html] > [data-link-field]) {
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+}
+
+[data-blok-popover-item-html]:has(> [data-link-field]),
+[data-link-field] {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+[data-link-options] {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 /* Headings: an outline, stepped in on guide lines. */
 [data-link-heading-row] {
   position: relative;

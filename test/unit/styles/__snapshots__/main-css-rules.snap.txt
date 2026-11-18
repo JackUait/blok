@@ -38936,6 +38936,24 @@ textarea[data-blok-field] {
   color: var(--blok-link-cover-text);
 }
 
+[data-blok-popover-items]:has(> [data-blok-popover-item-html] > [data-link-field]) {
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+}
+
+[data-blok-popover-item-html]:has(> [data-link-field]), [data-link-field] {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+[data-link-options] {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 [data-link-heading-row] {
   position: relative;
   padding-inline-start: calc(var(--blok-space-2) + var(--_blok-link-heading-depth, 0) * var(--blok-space-4));

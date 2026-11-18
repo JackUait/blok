@@ -1143,7 +1143,7 @@ describe('LinkInlineTool', () => {
       return { ...setup, itemWrapper, input: getInputFromWrapper(itemWrapper) };
     };
 
-    const seed = (entries: { url: string; title?: string; image?: string }[]): void => {
+    const seed = (entries: { url: string; title?: string; image?: string; checked?: boolean }[]): void => {
       localStorage.setItem('blok-recent-links', JSON.stringify(entries));
     };
 
@@ -1391,16 +1391,78 @@ describe('LinkInlineTool', () => {
           url: 'https://example.com',
           title: 'Example Domain',
           image: 'https://example.com/cover.png',
+          checked: true,
         });
       });
       expect(fetchMock).toHaveBeenCalledWith('/unfurl?url=https%3A%2F%2Fexample.com', { headers: undefined });
     });
 
-    it('does not look the title up again for a link that already has one', () => {
+    it('looks up a link stored before pictures were kept when the field opens, and draws its picture', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: 1, meta: { title: 'Escaping the Underworld', image: { url: 'https://i.example.com/cover.jpg' } } }),
+      });
+
+      vi.stubGlobal('fetch', fetchMock);
+      seed([
+        { url: 'https://www.youtube.com/watch?v=abc', title: 'YouTube' },
+        { url: 'https://b.com', title: 'B', checked: true },
+      ]);
+
+      const { itemWrapper } = openCreating({ unfurl: { endpoint: '/unfurl' } });
+
+      expect(recentRows(itemWrapper)[0].querySelector('img')).toBeNull();
+
+      await vi.waitFor(() => {
+        expect(recentRows(itemWrapper)[0].querySelector('img')?.getAttribute('src')).toBe('https://i.example.com/cover.jpg');
+      });
+      expect(rowText(recentRows(itemWrapper)[0], 'title')).toBe('Escaping the Underworld');
+      expect(recentRows(itemWrapper)[0].hasAttribute('data-link-recent-open')).toBe(true);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledWith('/unfurl?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc', { headers: undefined });
+    });
+
+    it('keeps the spine and the row the user was on when a late picture arrives', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: 1, meta: { image: { url: 'https://i.example.com/cover.jpg' } } }),
+      }));
+      seed([
+        { url: 'https://a.com', title: 'A' },
+        { url: 'https://b.com', title: 'B', checked: true },
+      ]);
+
+      const { itemWrapper, input } = openCreating({ unfurl: { endpoint: '/unfurl' } });
+
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+
+      await vi.waitFor(() => {
+        expect(recentRows(itemWrapper)[0].querySelector('img')).not.toBeNull();
+      });
+
+      const rows = recentRows(itemWrapper);
+
+      expect(rows[1].hasAttribute('data-link-recent-open')).toBe(true);
+      expect(rows[1]).toHaveAttribute('aria-selected', 'true');
+      expect(input.getAttribute('aria-activedescendant')).toBe(rows[1].id);
+    });
+
+    it('does not look a link up without a lookup endpoint', () => {
       const fetchMock = vi.fn();
 
       vi.stubGlobal('fetch', fetchMock);
       seed([{ url: 'https://example.com', title: 'Example Domain' }]);
+      openCreating();
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('does not look up again a link that was already looked up', () => {
+      const fetchMock = vi.fn();
+
+      vi.stubGlobal('fetch', fetchMock);
+      seed([{ url: 'https://example.com', title: 'Example Domain', checked: true }]);
 
       const { itemWrapper } = openCreating({ unfurl: { endpoint: '/unfurl' } });
 

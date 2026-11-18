@@ -10,6 +10,8 @@ export interface RecentLink {
   title?: string;
   /** The page's own picture, shown as the link's cover. */
   image?: string;
+  /** The lookup has answered for this link, with or without a picture. */
+  checked?: boolean;
 }
 
 /**
@@ -60,7 +62,7 @@ const toRecentLink = (value: unknown): RecentLink | null => {
     return null;
   }
 
-  const { url, title, image } = value as Record<string, unknown>;
+  const { url, title, image, checked } = value as Record<string, unknown>;
 
   if (typeof url !== 'string') {
     return null;
@@ -72,6 +74,7 @@ const toRecentLink = (value: unknown): RecentLink | null => {
     url,
     ...(cleaned !== '' ? { title: cleaned } : {}),
     ...(typeof image === 'string' ? { image } : {}),
+    ...(checked === true ? { checked } : {}),
   };
 };
 
@@ -134,5 +137,6 @@ export function updateRecentLinkMeta(url: string, meta: { title?: string; image?
     ...entry,
     ...(title ? { title } : {}),
     ...(meta.image ? { image: meta.image } : {}),
+    checked: true,
   }));
 }

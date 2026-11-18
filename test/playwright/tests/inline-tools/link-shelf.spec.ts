@@ -293,4 +293,35 @@ test.describe('link field: shelf of recent links', () => {
     await expect(page.locator('[data-link-headings-label]')).toHaveCSS('text-transform', 'uppercase');
     expect(await page.locator('[data-link-options]').evaluate((options) => Array.from(options.children).every((child) => child.hasAttribute('data-link-group')))).toBe(true);
   });
+
+  test('keeps the field in place while the lists scroll under it', async ({ page }) => {
+    await page.setViewportSize({ width: 900, height: 380 });
+    await createBlok(page, [
+      ...['One', 'Two', 'Three', 'Four', 'Five', 'Six'].map((text) => ({ type: 'header', data: { text, level: 2 } })),
+      { type: 'paragraph', data: { text: 'target words' } },
+    ]);
+
+    const input = await openLinkField(page, 'target');
+    const options = page.locator('[data-link-options]');
+    const before = await box(input);
+
+    expect(await options.evaluate((list) => list.scrollHeight > list.clientHeight)).toBe(true);
+
+    for (let step = 0; step < 10; step++) {
+      await input.press('ArrowDown');
+    }
+
+    const last = page.locator(HEADING_ROW_SELECTOR).last();
+
+    await expect(last).toHaveAttribute('aria-selected', 'true');
+    expect(await options.evaluate((list) => list.scrollTop)).toBeGreaterThan(0);
+
+    // The picked row is scrolled fully into the list, and the field has not moved.
+    const [listBox, lastBox] = [await box(options), await box(last)];
+
+    expect(lastBox.y + lastBox.height).toBeLessThanOrEqual(listBox.y + listBox.height + 0.5);
+    expect(await box(input)).toEqual(before);
+    expect(before.y + before.height).toBeLessThanOrEqual(listBox.y + 0.5);
+    expect(await page.getByTestId('popover-items').last().evaluate((items) => items.scrollTop)).toBe(0);
+  });
 });

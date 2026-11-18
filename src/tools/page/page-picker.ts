@@ -871,7 +871,7 @@ export class PagePicker {
     // A trusted constant from the icon module, not user input.
     glyph.innerHTML = IconChevronRight.trim();
     chevron.type = 'button';
-    // Out of the Tab order: Tab closes the picker.
+    // Out of the Tab order: Tab in the search field closes the picker.
     chevron.tabIndex = -1;
     chevron.setAttribute('aria-label', open ? labels.close : labels.open);
     chevron.setAttribute('aria-expanded', String(open));
@@ -883,6 +883,22 @@ export class PagePicker {
       this.toggleTree(page.pageId);
       // notion-motion.md Round 65 §3: focus goes to the chevron. The row is drawn anew, so focus its new chevron.
       this.chevronOf(key)?.focus({ preventScroll: true });
+    });
+    // notion-motion.md Round 67 §4: Tab moves to the next row, the picker stays open. Shift+Tab and the last row: unmeasured.
+    chevron.addEventListener('keydown', (event) => {
+      if (event.key !== 'Tab' || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
+        return;
+      }
+      const index = this.entries.findIndex((entry) => entry.key === key);
+      const next = index === -1 ? undefined : this.entries[index + 1]?.element;
+
+      if (next === undefined) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      next.tabIndex = -1;
+      next.focus({ preventScroll: true });
     });
     option.prepend(chevron);
 

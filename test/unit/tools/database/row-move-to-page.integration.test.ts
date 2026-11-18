@@ -530,6 +530,28 @@ describe('row menu › Move to › Workspace tree', () => {
       .some((option) => option.querySelector('[data-blok-testid="page-picker-tree-chevron"]') !== null)).toBe(false);
   });
 
+  // notion-motion.md Round 67 §4: Tab on a focused chevron moves to the next row; the picker stays open and nothing expands.
+  it('moves focus from a chevron to the next row on Tab, keeping the picker open', async () => {
+    const page = host({ children: children() });
+
+    await boot(page);
+    await openPicker();
+    const chevron = chevronOf('Home');
+
+    chevron.focus();
+    const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+
+    chevron.dispatchEvent(tab);
+    await quiet();
+
+    const notes = treeRows().find((row) => row.querySelector('.truncate')?.textContent === 'Notes');
+
+    expect(document.activeElement).toBe(notes);
+    expect(tab.defaultPrevented).toBe(true);
+    expect(treeTitles()).toEqual(['Home', 'Notes']);
+    expect(page.children).not.toHaveBeenCalledWith('w-home');
+  });
+
   it('opens a row\'s children under it, one level deeper, and closes them again, without picking', async () => {
     const page = host({ children: children() });
 

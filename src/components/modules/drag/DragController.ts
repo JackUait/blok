@@ -1664,7 +1664,7 @@ export class DragController extends Module {
     return blocks.some((member) => carriesReadOnly(member, (id) => this.Blok.BlockManager.getBlockById(id)));
   }
 
-  public async duplicateBlocksInPlace(block: Block): Promise<Block[]> {
+  public async duplicateBlocksInPlace(block: Block, options: { leaveOut?: readonly string[]; numberCopies?: boolean } = {}): Promise<Block[]> {
     // Drag internals initialize lazily on the first drag; Cmd+D can fire before
     // any drag has happened, so ensure operations/descendant helpers exist.
     this.lazyInit();
@@ -1684,10 +1684,16 @@ export class DragController extends Module {
     // block's nested descendants are usually not themselves selected, yet they
     // must travel with their parent into the copy (Notion's Cmd+D parity).
     const seen = new Set<string>();
+    // "Duplicate without content": these blocks and everything under them stay behind.
+    const leftOut = new Set((options.leaveOut ?? []).flatMap((id) => {
+      const member = this.Blok.BlockManager.getBlockById(id);
+
+      return member === undefined ? [] : [id, ...this.getHierarchyDescendants(member).map((descendant) => descendant.id)];
+    }));
     const sourceBlocks = baseBlocks
       .flatMap((baseBlock) => [baseBlock, ...this.collectDuplicateDescendants(baseBlock)])
       .filter((member) => {
-        if (seen.has(member.id)) {
+        if (seen.has(member.id) || leftOut.has(member.id)) {
           return false;
         }
 
@@ -1715,6 +1721,8 @@ export class DragController extends Module {
     if (prep.aborted) {
       return [];
     }
+    prep.leftOut = leftOut;
+    prep.numberCopies = options.numberCopies;
 
     const resultRef: { current: { duplicatedBlocks: Block[]; targetIndex: number } } = {
       current: { duplicatedBlocks: [], targetIndex: prep.baseInsertIndex },

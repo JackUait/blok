@@ -133,6 +133,129 @@ describe('PagePicker', () => {
     expect(onPick).toHaveBeenCalledExactlyOnceWith('p2');
   });
 
+  describe('hooks for a pick that takes time', () => {
+    const rows = (): HTMLElement[] => Array.from(document.querySelectorAll<HTMLElement>('[role="option"]'));
+    const key = (name: string): boolean => picker.handleKeydown(new KeyboardEvent('keydown', { key: name, cancelable: true }));
+    const settle = async (): Promise<void> => {
+      await Promise.resolve();
+      await Promise.resolve();
+    };
+
+    it('reports the active row, and null when the list is empty', () => {
+      const onActiveRow = vi.fn<(row: HTMLElement | null) => void>();
+
+      picker.open('', anchor, onPick, { onActiveRow });
+      picker.setResults([{ pageId: 'p1', title: 'Roadmap' }, { pageId: 'p2', title: 'Roadwork' }]);
+      expect(onActiveRow).toHaveBeenLastCalledWith(rows()[0]);
+
+      key('ArrowDown');
+      expect(onActiveRow).toHaveBeenLastCalledWith(rows()[1]);
+
+      picker.setResults([]);
+      expect(onActiveRow).toHaveBeenLastCalledWith(null);
+    });
+
+    it('hands beforePick the tree row that was picked', async () => {
+      const beforePick = vi.fn<(pageId: string, row: HTMLElement) => Promise<boolean>>(async () => false);
+
+      picker.open('', anchor, onPick, {
+        searchField: { placeholder: 'Search', onQuery: vi.fn() },
+        tree: { label: 'Workspace', open: 'Open', close: 'Close', children: async (pageId) => (pageId === null ? [{ pageId: 'w1', title: 'Home' }] : []) },
+        beforePick,
+      });
+      picker.setResults([]);
+      await vi.waitFor(() => expect(document.querySelector('[data-blok-page-picker-tree-row]')).not.toBeNull());
+      const row = document.querySelector<HTMLElement>('[data-blok-page-picker-tree-row]');
+
+      row?.click();
+      expect(beforePick).toHaveBeenCalledExactlyOnceWith('w1', row);
+    });
+
+    it('holds the pick until beforePick settles, with the list frozen', async () => {
+      const release = { go: (_go: boolean): void => undefined };
+      const beforePick = vi.fn<(pageId: string, row: HTMLElement) => Promise<boolean>>(() => new Promise((resolve) => {
+        release.go = resolve;
+      }));
+
+      picker.open('', anchor, onPick, { beforePick });
+      picker.setResults([{ pageId: 'p1', title: 'Roadmap' }, { pageId: 'p2', title: 'Roadwork' }]);
+      const [first, second] = rows();
+
+      first.click();
+      expect(beforePick).toHaveBeenCalledExactlyOnceWith('p1', first);
+      expect(onPick).not.toHaveBeenCalled();
+      expect(picker.opened).toBe(true);
+
+      second.click();
+      key('ArrowDown');
+      key('Enter');
+      picker.setResults([{ pageId: 'p3', title: 'Other' }]);
+      expect(beforePick).toHaveBeenCalledTimes(1);
+      expect(first.getAttribute('aria-selected')).toBe('true');
+      expect(rows()).toEqual([first, second]);
+
+      release.go(true);
+      await settle();
+      expect(onPick).toHaveBeenCalledExactlyOnceWith('p1');
+      expect(picker.opened).toBe(false);
+    });
+
+    it('drops the pick when beforePick answers false, and takes picks again', async () => {
+      const beforePick = vi.fn<(pageId: string, row: HTMLElement) => Promise<boolean>>(() => Promise.resolve(false));
+
+      picker.open('', anchor, onPick, { beforePick });
+      picker.setResults([{ pageId: 'p1', title: 'Roadmap' }]);
+      rows()[0].click();
+      await settle();
+
+      expect(onPick).not.toHaveBeenCalled();
+      expect(picker.opened).toBe(true);
+
+      rows()[0].click();
+      expect(beforePick).toHaveBeenCalledTimes(2);
+    });
+
+    it('drops the pick when the picker closes while beforePick is pending', async () => {
+      const release = { go: (_go: boolean): void => undefined };
+      const onClose = vi.fn();
+
+      picker.open('', anchor, onPick, {
+        onClose,
+        beforePick: () => new Promise((resolve) => {
+          release.go = resolve;
+        }),
+      });
+      picker.setResults([{ pageId: 'p1', title: 'Roadmap' }]);
+      rows()[0].click();
+      key('Escape');
+      release.go(true);
+      await settle();
+
+      expect(onPick).not.toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not carry a pending pick into the next opening', async () => {
+      const release = { go: (_go: boolean): void => undefined };
+
+      picker.open('', anchor, onPick, {
+        beforePick: () => new Promise((resolve) => {
+          release.go = resolve;
+        }),
+      });
+      picker.setResults([{ pageId: 'p1', title: 'Roadmap' }]);
+      rows()[0].click();
+      picker.open('', anchor, onPick);
+      picker.setResults([{ pageId: 'p2', title: 'Roadwork' }]);
+      release.go(true);
+      await settle();
+
+      expect(onPick).not.toHaveBeenCalled();
+      rows()[0].click();
+      expect(onPick).toHaveBeenCalledExactlyOnceWith('p2');
+    });
+  });
+
   it.each(['Enter', 'ArrowDown', 'ArrowUp', 'Home', 'End'])(
     'claims %s while the page list is empty',
     (key) => {

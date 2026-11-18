@@ -132,13 +132,20 @@ export interface PageConfig {
    * `loadDocument`, a database page link offers "Turn into inline database",
    * the reverse. Both undo as one step here. The page's document is left as
    * it is, so undo can bring the link back.
+   *
+   * With `createFromMention` and `search` too, a database row menu's "Move to"
+   * also lists the pages `search` finds. Picking one sends the row's body to
+   * `create` (with `title`, `document` and `parentId`: the picked page) as a
+   * plain page, without the row's properties, and removes the row as one undo
+   * step here. Undo leaves the new page as it is.
    */
   databasePages?: boolean;
   /**
    * Offers a "New page" section in the "@" menu: a sub-page of the current
    * page, or a page under one the user picks. Default false. Turn it on only
    * when `create` stores `title` and `parentId`. The new page is mentioned,
-   * not opened.
+   * not opened. With `databasePages`, a database row can also move to a page
+   * (see `databasePages`).
    */
   createFromMention?: boolean;
   /**
@@ -146,6 +153,13 @@ export interface PageConfig {
    * `''` as soon as "@" is typed: answer with recent pages.
    */
   search?(query: string): Promise<readonly PageSearchResult[]>;
+  /**
+   * The pages directly under a page, for the database row menu's "Move to"
+   * picker. `null` asks for the top-level pages. With it, the picker shows a
+   * "Workspace" section: the top-level pages as a tree, each row opening its
+   * children under it. Filter results by the current user, as for `search`.
+   */
+  children?(pageId: string | null): Promise<readonly PageSearchResult[]>;
   /**
    * The page's URL. Used for the link, middle click and Cmd/Ctrl click.
    * Without it the link has no href. Unsafe schemes (`javascript:` and the like) are dropped.
@@ -200,6 +214,10 @@ export interface PageConfig {
    * From the "@" menu (with `createFromMention`), `title` is the typed text
    * and `parentId` the page the user chose. No `parentId` means the page
    * this editor shows.
+   *
+   * From a database row's "Move to" (with `databasePages` and
+   * `createFromMention`), `title` is the row's title, `document` its body and
+   * `parentId` the page the user picked.
    */
   create?(init: PageCreateInit): PageCreateResult | Promise<PageCreateResult>;
   /**

@@ -784,7 +784,9 @@ test.describe('property and row menus', () => {
     await first.locator('[data-row-id="r1"] [data-blok-database-table-row-handle]').click();
     await expect(openMenu(page).getByPlaceholder('Search actions…')).toBeVisible();
     await clickSettled(openMenu(page).getByRole('menuitem', { name: 'Move to', exact: true }));
-    await clickSettled(page.getByRole('menuitem', { name: 'Archive' }));
+    // notion-motion.md Round 62 §1: the "Move page to…" picker takes the menu's place, its field focused.
+    await expect(page.getByPlaceholder('Move page to…')).toBeFocused();
+    await clickSettled(page.getByRole('option', { name: 'Archive' }));
 
     const moved = page.locator('[data-blok-id="db-2"] [data-blok-database-table-row][data-row-id="r1"]');
 
@@ -797,6 +799,394 @@ test.describe('property and row menus', () => {
     await expect(first.locator('[data-blok-database-table-row][data-row-id="r1"]')).toBeVisible();
     await expect(moved).toHaveCount(0);
     expect(await savedRow(page, 'r1')).toMatchObject({ 'p-title': 'Alpha', 'p-notes': 'short', 'p-amount': 1200, 'p-stage': 'o-idea' });
+  });
+
+  // notion-motion.md Round 62 §1 and Round 63 §2.
+  test('the Move to picker keeps 453 tall with full-bleed rows, and a query moves it to the right-click point', async ({ page }) => {
+    const archive: OutputBlockData = {
+      id: 'db-2',
+      type: 'database',
+      data: {
+        title: 'Archive',
+        schema: [{ id: 'q-title', name: 'Name', type: 'title', position: 'a0' }],
+        views: [{ id: 'w1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'w1',
+      },
+      content: [],
+    };
+    const box = page.locator('[data-blok-database-move-picker] [data-blok-popover-container]');
+    const option = page.locator('[data-blok-database-move-picker] [role="option"]').first();
+    const rect = async (locator: Locator): Promise<{ x: number; y: number; width: number; height: number }> => {
+      const found = await locator.boundingBox();
+
+      if (found === null) throw new Error('no box');
+
+      return found;
+    };
+    const openAt = async (): Promise<{ x: number; y: number }> => {
+      const target = await rect(cell(page, 'r1', 'p-notes'));
+      const point = { x: Math.round(target.x + 20), y: Math.round(target.y + target.height / 2) };
+
+      await page.mouse.click(point.x, point.y, { button: 'right' });
+      await clickSettled(openMenu(page).getByRole('menuitem', { name: 'Move to', exact: true }));
+      await expect(page.getByPlaceholder('Move page to…')).toBeFocused();
+      await box.evaluate((element) => Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => undefined))));
+
+      return point;
+    };
+
+    // Cleared back to empty, the box is 453 again and keeps 12 from the window's edges.
+    // The box re-places from a ResizeObserver, before paint; a read between the resize and that callback sees the old top.
+    const clearInside = async (): Promise<void> => {
+      await page.keyboard.press('ControlOrMeta+a');
+      await page.keyboard.press('Backspace');
+      await expect.poll(async () => {
+        const found = await rect(box);
+
+        return { height: Math.round(found.height), inside: found.y >= 12 && found.y + found.height <= 705 };
+      }).toEqual({ height: 453, inside: true });
+    };
+    const bottom = async (): Promise<number> => {
+      const found = await rect(box);
+
+      return Math.round(found.y + found.height);
+    };
+
+    await page.setViewportSize({ width: 1512, height: 717 });
+    await mount(page, [...blocks(), archive]);
+    const point = await openAt();
+
+    // notion-motion.md Round 64 §3: the box opens at the click point, not on the row menu: 1px under it when it fits.
+    await expect.poll(async () => Math.round((await rect(box)).y)).toBe(point.y + 1);
+    expect(Math.round((await rect(box)).x)).toBe(point.x);
+
+    // At rest: 453 tall whatever it holds, rows 330 wide edge to edge with no rounding, a 14px field.
+    expect((await rect(box)).height).toBeCloseTo(453, 0);
+    expect((await rect(option)).width).toBeCloseTo(330, 0);
+    expect((await rect(option)).x).toBeCloseTo((await rect(box)).x, 0);
+    // The scrolling list clips its rows, so it must span the box too.
+    expect((await rect(page.locator('[data-blok-database-move-picker] [data-blok-popover-items]'))).width).toBeCloseTo(330, 0);
+    expect(await option.evaluate((element) => getComputedStyle(element).borderRadius)).toBe('0px');
+    expect(await page.getByPlaceholder('Move page to…').evaluate((element) => getComputedStyle(element).fontSize)).toBe('14px');
+
+    // A keyboard ring on a full-bleed row is drawn inside it, or the list clips its sides.
+    await page.keyboard.press('ArrowDown');
+    expect(await option.evaluate((element) => getComputedStyle(element).outlineOffset)).toBe('-2px');
+    await page.keyboard.press('ArrowUp');
+
+    // A query: rows inset 322 at +4, radius 6; the box fits its content, its top 1px under the point.
+    await page.keyboard.type('Arch');
+    await expect.poll(async () => Math.round((await rect(option)).width)).toBe(322);
+    expect((await rect(option)).x).toBeCloseTo((await rect(box)).x + 4, 0);
+    expect(await option.evaluate((element) => getComputedStyle(element).borderRadius)).toBe('6px');
+    await expect.poll(async () => Math.round((await rect(box)).y)).toBe(point.y + 1);
+    expect((await rect(box)).height).toBeLessThan(453);
+
+    // When the row menu opened above the point, the searched box sits above it, its bottom on the point.
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => {
+      const holder = document.getElementById('blok');
+
+      if (holder !== null) holder.style.marginTop = '520px';
+    });
+    const low = await openAt();
+
+    // Round 64 §3: no room under the point, so the box sits above it, its bottom on the point.
+    await expect.poll(bottom).toBe(low.y);
+    await page.keyboard.type('Arch');
+    await expect.poll(async () => {
+      const found = await rect(box);
+
+      return Math.round(found.y + found.height);
+    }).toBe(low.y);
+    await clearInside();
+
+    // Lower in the window, cleared, the 453 box still fits it.
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => {
+      const holder = document.getElementById('blok');
+
+      if (holder !== null) holder.style.marginTop = '240px';
+    });
+    const mid = await openAt();
+
+    expect(mid.y + 454).toBeGreaterThan(717);
+    // Round 64 §3: no room under or above the point, so it is clamped 12 over the window bottom.
+    await expect.poll(bottom).toBe(705);
+    await page.keyboard.type('Arch');
+    await expect.poll(async () => Math.round((await rect(option)).width)).toBe(322);
+    await clearInside();
+  });
+
+  // notion-motion.md Round 64 §3: every entry places the box by one rule, 12 from the window's edges.
+  test.describe('Move to picker placement', () => {
+    const archiveBlock: OutputBlockData = {
+      id: 'db-2',
+      type: 'database',
+      data: {
+        title: 'Archive',
+        schema: [{ id: 'q-title', name: 'Name', type: 'title', position: 'a0' }],
+        views: [{ id: 'w1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'w1',
+      },
+      content: [],
+    };
+    const pickerBox = async (page: Page): Promise<{ x: number; y: number; width: number; height: number }> => {
+      const box = page.locator('[data-blok-database-move-picker] [data-blok-popover-container]');
+
+      await expect(page.getByPlaceholder('Move page to…')).toBeFocused();
+      await box.evaluate((element) => Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => undefined))));
+      const found = await box.boundingBox();
+
+      if (found === null) throw new Error('no box');
+
+      return found;
+    };
+    const lower = async (page: Page, by: number): Promise<void> => {
+      await page.evaluate((margin) => {
+        const holder = document.getElementById('blok');
+
+        if (holder !== null) holder.style.marginTop = `${margin}px`;
+      }, by);
+    };
+
+    test.beforeEach(async ({ page }) => {
+      await page.setViewportSize({ width: 1512, height: 717 });
+    });
+
+    test('a list row\'s right-click opens it at the point, and a query moves it there too', async ({ page }) => {
+      await mount(page, [...blocks(), archiveBlock]);
+      await page.evaluate(async (input) => {
+        await window.blokInstance?.render({ blocks: input });
+      }, [...blocks({ type: 'list', name: 'List' }), archiveBlock]);
+      await lower(page, 240);
+      const listRow = page.locator('[data-blok-id="db-1"] [data-blok-database-list-row][data-row-id="r1"]');
+      const target = await listRow.boundingBox();
+
+      if (target === null) throw new Error('no row');
+      const point = { x: Math.round(target.x + 40), y: Math.round(target.y + target.height / 2) };
+
+      await page.mouse.click(point.x, point.y, { button: 'right' });
+      await clickSettled(openMenu(page).getByRole('menuitem', { name: 'Move to', exact: true }));
+      const rest = await pickerBox(page);
+
+      // No room under or above the point: clamped 12 over the window bottom, at the click x.
+      expect(Math.round(rest.y + rest.height)).toBe(705);
+      expect(Math.round(rest.x)).toBe(point.x);
+
+      await page.keyboard.type('Arch');
+      await expect.poll(async () => Math.round((await pickerBox(page)).y)).toBe(point.y + 1);
+    });
+
+    // notion-motion.md Round 65 §3: Notion's row starts 8 left of its halo, which is Blok's row box.
+    test('⌘⇧P on a selected row keeps the box 12 over the window bottom, and Escape drops the selection', async ({ page }) => {
+      await mount(page, [...blocks(), archiveBlock]);
+      await lower(page, 240);
+      await row(page, 'r1').hover();
+      await row(page, 'r1').locator('[data-blok-database-table-row-handle]').click();
+      await expect(openMenu(page).getByPlaceholder('Search actions…')).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(row(page, 'r1')).toHaveAttribute('aria-selected', 'true');
+      await page.keyboard.press('ControlOrMeta+Shift+P');
+      const found = await pickerBox(page);
+      const rowBox = await row(page, 'r1').boundingBox();
+
+      expect(Math.round(found.x)).toBe(Math.round((rowBox?.x ?? -1) - 8));
+      expect(Math.round(found.y + found.height)).toBe(705);
+
+      await page.keyboard.press('Escape');
+      await expect(page.getByPlaceholder('Move page to…')).toHaveCount(0);
+      await expect(row(page, 'r1')).toHaveAttribute('aria-selected', 'false');
+    });
+
+    // notion-motion.md Round 65 §3: from the ⋮⋮ the box hangs under the handle, not from the row menu.
+    test('the row ⋮⋮ › Move to opens it under the handle, or 12 over the window bottom', async ({ page }) => {
+      const openFromHandle = async (): Promise<{ x: number; bottom: number }> => {
+        await row(page, 'r1').hover();
+        const handle = row(page, 'r1').locator('[data-blok-database-table-row-handle]');
+
+        await handle.click();
+        await clickSettled(openMenu(page).getByRole('menuitem', { name: 'Move to', exact: true }));
+        // Read when the picker reads it: after the menu has opened and closed.
+        const box = await handle.boundingBox();
+
+        if (box === null) throw new Error('no handle');
+
+        return { x: box.x, bottom: box.y + box.height };
+      };
+
+      await mount(page, [...blocks(), archiveBlock]);
+      const high = await openFromHandle();
+      const under = await pickerBox(page);
+
+      expect(high.bottom + 453).toBeLessThanOrEqual(705);
+      expect(Math.round(under.x)).toBe(Math.round(high.x));
+      expect(Math.round(under.y)).toBe(Math.round(high.bottom));
+
+      await page.keyboard.press('Escape');
+      await lower(page, 240);
+      const low = await openFromHandle();
+      const clamped = await pickerBox(page);
+
+      expect(low.bottom + 453).toBeGreaterThan(705);
+      expect(Math.round(clamped.x)).toBe(Math.round(low.x));
+      expect(Math.round(clamped.y + clamped.height)).toBe(705);
+    });
+
+    test('the side peek\'s ••• opens it under the button, 12 in from the window\'s right edge', async ({ page }) => {
+      await mount(page, [...blocks(), archiveBlock]);
+      await row(page, 'r1').hover();
+      await row(page, 'r1').locator('[data-blok-database-table-open]').click();
+      const actions = page.locator('[data-blok-database-peek-actions]:not([hidden])');
+
+      await actions.click();
+      await clickSettled(openMenu(page).getByRole('menuitem', { name: 'Move to', exact: true }));
+      const found = await pickerBox(page);
+      const button = await actions.boundingBox();
+
+      expect(Math.round(found.x + found.width)).toBe(1512 - 12);
+      expect(Math.round(found.y)).toBe(Math.round((button?.y ?? 0) + (button?.height ?? 0)));
+    });
+  });
+
+  // notion-motion.md Round 62 §1 and Round 63 §2: Workspace rows 330x28, chevron 20 at +14, icon 16 at +37, title at +60; a level is +14.
+  test('the Move to picker\'s Workspace tree opens a page\'s children 14px further in', async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 717 });
+    await page.evaluate(async (input) => {
+      if (window.blokInstance) {
+        await window.blokInstance.destroy?.();
+        window.blokInstance = undefined;
+      }
+      document.getElementById('blok')?.remove();
+      const holder = document.createElement('div');
+      const tree: Record<string, Array<{ pageId: string; title: string }>> = {
+        '': [{ pageId: 'w-home', title: 'Home' }, { pageId: 'w-notes', title: 'Notes' }],
+        'w-home': [{ pageId: 'w-plans', title: 'Plans' }],
+      };
+
+      holder.id = 'blok';
+      holder.style.cssText = 'max-width:900px;margin:40px auto 0';
+      document.body.appendChild(holder);
+      window.blokInstance = new window.Blok({
+        holder,
+        data: { blocks: input },
+        tools: {
+          page: {
+            class: (window as unknown as { defaultBlockTools: Record<string, { class: unknown }> }).defaultBlockTools.page.class,
+            config: {
+              databasePages: true,
+              createFromMention: true,
+              search: async () => [],
+              children: async (pageId: string | null) => tree[pageId ?? ''] ?? [],
+              create: () => undefined,
+            },
+          },
+        },
+      });
+      await window.blokInstance.isReady;
+    }, blocks());
+    await expect(page.getByRole('grid').first()).toBeVisible();
+
+    const box = page.locator('[data-blok-database-move-picker] [data-blok-popover-container]');
+    const treeRow = (title: string): Locator => page.locator('[data-blok-database-move-picker] [data-blok-page-picker-tree-row]').filter({ hasText: title });
+    const rect = async (locator: Locator): Promise<{ x: number; y: number; width: number; height: number }> => {
+      const found = await locator.boundingBox();
+
+      if (found === null) throw new Error('no box');
+
+      return found;
+    };
+    const offsets = async (title: string): Promise<number[]> => {
+      const left = (await rect(box)).x;
+      const row = treeRow(title);
+
+      return [
+        (await rect(row.getByTestId('page-picker-tree-chevron'))).x - left,
+        (await rect(row.getByTestId('page-picker-option-icon'))).x - left,
+        (await rect(row.getByText(title, { exact: true }))).x - left,
+      ].map((value) => Math.round(value));
+    };
+
+    await page.locator('[data-row-id="r1"]').hover();
+    await page.locator('[data-row-id="r1"] [data-blok-database-table-row-handle]').click();
+    await clickSettled(openMenu(page).getByRole('menuitem', { name: 'Move to', exact: true }));
+    await expect(page.getByPlaceholder('Move page to…')).toBeFocused();
+    await expect(page.locator('[data-blok-database-move-picker] [data-blok-page-picker-section="workspace"]')).toHaveText('Workspace');
+    await box.evaluate((element) => Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => undefined))));
+
+    expect(await offsets('Home')).toEqual([14, 37, 60]);
+    expect(Math.round((await rect(treeRow('Home'))).height)).toBe(28);
+    expect(Math.round((await rect(treeRow('Home'))).width)).toBe(330);
+    expect(Math.round((await rect(treeRow('Home').getByTestId('page-picker-tree-chevron'))).width)).toBe(20);
+    expect(Math.round((await rect(treeRow('Home').getByTestId('page-picker-option-icon'))).width)).toBe(16);
+
+    // notion-motion.md Round 65 §3: an open chevron painted 4.5 x 8, not a filled triangle.
+    const glyph = treeRow('Home').locator('[data-blok-testid="page-picker-tree-chevron"] svg');
+    const ink = await glyph.evaluate((svg) => {
+      const path = svg.querySelector('path');
+
+      if (path === null) throw new Error('no path');
+      const box = path.getBoundingClientRect();
+      const stroke = Number.parseFloat(getComputedStyle(path).strokeWidth);
+
+      return { width: box.width + stroke, height: box.height + stroke, fill: getComputedStyle(path).fill };
+    });
+
+    expect(ink.fill).toBe('none');
+    expect(Math.abs(ink.width - 4.5)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(ink.height - 8)).toBeLessThanOrEqual(0.5);
+
+    const angle = (): Promise<number> => glyph.evaluate((element) => {
+      const turn = new DOMMatrix(getComputedStyle(element).transform);
+      const rotate = getComputedStyle(element).rotate;
+
+      return Math.round(Math.atan2(turn.b, turn.a) * 180 / Math.PI) + (rotate === 'none' ? 0 : Number.parseFloat(rotate));
+    });
+    // Round 65 §3: the turn takes 0.2s ease-out, and focus goes to the chevron, with no ring.
+    await page.evaluate(() => {
+      const turns: unknown[] = [];
+      const animate = Element.prototype.animate;
+
+      Object.assign(window, { chevronTurns: turns });
+      Element.prototype.animate = function (this: Element, keyframes, options) {
+        if (this.closest('[data-blok-testid="page-picker-tree-chevron"]') !== null) turns.push({ keyframes, options });
+
+        return animate.call(this, keyframes, options);
+      };
+    });
+    await treeRow('Home').getByTestId('page-picker-tree-chevron').click();
+    await expect(treeRow('Plans')).toBeVisible();
+    expect((await page.evaluate(() => (window as unknown as { chevronTurns: unknown[] }).chevronTurns))[0]).toEqual({
+      keyframes: [{ rotate: 'none' }, { rotate: '90deg' }],
+      options: { duration: 200, easing: 'ease-out' },
+    });
+    expect(await offsets('Plans')).toEqual([28, 51, 74]);
+    // The chevron turns down while the row is open.
+    await expect.poll(angle).toBe(90);
+    await expect(treeRow('Home').getByTestId('page-picker-tree-chevron')).toBeFocused();
+    expect(await treeRow('Home').getByTestId('page-picker-tree-chevron').evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('none');
+
+    // notion-motion.md Round 66 §4: on the focused chevron the arrows do nothing, and Space and Enter toggle it without picking.
+    const chevron = treeRow('Home').getByTestId('page-picker-tree-chevron');
+    const search = page.getByPlaceholder('Move page to…');
+    const highlighted = page.locator('[data-blok-database-move-picker] [role="option"][aria-selected="true"]');
+    const before = await highlighted.allTextContents();
+
+    for (const key of ['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft']) {
+      await page.keyboard.press(key);
+      await expect(chevron).toBeFocused();
+      await expect(chevron).toHaveAttribute('aria-expanded', 'true');
+      await expect(highlighted).toHaveText(before);
+    }
+    await page.keyboard.press('Space');
+    await expect(chevron).toHaveAttribute('aria-expanded', 'false');
+    await expect(treeRow('Plans')).toHaveCount(0);
+    await expect(search).toHaveValue('');
+    await page.keyboard.press('Enter');
+    await expect(chevron).toHaveAttribute('aria-expanded', 'true');
+    await expect(treeRow('Plans')).toBeVisible();
+    await expect(chevron).toBeFocused();
+    await expect(page.locator('[data-row-id="r1"]')).toBeVisible();
   });
 });
 

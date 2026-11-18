@@ -17,6 +17,8 @@ export interface BlockShortcutsHandlers {
   onCopyAsMarkdown: () => void;
   /** Handler for duplicating the current block / selection (Notion's Cmd/Ctrl+D) */
   onDuplicate: () => void;
+  /** Duplicates the one selected block without its content (Notion's Cmd/Ctrl+Shift+D); false when it did nothing */
+  onDuplicateWithoutContent: () => boolean;
 }
 
 /**
@@ -69,7 +71,8 @@ export class BlockShortcuts {
     this.registerTimeout = setTimeout(() => {
       this.registerTimeout = null;
 
-      const definitions: Array<{ name: string; handler: () => void }> = [
+      // A handler that answers false did nothing, so the browser keeps the key.
+      const definitions: Array<{ name: string; handler: () => boolean | void }> = [
         // Move block up/down: Cmd/Ctrl+Shift+Arrow.
         { name: 'CMD+SHIFT+UP', handler: this.handlers.onMoveUp },
         { name: 'CMD+SHIFT+DOWN', handler: this.handlers.onMoveDown },
@@ -77,6 +80,7 @@ export class BlockShortcuts {
         { name: 'CMD+SHIFT+C', handler: this.handlers.onCopyAsMarkdown },
         // Duplicate block(s): Cmd/Ctrl+D.
         { name: 'CMD+D', handler: this.handlers.onDuplicate },
+        { name: 'CMD+SHIFT+D', handler: this.handlers.onDuplicateWithoutContent },
       ];
 
       for (const { name, handler } of definitions) {
@@ -84,11 +88,10 @@ export class BlockShortcuts {
           name,
           on: document,
           callback: (event: KeyboardEvent) => {
-            if (!this.shouldHandleShortcut(event)) {
+            if (!this.shouldHandleShortcut(event) || handler() === false) {
               return;
             }
             event.preventDefault();
-            handler();
           },
         }));
       }

@@ -113,6 +113,11 @@ export interface ViewGroupEntry {
 }
 
 /** What the panels ask of the database tool. */
+/** `typing`: a keystroke in a filter's value field, joining the open typing run in undo. */
+export interface PersonalWriteOptions {
+  typing?: boolean;
+}
+
 export interface ViewSettingsContext {
   /** `getLocale` dates the filter chips in the editor's language. */
   i18n: Pick<I18n, 't'> & Partial<Pick<I18n, 'getLocale'>>;
@@ -129,7 +134,7 @@ export interface ViewSettingsContext {
   /** A shared, undoable write to the saved view. Ignored while locked. */
   updateView: (changes: ViewChanges) => void;
   /** A personal, unsaved filter or sort edit (D4). */
-  updatePersonal: (patch: PersonalViewPatch) => void;
+  updatePersonal: (patch: PersonalViewPatch, options?: PersonalWriteOptions) => void;
   setLayout: (type: ViewType) => void;
   setLocked: (locked: boolean) => void;
   /** A linked view: its lock reads "Lock views" (research 20 §2b). */
@@ -1704,6 +1709,8 @@ export class ViewSettingsPages {
     return {
       title: this.t('settingsPropertyVisibility'),
       name: 'properties',
+      // notion-motion.md Round 64 §2: Notion's ⌘Z does nothing while this page is open.
+      ignoresHistoryKeys: true,
       build: (panel) => {
         const search = panelInput({
           value: state.query,
@@ -2187,7 +2194,7 @@ export class ViewSettingsPages {
   private valueControls(
     property: PropertyDefinition,
     filter: Pick<FilterConfig, 'operator' | 'value'>,
-    update: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void,
+    update: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>, typing?: boolean) => void,
     thisPage = true
   ): HTMLElement[] {
     const { value } = filter;
@@ -2212,7 +2219,7 @@ export class ViewSettingsPages {
         placeholder: this.t('filterValuePlaceholder'),
         label: this.t('filterValue'),
         testId: 'database-filter-value',
-        onInput: (text) => update({ value: text }),
+        onInput: (text) => update({ value: text }, true),
       })];
     }
 
@@ -2293,7 +2300,7 @@ export class ViewSettingsPages {
           placeholder: this.t('filterValuePlaceholder'),
           label: this.t('filterValue'),
           testId: 'database-filter-value',
-          onInput: (text) => update({ value: text }),
+          onInput: (text) => update({ value: text }, true),
         })];
     }
   }
@@ -2383,10 +2390,10 @@ export class ViewSettingsPages {
     const view = this.ctx.view();
     const fallback = { ...emptyFilterTree(), filterRules: withEntryIds(view.filters) };
     const tree = (): FilterGroup => this.ctx.view().filterTree ?? fallback;
-    const write = (next: FilterGroup): void => this.ctx.updatePersonal({
+    const write = (next: FilterGroup, typing = false): void => this.ctx.updatePersonal({
       ...(view.filterTree === undefined ? { filters: [] } : {}),
       filterTree: next,
-    });
+    }, typing ? { typing } : undefined);
 
     return {
       ...(titled ? { title: this.t('filterAdvanced') } : {}),
@@ -2414,7 +2421,7 @@ export class ViewSettingsPages {
     group: FilterGroup,
     layer: number,
     tree: () => FilterGroup,
-    write: (next: FilterGroup) => void
+    write: (next: FilterGroup, typing?: boolean) => void
   ): HTMLElement[] {
     const rows: HTMLElement[] = [];
 
@@ -2512,13 +2519,13 @@ export class ViewSettingsPages {
     node: FilterConfig & { id: string },
     prefix: HTMLElement,
     tree: () => FilterGroup,
-    write: (next: FilterGroup) => void
+    write: (next: FilterGroup, typing?: boolean) => void
   ): HTMLElement {
     const id = node.id;
     const line = document.createElement('div');
     const property = this.property(node.propertyId);
-    const save = (patch: Partial<Pick<FilterConfig, 'propertyId' | 'operator' | 'value'>>): void => {
-      write(updateFilterRule(tree(), id, patch));
+    const save = (patch: Partial<Pick<FilterConfig, 'propertyId' | 'operator' | 'value'>>, typing = false): void => {
+      write(updateFilterRule(tree(), id, patch), typing);
       panel.refresh();
     };
     const button = (testId: string, label: string, onClick: (self: HTMLElement) => void, icon?: string): HTMLElement => {
@@ -2576,8 +2583,8 @@ export class ViewSettingsPages {
         }),
       })));
     });
-    const controls = this.valueControls(property, node, (patch) => {
-      save(patch.operator === undefined ? patch : { ...patch, operator: keepLead(node.operator, patch.operator) });
+    const controls = this.valueControls(property, node, (patch, typing) => {
+      save(patch.operator === undefined ? patch : { ...patch, operator: keepLead(node.operator, patch.operator) }, typing);
     });
     const [only] = controls;
 
@@ -3837,6 +3844,7 @@ export const openAdvancedFilter = (anchor: HTMLElement, ctx: ViewSettingsContext
     anchor,
     root: new ViewSettingsPages(ctx).advanced(false),
     testId: 'database-advanced-filter',
+    ignoresHistoryKeys: true,
     // The floor under the rules' width (advanced() fits its content). Blok's old fixed width, unmeasured in Notion.
     width: 290,
     // notion-motion.md Round 18 §2 (r18-adv-open.raw): 4px under the "1 rule" chip.
@@ -3859,6 +3867,7 @@ export const openFilterPill = (anchor: HTMLElement, ctx: ViewSettingsContext, fi
     anchor,
     root: new ViewSettingsPages(ctx).simpleFilter(filterId),
     testId: 'database-filter-popover',
+    ignoresHistoryKeys: true,
     width: 220,
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
     ...(onClose !== undefined ? { onClose } : {}),

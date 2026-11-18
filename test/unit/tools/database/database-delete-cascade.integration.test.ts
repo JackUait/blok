@@ -157,6 +157,20 @@ const deleteViaApi = async (instance: Core, id: string): Promise<void> => {
   await quiet();
 };
 
+/** Backspace on a selected database asks first (notion-motion.md Round 66 §2): answer Move to Trash. */
+const confirmTrash = async (): Promise<void> => {
+  const confirm = await vi.waitFor(() => {
+    const found = document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-action="confirm"]');
+
+    if (found === null) throw new Error('no dialog');
+
+    return found;
+  });
+
+  confirm.click();
+  await quiet();
+};
+
 const undo = async (instance: Core): Promise<void> => {
   instance.moduleInstances.API.methods.history.undo();
   await quiet();
@@ -242,6 +256,7 @@ describe('deleting a database deletes its rows, sources and comments', () => {
     BlockSelection.selectBlock(block(instance, 'db'));
     BlockEvents.keydown(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
     await quiet();
+    await confirmTrash();
 
     expect(await savedShape(instance)).toEqual(['p0<root', 'p1<root']);
     expect(yjsShape(instance)).toEqual(['p0<root', 'p1<root']);
@@ -372,6 +387,7 @@ describe('deleting a database deletes its rows, sources and comments', () => {
     ['p0', 'db', 'p1'].forEach((id) => BlockSelection.selectBlock(block(instance, id)));
     BlockEvents.keydown(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
     await quiet();
+    await confirmTrash();
 
     expect(instance.moduleInstances.BlockManager.blocks.map((live) => live.name)).toEqual(['paragraph']);
     expect(instance.moduleInstances.YjsManager.toJSON().map((entry) => entry.type)).toEqual(['paragraph']);
@@ -560,6 +576,7 @@ describe('deleting a database deletes its rows, sources and comments', () => {
       BlockSelection.selectBlock(block(instance, 'db'));
       BlockEvents.keydown(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
       await quiet();
+      await confirmTrash();
 
       expect(deletes()).toEqual(['db:deleteRow:r1', 'src-b:deleteRow:b1']);
     });

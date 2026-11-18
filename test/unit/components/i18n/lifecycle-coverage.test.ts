@@ -299,7 +299,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2241 + 146 + 599 + 11 closure for all 2997 keys', () => {
+  it('rebuilds a disjoint 2251 + 146 + 601 + 11 closure for all 3009 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -313,7 +313,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2997);
+    expect(lifecycle.size).toBe(3009);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -417,6 +417,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +3: the feed card's Add reaction, React and "reacted with" hint call their keys by literal.
       // +12: the built-in comments thread, composer and row page section call their tools.database.comment* keys by literal.
       // +2: the feed card's comment summary row calls tools.database.feedCommentReplyOne/feedCommentReplies by literal.
+      // +2: the comment composer's Mention button and its menu's People label call tools.database.commentMention* by literal.
+      // +1: Attach file's chip remove button calls tools.database.filterRemove by literal (it left registered-namespace).
       // +2: the page block's creating title and Draft badge call tools.page.creating/draft by literal.
       // +1: the row menu's "Page" heading calls tools.database.rowMenuPage by literal.
       // +2: the row menu's Layout and Property visibility call tools.database.settingsLayout and
@@ -579,7 +581,11 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: Edit property's add field calls addOptionPlaceholder by literal.
       // +1 / -1: the row page cover calls tools.database.downloadCover by literal; its Change
       // button now reads title.changeCover, so tools.database.changeCover left (see below).
-      'executable-literal': 2241,
+      // +1: Move to's Workspace section calls tools.database.moveToWorkspace by literal.
+      // -1: the database block menu now reads tools.database.turnIntoPage through its tools.database. prefix (see registered-namespace-compatible).
+      // +2: the database block's Delete prompt calls trashDatabaseConfirm and its description by literal.
+      // +2: Duplicate's submenu calls blockSettings.duplicateWithContent and duplicateWithoutContent by literal.
+      'executable-literal': 2251,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -697,7 +703,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +8: View settings "Manage data sources" (settingsManageSources, manageSources*, manageSourcesViews_one/_other), through the panel's t().
       // -1: tools.database.groupStatusGroup is now called by literal (see executable-literal).
       // +1: tools.database.changeCover lost its literal caller; it shipped in 2.1.0, so it stays.
-      'registered-namespace-compatible': 599,
+      // +1: tools.database.turnIntoPage, via the database block menu's prefix.
+      // +2: trashDataSourcesConfirmDescription_one/_other, the database Delete prompt's plural text for 2+ data sources.
+      'registered-namespace-compatible': 601,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
       // +2: tools.database.rowLastEditedBy and rowWordCount, above.

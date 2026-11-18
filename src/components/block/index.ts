@@ -584,6 +584,50 @@ export class Block extends EventsDispatcher<BlockEvents> {
     }
   }
 
+  /** True when the tool asks before its block menu Delete removes it. */
+  public get asksBeforeDelete(): boolean {
+    return isFunction((this.toolInstance as unknown as Record<string, unknown>).confirmDelete);
+  }
+
+  /**
+   * The tool's answer to its delete question; yes when it asks nothing or the question fails.
+   * @param blockIds - the top blocks the delete removes, this one among them
+   */
+  public async confirmDelete(blockIds: string[] = [this.id]): Promise<boolean> {
+    const method = (this.toolInstance as unknown as Record<string, unknown>).confirmDelete;
+
+    if (!isFunction(method)) {
+      return true;
+    }
+    try {
+      const answer: unknown = await method.call(this.toolInstance, blockIds);
+
+      return answer !== false;
+    } catch (e) {
+      log(`Error during 'confirmDelete' call: ${e instanceof Error ? e.message : String(e)}`, 'error');
+
+      return true;
+    }
+  }
+
+  /** The blocks under this one that "Duplicate without content" leaves out; [] when none or the call throws. */
+  public contentBlockIds(): string[] {
+    const method = (this.toolInstance as unknown as Record<string, unknown>).contentBlockIds;
+
+    if (!isFunction(method)) {
+      return [];
+    }
+    try {
+      const ids: unknown = method.call(this.toolInstance);
+
+      return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [];
+    } catch (e) {
+      log(`Error during 'contentBlockIds' call: ${e instanceof Error ? e.message : String(e)}`, 'error');
+
+      return [];
+    }
+  }
+
   /** The tool's buttons for the page header row; [] when it has none or the call throws. */
   public pageHeaderActions(): PageHeaderAction[] {
     const method = (this.toolInstance as unknown as Record<string, unknown>).pageHeaderActions;
@@ -1111,8 +1155,13 @@ export class Block extends EventsDispatcher<BlockEvents> {
     return this.askTool('isDataReadOnly');
   }
 
+  /** The tool's lock (BlockTool.isLocked). */
+  public get toolLocked(): boolean {
+    return this.askTool('isLocked');
+  }
+
   /** A missing answer is false, a throw is true. */
-  private askTool(method: 'isReadOnly' | 'isDataReadOnly'): boolean {
+  private askTool(method: 'isReadOnly' | 'isDataReadOnly' | 'isLocked'): boolean {
     const answer = this.toolInstance[method];
 
     if (!isFunction(answer)) {

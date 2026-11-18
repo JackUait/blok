@@ -180,6 +180,27 @@ export interface BlockTool extends BaseTool {
   pageHeaderActions?(): PageHeaderAction[];
 
   /**
+   * Asked when the user deletes the block: the block menu's Delete (after the
+   * menu closes), or Backspace/Delete on a selection that holds it. One answer
+   * covers the whole selection. Answer `false` to keep the block, still
+   * selected. A throw or a rejection deletes it. Other deletes do not ask:
+   * cut, the block menu's Delete on a selection of several blocks, the API
+   * and redo. Typing over a selection that holds the block does nothing, and
+   * a paste lands after it instead of replacing it.
+   * @param blockIds - the top blocks the delete removes, this one among
+   *   them, so one question can describe the whole selection
+   */
+  confirmDelete?(blockIds: string[]): boolean | Promise<boolean>;
+
+  /**
+   * Ids of blocks under this one that are its content, such as a database's
+   * rows. When it returns any, the block menu's Duplicate offers "Duplicate
+   * without content" (Cmd/Ctrl+Shift+D on the selected block), which copies
+   * the block without them and without the blocks under them.
+   */
+  contentBlockIds?(): string[];
+
+  /**
    * True when this block and every block under it must act read-only while
    * the editor stays editable, for example a database whose host denies
    * editing. The block menu then shows its read-only items. A selection
@@ -201,6 +222,14 @@ export interface BlockTool extends BaseTool {
    * `api.blocks` calls still write. A throw counts as true.
    */
   isDataReadOnly?(): boolean;
+
+  /**
+   * True while the user has locked this block, like a locked database. Its
+   * block menu then leaves out Duplicate, Move to and Delete; Copy link and
+   * the tool's own items stay. Asked each time the menu opens. A throw
+   * counts as true.
+   */
+  isLocked?(): boolean;
 }
 
 /**
@@ -450,10 +479,13 @@ export interface BlockToolConstructable extends BaseToolConstructable {
    * before the Tool's own items, like Notion's page menu.
    * `trash` reads Delete as "Move to Trash", for a block that stands for
    * something the host keeps, like a page.
+   * `trashToast: false` leaves out the "Moved to Trash" toast a trash delete shows.
    * `lead` names the Tool's own items (by `name`) that come before Turn into
    * in a titled menu.
+   * `class` is added to the menu's popover, for the Tool's stylesheet.
+   * `minWidth` replaces the menu's 280px width floor.
    */
-  blockMenu?: { titled?: boolean; trash?: boolean; lead?: string[] };
+  blockMenu?: { titled?: boolean; trash?: boolean; trashToast?: boolean; lead?: string[]; class?: string; minWidth?: string };
 
   /**
    * Set to true when Enter on this container's empty LAST child must create the

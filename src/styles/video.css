@@ -22,6 +22,9 @@
   position: relative;
   max-width: 100%;
   vertical-align: top;
+  /* Frame space the resize handles stay out of: the bar's 14px inset and 48px height, plus 4px. */
+  --blok-video-keep-top: 0px;
+  --blok-video-keep-bottom: 66px;
 }
 
 /* media box — hugs the player, rounds + clips the overlaid chrome, casts the
@@ -154,9 +157,21 @@
 /* ----- resize handle — Notion-style pill straddling the edge ----- */
 [data-blok-tool="video"] [data-role="resize-handle"] {
   position: absolute;
-  top: 50%;
+  /* The frame's height, from controls.ts. The figure's own includes the caption. */
+  --blok-video-handle-frame: var(--blok-video-frame-h, 100%);
+  /* 1.15 is the hover scale: the grown handle must still fit the free strip. */
+  --blok-video-handle-h: min(
+    clamp(24px, calc(var(--blok-video-handle-frame) * 0.25), 50px),
+    calc((var(--blok-video-handle-frame) - var(--blok-video-keep-top) - var(--blok-video-keep-bottom)) / 1.15)
+  );
+  /* Centred on the frame, unless a control is in the way: then as near as the free strip allows. */
+  top: clamp(
+    calc(var(--blok-video-keep-top) + var(--blok-video-handle-h) * 0.575),
+    calc(var(--blok-video-handle-frame) / 2),
+    calc(var(--blok-video-handle-frame) - var(--blok-video-keep-bottom) - var(--blok-video-handle-h) * 0.575)
+  );
   width: 6px;
-  height: clamp(24px, 25%, 50px);
+  height: var(--blok-video-handle-h);
   background: var(--blok-handle-bg-default);
   border: 1px solid var(--blok-handle-fg-default);
   border-radius: var(--blok-radius-pill);
@@ -1434,7 +1449,11 @@
   backdrop-filter: blur(18px) saturate(1.8);
   cursor: pointer;
   pointer-events: auto;
-  transition: transform 320ms var(--blok-ease-spring-island), opacity 160ms ease;
+  transition:
+    transform 320ms var(--blok-ease-spring-island),
+    opacity 160ms ease,
+    width 200ms ease,
+    height 200ms ease;
 }
 [data-blok-tool="video"] .blok-video-controls__center:hover { transform: translate(-50%, -50%) scale(1.06); }
 /* It shows whenever the video is paused. Over a played video the bar comes up on
@@ -1444,7 +1463,10 @@
   pointer-events: none;
 }
 [data-blok-tool="video"] .blok-video-controls__center[hidden] { display: none; }
-[data-blok-tool="video"] .blok-video-controls__center svg { width: 30px; height: 30px; }
+[data-blok-tool="video"] .blok-video-controls__center svg {
+  width: 30px; height: 30px;
+  transition: width 200ms ease, height 200ms ease;
+}
 
 /* buffering spinner */
 [data-blok-tool="video"] .blok-video-controls__spinner {
@@ -1581,6 +1603,14 @@
 [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__menu-row[data-action="menu-theater"],
 [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__menu-row[data-action="menu-pip"] { display: flex; }
 
+/* What the resize handles stay out of, plus 4px: the corner buttons (8px inset, 30px tall)
+   and the capsule as large as a press makes it (6px inset, 44px tall; 5px and 38px when tiny). */
+[data-blok-tool="video"] .blok-video-inner[data-capsule] {
+  --blok-video-keep-top: 42px;
+  --blok-video-keep-bottom: 54px;
+}
+[data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] { --blok-video-keep-bottom: 47px; }
+
 /* the bar keeps its states but gives up its box; each part is placed on the frame */
 [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar { display: contents; }
 [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar > * {
@@ -1588,8 +1618,22 @@
   margin: 0;
   opacity: var(--blok-video-bar-on, 0);
   translate: 0 calc((1 - var(--blok-video-bar-on, 0)) * 18px);
-  transition: opacity 180ms ease, translate 420ms var(--blok-ease-spring-island), background 120ms ease, transform 120ms ease;
+  transition:
+    opacity 180ms ease,
+    translate 420ms var(--blok-ease-spring-island),
+    background 120ms ease,
+    transform 120ms ease,
+    inset 260ms var(--blok-ease-spring-island),
+    width 260ms var(--blok-ease-spring-island),
+    height 260ms var(--blok-ease-spring-island);
+  /* Crossing 400px, the parts were at full opacity inside the hidden bar. Without
+     this they would show for a moment while they fade to their own state. It must
+     outlast the opacity transition above. */
+  animation: blok-video-tier-in 200ms ease;
 }
+@keyframes blok-video-tier-in { from { opacity: 0; } }
+/* the bar comes back the same way */
+[data-blok-tool="video"] .blok-video-inner[data-tier="full"] .blok-video-controls__bar { animation: blok-video-tier-in 200ms ease; }
 
 /* the capsule is the scrubber: a fill grows across it and a drag anywhere on it seeks */
 [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar .blok-video-controls__seek-wrap {
@@ -1715,15 +1759,18 @@
   pointer-events: none;
 }
 
-/* below 260px: no settings button */
-[data-blok-tool="video"] .blok-video-inner[data-tier="small"] .blok-video-controls__menu-wrap,
-[data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__menu-wrap { display: none; }
 [data-blok-tool="video"] .blok-video-inner[data-tier="small"] .blok-video-controls__center { width: 40px; height: 40px; }
 [data-blok-tool="video"] .blok-video-inner[data-tier="small"] .blok-video-controls__center svg { width: 20px; height: 20px; }
 
-/* below 180px: play, the capsule and full screen only */
+/* below 180px: play, the capsule, the three dots and full screen. Mute moves into the sheet. */
+[data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__bar > .blok-video-controls__menu-wrap { inset-inline-end: calc(var(--blok-space-2) + 34px); }
+/* faded, not removed, so they leave and come back without a jump */
 [data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__time,
-[data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__volume-wrap { display: none; }
+[data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__volume-wrap {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 180ms ease, visibility 0s 180ms;
+}
 [data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__center { width: 32px; height: 32px; }
 [data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__center svg { width: 18px; height: 18px; }
 [data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__bar .blok-video-controls__seek-wrap {
@@ -1742,7 +1789,194 @@
   width: 28px; height: 28px;
 }
 
+/* ---------- the flash on a small player ----------
+   controls.ts stamps data-flash="pop" under 182px tall or 180px wide, where the
+   centre flash would touch the capsule or fill the frame. The play button on the
+   capsule answers there instead. Every other player keeps the flash as it is. */
+@keyframes blok-video-pop-disc {
+  from { background: var(--blok-video-buffered); }
+  to { background: transparent; }
+}
+@keyframes blok-video-pop-glyph {
+  0% { transform: scale(0.5); }
+  55% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+[data-blok-tool="video"] .blok-video-inner[data-flash="pop"] .blok-video-controls__burst { display: none; }
+[data-blok-tool="video"] .blok-video-inner[data-flash="pop"] .blok-video-controls__btn[data-action="play-toggle"].is-pop { animation: blok-video-pop-disc 420ms ease-out; }
+[data-blok-tool="video"] .blok-video-inner[data-flash="pop"] .blok-video-controls__btn[data-action="play-toggle"].is-pop svg { animation: blok-video-pop-glyph 420ms var(--blok-ease-spring-island); }
+
+/* ---------- the settings sheet: the card inside a capsule ----------
+   controls.ts moves the card into this layer below 400px and stamps the figure:
+   data-sheet (panel from 216px tall, frame below), data-sheet-content (rows, or
+   tiles under 180px wide or 146px tall) and data-sheet-rows="tight" under 300px. */
+@keyframes blok-video-sheet-fade { from { opacity: 0; } }
+@keyframes blok-video-sheet-rise { from { transform: translateY(14px) scale(0.97); } }
+@keyframes blok-video-sheet-grow { from { transform: scale(0.97); } }
+[data-blok-tool="video"] .blok-video-controls__sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: var(--blok-space-2);
+  background: color-mix(in srgb, var(--blok-video-burst-bg) 56%, transparent);
+  pointer-events: auto;
+}
+[data-blok-tool="video"] .blok-video-controls__sheet[hidden] { display: none; }
+[data-blok-tool="video"] .blok-video-controls__sheet .blok-video-controls__menu {
+  position: relative;
+  flex: none;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  max-height: 100%;
+  overflow-y: auto;
+  transform-origin: 50% 100%;
+}
+/* The pane off show is gone, not slid aside: left in place it would give the card something to scroll to. */
+[data-blok-tool="video"] .blok-video-controls__sheet .blok-video-controls__menu[data-pane="main"] [data-role="menu-speed"],
+[data-blok-tool="video"] .blok-video-controls__sheet .blok-video-controls__menu[data-pane="speed"] [data-role="menu-main"] { display: none; }
+/* the capsule and the corner buttons leave; the centre play already does */
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls:has(.blok-video-controls__sheet:not([hidden])) .blok-video-controls__bar { --blok-video-bar-on: 0; }
+[data-blok-tool="video"] .blok-video-controls__sheet-close {
+  position: absolute;
+  top: var(--blok-space-2);
+  inset-inline-end: var(--blok-space-2);
+  /* above the card, which fills the frame in a short player */
+  z-index: 4;
+  width: 30px; height: 30px;
+  background: var(--blok-video-island-bg);
+  -webkit-backdrop-filter: blur(18px) saturate(1.8);
+  backdrop-filter: blur(18px) saturate(1.8);
+  box-shadow: var(--blok-video-island-shadow);
+}
+[data-blok-tool="video"] .blok-video-controls__sheet-close:hover { background: var(--blok-video-burst-bg); }
+[data-blok-tool="video"] .blok-video-controls__sheet-close svg { width: 16px; height: 16px; }
+
+/* too short for a bottom card: it takes the whole frame, and the frame clips it */
+[data-blok-tool="video"] .blok-video-inner[data-sheet="frame"] .blok-video-controls__sheet {
+  padding: 0;
+  background: none;
+}
+[data-blok-tool="video"] .blok-video-inner[data-sheet="frame"] .blok-video-controls__sheet .blok-video-controls__menu {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: safe center;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  transform-origin: 50% 50%;
+}
+[data-blok-tool="video"] .blok-video-inner[data-sheet="frame"][data-sheet-content="rows"] .blok-video-controls__sheet .blok-video-controls__menu { padding-inline-end: 44px; }
+[data-blok-tool="video"] .blok-video-inner[data-sheet="frame"] .blok-video-controls__sheet-close {
+  background: var(--blok-video-control-bg-hover);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+[data-blok-tool="video"] .blok-video-inner[data-sheet="frame"] .blok-video-controls__sheet-close:hover { background: var(--blok-video-control-bg-active); }
+
+/* rows a little lower than the floating card's, so four fit a 146px frame */
+[data-blok-tool="video"] .blok-video-controls__sheet .blok-video-controls__menu-row { min-height: 32px; }
+[data-blok-tool="video"] .blok-video-controls__sheet .blok-video-controls__menu-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* A translated label can be long. The value and chevron wrap to a second line the row
+   cuts off, so they go before the label is shortened. */
+[data-blok-tool="video"] .blok-video-controls__sheet .blok-video-controls__menu-row[data-action="open-speed"] {
+  flex-wrap: wrap;
+  align-content: flex-start;
+  height: 32px;
+  overflow: hidden;
+}
+[data-blok-tool="video"] .blok-video-controls__sheet .blok-video-controls__menu-row[data-action="open-speed"] .blok-video-controls__menu-label { line-height: 32px; }
+[data-blok-tool="video"] .blok-video-inner[data-sheet-rows="tight"] .blok-video-controls__menu-row {
+  gap: var(--blok-space-1-5);
+  padding: 0 var(--blok-space-2);
+  font-size: 12px;
+}
+[data-blok-tool="video"] .blok-video-inner[data-sheet-rows="tight"] [data-role="menu-main"] .blok-video-controls__menu-chevron { display: none; }
+
+/* speed in the sheet: the back row, then the presets as a plain grid. The wire needs the card's full width. */
+[data-blok-tool="video"] .blok-video-controls__sheet [data-role="menu-speed"] { width: auto; }
+[data-blok-tool="video"] .blok-video-controls__sheet .blok-video-controls__speed-stepper,
+[data-blok-tool="video"] .blok-video-controls__sheet .blok-video-controls__speed-wire,
+[data-blok-tool="video"] .blok-video-controls__sheet .blok-video-controls__menu-divider { display: none; }
+[data-blok-tool="video"] .blok-video-controls__sheet .blok-video-controls__speed-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--blok-space-0-5);
+  height: auto;
+  margin: 0;
+}
+[data-blok-tool="video"] .blok-video-controls__sheet .blok-video-controls__speed-preset {
+  position: static;
+  width: auto;
+  height: 28px;
+  border-radius: var(--blok-radius-glass-row);
+  color: var(--blok-video-control-fg);
+  font-size: 12px;
+  transform: none;
+}
+[data-blok-tool="video"] .blok-video-controls__sheet .blok-video-controls__speed-preset:active { transform: scale(0.94); }
+
+/* tiles: the same choices where rows do not fit */
+[data-blok-tool="video"] .blok-video-controls__tiles { display: none; }
+[data-blok-tool="video"] .blok-video-inner[data-sheet-content="tiles"] .blok-video-controls__tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: minmax(20px, 38px);
+  gap: var(--blok-space-1);
+  align-content: center;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+[data-blok-tool="video"] .blok-video-inner[data-sheet-content="tiles"] .blok-video-controls__menu-pane,
+[data-blok-tool="video"] .blok-video-inner[data-sheet-content="tiles"] .blok-video-controls__sheet-close { display: none; }
+[data-blok-tool="video"] .blok-video-controls__tile {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--blok-radius-glass-row);
+  background: var(--blok-video-control-bg-hover);
+  color: var(--blok-video-control-fg);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, transform 120ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__tile:hover { background: var(--blok-video-control-bg-active); }
+[data-blok-tool="video"] .blok-video-controls__tile:active { transform: scale(0.94); }
+[data-blok-tool="video"] .blok-video-controls__tile svg { display: block; width: 16px; height: 16px; }
+[data-blok-tool="video"] .blok-video-controls__tile[aria-checked="true"] {
+  background: var(--blok-video-island-play-bg);
+  color: var(--blok-video-island-play-fg);
+}
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__tile:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--blok-video-focus-ring);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-blok-tool="video"] .blok-video-controls__sheet { animation: blok-video-sheet-fade 160ms ease; }
+  [data-blok-tool="video"] .blok-video-controls__sheet .blok-video-controls__menu {
+    animation: blok-video-sheet-rise 360ms var(--blok-ease-spring-island);
+    transition: none;
+  }
+  [data-blok-tool="video"] .blok-video-inner[data-sheet="frame"] .blok-video-controls__sheet .blok-video-controls__menu { animation-name: blok-video-sheet-grow; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar > *,
   [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar .blok-video-controls__seek-wrap { transition: none; }
+  [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar > * { animation: none; }
+  [data-blok-tool="video"] .blok-video-inner[data-tier="full"] .blok-video-controls__bar { animation: none; }
+  [data-blok-tool="video"] .blok-video-controls__center,
+  [data-blok-tool="video"] .blok-video-controls__center svg { transition: none; }
+  [data-blok-tool="video"] .blok-video-inner[data-flash="pop"] .blok-video-controls__btn[data-action="play-toggle"].is-pop,
+  [data-blok-tool="video"] .blok-video-inner[data-flash="pop"] .blok-video-controls__btn[data-action="play-toggle"].is-pop svg { animation: none; }
 }

@@ -519,6 +519,29 @@ describe('BlockToolAdapter', () => {
     });
   });
 
+  describe('block menu', () => {
+    it('reads the menu class and width floor a tool declares', () => {
+      const constructable = createConstructable({ blockMenu: { class: 'blok-x-menu', minWidth: '265px' } });
+      const { tool } = createBlockTool({ constructable });
+
+      expect(tool.blockMenu).toEqual({ titled: false, trash: false, lead: [], class: 'blok-x-menu', minWidth: '265px' });
+    });
+
+    it('leaves out a class or width that is not a string', () => {
+      const constructable = createConstructable({ blockMenu: { class: 1, minWidth: null } });
+      const { tool } = createBlockTool({ constructable });
+
+      expect(tool.blockMenu).toEqual({ titled: false, trash: false, lead: [] });
+    });
+
+    it('reads a trash menu that shows no toast', () => {
+      const constructable = createConstructable({ blockMenu: { trash: true, trashToast: false } });
+      const { tool } = createBlockTool({ constructable });
+
+      expect(tool.blockMenu).toEqual({ titled: false, trash: true, lead: [], trashToast: false });
+    });
+  });
+
   describe('pick insert', () => {
     it('says whether the tool asks the user for its data', () => {
       expect(createBlockTool().tool.picksInsert).toBe(false);

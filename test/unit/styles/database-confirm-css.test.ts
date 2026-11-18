@@ -303,6 +303,25 @@ describe('database confirm dialog css', () => {
       .toContain('box-shadow: 0 0 0 2px var(--blok-bg-primary), 0 0 0 4px var(--blok-focus-ring), 0 0 0 6px var(--blok-bg-primary)');
   });
 
+  // notion-motion.md Round 65 §1 "Move database to Trash?": title 20-44, body 44-80, confirm at 88, Cancel at 129, box 181.
+  it('lays out the trash prompt with Notion\'s 600 title, 16/24 body and borderless primary Cancel', () => {
+    const PANEL = '[data-blok-database-confirm-dialog][data-trash]';
+
+    expect(ruleBody(database, `${PANEL} [data-blok-database-confirm-title]`)).toContain('font-weight: 600');
+    const body = ruleBody(database, `${PANEL} [data-blok-database-confirm-title]:first-child ~ [data-blok-database-confirm-description]`);
+
+    expect(body).toContain('margin-top: 0');
+    expect(body).toContain('padding-bottom: var(--blok-space-3)');
+    expect(body).toContain('font-size: 16px');
+    expect(body).toContain('line-height: 24px');
+    expect(ruleBody(database, `${PANEL} [data-blok-database-confirm-title]:first-child ~ [data-blok-database-confirm-description] + [data-blok-database-confirm-action]`))
+      .toContain('margin-top: var(--blok-space-2)');
+    const cancel = ruleBody(database, `${PANEL} [data-blok-database-confirm-action="cancel"]`);
+
+    expect(cancel).toContain('border-color: transparent');
+    expect(cancel).toContain('color: var(--blok-database-ink)');
+  });
+
   it('drops the entrance under reduced motion', () => {
     expect(database).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[^@]*\[data-blok-database-confirm-dialog\][^{]*\{ animation: none; \}/);
   });

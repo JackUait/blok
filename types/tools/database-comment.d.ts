@@ -21,6 +21,31 @@ export interface DatabaseCommentData extends BlockToolData {
   editedAt?: number;
   /** Set on a resolved thread. */
   resolved?: boolean;
+  /** People, pages and dates picked from the "@" menu, in text order. */
+  mentions?: DatabaseCommentMention[];
+  /** Files attached with Attach file, as the host's uploader stored them. */
+  attachments?: DatabaseCommentAttachment[];
+}
+
+/** A file on a comment. */
+export interface DatabaseCommentAttachment {
+  /** Where the host's uploader stored it. */
+  url: string;
+  /** The file name shown. */
+  name: string;
+}
+
+/**
+ * A mention inside a comment's `text`. `label` is the text it covers, from
+ * `start`; a mention whose label no longer matches the text there is dropped.
+ */
+export interface DatabaseCommentMention {
+  type: 'person' | 'page' | 'date';
+  /** A person's id in the host's `people`, a page id, or a day as `YYYY-MM-DD`. */
+  id: string;
+  /** Index into `text`, in UTF-16 code units. */
+  start: number;
+  label: string;
 }
 
 export type DatabaseCommentConstructorOptions = BlockToolConstructorOptions<DatabaseCommentData>;

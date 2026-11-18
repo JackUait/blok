@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { searchVisiblePages } from '../../../../src/tools/page/search-pages';
+import { searchVisiblePages, visibleChildPages } from '../../../../src/tools/page/search-pages';
 import type { PageConfig } from '../../../../src/tools/page/types';
 
 describe('searchVisiblePages', () => {
@@ -76,5 +76,30 @@ describe('searchVisiblePages', () => {
 
   it('finds nothing without a search hook', async () => {
     await expect(searchVisiblePages({}, 'r')).resolves.toEqual([]);
+  });
+});
+
+describe('visibleChildPages', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('asks children for the page and checks its answers through resolve, as search does', async () => {
+    const children = vi.fn(() => Promise.resolve([
+      { pageId: 'p1', title: 'Old' },
+      { pageId: 'p2', title: 'Secret' },
+      { pageId: 'p3', title: 'Denied', access: 'none' as const },
+    ]));
+    const page: PageConfig = {
+      children,
+      resolve: (pageId) => (pageId === 'p1' ? { title: 'Roadmap' } : { access: 'none' }),
+    };
+
+    await expect(visibleChildPages(page, null)).resolves.toEqual([{ pageId: 'p1', title: 'Roadmap' }]);
+    expect(children).toHaveBeenCalledWith(null);
+  });
+
+  it('finds nothing without a children hook', async () => {
+    await expect(visibleChildPages({}, 'p1')).resolves.toEqual([]);
   });
 });

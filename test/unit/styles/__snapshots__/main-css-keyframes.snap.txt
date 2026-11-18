@@ -225,6 +225,18 @@
   from { opacity: 0 }
 }
 
+@keyframes blok-database-landed-tint {
+  from { --blok-database-landed-tint: transparent }
+}
+
+@keyframes blok-database-leaving {
+  to { opacity: 0 }
+}
+
+@keyframes blok-database-leaving-tint {
+  from { --blok-database-landed-tint: var(--blok-icon-active-bg) }
+}
+
 @keyframes blok-dice-impact {
   0%, 76% { transform: scale(0); opacity: 1 }
   84% { transform: scale(1.1); opacity: 1 }
@@ -1123,6 +1135,17 @@
   100% { box-shadow: 0 0 0 7px transparent }
 }
 
+@keyframes blok-video-pop-disc {
+  from { background: var(--blok-video-buffered) }
+  to { background: transparent }
+}
+
+@keyframes blok-video-pop-glyph {
+  0% { transform: scale(0.5) }
+  55% { transform: scale(1.18) }
+  100% { transform: scale(1) }
+}
+
 @keyframes blok-video-rise {
   from { opacity: 0; transform: translateY(8px) scale(0.98) }
   to { opacity: 1; transform: none }
@@ -1154,6 +1177,18 @@
   50% { transform: translateX(3px); opacity: 1 }
 }
 
+@keyframes blok-video-sheet-fade {
+  from { opacity: 0 }
+}
+
+@keyframes blok-video-sheet-grow {
+  from { transform: scale(0.97) }
+}
+
+@keyframes blok-video-sheet-rise {
+  from { transform: translateY(14px) scale(0.97) }
+}
+
 @keyframes blok-video-speed-roll-down {
   from { opacity: 0; transform: translateY(-0.45em) }
   to { opacity: 1; transform: translateY(0) }
@@ -1177,6 +1212,10 @@
   from { opacity: 0; transform: translateY(22px) scale(0.84) }
   60% { opacity: 1 }
   to { opacity: 1; transform: translateY(0) scale(1) }
+}
+
+@keyframes blok-video-tier-in {
+  from { opacity: 0 }
 }
 
 @keyframes bounceIn {

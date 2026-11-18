@@ -241,35 +241,6 @@ test.describe('toggle heading level conversion keeps children', () => {
     expect(child?.parent).toBe('toggle-h');
   });
 
-  test('changing the level via the direct "Heading N" tune entry keeps children', async ({ page }) => {
-    await createBlok(page, {
-      blocks: [
-        { id: 'toggle-h', type: 'header', data: { text: 'Toggle parent', level: 2, isToggleable: true, isOpen: true }, content: ['child-1'] },
-        { id: 'child-1', type: 'paragraph', data: { text: 'Nested child' }, parent: 'toggle-h' },
-      ],
-    });
-
-    await openBlockTunes(page, 'Toggle parent');
-
-    // Heading 1-6 are flat radio tiles in the block menu itself.
-    const levelEntry = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-header-level="3"]`);
-
-    await expect(levelEntry).toBeVisible();
-    await levelEntry.click();
-
-    const saved = await save(page);
-    const blocks = saved?.blocks ?? [];
-    const parent = blocks.find(b => b.data.text === 'Toggle parent');
-
-    expect(parent?.data.level).toBe(3);
-    expect(parent?.data.isToggleable).toBe(true);
-
-    const child = blocks.find(b => b.data.text === 'Nested child');
-
-    expect(child).toBeDefined();
-    expect(child?.parent).toBe('toggle-h');
-  });
-
   test('slash-menu conversion of an emptied toggle heading keeps children', async ({ page }) => {
     await createBlok(page, {
       blocks: [

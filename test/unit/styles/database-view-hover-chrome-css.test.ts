@@ -172,6 +172,8 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(body).toContain('box-shadow: var(--blok-database-form-question-ring) 0 0 0 0, var(--blok-database-form-question-ring) 0 0 0 0.5px inset');
     expect(body).toContain('border-radius: var(--blok-radius-dialog)');
     expect(body).toContain('padding: var(--blok-space-3)');
+    // notion-motion.md Round 65 §4: the title sits 22 under the card top (Round 31's 144 pitch: 120-tall cards).
+    expect(body).toContain('padding-block-start: 22px');
   });
 
   // notion-motion.md Round 31 §1: hover grows the ring to 1.25 out + 1.25 in over 0.3s.
@@ -188,12 +190,12 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(ruleBody('[data-blok-database-form-question-menu]')).toContain('transition: opacity 0.2s ease');
   });
 
-  // notion-motion.md Round 52 §3: the ⋯ sits 34 in from the card's right and 10 under its top (12 padding − 2).
+  // notion-motion.md Round 52 §3, Round 65 §4: the ⋯ sits 34 in from the card's right and 10 under its top (22 padding − 12).
   it('places the "Edit question" chip 10 under the card top and 34 in from its right', () => {
     const chip = ruleBody('[data-blok-database-form-question-menu]');
 
     expect(chip).toContain('align-self: flex-start');
-    expect(chip).toContain('margin-block-start: calc(var(--blok-space-0-5) * -1)');
+    expect(chip).toContain('margin-block-start: calc(var(--blok-space-3) * -1)');
     expect(chip).toContain('margin-inline-end: calc(var(--blok-space-0-5) * -1)');
   });
 
@@ -206,6 +208,8 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(name).toContain('font-weight: 700');
     expect(name).toContain('line-height: 30px');
     expect(name).toContain('border: none');
+    // notion-motion.md Round 65 §4: Notion's title is a pill padded 0 10, so its ink starts 10 in.
+    expect(name).toContain('padding: 0 var(--blok-space-2-5)');
     expect(name).toContain('background: transparent');
     expect(label).toContain('font-size: 24px');
     expect(label).toContain('font-weight: 700');
@@ -388,13 +392,14 @@ describe('form builder question card (research/21 §1k)', () => {
       expect(ruleBody(`${builder} > [data-blok-database-form-access]`)).not.toContain('max-inline-size');
     });
 
-    it('draws the access bar 48 tall, 34 above the first card', () => {
+    // notion-motion.md Round 65 §4: the first card starts 24 under the bar.
+    it('draws the access bar 48 tall, 24 above the first card', () => {
       const access = ruleBody(`${builder} > [data-blok-database-form-access]`);
 
       expect(access).toContain('min-block-size: 48px');
       expect(access).toContain('padding: var(--blok-space-2-5) var(--_blok-form-access-inset)');
       expect(access).toContain('--_blok-form-access-inset: 22px');
-      expect(access).toContain('margin-block-end: 34px');
+      expect(access).toContain('margin-block-end: var(--blok-space-6)');
     });
 
     // notion-motion.md Round 33 §1 (r33-form-*.raw): the icon is a 78 box (radius 4, no hover fill) where the title

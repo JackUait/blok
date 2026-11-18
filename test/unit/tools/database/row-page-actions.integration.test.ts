@@ -222,7 +222,8 @@ describe('row page Actions menu', () => {
       .find((item) => (item.textContent?.includes('Move to')) && !item.textContent.includes('Trash')) ?? null;
 
     await click(moveTo);
-    await click(document.querySelector('[data-blok-item-name="database-row-move-to-db2"]'));
+    await click([...document.querySelectorAll<HTMLElement>('[data-blok-database-move-picker] [role="option"]')]
+      .find((option) => option.textContent === 'Projects') ?? null);
 
     const saved = await editor?.save();
 

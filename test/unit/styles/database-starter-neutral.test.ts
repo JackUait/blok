@@ -51,6 +51,19 @@ describe('the database icon a template gives (research/27:42)', () => {
   });
 });
 
+// notion-motion.md Round 67 §1: an emoji icon is a 22x22 button at 538 with the title at 567 (no icon: 539).
+describe('an emoji database icon', () => {
+  it('is a 22x22 button 1px before the title\'s start, the title 6px after its box', () => {
+    const body = rule('[data-blok-database-icon="emoji"]');
+
+    expect(body).toMatch(/inline-size:\s*22px/);
+    expect(body).toMatch(/block-size:\s*22px/);
+    expect(body).toContain('margin-inline-end: var(--blok-space-1-5)');
+    expect(body).toMatch(/position:\s*relative/);
+    expect(body).toMatch(/inset-inline-start:\s*-1px/);
+  });
+});
+
 describe('a template\'s database icon sits right before the title', () => {
   // With tabs the title carries the centring offset itself, so the icon took it over (research/27:42).
   it('the icon takes the content offset and the title after it drops its own', () => {

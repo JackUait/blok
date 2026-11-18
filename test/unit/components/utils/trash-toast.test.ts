@@ -67,6 +67,12 @@ describe('trash toast', () => {
     expect(trashesBlock(block(false))).toBe(false);
   });
 
+  it('shows no toast for a block whose trash menu turns the toast off (a database)', () => {
+    const quiet = { tool: { blockMenu: { titled: false, trash: true, lead: [], trashToast: false } } } as unknown as Block;
+
+    expect(trashesBlock(quiet)).toBe(false);
+  });
+
   it('shows "Moved to Trash" with a Restore that undoes the delete step and closes the toast', () => {
     const before = {} as HistoryStep;
     const after = {};

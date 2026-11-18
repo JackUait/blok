@@ -44,6 +44,8 @@ export interface DatabaseConfirmOptions {
   roomy?: boolean;
   /** Focuses the confirm button on open, as Notion's "Undo Task Database?" (research/35 §1.7). */
   focusConfirm?: boolean;
+  /** A 600 title, a 16px body and a borderless Cancel, as Notion's "Move database to Trash?" (notion-motion.md Round 65 §1). */
+  trash?: boolean;
 }
 
 export interface DatabaseChoice {
@@ -89,6 +91,9 @@ const buildConfirm = (options: DatabaseConfirmOptions, choices: DatabaseChoice[]
   }
   if (options.roomy === true) {
     panel.setAttribute('data-roomy', '');
+  }
+  if (options.trash === true) {
+    panel.setAttribute('data-trash', '');
   }
   const close = options.closeLabel === undefined ? null : document.createElement('button');
 

@@ -151,6 +151,11 @@ export class BlockEvents extends Module {
       }
     }
 
+    // Before navigation mode, whose printable-key exit would put the caret in the block.
+    if (this.blockSelectionKeys.ignoreTypingOverAsker(event)) {
+      return;
+    }
+
     /**
      * Handle navigation mode keys first
      */

@@ -64,24 +64,26 @@ describe('row ⋮⋮ menu (research/08)', () => {
     expect(named(items(context()), 'tools.database.tableMoveToTrash').secondaryLabel).toBe(beautifyShortcut('DELETE'));
   });
 
-  it('Move to lists the other databases, after Duplicate', () => {
+  // notion-motion.md Round 62 §1: Move to closes the menu and opens the "Move page to…" picker in its place.
+  it('Move to closes the menu and opens the picker, after Duplicate', () => {
     const onMoveTo = vi.fn();
-    const list = items(context({ moveTargets: [{ id: 'db2', title: 'Projects' }, { id: 'db3', title: '' }], onMoveTo }));
+    const list = items(context({ onMoveTo }));
     const titles = list.map((i) => i.title);
-    const move = named(list, 'tools.database.tableMoveTo');
+    const move = named(list, 'tools.database.tableMoveTo') as Item & { closeOnActivate?: boolean };
 
     expect(titles.indexOf('tools.database.tableMoveTo')).toBe(titles.indexOf('tools.database.tableDuplicate') + 1);
-    expect(move.children?.items?.map((i) => i.title)).toEqual(['Projects', 'tools.database.relationUntitledDatabase']);
-    move.children?.items?.[0].onActivate?.(undefined as never, undefined);
-    expect(onMoveTo).toHaveBeenCalledWith('db2');
+    expect(move.children).toBeUndefined();
+    expect(move.closeOnActivate).toBe(true);
+    move.onActivate?.(undefined as never, undefined);
+    expect(onMoveTo).toHaveBeenCalledTimes(1);
   });
 
-  it('has no Move to when no other database can take the row', () => {
-    expect(items(context({ moveTargets: [], onMoveTo: vi.fn() })).map((i) => i.title)).not.toContain('tools.database.tableMoveTo');
+  it('has no Move to when the row has nowhere to go', () => {
+    expect(items(context()).map((i) => i.title)).not.toContain('tools.database.tableMoveTo');
   });
 
   it('Comment and Move to show their keys through the shared shortcut formatter', () => {
-    const list = items(context({ onComment: vi.fn(), moveTargets: [{ id: 'db2', title: 'Projects' }], onMoveTo: vi.fn() }));
+    const list = items(context({ onComment: vi.fn(), onMoveTo: vi.fn() }));
 
     expect(named(list, 'tools.database.tableComment').secondaryLabel).toBe(beautifyShortcut('CMD+SHIFT+M'));
     expect(named(list, 'tools.database.tableMoveTo').secondaryLabel).toBe(beautifyShortcut('CMD+SHIFT+P'));
@@ -243,13 +245,14 @@ describe('row ⋮⋮ menu in the table', () => {
     expect(open()?.textContent).toBe('tools.database.rowRemoveFromFavorites');
   });
 
-  it('Move to shows its key on screen next to its chevron', () => {
-    const root = mount({ moveRowTo: vi.fn(), moveTargets: () => [{ id: 'db2', title: 'Projects' }] });
+  it('Move to shows its key on screen', () => {
+    const root = mount({ canMoveRow: () => true, openMoveTo: vi.fn() });
 
     root.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-row-handle]')?.click();
     const move = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened] [data-blok-testid="popover-item-title"]')]
       .find((title) => title.textContent === 'tools.database.tableMoveTo')?.parentElement;
 
+    expect(move).toBeDefined();
     expect(move?.querySelector('[data-blok-testid="popover-item-secondary-title"]')).not.toBeNull();
   });
 });

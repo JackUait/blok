@@ -383,6 +383,55 @@ test.describe('a narrow player (capsule)', () => {
     await expect.poll(() => block.locator('[data-role="center-play"]').evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
   });
 
+  test('never lays a resize handle over a control, at any width', async ({ page }) => {
+    await createBlok(page, { blocks: [{ type: 'video', data: { url: unplayedVideoUrl(), width: 100, caption: 'A caption', captionVisible: true } }] });
+    const block = page.locator(VIDEO_BLOCK_SELECTOR);
+
+    await expect(block).toHaveAttribute('data-state', 'rendered');
+    await playThenPause(page);
+
+    const overlaps = await block.evaluate(async (root) => {
+      const figure = root.querySelector<HTMLElement>('[data-role="video-figure"]');
+      const bar = root.querySelector<HTMLElement>('[data-role="seek-wrap"]')?.parentElement;
+
+      if (!figure || !bar) return ['no player'];
+      // Every control up, as on hover, and each handle as large as its own hover makes it.
+      const shown = document.createElement('style');
+
+      bar.style.setProperty('opacity', '1', 'important');
+      bar.style.setProperty('--blok-video-bar-on', '1', 'important');
+      bar.style.setProperty('transform', 'none', 'important');
+      shown.textContent = '[data-role="video-controls"] *{transition:none !important;animation:none !important}'
+        + '[data-role="resize-handle"]{transition:none !important;opacity:1 !important;transform:translateY(-50%) scale(1.15) !important}';
+      document.head.append(shown);
+      const found: string[] = [];
+      const frame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+
+      for (const width of [640, 520, 420, 400, 399, 340, 300, 261, 259, 222, 200, 181, 179, 150]) {
+        figure.style.width = `${width}px`;
+        await frame();
+        const handles = [...root.querySelectorAll<HTMLElement>('[data-role="resize-handle"]')].map((el) => el.getBoundingClientRect());
+        const parts = [bar, ...bar.querySelectorAll<HTMLElement>('button, [data-role="seek-wrap"]')]
+          .filter((el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden');
+
+        const hit = parts.filter((part) => {
+          const box = part.getBoundingClientRect();
+
+          return box.width > 0 && box.height > 0 && handles.some((handle) => (
+            handle.right > box.left && handle.left < box.right && handle.bottom > box.top && handle.top < box.bottom
+          ));
+        });
+
+        found.push(...hit.map((part) => `${width}px: ${part.getAttribute('data-action') ?? part.getAttribute('data-role') ?? 'bar'}`));
+      }
+      shown.remove();
+
+      return found;
+    });
+
+    expect(overlaps).toEqual([]);
+  });
+
   test('seeks to where the capsule is pressed, and swells while held', async ({ page }) => {
     await createBlok(page, { blocks: [{ type: 'video', data: { url: unplayedVideoUrl(), width: 30 } }] });
     const block = page.locator(VIDEO_BLOCK_SELECTOR);
@@ -425,5 +474,174 @@ test.describe('a narrow player (capsule)', () => {
     await expect(bar).toHaveCSS('display', 'flex');
     await expect(block.locator('[data-action="theater"]')).toHaveCSS('display', 'grid');
     await expect(block.locator('[data-action="menu-theater"]')).toHaveCSS('display', 'none');
+  });
+
+  const insideFrame = async (page: Page, role: string): Promise<boolean> => page.locator(VIDEO_BLOCK_SELECTOR).evaluate((root, wanted) => {
+    const frame = root.querySelector('[data-role="video-media"]')?.getBoundingClientRect();
+    const box = root.querySelector(`[data-role="${wanted}"]`)?.getBoundingClientRect();
+
+    if (!frame || !box || box.width === 0) return false;
+
+    return box.left >= frame.left - 0.5 && box.right <= frame.right + 0.5 && box.top >= frame.top - 0.5 && box.bottom <= frame.bottom + 0.5;
+  }, role);
+
+  const showControls = async (page: Page): Promise<void> => {
+    const block = page.locator(VIDEO_BLOCK_SELECTOR);
+
+    await expect(block).toHaveAttribute('data-state', 'rendered');
+    await playThenPause(page);
+    await page.mouse.move(0, 0);
+    await block.getByTestId('video-player').hover({ position: { x: 20, y: 20 } });
+    await expect.poll(() => block.locator('[data-role="seek-wrap"]').evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+  };
+
+  test('opens the settings inside the frame, and clears the controls away', async ({ page }) => {
+    await createBlok(page, { blocks: [{ type: 'video', data: { url: unplayedVideoUrl(), width: 45 } }] });
+    const block = page.locator(VIDEO_BLOCK_SELECTOR);
+
+    await showControls(page);
+    await expect(figureOf(page)).toHaveAttribute('data-sheet-content', 'rows');
+    await block.getByRole('button', { name: 'Settings' }).click();
+
+    const card = block.locator('[data-role="playback-menu"]');
+
+    await expect(card).toBeVisible();
+    expect(await insideFrame(page, 'playback-menu')).toBe(true);
+    // Nothing to scroll to: every row fits.
+    expect(await card.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
+    await expect.poll(() => block.locator('[data-role="seek-wrap"]').evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
+
+    await block.getByRole('button', { name: /Playback speed/ }).click();
+    await block.locator('[data-action="speed-1.5"]').click();
+    expect(await block.getByTestId('video-player').evaluate((el) => (el as HTMLVideoElement).playbackRate)).toBe(1.5);
+    expect(await insideFrame(page, 'playback-menu')).toBe(true);
+    expect(await card.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
+
+    await block.getByRole('button', { name: 'Close' }).click();
+    await expect(card).toBeHidden();
+    await expect.poll(() => block.locator('[data-role="seek-wrap"]').evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+  });
+
+  test('keeps the three dots on the smallest player and carries sound in the tiles', async ({ page }) => {
+    await createBlok(page, { blocks: [{ type: 'video', data: { url: unplayedVideoUrl(), width: 20 } }] });
+    const block = page.locator(VIDEO_BLOCK_SELECTOR);
+    const player = block.getByTestId('video-player');
+
+    await showControls(page);
+    await expect(figureOf(page)).toHaveAttribute('data-tier', 'tiny');
+    await expect(block.locator('[data-action="mute-toggle"]')).toBeHidden();
+    await block.getByRole('button', { name: 'Settings' }).click();
+
+    const tiles = block.locator('[data-role="menu-tiles"]');
+
+    await expect(tiles).toBeVisible();
+    await expect(block.locator('[data-action="open-speed"]')).toBeHidden();
+    expect(await insideFrame(page, 'menu-tiles')).toBe(true);
+
+    const muted = await player.evaluate((el) => (el as HTMLVideoElement).muted);
+
+    await tiles.getByRole('switch', { name: /Mute|Unmute/ }).click();
+    expect(await player.evaluate((el) => (el as HTMLVideoElement).muted)).toBe(!muted);
+
+    await tiles.getByRole('button', { name: 'Close' }).click();
+    await expect(tiles).toBeHidden();
+  });
+
+  test('pops the play button on a short player, where the centre flash has no room', async ({ page }) => {
+    await createBlok(page, { blocks: [{ type: 'video', data: { url: unplayedVideoUrl(), width: 20 } }] });
+    const block = page.locator(VIDEO_BLOCK_SELECTOR);
+
+    await showControls(page);
+    await expect(figureOf(page)).toHaveAttribute('data-flash', 'pop');
+    await block.getByTestId('video-player').click({ position: { x: 20, y: 20 } });
+
+    await expect(block.locator('[data-role="play-burst"]')).toBeHidden();
+    await expect(block.locator('[data-action="play-toggle"]')).toHaveClass(/is-pop/);
+    await expect(block.locator('[data-action="play-toggle"]')).not.toHaveClass(/is-pop/);
+  });
+
+  test('a wide player keeps the centre flash and the floating card', async ({ page }) => {
+    await createBlok(page, { blocks: [{ type: 'video', data: { url: unplayedVideoUrl() } }] });
+    const block = page.locator(VIDEO_BLOCK_SELECTOR);
+
+    await expect(block).toHaveAttribute('data-state', 'rendered');
+    await playThenPause(page);
+    await page.mouse.move(0, 0);
+    await block.getByTestId('video-player').hover({ position: { x: 20, y: 20 } });
+    await expect(figureOf(page)).not.toHaveAttribute('data-flash', /.*/);
+    await block.getByTestId('video-player').click({ position: { x: 20, y: 20 } });
+
+    const burst = block.locator('[data-role="play-burst"]');
+
+    await expect(burst).toHaveClass(/is-active/);
+    expect(await burst.evaluate((el) => (el as HTMLElement).offsetWidth)).toBe(78);
+    await block.getByTestId('video-player').evaluate((el) => (el as HTMLVideoElement).pause());
+
+    await block.getByRole('button', { name: 'Settings' }).click();
+    await expect(block.locator('[data-role="playback-menu"]')).toBeVisible();
+    await expect(block.locator('[data-role="menu-sheet"]')).toBeHidden();
+    await expect(block.locator('[data-role="menu-tiles"]')).toBeHidden();
+  });
+});
+
+test.describe('resizing a video down', () => {
+  const dragToSmallest = async (page: Page): Promise<{ width: number; height: number }> => {
+    const block = page.locator(VIDEO_BLOCK_SELECTOR);
+    const frame = block.locator('[data-role="video-media"]');
+
+    await expect(block).toHaveAttribute('data-state', 'rendered');
+    await block.getByTestId('video-player').hover({ position: { x: 20, y: 20 } });
+
+    const handle = block.locator('[data-role="resize-handle"][data-edge="right"]');
+    const box = await handle.boundingBox();
+
+    if (!box) throw new Error('handle has no box');
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(0, box.y + box.height / 2, { steps: 8 });
+    await page.mouse.up();
+
+    const size = await frame.boundingBox();
+
+    if (!size) throw new Error('frame has no box');
+
+    return { width: size.width, height: size.height };
+  };
+
+  test('a 16:9 video stops where it is still about 124px tall', async ({ page }) => {
+    await createBlok(page, { blocks: [{ type: 'video', data: { url: SAMPLE_VIDEO_URL } }] });
+
+    const { width, height } = await dragToSmallest(page);
+
+    // The width is saved as a whole percent, so it lands within a few px of the limit.
+    expect(height).toBeGreaterThan(121);
+    expect(height).toBeLessThan(128);
+    expect(width).toBeGreaterThan(180);
+    expect(width).toBeLessThan(440);
+  });
+
+  test('a portrait video stops at about 180px wide', async ({ page }) => {
+    // 90x160. The block takes its shape from the file itself, so the sample will not do.
+    const portraitUrl = new URL('/portrait-fixture.webm', TEST_PAGE_URL).href;
+
+    await page.route(portraitUrl, (route) => route.fulfill({
+      path: join(process.cwd(), 'test/playwright/fixtures/video/portrait.webm'),
+      contentType: 'video/webm',
+    }));
+    await createBlok(page, { blocks: [{ type: 'video', data: { url: portraitUrl, aspectRatio: '9 / 16' } }] });
+    await page.locator(VIDEO_BLOCK_SELECTOR).getByTestId('video-player').evaluate((el) => new Promise<void>((resolve) => {
+      const video = el as HTMLVideoElement;
+
+      video.preload = 'metadata';
+      if (video.readyState >= 1) resolve();
+      else video.addEventListener('loadedmetadata', () => resolve(), { once: true });
+      video.load();
+    }));
+
+    const { width, height } = await dragToSmallest(page);
+
+    expect(width).toBeGreaterThan(176);
+    expect(width).toBeLessThan(185);
+    expect(height).toBeGreaterThan(300);
   });
 });

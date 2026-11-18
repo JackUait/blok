@@ -65,6 +65,7 @@ const buildSettings = (options: { refuse?: boolean; selectTwo?: boolean; refuseS
     },
     createdAt: 0,
     lastEditedAt: 0,
+    contentBlockIds: (): string[] => [],
     getTunes: () => ({ commonTunes: [],
       toolTunes: [] }),
     getActiveToolboxEntry: async () => ({ title: 'Text' }),

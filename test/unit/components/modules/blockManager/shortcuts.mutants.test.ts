@@ -22,6 +22,7 @@ const createHandlers = (): BlockShortcutsHandlers => ({
   onMoveDown: vi.fn(),
   onCopyAsMarkdown: vi.fn(),
   onDuplicate: vi.fn(),
+  onDuplicateWithoutContent: vi.fn(),
 });
 
 interface Harness {

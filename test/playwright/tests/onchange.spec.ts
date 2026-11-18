@@ -579,14 +579,8 @@ test.describe('onChange callback', () => {
 
     await openBlockSettings(page, 0);
 
-    // Heading 1-6 are flat radio tiles in the block menu itself.
-    const tuneOption = page
-      .getByTestId('block-tunes-popover')
-      .getByRole('menuitemradio', { name: 'Heading 1',
-        exact: true });
-
-    await expect(tuneOption).toBeVisible();
-    await tuneOption.dispatchEvent('click');
+    await page.getByTestId('block-tunes-popover').getByRole('menuitem', { name: 'Color', exact: true }).hover();
+    await page.getByTestId('block-color-swatch-textColor-red').click();
 
     await waitForOnChangeCallCount(page, 1);
 

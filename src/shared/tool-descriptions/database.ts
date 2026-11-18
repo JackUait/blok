@@ -543,6 +543,7 @@ export const DATABASE_DATA = {
         color: { type: 'string', enum: ['green', 'blue', 'gray', 'red', 'orange', 'yellow', 'purple', 'pink'] },
       },
     },
+    emoji: { type: 'string', description: 'An emoji before the title. A database keeps one of emoji and icon.' },
     starter: { type: 'string', enum: ['tasks', 'projects', 'skills', 'documentHub', 'brainstorm', 'meetingNotes', 'goals', 'campaign', 'contentCalendar',
       'events', 'socialMedia', 'issues', 'featureRequests', 'engineeringDocs', 'fundraising', 'pipeline', 'accounts', 'creative', 'inventory', 'roadmap', 'assets'], description: 'The template this database was made from. Removed by "Undo … database".' },
     automations: {

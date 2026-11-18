@@ -202,6 +202,7 @@ export class YjsManager extends Module {
     this.undoHistory.setPlacementCallback((blockId, placement, origin) => {
       this.replayMovePlacement(blockId, placement, origin);
     });
+    this.undoHistory.setMoveSettler(() => this.Blok?.BlockManager?.flushMoveReplaySync());
 
     // Barrier inside UndoHistory so every split it makes on its own (typing
     // window, sub-step) flushes buffered typing writes first.

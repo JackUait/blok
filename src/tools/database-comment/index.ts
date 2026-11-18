@@ -3,6 +3,7 @@ import { databaseCommentSanitize } from '../../shared/tool-descriptions/sanitize
 import type { BlockTool, BlockToolConstructorOptions, SanitizerConfig } from '../../../types';
 import type { DatabaseCommentData } from './types';
 import { overrideStatic } from '../../components/utils/override-static';
+import { keptAttachments, keptMentions } from '../../shared/database-comment-mentions';
 
 const text = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
 const time = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
@@ -12,15 +13,20 @@ const normalize = (data: Partial<DatabaseCommentData> | undefined): DatabaseComm
   const authorName = text(data?.authorName);
   const propertyId = text(data?.propertyId);
   const editedAt = time(data?.editedAt);
+  const body = text(data?.text) ?? '';
+  const mentions = keptMentions(body, data?.mentions);
+  const attachments = keptAttachments(data?.attachments);
 
   return {
-    text: text(data?.text) ?? '',
+    text: body,
     createdAt: time(data?.createdAt) ?? 0,
     ...(authorId === undefined || authorId === '' ? {} : { authorId }),
     ...(authorName === undefined || authorName === '' ? {} : { authorName }),
     ...(propertyId === undefined || propertyId === '' ? {} : { propertyId }),
     ...(editedAt === undefined ? {} : { editedAt }),
     ...(data?.resolved === true ? { resolved: true } : {}),
+    ...(mentions.length === 0 ? {} : { mentions }),
+    ...(attachments.length === 0 ? {} : { attachments }),
   };
 };
 
@@ -64,10 +70,10 @@ export class DatabaseCommentTool implements BlockTool {
   }
 
   /** An edit or a resolve. The database saves it with `dispatchChange({ derived: true })`, so it is not an undo step. */
-  public updateComment(param: { text?: string; editedAt?: number; resolved?: boolean }): void {
+  public updateComment(param: { text?: string; editedAt?: number; resolved?: boolean; mentions?: DatabaseCommentData['mentions'] }): void {
     this.data = normalize({
       ...this.data,
-      ...(param.text === undefined ? {} : { text: param.text }),
+      ...(param.text === undefined ? {} : { text: param.text, mentions: param.mentions }),
       ...(param.editedAt === undefined ? {} : { editedAt: param.editedAt }),
       ...(param.resolved === undefined ? {} : { resolved: param.resolved }),
     });

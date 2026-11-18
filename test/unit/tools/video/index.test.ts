@@ -808,7 +808,7 @@ describe('VideoTool — resize', () => {
     expect(block.dispatchChange).toHaveBeenCalled();
   });
 
-  it('floors the player width at the 440px minimum when dragged narrower', () => {
+  it('stops a 16:9 player at the width that keeps it 124px tall', () => {
     const block = createMockBlock();
     const tool = new VideoTool(createOptions({ url: 'u', width: 100 }, {}, block));
     const root = tool.render();
@@ -824,8 +824,27 @@ describe('VideoTool — resize', () => {
     // Drag the edge way past the left wall — width wants to collapse to ~0.
     handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 0, bubbles: true }));
     handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 0, bubbles: true }));
-    // 440px floor on a 1000px container → 44%, not the global 10%.
-    expect(tool.save().width).toBe(44);
+    // 124px tall at 16:9 is 221px wide: 22% of a 1000px container, not the global 10%.
+    expect(tool.save().width).toBe(22);
+  });
+
+  it('stops a portrait player at 180px wide', () => {
+    const block = createMockBlock();
+    const tool = new VideoTool(createOptions({ url: 'u', width: 100, aspectRatio: '9 / 16' }, {}, block));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('[data-role="video-figure"]');
+    if (!figure) throw new Error('figure missing');
+    stubRect(root, 1000);
+    stubRect(figure, 1000);
+    const handle = root.querySelector<HTMLElement>('[data-role="resize-handle"][data-edge="right"]');
+    if (!handle) throw new Error('handle missing');
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 1000, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 0, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 0, bubbles: true }));
+
+    expect(tool.save().width).toBe(18);
   });
 
   it('flags the figure as resize-blocked while dragged past the floor, clears on commit', () => {

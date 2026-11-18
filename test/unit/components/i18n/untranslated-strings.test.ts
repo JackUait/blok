@@ -257,6 +257,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'notifier.ok',
   ]),
   fr: new Set([
+    // R-fr-114: the plural noun "pages" is the native French word.
+    'tools.database.moveToPages',
     // "Note" is the native French noun for a written remark.
     'toolNames.annotation',
     // "Web" is a dictionary-listed noun; see the ledger's retention row.

@@ -57,10 +57,18 @@ describe('playground presence face', () => {
     expect(face.textContent).toBe('😀');
   });
 
-  it('paints the participant colour', () => {
-    const face = buildPresenceFace(participant({ color: '#6940a5' }));
+  it('paints a named participant in their colour', () => {
+    const face = buildPresenceFace(participant({ name: 'Alice', glyph: null, label: null, color: '#6940a5' }));
 
     expect(face.style.background).toBe('rgb(105, 64, 165)');
+  });
+
+  it('hands a nameless participant colour to the stylesheet, which washes the face with it', () => {
+    const face = buildPresenceFace(participant({ color: '#6940a5' }));
+
+    expect(face.style.getPropertyValue('--blok-presence-color')).toBe('#6940a5');
+    // An inline background would beat the wash presence.css paints.
+    expect(face.style.background).toBe('');
   });
 
   it('names a participant through Blok tooltip rather than the browser one', () => {

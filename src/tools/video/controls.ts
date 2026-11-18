@@ -6,6 +6,7 @@ import {
   IconPlayerBackward,
   IconPlayerForward,
   IconCollapseFullscreen,
+  IconCross,
   IconDotsHorizontal,
   IconPlayerLoop,
   IconPlayerPause,
@@ -19,7 +20,7 @@ import {
 } from '../../components/icons';
 import { promoteToTopLayer, removeFromTopLayer, supportsPopoverAPI } from '../../components/utils/top-layer';
 import { isKeyboardModality } from '../../components/utils/input-modality';
-import { createVolumeIcon } from '../../components/utils/volume-icon';
+import { createVolumeIcon, volumeLevelIcon } from '../../components/utils/volume-icon';
 import { getElementDirection } from '../../components/utils/direction';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { tr } from './i18n';
@@ -113,6 +114,15 @@ const TIER_SMALL_BELOW = 260;
 const TIER_TINY_BELOW = 180;
 
 /** Size tier for a player's rendered width. An unmeasured player (0) counts as full. */
+/** Under this height a centred flash would touch the capsule. */
+const FLASH_POP_BELOW = 182;
+/** Under this height the settings card has no room to rise from the bottom. */
+const SHEET_FRAME_BELOW = 216;
+/** Under this height the settings rows do not fit, so tiles stand in. */
+const SHEET_TILES_BELOW = 146;
+/** Under this width the settings rows get smaller type and drop the chevron. */
+const SHEET_TIGHT_BELOW = 300;
+
 export function playerTier(width: number): PlayerTier {
   if (width <= 0 || width >= TIER_COMPACT_BELOW) return 'full';
   if (width >= TIER_SMALL_BELOW) return 'compact';
@@ -520,6 +530,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     muteToggle.setAttribute('aria-pressed', String(muted));
     volumeIcon.paint(video.volume, muted);
     muteToggle.setAttribute('aria-label', muted ? i18nLabel('unmute', 'Unmute') : i18nLabel('mute', 'Mute'));
+    syncSoundTile(muted);
     // muting parks the slider at the very beginning; unmuted tracks the real volume
     volume.value = muted ? '0' : String(video.volume);
     // paint the filled (already-set) portion to the left of the thumb
@@ -558,9 +569,12 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   const flashBurst = (willPlay: boolean): void => {
     burst.innerHTML = willPlay ? IconPlayerPlay : IconPlayerPause;
     burst.classList.remove('is-active');
-    burst.offsetWidth;
-    burst.classList.add('is-active');
+    playToggle.classList.remove('is-pop');
+    const target = figure.getAttribute('data-flash') === 'pop' ? playToggle : burst;
+    target.offsetWidth;
+    target.classList.add(target === burst ? 'is-active' : 'is-pop');
   };
+  const onPopEnd = (): void => playToggle.classList.remove('is-pop');
   // Clear on the disc's own animation only — the radiating ring (::after) ends
   // separately and must not cut the disc short. jsdom fires a bare Event with no
   // animationName, so an empty name still clears (keeps the unit test honest).
@@ -887,7 +901,55 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   speedPane.addEventListener('pointerdown', (event) => {
     if (!(event.target instanceof Element && event.target.closest('.blok-video-controls__speed-entry'))) speedEntry.commit();
   }, true);
-  menu.append(mainPane, speedPane);
+  // The smallest players have no room for rows: the same choices as icon tiles.
+  // CSS shows them in place of the panes (data-sheet-content="tiles").
+  const tiles = document.createElement('div');
+  tiles.className = 'blok-video-controls__tiles';
+  tiles.setAttribute('data-role', 'menu-tiles');
+  const tile = (action: string, label: string, icon = ''): HTMLButtonElement => {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'blok-video-controls__tile';
+    el.setAttribute('data-action', action);
+    el.setAttribute('aria-label', label);
+    el.innerHTML = icon;
+    return el;
+  };
+  const speedTile = tile('tile-speed', i18nLabel('playbackSpeed', 'Playback speed'));
+  // One press, one preset up; past the last it starts over.
+  speedTile.addEventListener('click', () => {
+    setRate(SPEED_PEGS.find((peg) => peg > state.selectedRate) ?? SPEED_PEGS[0]);
+  });
+  const loopTile = tile('tile-loop', i18nLabel('loop', 'Loop'), IconPlayerLoop);
+  loopTile.setAttribute('role', 'switch');
+  loopTile.setAttribute('aria-checked', String(loop));
+  loopTile.addEventListener('click', () => { setLoop(!media.loop); onLoopChange?.(); });
+  const soundTile = tile('tile-sound', i18nLabel('mute', 'Mute'));
+  soundTile.setAttribute('role', 'switch');
+  soundTile.addEventListener('click', () => muteToggle.click());
+  const syncSoundTile = (muted: boolean): void => {
+    soundTile.setAttribute('aria-checked', String(!muted));
+    soundTile.setAttribute('aria-label', muted ? i18nLabel('unmute', 'Unmute') : i18nLabel('mute', 'Mute'));
+    soundTile.innerHTML = volumeLevelIcon(video.volume, muted);
+  };
+  syncSoundTile(isMuted());
+  // The find bar's Close, as the file tool reuses it: one word, already in every locale.
+  const closeLabel = tr(i18n, 'find.close', 'Close');
+  const closeTile = tile('tile-close', closeLabel, IconCross);
+  tiles.append(speedTile, loopTile, soundTile, closeTile);
+  menu.append(mainPane, speedPane, tiles);
+
+  // In a capsule the card opens inside the frame: this layer dims the picture
+  // and holds the card and its close button. syncSize moves the card in and out.
+  const sheet = document.createElement('div');
+  sheet.className = 'blok-video-controls__sheet';
+  sheet.setAttribute('data-role', 'menu-sheet');
+  sheet.hidden = true;
+  const sheetClose = button('menu-close', closeLabel, IconCross);
+  sheetClose.classList.add('blok-video-controls__sheet-close');
+  sheet.append(sheetClose);
+  root.appendChild(sheet);
+  const inSheet = (): boolean => menu.parentElement === sheet;
 
   // Only the characters that changed roll in: up for a faster speed, down for a slower one.
   const readout = { text: '' };
@@ -905,6 +967,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
 
   const syncSpeedUi = (rate: number, previous: number): void => {
     speedRowValue.textContent = rate === 1 ? i18nLabel('speedNormal', 'Normal') : SPEED_LABEL(rate);
+    speedTile.textContent = SPEED_LABEL(rate);
     backRowValue.textContent = SPEED_LABEL(rate);
     paintReadout(rate, rate > previous);
     speedDecrease.disabled = rate <= SPEED_MIN;
@@ -977,6 +1040,8 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     if (focus) (pane === 'speed' ? backRow : speedRow).focus({ preventScroll: true });
     // A size cannot animate to or from `auto`: pin the old size, then the new one.
     const to = { height: menu.offsetHeight, width: menu.offsetWidth };
+    // In the sheet CSS sizes the card, so there is nothing to pin.
+    if (inSheet()) return;
     if (!animate || reducedMotion || !from.height || !to.height || (from.height === to.height && from.width === to.width)) return;
     menu.style.height = `${from.height}px`;
     menu.style.width = `${from.width}px`;
@@ -1000,6 +1065,10 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
 
   const MENU_GAP = 8;
   const positionMenu = (): void => {
+    if (inSheet()) {
+      ['left', 'right', 'bottom', 'transform-origin'].forEach((prop) => menu.style.removeProperty(prop));
+      return;
+    }
     const g = gear.getBoundingClientRect();
     const f = figure.getBoundingClientRect();
     const b = bar.getBoundingClientRect();
@@ -1041,6 +1110,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     // Every open starts on the main list, whatever was showing when it closed.
     showPane('main', { animate: false });
     menu.hidden = false;
+    sheet.hidden = !inSheet();
     positionMenu();
     gear.setAttribute('aria-expanded', 'true');
     document.addEventListener('mousedown', onMenuOutside);
@@ -1050,6 +1120,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     if (menu.hidden) return;
     speedEntry.commit();
     menu.hidden = true;
+    sheet.hidden = true;
     stopStepHold();
     endMenuResize();
     speedWire.rest();
@@ -1062,6 +1133,12 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     if (menu.hidden) openMenu();
     else closeMenu();
   });
+  const closeMenuToGear = (): void => {
+    closeMenu();
+    gear.focus({ preventScroll: true });
+  };
+  sheetClose.addEventListener('click', closeMenuToGear);
+  closeTile.addEventListener('click', closeMenuToGear);
   // Escape steps back out: submenu to main list, main list to closed.
   menu.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
@@ -1071,8 +1148,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
       showPane('main', { focus: true });
       return;
     }
-    closeMenu();
-    gear.focus({ preventScroll: true });
+    closeMenuToGear();
   });
 
   // ----- view modes: ambient glow / theater / picture-in-picture -----
@@ -1298,6 +1374,9 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   theaterRow.append(menuIcon(IconPlayerTheater), menuText('blok-video-controls__menu-label', i18nLabel('theater', 'Theater mode')));
   theaterRow.addEventListener('click', () => { closeMenu(); setTheater(true); });
   mainPane.append(theaterRow);
+  const theaterTile = tile('tile-theater', i18nLabel('theater', 'Theater mode'), IconPlayerTheater);
+  theaterTile.addEventListener('click', () => theaterRow.click());
+  tiles.insertBefore(theaterTile, closeTile);
 
   // Picture-in-picture — only mounted when the browser supports it.
   const pipSupported = Boolean(document.pictureInPictureEnabled);
@@ -1315,25 +1394,57 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     pipRow.append(menuIcon(IconPlayerPip), menuText('blok-video-controls__menu-label', i18nLabel('pip', 'Picture-in-Picture')));
     pipRow.addEventListener('click', () => { closeMenu(); pipBtn.click(); });
     mainPane.append(pipRow);
+    const pipTile = tile('tile-pip', i18nLabel('pip', 'Picture-in-Picture'), IconPlayerPip);
+    pipTile.addEventListener('click', () => pipRow.click());
+    tiles.insertBefore(pipTile, closeTile);
     video.addEventListener('enterpictureinpicture', onEnterPip);
     video.addEventListener('leavepictureinpicture', onLeavePip);
   }
 
   // ----- size tier -----
-  const tierState: { current: PlayerTier | null; observer: ResizeObserver | null } = { current: null, observer: null };
-  const syncTier = (): void => {
-    const tier = playerTier(figure.clientWidth);
-    if (tier === tierState.current) return;
-    tierState.current = tier;
-    closeMenu();
-    figure.setAttribute('data-tier', tier);
-    figure.toggleAttribute('data-capsule', tier !== 'full');
-    gear.innerHTML = tier === 'full' ? IconPlayerSettings : IconDotsHorizontal;
+  // The stamps video.css reads. The height is the overlay's: the <video> itself is 150px
+  // until its metadata loads. A height of 0 is not measured yet, and counts as tall.
+  const stamp = (name: string, value: string | null): void => {
+    if (value === null) figure.removeAttribute(name);
+    else figure.setAttribute(name, value);
   };
-  syncTier();
+  const tierState: { tier: PlayerTier | null; content: string | null; observer: ResizeObserver | null } = { tier: null, content: null, observer: null };
+  const syncSize = (): void => {
+    const width = figure.clientWidth;
+    const height = root.clientHeight;
+    const tier = playerTier(width);
+    const capsule = tier !== 'full';
+    // video.css places the resize handles by this; they sit on the figure, which is taller by the caption.
+    if (height > 0) figure.style.setProperty('--blok-video-frame-h', `${height}px`);
+    else figure.style.removeProperty('--blok-video-frame-h');
+    const under = (limit: number): boolean => height > 0 && height < limit;
+    const content = capsule && (tier === 'tiny' || under(SHEET_TILES_BELOW)) ? 'tiles' : 'rows';
+    // The card under an open sheet would change shape, or lose its button.
+    if (tier !== tierState.tier || content !== tierState.content) closeMenu();
+    if (tier !== tierState.tier) {
+      figure.setAttribute('data-tier', tier);
+      figure.toggleAttribute('data-capsule', capsule);
+      gear.innerHTML = capsule ? IconDotsHorizontal : IconPlayerSettings;
+      if (capsule) sheet.insertBefore(menu, sheetClose);
+      else figure.appendChild(menu);
+    }
+    tierState.tier = tier;
+    tierState.content = content;
+    const pop = capsule && (tier === 'tiny' || under(FLASH_POP_BELOW));
+    // A flash caught mid-way would resume when the disc comes back.
+    if (pop) burst.classList.remove('is-active');
+    stamp('data-flash', pop ? 'pop' : null);
+    const layout = under(SHEET_FRAME_BELOW) ? 'frame' : 'panel';
+    stamp('data-sheet', capsule ? layout : null);
+    stamp('data-sheet-content', capsule ? content : null);
+    stamp('data-sheet-rows', capsule && width < SHEET_TIGHT_BELOW ? 'tight' : null);
+  };
+  syncSize();
   if (typeof ResizeObserver !== 'undefined') {
-    tierState.observer = new ResizeObserver(syncTier);
+    tierState.observer = new ResizeObserver(syncSize);
     tierState.observer.observe(figure);
+    // The height can change alone: the aspect ratio arrives with the metadata.
+    tierState.observer.observe(root);
   }
 
   // ----- idle auto-hide -----
@@ -1496,6 +1607,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   const setLoop = (next: boolean, persist = true): void => {
     media.loop = next;
     loopRow.setAttribute('aria-checked', String(next));
+    loopTile.setAttribute('aria-checked', String(next));
     if (persist) safeSet(LOOP_KEY, String(next));
   };
   // Restore shared preferences before applying this block's Loop edit.
@@ -1537,6 +1649,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   video.addEventListener('keydown', onVideoKeydown);
   seekFlash.addEventListener('animationend', onSeekFlashEnd);
   burst.addEventListener('animationend', onBurstEnd);
+  playToggle.addEventListener('animationend', onPopEnd);
   seek.addEventListener('input', onSeekInput);
   seek.addEventListener('pointermove', onSeekHover);
   seek.addEventListener('pointerleave', onSeekHoverLeave);

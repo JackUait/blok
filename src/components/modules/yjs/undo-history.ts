@@ -386,6 +386,9 @@ export class UndoHistory {
    */
   private placementCallback: MoveReplayCallback;
 
+  /** Puts the holders of replayed moves at their places. See {@link setMoveSettler}. */
+  private settleReplayedMoves: () => void = () => undefined;
+
   /**
    * Flush barrier for coalesced typing writes (see BlockWriteBuffer). Runs at
    * the START of stopCapturing/undo/redo so buffered writes join the capture
@@ -1251,6 +1254,14 @@ export class UndoHistory {
    */
   public setPlacementCallback(callback: MoveReplayCallback): void {
     this.placementCallback = callback;
+  }
+
+  /**
+   * Set what runs after a replay and before its selection is restored, to put
+   * the holders of the moves it replayed at their places.
+   */
+  public setMoveSettler(settle: () => void): void {
+    this.settleReplayedMoves = settle;
   }
 
   /**
@@ -2307,6 +2318,10 @@ export class UndoHistory {
 
       return;
     }
+
+    // A replayed move's holder is not at its place until the move sync runs,
+    // and restoring a block selection scrolls to the holder.
+    this.settleReplayedMoves();
 
     // Redo lands where the selection was at the matching undo press. With
     // none (an API undo) or one that is gone, it lands at the step's own end.

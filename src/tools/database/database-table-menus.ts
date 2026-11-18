@@ -442,9 +442,8 @@ export interface RowMenuContext {
   onDelete?: () => void;
   /** The host's comments lever. Without it there is no Comment row. */
   onComment?: () => void;
-  /** Other databases of this document. Without any there is no Move to row. */
-  moveTargets?: Array<{ id: string; title: string }>;
-  onMoveTo?: (databaseId: string) => void;
+  /** Opens the Move to picker; gets the menu's box. Without it there is no Move to row. */
+  onMoveTo?: (menu: DOMRect | undefined) => void;
   /** Who edited the row last, and when, already formatted. */
   lastEdited?: { name?: string; avatarUrl?: string; time: string };
   /** Words and characters of the row. Without it or lastEdited there is no footer. */
@@ -566,14 +565,11 @@ export const commentMenuItem = (i18n: T): { type: PopoverItemType.Default; title
   secondaryLabel: beautifyShortcut('CMD+SHIFT+M'),
 });
 
-/** The databases "Move to" offers. Also the list ⌘⇧P opens on one selected row. */
-export const moveTargetItems = (i18n: T, targets: ReadonlyArray<{ id: string; title: string }>, onMoveTo: (databaseId: string) => void): PopoverItemParams[] =>
-  targets.map((target) => ({
-    type: PopoverItemType.Default as const,
-    name: `database-row-move-to-${target.id}`,
-    title: target.title === '' ? i18n.t('tools.database.relationUntitledDatabase') : target.title,
-    onActivate: () => onMoveTo(target.id),
-  }));
+/** The open menu holding Move to: the picker takes its place (notion-motion.md Round 62 §1). */
+const moveToMenuBox = (): DOMRect | undefined => document
+  .querySelector('[data-blok-popover-opened="true"] [data-blok-item-name="database-row-move-to"]')
+  ?.closest('[data-blok-popover-container]')
+  ?.getBoundingClientRect();
 
 /** What the row menu and the row page's "•••" menu can do to the row itself. */
 export interface RowActionContext {
@@ -583,9 +579,8 @@ export interface RowActionContext {
   onDuplicate?: () => void;
   /** Without it there is no Move to Trash row. */
   onDelete?: () => void;
-  /** Other databases of this document. Without any there is no Move to row. */
-  moveTargets?: Array<{ id: string; title: string }>;
-  onMoveTo?: (databaseId: string) => void;
+  /** Opens the Move to picker; gets the menu's box. Without it there is no Move to row. */
+  onMoveTo?: (menu: DOMRect | undefined) => void;
 }
 
 /**
@@ -594,20 +589,21 @@ export interface RowActionContext {
  */
 export const rowActionItems = (ctx: RowActionContext, options: { trashShortcut: boolean }): PopoverItemParams[] => {
   const { i18n, onDuplicate, onDelete, onMoveTo } = ctx;
-  const targets = ctx.moveTargets ?? [];
 
   return [
     { type: PopoverItemType.Default, name: 'database-row-copy-link', title: i18n.t('tools.database.tableCopyLink'), icon: IconLink, onActivate: ctx.onCopyLink },
     ...(onDuplicate !== undefined
       ? [{ type: PopoverItemType.Default as const, name: 'database-row-duplicate', title: i18n.t('tools.database.tableDuplicate'), icon: IconCopy, secondaryLabel: beautifyShortcut('CMD+D'), onActivate: onDuplicate }]
       : []),
-    ...(onMoveTo !== undefined && targets.length > 0
+    ...(onMoveTo !== undefined
       ? [{
         type: PopoverItemType.Default as const,
+        name: 'database-row-move-to',
         title: i18n.t('tools.database.tableMoveTo'),
         icon: IconArrowDiagonal,
         secondaryLabel: beautifyShortcut('CMD+SHIFT+P'),
-        children: { searchable: true, items: moveTargetItems(i18n, targets, onMoveTo) },
+        closeOnActivate: true,
+        onActivate: () => onMoveTo(moveToMenuBox()),
       }]
       : []),
     ...(onDelete !== undefined

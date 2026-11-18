@@ -64,7 +64,7 @@ const AGENT_ATTR = 'data-blok-presence-agent';
 const INITIALS_ATTR = 'data-blok-presence-initials';
 
 /**
- * Which silhouette a nameless peer wears. presence.css turns it into a mask;
+ * Which silhouette a nameless peer wears. presence.css turns it into an image;
  * the shape is never a child node, for the same reason the monogram is not —
  * block copy keeps whatever the holder held.
  */

@@ -23,6 +23,7 @@ const createSettings = (commonTunes: MenuConfigItem[], toolTunes: MenuConfigItem
   const block = {
     id: 'section', name: 'custom-heading', parentId: null, holder, pluginsContent: content,
     createdAt: 0, lastEditedAt: 0,
+    contentBlockIds: (): string[] => [],
     getTunes: () => ({ commonTunes, toolTunes }),
     getActiveToolboxEntry: async () => ({ title: 'Custom title', icon: '<svg></svg>' }),
     save: async () => ({ data: { text: 'Section' } }),
@@ -282,7 +283,7 @@ describe('Block settings control groups', () => {
     actions[1].click();
     expect(last).toHaveBeenCalledTimes(1);
     actions[2].click();
-    expect(duplicate).toHaveBeenCalledWith(block);
+    expect(duplicate).toHaveBeenCalledWith(block, { leaveOut: [], numberCopies: true });
     expect(remove).not.toHaveBeenCalled();
   });
 });

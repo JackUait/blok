@@ -1839,6 +1839,32 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R142_BYTES = 1180;
     // Lane r146: Round 61 feed card top, form access "Change", Preview spacing, form header glyphs. Net database.css growth against origin/main.
     const DATABASE_R146_BYTES = 973;
+    // Lane r149: Round 62 comment composer, its "@" mention menu, mention chips, attached files and the composer buttons. Net database.css growth against origin/main.
+    const DATABASE_R149_BYTES = 6337;
+    // Lane r148: Round 62 Move to picker (centre origin, search inset, 322x28 result rows). Net database.css growth against origin/main.
+    const DATABASE_R148_BYTES = 1240;
+    // Lane r152: Round 62 feed composer buttons at card + 562 / 592 / 622. Net database.css growth against origin/main.
+    const DATABASE_R152_BYTES = 790;
+    // Lane r150: Round 62 Move to picker at rest (453 tall, full-bleed rows), its 453 cap and 14px field. Net database.css growth against origin/main.
+    const DATABASE_R150_BYTES = 1307;
+    // Lane r153: Round 62 Move to Workspace tree rows (chevron 20 at +14, icon 16 at +37, +14 a level) and the chevron turn. Net database.css growth against origin/main.
+    const DATABASE_R153_BYTES = 2792;
+    // Lane r156: Round 64 §4 selected database block tint fades in over 200ms. Net database.css growth against origin/main.
+    const DATABASE_R156_BYTES = 378;
+    // Lane r155: Round 64 a List row or Gallery card an undo brings back fades its pick in (registered tint + keyframes). Net database.css growth against origin/main.
+    const DATABASE_R155_BYTES = 822;
+    // Lane r158: Round 65 §1 database block menu (28px rows, 29 apart) and the "Move database to Trash?" prompt. Net database.css growth against origin/main.
+    const DATABASE_R158_BYTES = 1943;
+    // Lane r157: Round 65 §2 the pick an undo replaces fades out (leaving rule + keyframes). Net database.css growth against origin/main.
+    const DATABASE_R157_BYTES = 599;
+    // Lane r159: Round 65 Move to chevron, form card, today dot, board count and side peek radius. Net database.css growth against origin/main.
+    const DATABASE_R159_BYTES = 973;
+    // Lane r162: Round 66 §4 side and center peek header buttons at radius 6, §3 calendar leaving halo. Net database.css growth against origin/main.
+    const DATABASE_R162_BYTES = 887;
+    // Lane r164: Round 67 §3 calendar card Edit property editor (38px, no motion), §1 22px emoji icon button. Net database.css growth against origin/main.
+    const DATABASE_R164_BYTES = 699;
+    // Lane r165: Round 67 §1 Duplicate submenu (275x65, 28px rows, opacity fade) and the Move to Trash row (no Del, neutral hover). Net database.css growth against origin/main.
+    const DATABASE_R165_BYTES = 1904;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -1875,6 +1901,16 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const EMBED_IDLE_DECK_BYTES = 4_153;
     // video.css: the capsule a player below 400px swaps the bar for, with its three size tiers (measured video.css growth).
     const VIDEO_CAPSULE_BYTES = 10_820;
+    // video.css: the settings sheet inside a capsule (bottom card, frame card, tiles) and the play button pop (measured video.css growth).
+    const VIDEO_CAPSULE_SHEET_BYTES = 9_321;
+    // video.css: the fade and size glides that hide the seams between player size tiers (measured video.css growth).
+    const VIDEO_TIER_GLIDE_BYTES = 1_253;
+    // video.css: the resize handles keep to the strip of the frame the controls leave free (measured video.css growth).
+    const VIDEO_HANDLE_CLEARANCE_BYTES = 1_364;
+    // presence.css: anonymous faces redrawn as ink drawings, each stored twice — at rest and in hover motion (measured presence.css growth).
+    const PRESENCE_INK_FACES_BYTES = 4_973;
+    // table-of-contents.css: the block is never the browser's scroll anchor (measured table-of-contents.css growth).
+    const TOC_NO_SCROLL_ANCHOR_BYTES = 459;
     // file.css: the object on a file card — pages, editor tab, filmstrip, record, folder, punch card (measured file.css growth).
     const FILE_CARD_OBJECT_BYTES = 27_626;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
@@ -2432,6 +2468,19 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R145_BYTES
       + DATABASE_R142_BYTES
       + DATABASE_R146_BYTES
+      + DATABASE_R149_BYTES
+      + DATABASE_R148_BYTES
+      + DATABASE_R152_BYTES
+      + DATABASE_R150_BYTES
+      + DATABASE_R153_BYTES
+      + DATABASE_R156_BYTES
+      + DATABASE_R155_BYTES
+      + DATABASE_R158_BYTES
+      + DATABASE_R157_BYTES
+      + DATABASE_R159_BYTES
+      + DATABASE_R162_BYTES
+      + DATABASE_R164_BYTES
+      + DATABASE_R165_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES
@@ -2443,7 +2492,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + MEDIA_SPEED_ENTRY_BYTES
       + EMBED_BRAND_APP_ICON_BYTES
       + EMBED_IDLE_DECK_BYTES
-      + VIDEO_CAPSULE_BYTES;
+      + VIDEO_CAPSULE_BYTES
+      + VIDEO_CAPSULE_SHEET_BYTES
+      + VIDEO_TIER_GLIDE_BYTES
+      + VIDEO_HANDLE_CLEARANCE_BYTES
+      + PRESENCE_INK_FACES_BYTES
+      + TOC_NO_SCROLL_ANCHOR_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

@@ -362,3 +362,169 @@ test('a table row\'s Comment box near the window bottom sits 4px above the row a
   expect(anchor.top - card.bottom).toBeCloseTo(4, 0);
   expect(origin).toBe(`${card.width / 2}px ${card.height}px`);
 });
+
+// notion-motion.md Round 62 §2: Mention puts "@" in the text and opens the menu above the box, its left 22 before the "@".
+test('Mention opens the "@" menu above the comment box; Escape closes only the menu; Enter picks Today', async ({ page }) => {
+  await titleCell(page).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: /Comment/ }).click();
+  await expect(composer(page)).toBeFocused();
+  await composer(page).evaluate(async (input) => {
+    await Promise.all(input.closest('[data-blok-popover-container]')?.getAnimations().map((animation) => animation.finished) ?? []);
+  });
+  await composer(page).pressSequentially('see ');
+  await page.getByRole('button', { name: 'Mention a person, page, or date' }).click();
+
+  const menu = page.getByRole('listbox', { name: 'Mention a person, page, or date' });
+
+  await expect(menu).toBeVisible();
+  await expect(composer(page)).toHaveValue('see @');
+  await expect(composer(page)).toBeFocused();
+  await menu.evaluate(async (el) => {
+    await Promise.all(el.getAnimations().map((animation) => animation.finished));
+  });
+  const place = await menu.evaluate((el) => {
+    const box = document.querySelector('[data-blok-database-comment-input]')?.closest('[data-blok-popover-container]')?.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+
+    return { width: r.width, bottom: r.bottom, left: r.left, boxTop: box?.top ?? 0 };
+  });
+
+  const at = await composer(page).evaluate((input) => {
+    const style = getComputedStyle(input);
+    const context = document.createElement('canvas').getContext('2d');
+
+    if (context === null) return 0;
+    context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+
+    return input.getBoundingClientRect().left + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft) + context.measureText('see ').width;
+  });
+
+  expect(place.width).toBe(330);
+  expect(place.bottom).toBeCloseTo(place.boxTop - 3.5, 0);
+  expect(place.left).toBeCloseTo(at - 22, 0);
+  await expect(menu.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
+
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await expect(composer(page)).toBeVisible();
+  await expect(composer(page)).toHaveValue('see @');
+
+  await composer(page).pressSequentially('t');
+  await expect(menu).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(menu).toBeHidden();
+  await page.keyboard.press('Enter');
+
+  const chip = page.getByRole('listitem').locator('[data-blok-database-comment-mention-chip="date"]');
+
+  await expect(chip).toBeVisible();
+  const [saved] = await savedComments(page);
+
+  expect(saved.data.mentions).toEqual([expect.objectContaining({ type: 'date', start: 4 })]);
+});
+
+const mountWithUploader = async (page: Page, input: OutputBlockData[]): Promise<void> => {
+  await page.evaluate(async (input) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
+    }
+    document.getElementById('blok')?.remove();
+    const holder = document.createElement('div');
+    const globals = window as unknown as Record<string, unknown>;
+
+    holder.id = 'blok';
+    document.body.appendChild(holder);
+    window.blokInstance = new window.Blok({
+      holder,
+      data: { blocks: input },
+      tools: { paragraph: globals.BlokParagraph, database: globals.BlokDatabase },
+      uploader: { uploadByFile: async (file: File) => ({ url: `https://files.test/${file.name}` }) },
+    });
+    await window.blokInstance.isReady;
+  }, input);
+};
+
+// notion-motion.md Round 62 §2: Attach at + 378, Mention at + 408, Send at + 438, each 24 square; Send 0.4 empty, blue with text.
+test('the comment box runs Attach file, Mention and Send as Notion\'s, and a picked file goes with the comment', async ({ page }) => {
+  await mountWithUploader(page, blocks());
+  await titleCell(page).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: /Comment/ }).click();
+  await expect(composer(page)).toBeFocused();
+  await composer(page).evaluate(async (input) => {
+    await Promise.all(input.closest('[data-blok-popover-container]')?.getAnimations().map((animation) => animation.finished) ?? []);
+  });
+  const look = async (): Promise<Array<{ name: string | null; x: number; width: number; height: number; opacity: string; color: string; svg: number }>> =>
+    composer(page).evaluate((input) => {
+      const box = input.closest('[data-blok-popover-container]')?.getBoundingClientRect();
+
+      return [...(input.parentElement?.querySelectorAll(':scope > button') ?? [])].map((button) => {
+        const r = button.getBoundingClientRect();
+        const style = getComputedStyle(button);
+
+        return {
+          name: button.getAttribute('aria-label'),
+          x: r.left - (box?.left ?? 0),
+          width: r.width,
+          height: r.height,
+          opacity: style.opacity,
+          color: style.color,
+          svg: button.querySelector('svg')?.getBoundingClientRect().width ?? 0,
+        };
+      });
+    });
+  const empty = await look();
+
+  expect(empty.map((button) => button.name)).toEqual(['Attach file', 'Mention a person, page, or date', 'Send comment']);
+  expect(empty.map((button) => Math.round(button.x))).toEqual([378, 408, 438]);
+  empty.forEach((button) => {
+    expect([button.width, button.height, button.svg]).toEqual([24, 24, 20]);
+  });
+  expect(empty[2].opacity).toBe('0.4');
+
+  await composer(page).pressSequentially('A long line that keeps going well past the width of the box, with https://example.com/a/very/long/unbroken/path/that/never/stops');
+  const typed = await look();
+
+  expect(typed[2]).toMatchObject({ opacity: '1', color: 'rgb(39, 131, 222)' });
+  expect(typed.map((button) => Math.round(button.x))).toEqual([378, 408, 438]);
+
+  const chooser = page.waitForEvent('filechooser');
+
+  await page.getByRole('button', { name: 'Attach file' }).click();
+  await (await chooser).setFiles({ name: 'plan.pdf', mimeType: 'application/pdf', buffer: Buffer.from('x') });
+  await expect(page.locator('[data-blok-database-comment-draft-file]')).toHaveText('plan.pdf');
+  await expect(composer(page)).toBeFocused();
+  await page.keyboard.press('Enter');
+
+  const file = page.getByRole('listitem').getByRole('link', { name: 'plan.pdf' });
+
+  await expect(file).toHaveAttribute('href', 'https://files.test/plan.pdf');
+  const [saved] = await savedComments(page);
+
+  expect(saved.data.attachments).toEqual([{ url: 'https://files.test/plan.pdf', name: 'plan.pdf' }]);
+});
+
+// Round 62 §2 (corrects Round 61): a feed card's composer buttons are hidden at rest and on hover, shown with focus.
+test('a feed card\'s composer shows its buttons only while it has focus, and Escape hides them again', async ({ page }) => {
+  const [intro, database, row] = blocks();
+
+  await mountWithUploader(page, [
+    intro,
+    { ...database, data: { ...database.data, views: [{ id: 'v1', name: 'Feed', type: 'feed', position: 'a0', sorts: [], filters: [], visibleProperties: [] }] } },
+    row,
+  ]);
+  const input = composer(page);
+  const box = page.locator('[data-blok-database-feed-comments]');
+  const tools = box.getByRole('button', { name: /^(Attach file|Mention a person, page, or date|Send comment)$/, includeHidden: true });
+
+  await expect(input).toBeVisible();
+  await expect(tools).toHaveCount(3);
+  for (const button of await tools.all()) await expect(button).toBeHidden();
+  await input.hover();
+  for (const button of await tools.all()) await expect(button).toBeHidden();
+  await input.click();
+  for (const button of await tools.all()) await expect(button).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(input).not.toBeFocused();
+  for (const button of await tools.all()) await expect(button).toBeHidden();
+});

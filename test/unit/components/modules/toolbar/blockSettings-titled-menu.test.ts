@@ -98,6 +98,7 @@ vi.mock('../../../../../src/components/i18n', () => ({
 }));
 
 const createBlock = (blockMenu: { titled: boolean; trash: boolean; lead?: string[] } = { titled: false, trash: false }): Block => ({
+  contentBlockIds: (): string[] => [],
   getTunes: vi.fn(() => ({ commonTunes: [] })),
   getActiveToolboxEntry: vi.fn(async () => undefined),
   name: 'page',
@@ -116,6 +117,7 @@ const createBlokMock = (): Record<string, unknown> => ({
     allBlocksSelected: false,
   },
   BlockManager: {
+    blocks: [] as Block[],
     currentBlock: undefined as Block | undefined,
     convert: vi.fn(async () => createBlock()),
   },
@@ -293,5 +295,99 @@ describe('BlockSettings — a tool that declares a titled block menu', () => {
     expect(layout(items)[0]).toBe('color');
     expect((items as Named[]).find((item) => item.name === 'copy-link')?.title).toBe('Copy link');
     expect((items as Named[]).find((item) => item.name === 'delete')?.title).toBe('blockSettings.delete');
+  });
+});
+
+describe('BlockSettings — a block that asks before its menu Delete', () => {
+  let blockSettings: BlockSettings;
+  let blok: Record<string, unknown>;
+
+  type Activatable = Named & { onActivate: (item: PopoverItemParams) => unknown };
+
+  const deleteItem = async (block: Block, removeBlock: Mock): Promise<Activatable | undefined> => {
+    const tunes: MenuConfigItem[] = [{ name: 'delete', title: 'blockSettings.delete', onActivate: removeBlock }];
+    const items = await (blockSettings as unknown as {
+      getTunesItems: (b: Block, common: MenuConfigItem[], tool: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }).getTunesItems(block, tunes, []);
+
+    return (items as Activatable[]).find((item) => item.name === 'delete');
+  };
+
+  const askingBlock = (answer: Promise<boolean>): Block => Object.assign(createBlock(), {
+    asksBeforeDelete: true,
+    confirmDelete: vi.fn(() => answer),
+  });
+
+  beforeEach(() => {
+    getConvertibleToolsForBlockMock.mockReset();
+    getConvertibleToolsForBlockMock.mockResolvedValue([]);
+    blockSettings = new BlockSettings({
+      config: {},
+      eventsDispatcher: { on: vi.fn(), off: vi.fn(), emit: vi.fn() } as unknown as typeof blockSettings['eventsDispatcher'],
+    });
+    blok = createBlokMock();
+    Object.assign(blok.BlockManager as Record<string, unknown>, { getBlockById: vi.fn(() => ({})) });
+    blockSettings.state = blok as unknown as BlokModules;
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('keeps the block when the question is answered no', async () => {
+    const removeBlock = vi.fn();
+    const block = askingBlock(Promise.resolve(false));
+    const remove = await deleteItem(block, removeBlock);
+
+    remove?.onActivate(remove);
+    await vi.waitFor(() => expect(block.confirmDelete).toHaveBeenCalledTimes(1));
+    await Promise.resolve();
+
+    expect(removeBlock).not.toHaveBeenCalled();
+  });
+
+  // notion-motion.md Round 66 §2: after Escape or Cancel the database stays selected.
+  it('leaves the block selected after a no', async () => {
+    const block = Object.assign(askingBlock(Promise.resolve(false)), { id: 'asks', selected: false });
+    const other = Object.assign(createBlock(), { id: 'other', selected: true });
+
+    Object.assign(blok.BlockManager as Record<string, unknown>, { blocks: [other, block] });
+    const remove = await deleteItem(block, vi.fn());
+
+    remove?.onActivate(remove);
+
+    await vi.waitFor(() => expect(block.selected).toBe(true));
+    expect(other.selected).toBe(false);
+  });
+
+  it('closes the menu before it asks, and deletes this block on yes', async () => {
+    const removeBlock = vi.fn();
+    const other = createBlock();
+    const answer: { resolve: (value: boolean) => void } = { resolve: () => undefined };
+    const block = askingBlock(new Promise<boolean>((resolve) => {
+      answer.resolve = resolve;
+    }));
+    const remove = await deleteItem(block, removeBlock);
+    const manager = blok.BlockManager as { currentBlock: Block | undefined };
+
+    remove?.onActivate(remove);
+    expect((blok.Toolbar as { close: Mock }).close).toHaveBeenCalledTimes(1);
+    expect(removeBlock).not.toHaveBeenCalled();
+
+    // The dialog moved focus: the current block may be another one by now.
+    manager.currentBlock = other;
+    answer.resolve(true);
+
+    await vi.waitFor(() => expect(removeBlock).toHaveBeenCalledTimes(1));
+    expect(manager.currentBlock).toBe(block);
+  });
+
+  it('deletes at once for a block that does not ask', async () => {
+    const removeBlock = vi.fn();
+    const remove = await deleteItem(createBlock(), removeBlock);
+
+    remove?.onActivate(remove);
+
+    expect(removeBlock).toHaveBeenCalledTimes(1);
   });
 });

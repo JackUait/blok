@@ -394,6 +394,66 @@ test.describe('feed view', () => {
     if (tab === null || card === null) throw new Error('no feed');
     expect(card.y - tab.y).toBeCloseTo(50, 1);
   });
+
+  // notion-motion.md Round 64 §4: a feed card right-click opens the database block's menu. Its rows Blok
+  // backs come in Notion's groups, the block is selected, and its tint fades in over 0.2s.
+  test.describe('feed card right-click menu', () => {
+    const menu = (page: Page): Locator => page.getByTestId('block-tunes-popover').getByTestId('popover-container').first();
+    const row = (page: Page, name: string): Locator => menu(page).locator(`[data-blok-item-name="${name}"]`);
+    const holder = (page: Page): Locator => page.locator('[data-blok-element][data-blok-id="db-1"]');
+    const openMenu = async (page: Page): Promise<void> => {
+      await mount(page, blocks({ type: 'feed', properties: [{ id: 'p-title', visible: true }] }));
+      const card = page.locator('[data-blok-database-feed-card]').first();
+      const box = await card.boundingBox();
+
+      if (box === null) throw new Error('no feed card');
+      // The blank end of the card: the title keeps the browser's menu.
+      await page.mouse.click(box.x + box.width - 12, box.y + box.height - 8, { button: 'right' });
+      await expect(menu(page)).toBeVisible();
+    };
+
+    test('lists the database rows in Notion\'s groups, then core\'s', async ({ page }) => {
+      await openMenu(page);
+      const layout = await menu(page).locator('[data-blok-item-name], [data-blok-testid="popover-item-separator"]').evaluateAll((els) =>
+        els.filter((el) => el.closest('[data-blok-nested="true"]') === null)
+          .map((el) => el.getAttribute('data-blok-item-name') ?? '|'));
+
+      expect(layout.slice(0, 8)).toEqual(['database-lock', 'database-rename', 'database-merge-csv', '|', 'database-open-as-page', '|', 'copy-link', 'duplicate']);
+    });
+
+    test('fades the selected database block\'s tint in over 200ms', async ({ page }) => {
+      await openMenu(page);
+      await expect(holder(page)).toHaveAttribute('data-blok-selected', 'true');
+      const fades = await holder(page).evaluate((el) => el.getAnimations({ subtree: true })
+        .filter((animation) => (animation.effect as KeyframeEffect | null)?.pseudoElement === '::after'
+          && (animation.effect as KeyframeEffect | null)?.target?.parentElement === el)
+        .map((animation) => animation.effect?.getTiming().duration));
+
+      expect(fades).toEqual([200]);
+    });
+
+    test('Lock database switches in place and keeps the block selected', async ({ page }) => {
+      await openMenu(page);
+      await row(page, 'database-lock').click();
+
+      await expect(row(page, 'database-lock')).toHaveAttribute('data-blok-popover-item-active', 'true');
+      await expect(menu(page)).toBeVisible();
+      await expect(holder(page)).toHaveAttribute('data-blok-selected', 'true');
+      const title = (await saved(page)).find((block) => block.id === 'db-1')?.data.schema as Array<{ type: string; databaseLocked?: boolean }>;
+
+      expect(title.find((property) => property.type === 'title')?.databaseLocked).toBe(true);
+    });
+
+    test('Rename closes the menu with the caret in the title', async ({ page }) => {
+      await openMenu(page);
+      await row(page, 'database-rename').click();
+
+      await expect(menu(page)).toBeHidden();
+      await expect(page.locator('[data-blok-database-title]').first()).toBeFocused();
+      await page.keyboard.type('!');
+      await expect(page.locator('[data-blok-database-title]').first()).toHaveText('Tasks!');
+    });
+  });
 });
 
 test.describe('CSV', () => {

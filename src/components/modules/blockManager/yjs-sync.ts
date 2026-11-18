@@ -2479,40 +2479,51 @@ export class BlockYjsSync {
     this.moveSyncScheduled = true;
 
     // Use queueMicrotask to defer sync until all move events are processed
-    queueMicrotask(() => {
-      this.moveSyncScheduled = false;
+    queueMicrotask(() => this.flushMoveSync());
+  }
 
-      const movedIds = [...this.pendingMovedBlockIds];
+  /**
+   * Runs the move sync {@link handleYjsMove} scheduled, now. Until it runs, a
+   * replayed block's holder sits where the reparent left it (the end of its
+   * new parent), not at its place. A history replay calls this before it
+   * restores the selection, which scrolls to the block.
+   */
+  public flushMoveSync(): void {
+    if (!this.moveSyncScheduled) {
+      return;
+    }
+    this.moveSyncScheduled = false;
 
-      this.pendingMovedBlockIds.clear();
+    const movedIds = [...this.pendingMovedBlockIds];
 
-      if (this.destroyed) {
-        return;
-      }
+    this.pendingMovedBlockIds.clear();
 
-      const movedIntoParents = new Set(movedIds.map((movedId) => {
-        const rawParentId = this.dependencies.YjsManager.getBlockById(movedId)?.get('parentId');
+    if (this.destroyed) {
+      return;
+    }
 
-        return typeof rawParentId === 'string' ? rawParentId : null;
-      }));
+    const movedIntoParents = new Set(movedIds.map((movedId) => {
+      const rawParentId = this.dependencies.YjsManager.getBlockById(movedId)?.get('parentId');
 
-      // The flat order is derived from contentIds, so they take the doc's
-      // sibling order first.
-      this.withAtomicOperation(() => {
-        movedIntoParents.forEach((parentId) => this.reconcileParentChildOrderFromDoc(parentId));
-      });
+      return typeof rawParentId === 'string' ? rawParentId : null;
+    }));
 
-      const reordered = this.syncBlockOrderFromYjs();
+    // The flat order is derived from contentIds, so they take the doc's
+    // sibling order first.
+    this.withAtomicOperation(() => {
+      movedIntoParents.forEach((parentId) => this.reconcileParentChildOrderFromDoc(parentId));
+    });
 
-      // Holder moves must not echo back to Yjs as fresh local writes, which
-      // would pollute the undo/redo stacks — same window the batch reconcile
-      // uses.
-      this.withAtomicOperation(() => {
-        // The flat resync does not move nested holders. Re-assert the
-        // parent's sibling order against the (now correct) array, exactly
-        // as the batch reconcile does for a captured reparent.
-        new Set([...movedIntoParents, ...reordered]).forEach((parentId) => this.reconcileHolderOrderForParent(parentId));
-      });
+    const reordered = this.syncBlockOrderFromYjs();
+
+    // Holder moves must not echo back to Yjs as fresh local writes, which
+    // would pollute the undo/redo stacks — same window the batch reconcile
+    // uses.
+    this.withAtomicOperation(() => {
+      // The flat resync does not move nested holders. Re-assert the
+      // parent's sibling order against the (now correct) array, exactly
+      // as the batch reconcile does for a captured reparent.
+      new Set([...movedIntoParents, ...reordered]).forEach((parentId) => this.reconcileHolderOrderForParent(parentId));
     });
   }
 

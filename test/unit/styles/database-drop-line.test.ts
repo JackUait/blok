@@ -114,6 +114,20 @@ describe('database drop line css', () => {
     expect(database.lastIndexOf('@media (prefers-reduced-motion: reduce)', off)).toBeGreaterThan(database.indexOf(`${landed} {`));
   });
 
+  // notion-motion.md Round 65 §2 (List swap): the pick an undo replaces fades out over ~200ms.
+  it('fades a leaving list row or gallery card tint out over 200ms ease, and not under reduced motion', () => {
+    const leaving = ':is([data-blok-database-list-row], [data-blok-database-gallery-card])[data-blok-database-row-leaving]';
+    const body = ruleBody(database, leaving);
+
+    expect(body).toContain('background-image: linear-gradient(var(--blok-database-landed-tint), var(--blok-database-landed-tint))');
+    expect(body).toContain('animation: blok-database-leaving-tint 200ms ease');
+    expect(database).toMatch(/@keyframes blok-database-leaving-tint \{ from \{ --blok-database-landed-tint: var\(--blok-icon-active-bg\); \} \}/);
+    const off = database.lastIndexOf(`${leaving} { animation: none; }`);
+
+    expect(off).toBeGreaterThan(database.indexOf(`${leaving} {`));
+    expect(database.lastIndexOf('@media (prefers-reduced-motion: reduce)', off)).toBeGreaterThan(database.indexOf(`${leaving} {`));
+  });
+
   // notion-motion.md Round 40 §2: the cursor while a card is held reads `grabbing`.
   it('shows the grabbing cursor over the board while a card is dragged', () => {
     expect(database).toMatch(/\[data-blok-database-dragging\], \[data-blok-database-dragging\] \* \{ cursor: grabbing; \}/);

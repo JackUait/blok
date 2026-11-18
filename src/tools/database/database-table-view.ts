@@ -707,29 +707,27 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   }
 
   /**
-   * notion-motion.md Round 63 §1: undo selects the rows it brought back, or
-   * drops a row selection; a cell selection stays. The halo's 200ms transition
-   * is the fade, so the rows a redraw just made get their style first.
-   * Returns the rows it dropped, for a redo to give back (Round 64 §1).
+   * notion-motion.md Round 63 §1 and Round 65 §2: undo or redo makes these rows
+   * the selection; none drops a row selection, and a cell selection stays. The
+   * halo's 200ms transition is the fade, so the rows a redraw just made get their style first.
    */
-  pickAfterUndo(rowIds: string[] | null): string[] {
+  pickAfterUndo(rowIds: string[]): void {
     const current = this.state.selection;
 
-    if (this.grid === null || (rowIds === null && current?.kind !== 'rows')) return [];
-    const dropped = rowIds === null && current?.kind === 'rows' ? [...current.rowIds] : [];
-    const next = rowIds ?? [];
-    const changing = new Set([...next, ...(current?.kind === 'rows' ? current.rowIds : [])]);
+    if (this.grid === null || (rowIds.length === 0 && current?.kind !== 'rows')) return;
+    const changing = new Set([...rowIds, ...(current?.kind === 'rows' ? current.rowIds : [])]);
 
     this.root?.querySelectorAll<HTMLElement>('[data-blok-database-table-row]').forEach((rowEl) => {
       if (changing.has(rowEl.getAttribute('data-row-id') ?? '')) getComputedStyle(rowEl, '::after').getPropertyValue('opacity');
     });
-    this.grid.selectRows(next);
-
-    return dropped;
+    this.grid.selectRows(rowIds);
   }
 
-  hasSelection(): boolean {
-    return this.state.selection !== null;
+  /** The selected rows; none for a cell selection. */
+  pickedRows(): string[] {
+    const current = this.state.selection;
+
+    return current?.kind === 'rows' ? [...current.rowIds] : [];
   }
 
   appendRow(container: HTMLElement, row: DatabaseRow): void {

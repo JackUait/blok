@@ -12073,6 +12073,18 @@ button[data-blok-database-table-group-count]:hover {
   }
 }
 
+/* Round 65 §2: the pick an undo replaces fades out as the recorded one fades in. */
+:is([data-blok-database-list-row], [data-blok-database-gallery-card])[data-blok-database-row-leaving] {
+  background-image: linear-gradient(var(--blok-database-landed-tint), var(--blok-database-landed-tint));
+  animation: blok-database-leaving-tint 200ms ease;
+}
+
+@keyframes blok-database-leaving-tint {
+  from {
+    --blok-database-landed-tint: var(--blok-icon-active-bg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-row-landed]::after {
     animation: none;
@@ -12083,6 +12095,10 @@ button[data-blok-database-table-group-count]:hover {
   }
 
   :is([data-blok-database-list-row], [data-blok-database-gallery-card])[data-blok-database-row-landed] {
+    animation: none;
+  }
+
+  :is([data-blok-database-list-row], [data-blok-database-gallery-card])[data-blok-database-row-leaving] {
     animation: none;
   }
 

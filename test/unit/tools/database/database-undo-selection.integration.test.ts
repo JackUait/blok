@@ -179,6 +179,42 @@ describe('row selection after undo', () => {
     expect(selectedRows()).toEqual(['r2']);
   });
 
+  // notion-motion.md Round 65 §2 (swap test): undo brings back the selection current when the edit was made; redo the one current at undo.
+  it('brings back the row selection the edit was made with, and redo the one undo replaced', async () => {
+    const blok = await make();
+
+    await pickRow('r1');
+    await editNote(blok, 'r1', 'edited');
+    await pickRow('r1');
+    await pickRow('r3');
+    expect(selectedRows()).toEqual(['r3']);
+
+    blok.history.undo();
+    await quiet();
+
+    expect(row('r1')?.textContent).not.toContain('edited');
+    expect(selectedRows()).toEqual(['r1']);
+
+    blok.history.redo();
+    await quiet();
+
+    expect(row('r1')?.textContent).toContain('edited');
+    expect(selectedRows()).toEqual(['r3']);
+  });
+
+  it('keeps a row selection that was there when the edit was made', async () => {
+    const blok = await make();
+
+    await pickRow('r2');
+    await editNote(blok, 'r1', 'edited');
+
+    blok.history.undo();
+    await quiet();
+
+    expect(row('r1')?.textContent).not.toContain('edited');
+    expect(selectedRows()).toEqual(['r2']);
+  });
+
   it('keeps a row selection when it undoes a reorder', async () => {
     const blok = await make();
     const block = blok.blocks.getById('r1');
@@ -236,6 +272,48 @@ describe('row selection after undo', () => {
 
     expect(picked(type)).toEqual(['r2']);
     expect(document.querySelector(`${ITEM[type]}[data-row-id="r2"]`)?.hasAttribute('data-blok-database-row-landed')).toBe(true);
+  });
+
+  // notion-motion.md Round 65 §2 (List swap): the current pick fades out and the recorded one fades in.
+  it('crossfades a List pick back to the row selected when the edit was made', async () => {
+    const blok = await make('list');
+    const metaClick = async (id: string): Promise<void> => {
+      document.querySelector<HTMLElement>(`${ITEM.list}[data-row-id="${id}"]`)?.dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }));
+      await quiet();
+    };
+    const listRow = (id: string): HTMLElement | null => document.querySelector<HTMLElement>(`${ITEM.list}[data-row-id="${id}"]`);
+
+    await metaClick('r1');
+    await editNote(blok, 'r1', 'edited');
+    await metaClick('r1');
+    await metaClick('r3');
+    expect(picked('list')).toEqual(['r3']);
+
+    blok.history.undo();
+    await quiet();
+
+    expect(picked('list')).toEqual(['r1']);
+    expect(listRow('r1')?.hasAttribute('data-blok-database-row-landed')).toBe(true);
+    expect(listRow('r3')?.hasAttribute('data-blok-database-row-leaving')).toBe(true);
+
+    blok.history.redo();
+    await quiet();
+
+    expect(picked('list')).toEqual(['r3']);
+  });
+
+  it('does not restart the fade on a List row that stays picked', async () => {
+    const blok = await make('list');
+
+    document.querySelector<HTMLElement>(`${ITEM.list}[data-row-id="r2"]`)?.dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }));
+    await quiet();
+    await editNote(blok, 'r1', 'edited');
+
+    blok.history.undo();
+    await quiet();
+
+    expect(picked('list')).toEqual(['r2']);
+    expect(document.querySelector(`${ITEM.list}[data-row-id="r2"]`)?.hasAttribute('data-blok-database-row-landed')).toBe(false);
   });
 
   it('selects nothing when undo brings a board card back', async () => {

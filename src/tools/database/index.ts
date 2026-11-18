@@ -11,6 +11,7 @@ import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolDa
 import type { AgentRun } from '../../../types/api';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
 import { HistoryDraftsCommit, type HistoryDraftsCommitPayload } from '../../components/events/HistoryDraftsCommit';
+import type { HistoryStep } from '../../../types/api/history';
 import type { AutofillSettings, ButtonAction, ButtonCallbackAction, ButtonSendNotificationAction, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, DeletedPropertyDefinition, PropertyValue, DatabasePermissionAction, DashboardWidget, DashboardRow, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue, LoadLimit, ViewCalculation } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
@@ -314,6 +315,8 @@ const isEmptyLine = (block: { type: string; data: unknown } | undefined): boolea
 /** The block a 'block changed' payload is about, if the payload carries one. */
 const changedBlock = (payload: unknown): ChangedBlock | undefined =>
   (payload as { event?: { detail?: { target?: ChangedBlock } } } | undefined)?.event?.detail?.target;
+
+const sameIds = (a: readonly string[], b: readonly string[]): boolean => a.length === b.length && a.every((id) => b.includes(id));
 
 /** A computed value as one line of text, for the formula editor's preview. */
 const formatPreview = (value: PropertyValue): string => {
@@ -865,11 +868,17 @@ export class DatabaseTool implements BlockTool {
   private barlessRowId: string | null = null;
   /** The row a drop just landed: the next paint marks it so its halo fades in once. */
   private landedRowIds: readonly string[] = [];
-  /** What an undo does to the table's selection, applied once its redraw is done. */
-  private undoPick: { restored: string[]; edited: boolean; redone: boolean } | null = null;
-  /** The row selection an undone cell edit dropped, for its redo to give back. */
-  private undoDroppedRows: string[] = [];
+  /** The rows an undo just unpicked: the next paint fades their tint out once. */
+  private leavingRowIds: readonly string[] = [];
+  /** What an undo does to the selection, applied once its redraw is done. */
+  private undoPick: { restored: string[]; edited: boolean; redone: boolean; step?: HistoryStep; atUndo?: string[] } | null = null;
   private undoPickTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * Per row-edit step: the row pick when it was recorded, the pick its undo replaced,
+   * and the pick its undo left. The step handle stays the same across undo and redo.
+   */
+  private readonly stepPicks = new WeakMap<HistoryStep, { recorded: string[]; undone?: string[]; applied?: string[] }>();
+  private stepPickTimer: ReturnType<typeof setTimeout> | null = null;
   /** A row "+ New" just made, with the values it was born with. Escape deletes it while it stays so. */
   private freshRow: { id: string; properties: string } | null = null;
 
@@ -971,6 +980,7 @@ export class DatabaseTool implements BlockTool {
     this.api.events.on('block changed', this.handleBodyEdit);
     this.api.events.on('block changed', this.handleBodyShape);
     this.api.events.on('block changed', this.handleAgentRowWrite);
+    this.api.events.on('block changed', this.recordStepPick);
     this.api.events.on('block changed', this.scheduleBacklinks);
     this.builtInComments.listen();
     this.api.events.on('block replayed', this.scheduleBacklinks);
@@ -3030,7 +3040,9 @@ export class DatabaseTool implements BlockTool {
   destroy(): void {
     this.destroyed = true;
     if (this.undoPickTimer !== null) clearTimeout(this.undoPickTimer);
+    if (this.stepPickTimer !== null) clearTimeout(this.stepPickTimer);
     this.undoPickTimer = null;
+    this.stepPickTimer = null;
     this.undoPick = null;
     this.sourcePicker?.close();
     this.movePicker?.picker.close();
@@ -3051,6 +3063,7 @@ export class DatabaseTool implements BlockTool {
     this.api.events.off('block changed', this.handleBodyEdit);
     this.api.events.off('block changed', this.handleBodyShape);
     this.api.events.off('block changed', this.handleAgentRowWrite);
+    this.api.events.off('block changed', this.recordStepPick);
     this.api.events.off('block changed', this.scheduleBacklinks);
     this.api.events.off('block replayed', this.scheduleBacklinks);
     if (this.backlinksTimer !== null) clearTimeout(this.backlinksTimer);
@@ -3435,9 +3448,40 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
+   * notion-motion.md Round 65 §2: an undo brings back the row pick that was
+   * current when its step was recorded. So each local row write notes the pick
+   * on its step; the first write of a step wins.
+   */
+  private readonly recordStepPick = (payload: unknown): void => {
+    const detail = (payload as { event?: { type?: unknown; detail?: { origin?: unknown; replaySource?: unknown } } } | undefined)?.event;
+    const target = changedBlock(payload);
+
+    if (
+      this.destroyed || this.readOnly || this.stepPickTimer !== null || detail?.type !== 'block-changed' ||
+      detail.detail?.origin !== 'local' || detail.detail.replaySource !== undefined ||
+      target?.name !== 'database-row' || target.parentId !== this.dataId
+    ) return;
+    const recorded = this.currentPick();
+
+    // Later: the write lands in the history after this event, and one look covers a burst.
+    this.stepPickTimer = setTimeout(() => {
+      this.stepPickTimer = null;
+      const step = this.api.history.latestStep();
+
+      if (!this.destroyed && step !== undefined && !this.stepPicks.has(step)) this.stepPicks.set(step, { recorded });
+    }, 0);
+  };
+
+  /** The picked rows of the shown view: a table's row selection (not its cells), or the other views' picks. */
+  private currentPick(): string[] {
+    return this.view instanceof DatabaseTableView ? this.view.pickedRows() : [...this.rowSelection];
+  }
+
+  /**
    * notion-motion.md Round 63 §1 (table): an undone row delete selects the
-   * row; an undone cell edit drops a row selection, and Round 64 §1: its redo
-   * gives it back. A reorder writes only the position, and its undo keeps the selection.
+   * row. Round 65 §2: an undone cell edit brings back the pick recorded with
+   * it, and its redo the pick the undo replaced. A reorder writes only the
+   * position, and its undo keeps the selection.
    */
   private noteUndoPick(capture: BlockReplayCapture): void {
     const native = capture.native;
@@ -3454,6 +3498,11 @@ export class DatabaseTool implements BlockTool {
     if (restored) pick.restored.push(capture.blockId);
     else if (capture.origin === 'undo') pick.edited = true;
     else pick.redone = true;
+    // Only now, mid-replay, is the undone step still the newest one.
+    if (capture.origin === 'undo' && pick.step === undefined) {
+      pick.step = this.api.history.latestStep();
+      pick.atUndo = this.currentPick();
+    }
     this.undoPick = pick;
     // A timeout: the redraw runs in the microtasks the same change queued.
     this.undoPickTimer ??= setTimeout(() => this.applyUndoPick(), 0);
@@ -3465,30 +3514,54 @@ export class DatabaseTool implements BlockTool {
     this.undoPick = null;
     this.undoPickTimer = null;
     if (pick === null || this.destroyed) return;
-    const restored = pick.restored.filter((id) => this.model.getRow(id) !== undefined);
+    const live = (ids: readonly string[]): string[] => ids.filter((id) => this.model.getRow(id) !== undefined);
+    const restored = live(pick.restored);
 
-    if (!(this.view instanceof DatabaseTableView)) {
-      const type = this.shownView()?.type;
-
-      // notion-motion.md Round 64 §1: a List row or Gallery card comes back selected; a Board card does not.
-      if (restored.length > 0 && (type === 'list' || type === 'gallery')) this.landRows(restored);
+    if (restored.length > 0) {
+      this.landPick(restored, true);
 
       return;
     }
-    if (restored.length > 0) {
-      this.undoDroppedRows = [];
-      this.view.pickAfterUndo(restored);
-    } else if (pick.edited) {
-      const dropped = this.view.pickAfterUndo(null);
+    if (pick.edited && pick.step !== undefined) {
+      const record = this.stepPicks.get(pick.step) ?? { recorded: [] };
+      const next = live(record.recorded);
 
-      if (dropped.length > 0) this.undoDroppedRows = dropped;
-    } else if (pick.redone) {
-      const back = this.undoDroppedRows.filter((id) => this.model.getRow(id) !== undefined);
+      this.stepPicks.set(pick.step, { recorded: record.recorded, undone: pick.atUndo ?? [], applied: next });
+      this.landPick(next, false);
 
-      this.undoDroppedRows = [];
-      // A selection made since the undo stays.
-      if (back.length > 0 && !this.view.hasSelection()) this.view.pickAfterUndo(back);
+      return;
     }
+    if (!pick.redone) return;
+    const step = this.api.history.latestStep();
+    const record = step === undefined ? undefined : this.stepPicks.get(step);
+    const current = this.currentPick();
+
+    // A pick made since the undo stays.
+    if (record?.undone === undefined || record.applied === undefined || !sameIds(current, record.applied)) return;
+    this.landPick(live(record.undone), false);
+  }
+
+  /**
+   * Make these rows the pick, fading the change. A table and, Round 64 §1 and
+   * Round 65 §2, a List or Gallery; a Board card comes back unpicked, and the
+   * other views are unmeasured. An undone delete only adds its rows.
+   */
+  private landPick(rowIds: string[], restoring: boolean): void {
+    if (this.view instanceof DatabaseTableView) {
+      this.view.pickAfterUndo(rowIds);
+
+      return;
+    }
+    const type = this.shownView()?.type;
+
+    if (type !== 'list' && type !== 'gallery') return;
+    const before = restoring ? [] : [...this.rowSelection];
+
+    this.landedRowIds = rowIds.filter((id) => !before.includes(id));
+    this.leavingRowIds = before.filter((id) => !rowIds.includes(id));
+    this.selectRows(rowIds);
+    this.landedRowIds = [];
+    this.leavingRowIds = [];
   }
 
   private readonly handleBlockReplayed = (capture: BlockReplayCapture): void => {
@@ -11793,6 +11866,7 @@ export class DatabaseTool implements BlockTool {
 
       el.toggleAttribute('data-blok-database-row-selected', selected);
       el.toggleAttribute('data-blok-database-row-landed', selected && this.landedRowIds.includes(el.getAttribute('data-row-id') ?? ''));
+      el.toggleAttribute('data-blok-database-row-leaving', !selected && this.leavingRowIds.includes(el.getAttribute('data-row-id') ?? ''));
       if (selected) {
         el.setAttribute('aria-selected', 'true');
       } else {

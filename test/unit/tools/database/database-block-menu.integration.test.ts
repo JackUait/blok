@@ -259,6 +259,38 @@ describe('the database block menu', () => {
     expect(document.querySelector('[data-blok-database-confirm-dialog]')).toBeNull();
   });
 
+  // notion-motion.md Round 66 §2: a linked view goes at once, with no dialog.
+  it('Backspace on a selected linked view deletes it without asking, and undo brings it back', async () => {
+    holder?.remove();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+    const instance = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
+      data: { blocks: [...structuredClone(database()), { id: 'linked', type: 'database', data: { title: '', source: { databaseId: 'db' }, views: [], activeViewId: '' } }] },
+    } as never) as unknown as Runtime & {
+      history: { undo: () => void };
+      module: { blockSelection: { selectBlock: (block: Block) => void } };
+    };
+
+    editor = instance;
+    await instance.isReady;
+    await settle();
+    const linked = instance.module.blockManager.blocks.find(candidate => candidate.id === 'linked');
+
+    if (linked === undefined) throw new Error('no linked view');
+    instance.module.blockSelection.selectBlock(linked);
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+    await settle();
+
+    expect(document.querySelector('[data-blok-database-confirm-dialog]')).toBeNull();
+    expect(instance.module.blockManager.blocks.map(candidate => candidate.id)).not.toContain('linked');
+
+    instance.history.undo();
+    await vi.waitFor(() => expect(instance.module.blockManager.blocks.map(candidate => candidate.id)).toContain('linked'));
+  });
+
   // notion-motion.md Round 66 §2: Backspace on the selected database asks too; Escape keeps it selected.
   it('Backspace on the selected database asks, Escape keeps it selected, and a yes undoes with its rows', async () => {
     const instance = await boot() as Runtime & {

@@ -183,8 +183,9 @@ export interface BlockTool extends BaseTool {
    * Asked when the user deletes the block: the block menu's Delete (after the
    * menu closes), or Backspace/Delete on a selection that holds it. One answer
    * covers the whole selection. Answer `false` to keep the block, still
-   * selected. A throw or a rejection deletes it. Other deletes (the API,
-   * redo) do not ask.
+   * selected. A throw or a rejection deletes it. Other deletes do not ask:
+   * cut, typing or pasting over the selection, the block menu's Delete on a
+   * selection of several blocks, the API and redo.
    */
   confirmDelete?(): boolean | Promise<boolean>;
 

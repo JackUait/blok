@@ -365,6 +365,56 @@ describe('row selection after undo', () => {
     expect(event('r1')?.hasAttribute('data-blok-database-row-leaving')).toBe(true);
   });
 
+  // notion-motion.md Round 67 §3: Edit property › Text edits at the right-click point; the card stays selected through Escape and undo.
+  it('keeps the calendar event selected through an Edit property › Text edit and its undo', async () => {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const blocks = doc();
+    const data = blocks[0].data as { schema: Array<Record<string, unknown>>; views: Array<Record<string, unknown>> };
+
+    data.schema.push({ id: 'd', name: 'Date', type: 'date', position: 'a2' });
+    data.views[0] = { ...data.views[0], type: 'calendar' };
+    blocks.slice(1).forEach((block) => {
+      (block.data as { properties: Record<string, unknown> }).properties.d = today;
+    });
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
+      data: { blocks },
+    } as never) as unknown as TestEditor;
+    const blok = editor;
+
+    await blok.isReady;
+    await quiet();
+    const calendarPicked = (): string[] => [...document.querySelectorAll('[data-blok-database-calendar-event][data-blok-database-row-selected]')]
+      .map((el) => el.getAttribute('data-row-id') ?? '');
+    const note = async (): Promise<unknown> => ((await blok.blocks.getById('r1')?.save())?.data as { properties: Record<string, unknown> }).properties.x;
+
+    document.querySelector('[data-blok-database-calendar-event][data-row-id="r1"]')
+      ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+    [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened] [data-blok-testid="popover-item-title"]')]
+      .find((node) => node.textContent === 'Edit property')?.closest<HTMLElement>('[data-blok-popover-item]')?.click();
+    document.querySelector<HTMLElement>('[data-blok-popover-item][data-blok-item-name="database-row-edit-property-x"]')?.click();
+    const field = document.querySelector<HTMLTextAreaElement>('[data-blok-database-cell-editor] textarea');
+
+    expect(document.querySelector('[data-blok-database-edit-point]')).not.toBeNull();
+    if (field === null) throw new Error('no editor');
+    field.value = 'edited';
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(await note()).toBe('edited');
+    expect(calendarPicked()).toEqual(['r1']);
+
+    blok.history.undo();
+    await quiet();
+
+    expect(await note()).toBe('a');
+    expect(calendarPicked()).toEqual(['r1']);
+  });
+
   it('selects nothing when undo brings a board card back', async () => {
     const blok = await make('board');
 

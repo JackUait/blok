@@ -474,6 +474,12 @@ describe('cell editor CSS', () => {
       expect(declared("[data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-cell-input]", 'min-height'))
         .toEqual(['38px']);
     });
+
+    // notion-motion.md Round 67 §3: a calendar card's Edit property › Text box is 240x38.
+    it('is 38px tall at a calendar card\'s right-click point', () => {
+      expect(declared("[data-blok-popover-custom-class~='blok-database-point-editor'] [data-blok-database-cell-input]", 'min-height'))
+        .toEqual(['38px']);
+    });
   });
 
   // Notion's picker, measured 2026-10-25 from its top-left: field 12/12, header 52, grid 74 (224 tall), first row 307.

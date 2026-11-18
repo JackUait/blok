@@ -8456,7 +8456,9 @@ textarea[data-blok-database-property-description][data-blok-field] {
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-table-cell-editor'] > [data-blok-popover-container],
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-table-cell-editor']:not([data-blok-popover-opened='true']) > [data-blok-popover-container],
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-value-editor'] > [data-blok-popover-container],
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-value-editor']:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-value-editor']:not([data-blok-popover-opened='true']) > [data-blok-popover-container],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-point-editor'] > [data-blok-popover-container],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-point-editor']:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
   transition: none;
   transform: none;
 }
@@ -8499,8 +8501,9 @@ textarea[data-blok-database-cell-input] {
   text-align: end;
 }
 
-/* notion-spec §7: over a row page value, text and number are both 38px tall. */
-[data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-cell-input] {
+/* notion-spec §7: over a row page value, text and number are both 38px tall; Round 67 §3: a calendar card's Text too. */
+[data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-cell-input],
+[data-blok-popover-custom-class~='blok-database-point-editor'] [data-blok-database-cell-input] {
   min-height: 38px;
 }
 

@@ -7953,7 +7953,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** Inline edit of a board card property (Notion 2022-08-25): the cell editor, no page. */
-  private editCardProperty(rowId: string, propertyId: string, anchor: HTMLElement, afterClose?: () => void, context?: NativeWidgetContext): void {
+  private editCardProperty(rowId: string, propertyId: string, anchor: HTMLElement, afterClose?: () => void, context?: NativeWidgetContext, atPoint = false): void {
     const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === propertyId);
     const row = this.model.getRow(rowId);
 
@@ -7968,6 +7968,7 @@ export class DatabaseTool implements BlockTool {
       i18n: this.api.i18n,
       readOnly: false,
       options: this.model.getProperty(propertyId)?.config?.options ?? [],
+      ...(atPoint ? { atPoint } : {}),
       ...(reminder !== undefined ? { reminder } : {}),
       ...(property.type === 'date'
         ? { onReminderChange: (next: DateReminderOffset | null) => { if (context === undefined || context.writable()) this.commitReminder(rowId, propertyId, next); } }
@@ -10346,7 +10347,7 @@ export class DatabaseTool implements BlockTool {
       .sort((a, b) => a.name.localeCompare(b.name));
     const edits = !writable() ? {} : {
       onEditIcon: () => this.editRowIcon(rowId),
-      onEditProperty: (propertyId: string) => this.editRowProperty(rowId, propertyId),
+      onEditProperty: (propertyId: string) => this.editRowProperty(rowId, propertyId, card, options.pointer),
       ...(options.viewSettings
         ? {
           onLayout: () => this.controls.openSettingsPage('layout', card),
@@ -10415,8 +10416,20 @@ export class DatabaseTool implements BlockTool {
     this.cardDrawer?.editIcon();
   }
 
-  /** A card's Edit property ›: the row page opens, then that value's editor. */
-  private editRowProperty(rowId: string, propertyId: string): void {
+  /**
+   * A card's Edit property ›: the row page opens, then that value's editor.
+   * notion-motion.md Round 67 §3: a calendar card's Text opens alone at the right-click point, 1px left of it.
+   * Other types and views, and a menu opened with no pointer, are unmeasured.
+   */
+  private editRowProperty(rowId: string, propertyId: string, card?: HTMLElement, pointer?: Pick<MouseEvent, 'clientX' | 'clientY'>): void {
+    if (card?.matches('[data-blok-database-calendar-event]') === true && pointer !== undefined && this.model.getProperty(propertyId)?.type === 'text') {
+      const point = pointerAnchor(card, { clientX: pointer.clientX - 1, clientY: pointer.clientY });
+
+      point.setAttribute('data-blok-database-edit-point', '');
+      this.editCardProperty(rowId, propertyId, point, () => point.remove(), undefined, true);
+
+      return;
+    }
     this.handleRowClick(rowId);
     this.cardDrawer?.editProperty(propertyId);
   }

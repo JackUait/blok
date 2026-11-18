@@ -1861,6 +1861,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R159_BYTES = 973;
     // Lane r162: Round 66 §4 side and center peek header buttons at radius 6, §3 calendar leaving halo. Net database.css growth against origin/main.
     const DATABASE_R162_BYTES = 887;
+    // Lane r164: Round 67 §3 calendar card Edit property editor (38px, no motion). Net database.css growth against origin/main.
+    const DATABASE_R164_BYTES = 407;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2473,6 +2475,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R157_BYTES
       + DATABASE_R159_BYTES
       + DATABASE_R162_BYTES
+      + DATABASE_R164_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

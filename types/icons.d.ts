@@ -228,6 +228,7 @@ export declare const IconFile: string;
 export declare const IconPage: string;
 export declare const IconPageEmpty: string;
 export declare const IconLock: string;
+export declare const IconLockOpen: string;
 export declare const IconFileDoc: string;
 export declare const IconFileSheet: string;
 export declare const IconFileSlides: string;

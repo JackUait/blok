@@ -3629,16 +3629,19 @@ button[data-blok-database-board-lane-count]:hover {
 }
 
 /* notion-motion.md Round 65 §1: the database block's ⋮⋮ menu rows are 28px, 29 apart, and a group starts 37 after
-   the last row's top. Must outrank popover-animation.css's block-menu rows (32px, no margin). */
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-block-menu'][data-blok-testid='block-tunes-popover'] > [data-blok-popover-container] > [data-blok-popover-items]:not([data-blok-hidden]) > [data-blok-popover-item]:not([data-blok-hidden]):not([data-blok-header-level]) {
-  min-height: 28px;
-  padding-block: 0;
-  margin-block-end: var(--blok-space-0-25);
-}
+   the last row's top. Must outrank popover-animation.css's block-menu rows (32px, no margin).
+   Desktop only: a phone keeps the shared 44px touch rows. */
+@media (min-width: 651px) {
+  [data-blok-popover][data-blok-popover-custom-class~='blok-database-block-menu'][data-blok-testid='block-tunes-popover'] > [data-blok-popover-container] > [data-blok-popover-items]:not([data-blok-hidden]) > [data-blok-popover-item]:not([data-blok-hidden]):not([data-blok-header-level]) {
+    min-height: 28px;
+    padding-block: 0;
+    margin-block-end: var(--blok-space-0-25);
+  }
 
-/* The separator already gives the 37. */
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-block-menu'][data-blok-testid='block-tunes-popover'] > [data-blok-popover-container] > [data-blok-popover-items]:not([data-blok-hidden]) > [data-blok-popover-item]:not([data-blok-hidden]):not([data-blok-header-level]):has(+ [data-blok-popover-item-separator]) {
-  margin-block-end: 0;
+  /* The separator already gives the 37. */
+  [data-blok-popover][data-blok-popover-custom-class~='blok-database-block-menu'][data-blok-testid='block-tunes-popover'] > [data-blok-popover-container] > [data-blok-popover-items]:not([data-blok-hidden]) > [data-blok-popover-item]:not([data-blok-hidden]):not([data-blok-header-level]):has(+ [data-blok-popover-item-separator]) {
+    margin-block-end: 0;
+  }
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-container] {

@@ -609,6 +609,24 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       expect(row()?.getAttribute('aria-selected')).toBe('false');
     });
 
+    // notion-motion.md Round 66 §4: from a right-click, Escape drops the row selection and leaves the Name cell selected.
+    it('leaves the Name cell selected when Escape closes the right-click Move to picker', async () => {
+      const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('table'));
+      const row = (): Element | null => el.querySelector('[data-blok-database-table-row][data-row-id="a"]');
+      const selectedCells = (): Array<string | null> => [...el.querySelectorAll('[data-row-id="a"] [role="gridcell"][aria-selected="true"]')]
+        .map((cell) => cell.getAttribute('data-property-id'));
+
+      rowEl(el, 'table').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+      itemByTitle('tools.database.tableMoveTo').click();
+      expect(await moveOptions()).toEqual(['Projects']);
+      expect(row()?.getAttribute('aria-selected')).toBe('true');
+      document.querySelector('[data-blok-database-move-picker] input')
+        ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(selectedCells()).toEqual(['title']);
+      expect(row()?.getAttribute('aria-selected')).toBe('false');
+    });
+
     it('two picked rows take no ⌘⇧M: the comment is for one page', () => {
       const open = vi.fn();
       const doc = makeDoc([fakeRow('a', 'db', { title: 'Alpha', status: 'o1' }, 'a0'), fakeRow('b', 'db', { title: 'Beta', status: 'o1' }, 'a1')]);

@@ -27,7 +27,7 @@ import {
 import { DatabaseTableGrid, createTableState } from './database-table-grid';
 import { SELECTION_BAR_SEGMENTS, bulkCloseClearsSelection, bulkStartValue, selectionPropertyButton, watchBulkCloseKey } from './database-selection-bar';
 import { cellText } from './database-table-clipboard';
-import type { CellChange, TableState } from './database-table-grid';
+import type { CellChange, CellRef, TableState } from './database-table-grid';
 import { fileChipIcon, rowPageGlyph, showsPageIcon } from './page-icon';
 
 import { CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, headerViewItems, loadLimitItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
@@ -2288,6 +2288,11 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     return true;
   }
 
+  private selectCell(ref: CellRef): void {
+    this.state.selection = { kind: 'cell', anchor: ref, focus: ref };
+    this.grid?.paint();
+  }
+
   /** From the ⋮⋮ `handle`, or at the `pointer` of a right-click. */
   private openRowMenu(handle: HTMLElement | null, rowId: string, pointer?: Pick<MouseEvent, 'clientX' | 'clientY'>): void {
     const handlers = this.handlers;
@@ -2316,15 +2321,20 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       onEditProperty: (propertyId) => {
         const ref = { rowId, propertyId };
 
-        this.state.selection = { kind: 'cell', anchor: ref, focus: ref };
-        this.grid?.paint();
+        this.selectCell(ref);
         this.grid?.openEditor(ref);
       },
       onOpenIn: (mode) => handlers.openRow(rowId, mode),
       onCopyLink: () => handlers.copyRowLink(rowId),
       onDuplicate: () => handlers.duplicateRow(rowId),
       // notion-motion.md Round 65 §3: from the ⋮⋮ the picker hangs under the handle.
-      ...(handlers.openMoveTo !== undefined && handlers.canMoveRow?.() === true ? { onMoveTo: (menu: DOMRect | undefined) => handlers.openMoveTo?.(rowId, commentAnchor, spot ?? (handle === null ? menuFrom(menu, commentAnchor) : { under: handle })) } : {}),
+      // Round 66 §4: from a right-click, Escape leaves the Name cell selected. The ⋮⋮ case is unmeasured.
+      ...(handlers.openMoveTo !== undefined && handlers.canMoveRow?.() === true ? { onMoveTo: (menu: DOMRect | undefined) => handlers.openMoveTo?.(
+        rowId,
+        commentAnchor,
+        spot ?? (handle === null ? menuFrom(menu, commentAnchor) : { under: handle }),
+        pointer === undefined ? undefined : () => this.selectCell({ rowId, propertyId: this.options.titlePropertyId }),
+      ) } : {}),
       ...rowMenuFooter({
         row: this.allRows().find((row) => row.id === rowId),
         titlePropertyId: this.options.titlePropertyId,

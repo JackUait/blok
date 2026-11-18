@@ -194,7 +194,7 @@ describe('the database block menu', () => {
   });
 
   it('takes a 265px menu with 28px rows, like Notion\'s (notion-motion.md Round 65 §1)', () => {
-    expect((DatabaseTool as unknown as { blockMenu: unknown }).blockMenu).toEqual({ class: 'blok-database-block-menu', minWidth: '265px' });
+    expect((DatabaseTool as unknown as { blockMenu: unknown }).blockMenu).toEqual({ class: 'blok-database-block-menu', minWidth: '265px', trash: true, trashToast: false });
   });
 
   it('Delete asks first in Notion\'s "Move database to Trash?" dialog, and Cancel keeps it', async () => {

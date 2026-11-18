@@ -160,10 +160,11 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
 
   /**
    * How the block menu is laid out: `titled` heads it with the tool's name
-   * and puts Turn into first; `trash` reads Delete as "Move to Trash";
+   * and puts Turn into first; `trash` reads Delete as "Move to Trash",
+   * with a toast unless `trashToast` is false;
    * `class` and `minWidth` go to the menu's popover.
    */
-  public get blockMenu(): { titled: boolean; trash: boolean; lead: string[]; class?: string; minWidth?: string } {
+  public get blockMenu(): { titled: boolean; trash: boolean; trashToast?: false; lead: string[]; class?: string; minWidth?: string } {
     const menu: unknown = (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.BlockMenu];
     const field = (key: string): unknown => (typeof menu === 'object' && menu !== null ? (menu as Record<string, unknown>)[key] : undefined);
     const lead = field('lead');
@@ -176,6 +177,7 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
       lead: Array.isArray(lead) ? lead.filter((name): name is string => typeof name === 'string') : [],
       ...(typeof menuClass === 'string' ? { class: menuClass } : {}),
       ...(typeof minWidth === 'string' ? { minWidth } : {}),
+      ...(field('trashToast') === false ? { trashToast: false as const } : {}),
     };
   }
 

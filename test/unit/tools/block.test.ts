@@ -533,6 +533,13 @@ describe('BlockToolAdapter', () => {
 
       expect(tool.blockMenu).toEqual({ titled: false, trash: false, lead: [] });
     });
+
+    it('reads a trash menu that shows no toast', () => {
+      const constructable = createConstructable({ blockMenu: { trash: true, trashToast: false } });
+      const { tool } = createBlockTool({ constructable });
+
+      expect(tool.blockMenu).toEqual({ titled: false, trash: true, lead: [], trashToast: false });
+    });
   });
 
   describe('pick insert', () => {

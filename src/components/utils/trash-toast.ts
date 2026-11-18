@@ -12,10 +12,10 @@ type DeleteModules = Modules & Pick<BlokModules, 'BlockManager'>;
 const TRASH_TOAST_MS = 8000;
 
 /**
- * True when the block's menu trashes it instead of deleting it (a sub-page).
+ * True when deleting the block shows the Trash toast (a sub-page).
  * @param block - the block to check
  */
-export const trashesBlock = (block: Block): boolean => block.tool?.blockMenu?.trash;
+export const trashesBlock = (block: Block): boolean => block.tool?.blockMenu?.trash && block.tool.blockMenu.trashToast !== false;
 
 /**
  * Shows Notion's "Moved to Trash" toast after a delete that trashed a block.

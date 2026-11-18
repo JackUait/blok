@@ -902,11 +902,13 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         items.push(...actionTunes);
       } else if (blockMenu?.trash === true) {
         // Trashing is an ordinary action beside Duplicate, as in Notion's page menu.
+        const trash = this.withDeleteConfirm({ ...actionTunes[deleteIndex], title: this.Blok.I18n.t('blockSettings.moveToTrash') } as MenuConfigItem, currentBlock);
+
         items.push(
           ...actionTunes.filter((_tune, index) => index !== deleteIndex),
           duplicateItem,
           ...moveTo,
-          this.withTrashToast(this.withDeleteConfirm({ ...actionTunes[deleteIndex], title: this.Blok.I18n.t('blockSettings.moveToTrash') } as MenuConfigItem, currentBlock), currentBlock)
+          blockMenu.trashToast === false ? trash : this.withTrashToast(trash, currentBlock)
         );
       } else {
         items.push(

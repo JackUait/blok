@@ -460,12 +460,13 @@ export interface BlockToolConstructable extends BaseToolConstructable {
    * before the Tool's own items, like Notion's page menu.
    * `trash` reads Delete as "Move to Trash", for a block that stands for
    * something the host keeps, like a page.
+   * `trashToast: false` leaves out the "Moved to Trash" toast a trash delete shows.
    * `lead` names the Tool's own items (by `name`) that come before Turn into
    * in a titled menu.
    * `class` is added to the menu's popover, for the Tool's stylesheet.
    * `minWidth` replaces the menu's 280px width floor.
    */
-  blockMenu?: { titled?: boolean; trash?: boolean; lead?: string[]; class?: string; minWidth?: string };
+  blockMenu?: { titled?: boolean; trash?: boolean; trashToast?: boolean; lead?: string[]; class?: string; minWidth?: string };
 
   /**
    * Set to true when Enter on this container's empty LAST child must create the

@@ -639,9 +639,12 @@ export class DatabaseTool implements BlockTool {
     return { allow: ['database-row', 'database', 'tabs', 'database-comment'] };
   }
 
-  /** notion-motion.md Round 65 §1: Notion's database block menu is 265 wide with 28px rows. */
-  public static get blockMenu(): { class: string; minWidth: string } {
-    return { class: 'blok-database-block-menu', minWidth: '265px' };
+  /**
+   * notion-motion.md Round 65 §1: Notion's database block menu is 265 wide with 28px rows.
+   * Round 66 §1: Move to Trash sits beside Duplicate, and no toast follows.
+   */
+  public static get blockMenu(): { class: string; minWidth: string; trash: true; trashToast: false } {
+    return { class: 'blok-database-block-menu', minWidth: '265px', trash: true, trashToast: false };
   }
 
   /** Deleting a database deletes its rows, sources and comments. Promoting them would drop rows into the parent. */

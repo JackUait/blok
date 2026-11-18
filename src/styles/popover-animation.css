@@ -141,6 +141,106 @@
   }
 }
 
+/* The block menu's quiet look: regular labels, small gray icons, 28px rows, lines from edge to edge.
+   Desktop only: a phone keeps the shared touch rows. The database block menu has its own measured look. */
+@media (min-width: 651px) {
+  /* The menu and its submenus. The doubled attributes outrank the dense-menu rule above, which sets the same properties. */
+  [data-blok-popover][data-blok-testid='block-tunes-popover']:not([data-blok-popover-custom-class~='blok-database-block-menu']) > [data-blok-popover-container][data-blok-testid='popover-container'],
+  [data-blok-popover][data-blok-testid='block-tunes-popover']:not([data-blok-popover-custom-class~='blok-database-block-menu']) [data-blok-nested='true'] > [data-blok-popover-container][data-blok-testid='popover-container'] {
+    padding-inline: var(--blok-space-1-5);
+    border-radius: var(--blok-radius-dialog);
+    --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-dialog) - var(--blok-space-1-5)));
+    /* Every row takes the soft label ink. */
+    --blok-popover-item-label-text: var(--blok-block-menu-label);
+
+    > [data-blok-testid='popover-search-field'] {
+      min-height: 30px;
+      margin-top: var(--blok-space-1-5);
+      /* 7px + the field's 1px border: the text starts 8px in, where the rows' padding ends. */
+      padding-inline: var(--blok-space-1-75);
+      border-radius: var(--blok-radius-control);
+      background-color: var(--blok-block-menu-field-bg);
+      font-size: 14px;
+
+      /* No glyph: the placeholder starts where the row icons start. */
+      &::before {
+        display: none;
+      }
+
+      /* The menu opens with the field focused, so focus keeps the fill. The shared field adds its hairline border. */
+      &:has(:is(input, textarea):focus) {
+        background-color: var(--blok-block-menu-field-bg);
+      }
+    }
+
+    > [data-blok-popover-items] {
+      padding-block: var(--blok-space-1-5);
+      row-gap: 0;
+
+      > [data-blok-popover-item]:not([data-blok-hidden]) {
+        min-height: 28px;
+        padding-block: var(--blok-space-0-5);
+        padding-inline: var(--blok-space-2);
+
+        > [data-blok-popover-item-title] {
+          font-size: 14px;
+          font-weight: 400;
+        }
+
+        /* -3px: a drawing starts about 3px inside its box; the search text does not. */
+        > [data-blok-popover-item-icon]:not([data-blok-popover-item-icon-chevron-right]) {
+          width: 18px;
+          margin-inline: -3px var(--blok-space-2);
+          color: var(--blok-block-menu-icon);
+
+          svg {
+            width: 18px;
+            height: 18px;
+          }
+        }
+
+        > [data-blok-popover-item-secondary-title] {
+          color: var(--blok-block-menu-hint);
+          font-size: 12px;
+          letter-spacing: 0.04em;
+        }
+
+        > [data-blok-popover-item-icon-chevron-right] {
+          margin-inline-end: -3px;
+          color: var(--blok-block-menu-hint);
+        }
+
+        /* A red row is red all through. */
+        &[data-blok-popover-item-destructive]:is(:hover, [data-blok-force-hover], [data-blok-focused='true']) > * {
+          color: inherit;
+        }
+      }
+
+      > [role='separator'] {
+        margin-inline: calc(-1 * var(--blok-space-1-5));
+        padding-block: var(--blok-space-1-25);
+      }
+
+      /* One line: the label, then the date. */
+      > [data-blok-item-name='edit-metadata'] > div {
+        padding: var(--blok-space-0-75) var(--blok-space-2);
+        color: var(--blok-block-menu-hint);
+        font-size: 12px;
+        line-height: 17px;
+
+        > * {
+          display: inline;
+          margin: 0;
+        }
+
+        > [data-edit-meta-label]::after {
+          content: ' ';
+        }
+      }
+    }
+  }
+}
+
 /* The inline toolbar sets width on the element. Search moves convert items into
    the block menu; the promoted mark keeps that menu from taking this layout. */
 [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item])) {

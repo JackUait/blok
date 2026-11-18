@@ -158,6 +158,11 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
     reason: 'Text input: the shared field keys its focus look on the text input or textarea only (never a button inside the box), so it may look active however the field was focused.',
   },
   {
+    file: 'src/styles/popover-animation.css',
+    match: 'textarea):focus',
+    reason: 'Text input: the block menu\'s search field keeps its fill while its input has focus, however it was focused.',
+  },
+  {
     file: 'src/styles/database.css',
     match: 'input[data-blok-database-picker-search]:focus',
     reason: 'Text input: the Filter / Sort picker search takes the shared field\'s focus border, with no ring.',

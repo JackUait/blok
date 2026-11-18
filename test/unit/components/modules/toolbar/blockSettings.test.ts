@@ -927,7 +927,7 @@ describe('BlockSettings', () => {
   });
 
 
-  it('gives the popover a 280px floor instead of a fixed width', async () => {
+  it('gives the popover a 264px floor instead of a fixed width', async () => {
     blockSettings.make();
 
     const block = createBlock();
@@ -951,7 +951,7 @@ describe('BlockSettings', () => {
     const popover = getLastPopover();
     const params = popover?.params as { minWidth?: string; width?: string } | undefined;
 
-    expect(params?.minWidth).toBe('280px');
+    expect(params?.minWidth).toBe('264px');
     expect(params?.width).toBeUndefined();
 
     getTunesItemsSpy.mockRestore();
@@ -2113,10 +2113,10 @@ describe('BlockSettings', () => {
 
       /**
        * When the Blok locale is 'ru', the date must be formatted in Russian
-       * with the full month name and no trailing abbreviation suffix on the year.
-       * Expected: "10 апреля 2024, 01:12" (no "г." after the year).
+       * with the short month name and no trailing abbreviation suffix on the year.
+       * Expected: "10 апр. 2024, 01:12" (no "г." after the year).
        */
-      expect(dateText).toContain('апреля');
+      expect(dateText).toContain('апр.');
       expect(dateText).not.toMatch(/г\./);
     });
 

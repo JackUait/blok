@@ -355,7 +355,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         autoFocusFirstItem: false,
         // A floor, not a fixed width: a long translation plus its shortcut
         // would otherwise be pushed past the menu edge.
-        minWidth: block.tool?.blockMenu?.minWidth ?? '280px',
+        minWidth: block.tool?.blockMenu?.minWidth ?? '264px',
         ...(block.tool?.blockMenu?.class === undefined ? {} : { class: block.tool.blockMenu.class }),
         /**
          * A cursor/holder-anchored menu (context menu, Shift+F10) opens AT the
@@ -1229,11 +1229,23 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     const timestamp = block.lastEditedAt ?? block.createdAt;
     const date = new Date(Number.isFinite(timestamp) ? timestamp : Date.now());
 
-    const dateParts = new Intl.DateTimeFormat(locale, {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    }).formatToParts(date);
+    const now = new Date();
+    // Calendar days, not 24-hour spans: 23:30 last night is "yesterday".
+    const daysAgo = Math.round(
+      (new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+        - new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()) / 86_400_000
+    );
+    // "today" / "yesterday" in the reader's language; never trimmed below.
+    const nearDay = daysAgo === 0 || daysAgo === 1
+      ? new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(-daysAgo, 'day')
+      : null;
+    const dateParts = nearDay !== null
+      ? []
+      : new Intl.DateTimeFormat(locale, {
+        day: 'numeric',
+        month: 'short',
+        ...(date.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' as const }),
+      }).formatToParts(date);
 
     /**
      * Strip trailing literal parts that are abbreviations (contain a period),
@@ -1246,7 +1258,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       dateParts.pop();
     }
 
-    const dateStr = dateParts.map(p => p.value).join('');
+    const dateStr = nearDay ?? dateParts.map(p => p.value).join('');
     const timeStr = new Intl.DateTimeFormat(locale, { timeStyle: 'short' }).format(date);
 
     dateEl.textContent = `${dateStr}, ${timeStr}`;

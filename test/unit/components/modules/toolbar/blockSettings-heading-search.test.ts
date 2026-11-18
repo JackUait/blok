@@ -193,12 +193,12 @@ describe('Heading search in real block settings', () => {
     expect(document.querySelector('[data-blok-item-name="header-3"]')?.textContent).toContain('Heading 3');
   });
 
-  it('gives the built-in menu a 280px width', async () => {
+  it('gives the built-in menu a 264px width', async () => {
     const { settings, block } = createSettings();
 
     await settings.open(block);
 
-    expect(getMenu().style.getPropertyValue('--width')).toBe('280px');
+    expect(getMenu().style.getPropertyValue('--width')).toBe('264px');
   });
 
   it('does not change a custom popover width', () => {

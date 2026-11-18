@@ -85,6 +85,48 @@
   line-height: 14px;
 }
 
+[@media (min-width: 651px)] [data-blok-popover][data-blok-testid='block-tunes-popover']:not([data-blok-popover-custom-class~='blok-database-block-menu']) > [data-blok-popover-container][data-blok-testid='popover-container'], [data-blok-popover][data-blok-testid='block-tunes-popover']:not([data-blok-popover-custom-class~='blok-database-block-menu']) [data-blok-nested='true'] > [data-blok-popover-container][data-blok-testid='popover-container'] {
+  padding-inline: var(--blok-space-1-5);
+  border-radius: var(--blok-radius-dialog);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-dialog) - var(--blok-space-1-5)));
+  --blok-popover-item-label-text: var(--blok-block-menu-label);
+  min-height: 30px;
+  margin-top: var(--blok-space-1-5);
+  padding-inline: var(--blok-space-1-75);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-block-menu-field-bg);
+  font-size: 14px;
+  display: none;
+  background-color: var(--blok-block-menu-field-bg);
+  padding-block: var(--blok-space-1-5);
+  row-gap: 0;
+  min-height: 28px;
+  padding-block: var(--blok-space-0-5);
+  padding-inline: var(--blok-space-2);
+  font-size: 14px;
+  font-weight: 400;
+  width: 18px;
+  margin-inline: -3px var(--blok-space-2);
+  color: var(--blok-block-menu-icon);
+  width: 18px;
+  height: 18px;
+  color: var(--blok-block-menu-hint);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  margin-inline-end: -3px;
+  color: var(--blok-block-menu-hint);
+  color: inherit;
+  margin-inline: calc(-1 * var(--blok-space-1-5));
+  padding-block: var(--blok-space-1-25);
+  padding: var(--blok-space-0-75) var(--blok-space-2);
+  color: var(--blok-block-menu-hint);
+  font-size: 12px;
+  line-height: 17px;
+  display: inline;
+  margin: 0;
+  content: ' ';
+}
+
 [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item])) {
   width: min(232px, calc(100vw - 16px)) !important;
   min-width: 0;
@@ -2192,6 +2234,10 @@
   --blok-item-focus-shadow: rgba(55, 53, 47, 0.08);
   --blok-focus-ring: #2383e2;
   --blok-item-hover-bg: rgba(55, 53, 47, 0.08);
+  --blok-block-menu-label: #37352f;
+  --blok-block-menu-icon: #6f6e69;
+  --blok-block-menu-hint: #6f6e69;
+  --blok-block-menu-field-bg: rgba(55, 53, 47, 0.045);
   --blok-skeleton-bar: rgba(55, 53, 47, 0.07);
   --blok-skeleton-sheen: rgba(255, 255, 255, 0.65);
   --blok-ai-tail: #7c5cff;
@@ -2544,6 +2590,10 @@
   --blok-item-focus-shadow: rgba(255, 255, 255, 0.055);
   --blok-focus-ring: #4c9fff;
   --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
+  --blok-block-menu-label: #d6d4cf;
+  --blok-block-menu-icon: #b4b3b0;
+  --blok-block-menu-hint: #9a9893;
+  --blok-block-menu-field-bg: rgba(255, 255, 255, 0.04);
   --blok-skeleton-bar: rgba(255, 255, 255, 0.06);
   --blok-skeleton-sheen: rgba(255, 255, 255, 0.09);
   --blok-ai-tail: #a08bff;
@@ -2715,6 +2765,10 @@
   --blok-item-focus-shadow: rgba(255, 255, 255, 0.055);
   --blok-focus-ring: #4c9fff;
   --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
+  --blok-block-menu-label: #d6d4cf;
+  --blok-block-menu-icon: #b4b3b0;
+  --blok-block-menu-hint: #9a9893;
+  --blok-block-menu-field-bg: rgba(255, 255, 255, 0.04);
   --blok-skeleton-bar: rgba(255, 255, 255, 0.06);
   --blok-skeleton-sheen: rgba(255, 255, 255, 0.09);
   --blok-ai-tail: #a08bff;

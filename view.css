@@ -634,6 +634,10 @@
   --blok-item-focus-shadow: rgba(55, 53, 47, 0.08);
   --blok-focus-ring: #2383e2;
   --blok-item-hover-bg: rgba(55, 53, 47, 0.08);
+  --blok-block-menu-label: #37352f;
+  --blok-block-menu-icon: #6f6e69;
+  --blok-block-menu-hint: #6f6e69;
+  --blok-block-menu-field-bg: rgba(55, 53, 47, 0.045);
   --blok-skeleton-bar: rgba(55, 53, 47, 0.07);
   --blok-skeleton-sheen: rgba(255, 255, 255, 0.65);
   --blok-ai-tail: #7c5cff;
@@ -942,6 +946,10 @@
     --blok-item-focus-shadow: rgba(255, 255, 255, 0.055);
     --blok-focus-ring: #4c9fff;
     --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
+    --blok-block-menu-label: #d6d4cf;
+    --blok-block-menu-icon: #b4b3b0;
+    --blok-block-menu-hint: #9a9893;
+    --blok-block-menu-field-bg: rgba(255, 255, 255, 0.04);
     --blok-skeleton-bar: rgba(255, 255, 255, 0.06);
     --blok-skeleton-sheen: rgba(255, 255, 255, 0.09);
     --blok-ai-tail: #a08bff;
@@ -1113,6 +1121,10 @@
   --blok-item-focus-shadow: rgba(255, 255, 255, 0.055);
   --blok-focus-ring: #4c9fff;
   --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
+  --blok-block-menu-label: #d6d4cf;
+  --blok-block-menu-icon: #b4b3b0;
+  --blok-block-menu-hint: #9a9893;
+  --blok-block-menu-field-bg: rgba(255, 255, 255, 0.04);
   --blok-skeleton-bar: rgba(255, 255, 255, 0.06);
   --blok-skeleton-sheen: rgba(255, 255, 255, 0.09);
   --blok-ai-tail: #a08bff;

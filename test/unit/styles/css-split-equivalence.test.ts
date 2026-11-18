@@ -1911,6 +1911,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const PRESENCE_INK_FACES_BYTES = 4_973;
     // table-of-contents.css: the block is never the browser's scroll anchor (measured table-of-contents.css growth).
     const TOC_NO_SCROLL_ANCHOR_BYTES = 459;
+    // popover-animation.css + colors.css: the block menu's quiet look and its four tokens (measured growth of both files).
+    const BLOCK_MENU_QUIET_BYTES = 4_325;
     // file.css: the object on a file card — pages, editor tab, filmstrip, record, folder, punch card (measured file.css growth).
     const FILE_CARD_OBJECT_BYTES = 27_626;
     // emoji-picker.css: the database icon pickers' keyboard highlight (measured emoji-picker.css growth).
@@ -2500,7 +2502,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + VIDEO_HANDLE_CLEARANCE_BYTES
       + PRESENCE_INK_FACES_BYTES
       + TOC_NO_SCROLL_ANCHOR_BYTES
-      + EMOJI_FILTER_KEYS_HIGHLIGHT_BYTES;
+      + EMOJI_FILTER_KEYS_HIGHLIGHT_BYTES
+      + BLOCK_MENU_QUIET_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

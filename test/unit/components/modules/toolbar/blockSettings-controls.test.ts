@@ -283,7 +283,7 @@ describe('Block settings control groups', () => {
     actions[1].click();
     expect(last).toHaveBeenCalledTimes(1);
     actions[2].click();
-    expect(duplicate).toHaveBeenCalledWith(block);
+    expect(duplicate).toHaveBeenCalledWith(block, { leaveOut: [], numberCopies: true });
     expect(remove).not.toHaveBeenCalled();
   });
 });

@@ -863,7 +863,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       }
 
       // The menu's restored caret can leave its field focused under the selected copy.
-      void (leaveOut.length === 0 ? DragManager?.duplicateBlocksInPlace(currentBlock) : DragManager?.duplicateBlocksInPlace(currentBlock, { leaveOut }))?.then((copies) => {
+      void DragManager?.duplicateBlocksInPlace(currentBlock, { leaveOut, numberCopies: true })?.then((copies) => {
         if (copies.some((copy) => copy.selected)) {
           this.releaseFocus();
           this.letGoOnFocus(copies);

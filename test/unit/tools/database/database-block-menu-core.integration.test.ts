@@ -237,6 +237,37 @@ describe('the database block menu in core', () => {
     expect(copy.contentIds).toHaveLength(3);
   });
 
+  /** notion-motion.md Round 67 §1: the copy reads " (1)"; a title ending " (n)" goes to n + 1, taken or not. */
+  const copyTitle = async (title: string, without = false): Promise<unknown> => {
+    const blocks = setUpDatabase();
+
+    blocks[0] = { ...blocks[0], data: { ...blocks[0].data, title } };
+    const instance = await boot(blocks);
+
+    (await duplicateSubmenu(instance, 'db')).find((row) => row.getAttribute('data-blok-item-name') === (without ? 'duplicate-without-content' : 'duplicate-with-content'))?.click();
+    const copy = await vi.waitFor(() => {
+      const found = instance.moduleInstances.BlockManager.blocks.find((candidate) => candidate.name === 'database' && candidate.id !== 'db');
+
+      if (found === undefined) throw new Error('no copy yet');
+
+      return found;
+    });
+
+    return (await copy.save())?.data.title;
+  };
+
+  it('Duplicate titles the copy " (1)", like Notion', async () => {
+    expect(await copyTitle('Tasks')).toBe('Tasks (1)');
+  });
+
+  it('Duplicate without content titles the copy " (1)" too', async () => {
+    expect(await copyTitle('Tasks', true)).toBe('Tasks (1)');
+  });
+
+  it('Duplicate of "Tasks (2)" is "Tasks (3)"', async () => {
+    expect(await copyTitle('Tasks (2)')).toBe('Tasks (3)');
+  });
+
   it('a linked view\'s Duplicate has no submenu, as in Notion', async () => {
     const instance = await boot([...setUpDatabase(), { id: 'linked', type: 'database', data: { title: '', source: { databaseId: 'db' }, views: [], activeViewId: '' } }]);
     const rows = await openMenu(instance, 'linked');

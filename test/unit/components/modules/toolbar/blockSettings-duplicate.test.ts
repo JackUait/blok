@@ -230,7 +230,8 @@ describe('BlockSettings — Duplicate menu item (BUG #8)', () => {
 
     const dragManager = blokMock.DragManager as { duplicateBlocksInPlace: Mock };
 
-    expect(dragManager.duplicateBlocksInPlace).toHaveBeenCalledWith(block);
+    // numberCopies: a database copy is titled " (1)" (notion-motion.md Round 67 §1).
+    expect(dragManager.duplicateBlocksInPlace).toHaveBeenCalledWith(block, { leaveOut: [], numberCopies: true });
   });
 
   it('selects the block before duplicating, so the copy is left selected instead of a caret', async () => {

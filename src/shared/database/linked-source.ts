@@ -218,6 +218,22 @@ export const withoutRowOrderOf = <T>(type: string, data: T, leftOut: ReadonlySet
 };
 
 /**
+ * notion-motion.md Round 67 §1: the block menu's Duplicate titles a database copy " (1)", and a
+ * title ending " (n)" goes to n + 1. Notion does not check whether that name is taken.
+ * An empty title stays empty (unmeasured).
+ * @param type - the block's tool name
+ * @param data - the block's data
+ */
+export const numberedCopyOf = <T>(type: string, data: T): T => {
+  const title = isFields(data) ? data.title : undefined;
+
+  if (type !== DATABASE || typeof title !== 'string' || title.trim() === '') return data;
+  const numbered = /^(.*) \((\d+)\)$/.exec(title);
+
+  return { ...data, title: numbered === null ? `${title} (1)` : `${numbered[1]} (${Number(numbered[2]) + 1})` };
+};
+
+/**
  * New view ids for each copied database, by its original block id. Personal
  * view state and `#view-<id>` links are keyed by view id, so a copy that kept
  * them would share both with the original. View ids repeat across blocks, so

@@ -1664,7 +1664,7 @@ export class DragController extends Module {
     return blocks.some((member) => carriesReadOnly(member, (id) => this.Blok.BlockManager.getBlockById(id)));
   }
 
-  public async duplicateBlocksInPlace(block: Block, options: { leaveOut?: readonly string[] } = {}): Promise<Block[]> {
+  public async duplicateBlocksInPlace(block: Block, options: { leaveOut?: readonly string[]; numberCopies?: boolean } = {}): Promise<Block[]> {
     // Drag internals initialize lazily on the first drag; Cmd+D can fire before
     // any drag has happened, so ensure operations/descendant helpers exist.
     this.lazyInit();
@@ -1722,6 +1722,7 @@ export class DragController extends Module {
       return [];
     }
     prep.leftOut = leftOut;
+    prep.numberCopies = options.numberCopies;
 
     const resultRef: { current: { duplicatedBlocks: Block[]; targetIndex: number } } = {
       current: { duplicatedBlocks: [], targetIndex: prep.baseInsertIndex },

@@ -246,7 +246,8 @@
 [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item])) {
   width: min(232px, calc(100vw - 16px)) !important;
   min-width: 0;
-  max-height: min(520px, calc(100dvh - 16px));
+  /* Grows to fit every option; the window is the only cap. */
+  max-height: calc(100dvh - 16px);
 }
 
 [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item])) > [data-blok-testid='popover-search-field'] {

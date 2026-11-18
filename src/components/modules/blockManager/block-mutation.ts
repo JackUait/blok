@@ -1786,6 +1786,18 @@ export class BlockMutation {
 
     Object.assign(newBlockData, carriedBlockColors(savedBlock.data, newBlockData, field => field in targetSanitize));
 
+    // Links in the document point at a heading's anchor; another level is still that heading.
+    const sourceAnchor = savedBlock.data.anchor;
+
+    if (
+      source.name === 'header'
+      && replacingTool.name === 'header'
+      && typeof sourceAnchor === 'string'
+      && newBlockData.anchor === undefined
+    ) {
+      newBlockData.anchor = sourceAnchor;
+    }
+
     /**
      * Preserve the to-do `checked` state across a turn-into round trip
      * (to-do → bulleted → to-do must come back checked).

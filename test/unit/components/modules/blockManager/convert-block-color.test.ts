@@ -269,3 +269,46 @@ describe('convert() preserves block-level color', () => {
     expect(passedData.backgroundColor).toBeUndefined();
   });
 });
+
+describe('convert() keeps a heading anchor when a heading stays a heading', () => {
+  let operations: BlockOperations;
+  let blocksStore: BlocksStore;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    blocksStore = createBlocksStore([createMockBlock({ id: 'block-1', name: 'paragraph' })]);
+
+    const repository = new BlockRepository();
+
+    repository.initialize(blocksStore);
+
+    operations = new BlockOperations(
+      createMockDependencies(),
+      repository,
+      createMockBlockFactory(),
+      new BlockHierarchy(repository),
+      vi.fn(<Type extends BlockMutationType>(_t: Type, block: Block) => block),
+      0
+    );
+    operations.setYjsSync(createMockYjsSync());
+  });
+
+  it('carries the anchor to another heading level', async () => {
+    const heading = createMockBlock({ id: 'h', name: 'header', data: { text: 'Hi', level: 2, anchor: 'intro' } });
+    const replaceSpy = vi.spyOn(operations, 'replace').mockReturnValue(heading);
+
+    await operations.convert(heading, 'header', blocksStore, { level: 3 });
+
+    expect(replaceSpy.mock.calls[0][2]).toMatchObject({ level: 3, anchor: 'intro' });
+  });
+
+  it('does not put the anchor on another tool', async () => {
+    const heading = createMockBlock({ id: 'h', name: 'header', data: { text: 'Hi', level: 2, anchor: 'intro' } });
+    const replaceSpy = vi.spyOn(operations, 'replace').mockReturnValue(heading);
+
+    await operations.convert(heading, 'paragraph', blocksStore);
+
+    expect(replaceSpy.mock.calls[0][2].anchor).toBeUndefined();
+  });
+});

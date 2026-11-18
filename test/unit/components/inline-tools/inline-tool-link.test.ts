@@ -117,7 +117,22 @@ const ENGLISH_LINK_TRANSLATIONS: Record<string, string> = {
   'tools.link.webLink': defaultDictionary['tools.link.webLink'],
   'tools.link.recent': defaultDictionary['tools.link.recent'],
   'tools.link.onThisPage': defaultDictionary['tools.link.onThisPage'],
+  'tools.database.moveToPages': defaultDictionary['tools.database.moveToPages'],
+  'tools.page.unresolved': defaultDictionary['tools.page.unresolved'],
+  'tools.page.draft': defaultDictionary['tools.page.draft'],
 };
+
+type PageHit = { pageId: string; title?: string; icon?: { type: 'emoji'; value: string }; access?: 'none'; path?: string[]; status?: 'draft' | 'published' };
+
+type PageHost = {
+  search?: (query: string) => Promise<readonly PageHit[]>;
+  href?: (pageId: string) => string;
+};
+
+/**
+ * The page tool's config the tool sees through `api.tools`. Reset before every test.
+ */
+const pageHost: { config: PageHost | null } = { config: null };
 
 type DocumentBlock = { id: string; name: string; holder: HTMLElement };
 
@@ -164,6 +179,9 @@ const createTool = (
     blocks: {
       getBlocksCount: () => documentBlocks.length,
       getBlockByIndex: (index: number) => documentBlocks[index],
+    },
+    tools: {
+      getBlockTools: () => pageHost.config === null ? [] : [{ name: 'page', settings: pageHost.config }],
     },
     config: {
       link: linkConfig,
@@ -216,6 +234,7 @@ describe('LinkInlineTool', () => {
     setDocumentCommand(vi.fn());
     localStorage.removeItem('blok-recent-links');
     documentBlocks.length = 0;
+    pageHost.config = null;
   });
 
   afterEach(() => {
@@ -1615,6 +1634,392 @@ describe('LinkInlineTool', () => {
       input.dispatchEvent(new Event('input'));
 
       expect(input.hasAttribute('aria-activedescendant')).toBe(false);
+    });
+  });
+
+  describe('pages', () => {
+    type PagesTool = { insertLink(link: string): void };
+
+    const PAGES: PageHit[] = [
+      { pageId: 'p1', title: 'Roadmap', path: ['Home', 'Plans'] },
+      { pageId: 'p2', title: 'Release notes', icon: { type: 'emoji', value: '📝' } },
+    ];
+
+    const hostWith = (search: PageHost['search']): PageHost => ({
+      search,
+      href: (pageId) => `https://app.test/p/${pageId}`,
+    });
+
+    const openCreating = (): ToolSetup & { itemWrapper: HTMLElement; input: HTMLInputElement; close: () => void; open: () => void } => {
+      const setup = createTool();
+
+      vi.spyOn(setup.tool as unknown as PagesTool, 'insertLink').mockImplementation(() => undefined);
+
+      const renderResult = setup.tool.render() as unknown as LinkToolRenderResult;
+      const itemWrapper = renderResult.children.items[0].element;
+
+      document.body.appendChild(itemWrapper);
+      renderResult.children.onOpen();
+
+      return {
+        ...setup,
+        itemWrapper,
+        input: getInputFromWrapper(itemWrapper),
+        close: () => renderResult.children.onClose(),
+        open: () => renderResult.children.onOpen(),
+      };
+    };
+
+    const pageSection = (itemWrapper: HTMLElement): HTMLElement | null =>
+      itemWrapper.querySelector<HTMLElement>('[data-link-pages]');
+
+    const pageRows = (itemWrapper: HTMLElement): HTMLElement[] =>
+      Array.from(itemWrapper.querySelectorAll<HTMLElement>('[data-link-page-row]'));
+
+    const pageTitles = (itemWrapper: HTMLElement): string[] =>
+      pageRows(itemWrapper).map((row) => row.querySelector('[data-link-page-title]')?.textContent ?? '');
+
+    const type = (field: HTMLInputElement, value: string): void => {
+      const input = field;
+
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+    };
+
+    const press = (input: HTMLInputElement, key: string): void => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    };
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('asks the host for pages when the field opens and lists them under "Pages"', async () => {
+      const search = vi.fn().mockResolvedValue(PAGES);
+
+      pageHost.config = hostWith(search);
+      localStorage.setItem('blok-recent-links', JSON.stringify([{ url: 'https://a.com', title: 'A', checked: true }]));
+      addHeading(2, 'Intro');
+
+      const { itemWrapper } = openCreating();
+
+      expect(pageSection(itemWrapper)?.hidden).toBe(true);
+      await vi.waitFor(() => expect(pageTitles(itemWrapper)).toEqual(['Roadmap', 'Release notes']));
+
+      expect(search).toHaveBeenCalledWith('');
+      expect(pageSection(itemWrapper)?.hidden).toBe(false);
+      expect(itemWrapper.querySelector('[data-link-pages-label]')?.textContent).toBe('Pages');
+      expect(pageRows(itemWrapper)[0].querySelector('[data-link-page-meta]')?.textContent).toBe('Home / Plans');
+      expect(Array.from(itemWrapper.querySelectorAll('[data-link-group]')).map((group) =>
+        ['data-link-recent', 'data-link-pages', 'data-link-headings', 'data-link-kinds'].find((name) => group.hasAttribute(name))))
+        .toEqual(['data-link-recent', 'data-link-pages', 'data-link-headings', 'data-link-kinds']);
+    });
+
+    it('shows a page\'s own icon, and nothing in its place for a page without one', async () => {
+      pageHost.config = hostWith(vi.fn().mockResolvedValue(PAGES));
+
+      const { itemWrapper } = openCreating();
+
+      await vi.waitFor(() => expect(pageRows(itemWrapper)).toHaveLength(2));
+
+      const [plain, withIcon] = pageRows(itemWrapper);
+
+      expect(plain.querySelector('[data-link-page-icon]')).toBeNull();
+      expect(withIcon.querySelector('[data-link-page-icon]')?.textContent).toBe('📝');
+    });
+
+    it('names an untitled page "Page" and marks a draft', async () => {
+      pageHost.config = hostWith(vi.fn().mockResolvedValue([{ pageId: 'p9', status: 'draft', path: ['Home'] }]));
+
+      const { itemWrapper } = openCreating();
+
+      await vi.waitFor(() => expect(pageTitles(itemWrapper)).toEqual(['Page']));
+      expect(pageRows(itemWrapper)[0].querySelector('[data-link-page-meta]')?.textContent).toBe('Draft · Home');
+    });
+
+    it('links the selected words to the page address and keeps the page out of Recent', async () => {
+      pageHost.config = hostWith(vi.fn().mockResolvedValue(PAGES));
+
+      const { tool, itemWrapper, inlineToolbar } = openCreating();
+
+      await vi.waitFor(() => expect(pageRows(itemWrapper)).toHaveLength(2));
+      pageRows(itemWrapper)[1].click();
+
+      expect((tool as unknown as PagesTool).insertLink).toHaveBeenCalledWith('https://app.test/p/p2');
+      expect(inlineToolbar.close).toHaveBeenCalled();
+      expect(localStorage.getItem('blok-recent-links')).toBeNull();
+    });
+
+    it('links to an address the typed-link rules would refuse, as the host gave it', async () => {
+      pageHost.config = { search: vi.fn().mockResolvedValue(PAGES), href: (pageId) => `page?id=${pageId}` };
+
+      const { tool, itemWrapper } = openCreating();
+
+      await vi.waitFor(() => expect(pageRows(itemWrapper)).toHaveLength(2));
+      pageRows(itemWrapper)[0].click();
+
+      expect((tool as unknown as PagesTool).insertLink).toHaveBeenCalledWith('page?id=p1');
+    });
+
+    it('leaves out a page with no address or an unsafe one', async () => {
+      pageHost.config = {
+        search: vi.fn().mockResolvedValue([...PAGES, { pageId: 'p3', title: 'Empty' }]),
+        href: (pageId) => ({ p1: 'javascript:alert(1)', p2: 'https://app.test/p/p2' } as Record<string, string>)[pageId] ?? '',
+      };
+
+      const { itemWrapper } = openCreating();
+
+      await vi.waitFor(() => expect(pageTitles(itemWrapper)).toEqual(['Release notes']));
+    });
+
+    it('leaves out a page the user may not see', async () => {
+      pageHost.config = hostWith(vi.fn().mockResolvedValue([{ pageId: 'p0', title: 'Secret', access: 'none' }, ...PAGES]));
+
+      const { itemWrapper } = openCreating();
+
+      await vi.waitFor(() => expect(pageTitles(itemWrapper)).toEqual(['Roadmap', 'Release notes']));
+    });
+
+    it.each([
+      ['no page tool', null],
+      ['no search', { href: (pageId: string) => `/p/${pageId}` }],
+      ['no address', { search: vi.fn().mockResolvedValue(PAGES) }],
+    ] as [string, PageHost | null][])('shows no Pages section with %s', async (_name, config) => {
+      pageHost.config = config;
+
+      const { itemWrapper } = openCreating();
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(pageSection(itemWrapper)?.hidden).toBe(true);
+      expect(config?.search ?? vi.fn()).not.toHaveBeenCalled();
+    });
+
+    it('searches as the user types, after a short pause, with the latest text only', async () => {
+      vi.useFakeTimers();
+
+      const search = vi.fn().mockResolvedValue([]);
+
+      pageHost.config = hostWith(search);
+
+      const { input } = openCreating();
+
+      search.mockClear();
+      type(input, 'r');
+      type(input, 'ro');
+      type(input, 'roa');
+
+      expect(search).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(150);
+
+      expect(search).toHaveBeenCalledTimes(1);
+      expect(search).toHaveBeenCalledWith('roa');
+    });
+
+    it('drops an answer that arrives after a newer one', async () => {
+      vi.useFakeTimers();
+
+      const answers: Record<string, (hits: PageHit[]) => void> = {};
+      const search = vi.fn((query: string) => new Promise<readonly PageHit[]>((resolve) => {
+        answers[query] = resolve;
+      }));
+
+      pageHost.config = hostWith(search);
+
+      const { itemWrapper, input } = openCreating();
+
+      type(input, 'ro');
+      await vi.advanceTimersByTimeAsync(150);
+      type(input, 'rel');
+      await vi.advanceTimersByTimeAsync(150);
+
+      answers.rel([PAGES[1]]);
+      await vi.advanceTimersByTimeAsync(0);
+      answers.ro([PAGES[0]]);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(pageTitles(itemWrapper)).toEqual(['Release notes']);
+    });
+
+    it('keeps showing the pages that still match while a new search is on its way', async () => {
+      vi.useFakeTimers();
+
+      const search = vi.fn().mockResolvedValueOnce(PAGES).mockReturnValue(new Promise(() => undefined));
+
+      pageHost.config = hostWith(search);
+
+      const { itemWrapper, input } = openCreating();
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(pageTitles(itemWrapper)).toEqual(['Roadmap', 'Release notes']);
+
+      type(input, 'road');
+
+      expect(pageTitles(itemWrapper)).toEqual(['Roadmap']);
+    });
+
+    it('marks the part of a page title the search matched', async () => {
+      vi.useFakeTimers();
+      pageHost.config = hostWith(vi.fn().mockResolvedValue(PAGES));
+
+      const { itemWrapper, input } = openCreating();
+
+      await vi.advanceTimersByTimeAsync(0);
+      type(input, 'road');
+
+      const title = pageRows(itemWrapper)[0].querySelector('[data-link-page-title]');
+
+      expect(title?.querySelector('[data-link-page-match]')?.textContent).toBe('Road');
+      expect(title?.textContent).toBe('Roadmap');
+    });
+
+    it('picks the first page on Enter when the search finds pages and no heading', async () => {
+      vi.useFakeTimers();
+      pageHost.config = hostWith(vi.fn().mockResolvedValue([PAGES[0]]));
+
+      const { tool, itemWrapper, input } = openCreating();
+
+      type(input, 'road');
+      await vi.advanceTimersByTimeAsync(150);
+
+      expect(pageRows(itemWrapper)[0]).toHaveAttribute('aria-selected', 'true');
+      expect(input.getAttribute('aria-activedescendant')).toBe(pageRows(itemWrapper)[0].id);
+
+      press(input, 'Enter');
+
+      expect((tool as unknown as PagesTool).insertLink).toHaveBeenCalledWith('https://app.test/p/p1');
+    });
+
+    it('keeps Enter on the heading already picked when pages arrive late', async () => {
+      vi.useFakeTimers();
+      pageHost.config = hostWith(vi.fn().mockResolvedValue([{ pageId: 'p5', title: 'Setup notes' }]));
+      addHeading(2, 'Setup guide', 'h-setup');
+
+      const { tool, itemWrapper, input } = openCreating();
+
+      type(input, 'setup');
+
+      const heading = itemWrapper.querySelector<HTMLElement>('[data-link-heading-row]');
+
+      expect(heading).toHaveAttribute('aria-selected', 'true');
+
+      await vi.advanceTimersByTimeAsync(150);
+
+      expect(pageTitles(itemWrapper)).toEqual(['Setup notes']);
+      expect(heading).toHaveAttribute('aria-selected', 'true');
+      expect(input.getAttribute('aria-activedescendant')).toBe(heading?.id);
+
+      press(input, 'Enter');
+
+      expect((tool as unknown as PagesTool).insertLink).toHaveBeenCalledWith('#h-setup');
+    });
+
+    it('leaves Enter to a typed web link, and does not search pages for it', async () => {
+      vi.useFakeTimers();
+
+      const search = vi.fn().mockResolvedValue(PAGES);
+
+      pageHost.config = hostWith(search);
+
+      const { tool, itemWrapper, input } = openCreating();
+
+      await vi.advanceTimersByTimeAsync(0);
+      search.mockClear();
+      type(input, 'https://example.com');
+      await vi.advanceTimersByTimeAsync(150);
+
+      expect(search).not.toHaveBeenCalled();
+      expect(pageSection(itemWrapper)?.hidden).toBe(true);
+
+      press(input, 'Enter');
+
+      expect((tool as unknown as PagesTool).insertLink).toHaveBeenCalledWith('https://example.com');
+    });
+
+    it('does not search pages for a "#" heading search', async () => {
+      vi.useFakeTimers();
+
+      const search = vi.fn().mockResolvedValue(PAGES);
+
+      pageHost.config = hostWith(search);
+
+      const { itemWrapper, input } = openCreating();
+
+      await vi.advanceTimersByTimeAsync(0);
+      search.mockClear();
+      type(input, '#road');
+      await vi.advanceTimersByTimeAsync(150);
+
+      expect(search).not.toHaveBeenCalled();
+      expect(pageSection(itemWrapper)?.hidden).toBe(true);
+    });
+
+    it('walks from the recent links through the pages to the headings with the arrows', async () => {
+      pageHost.config = hostWith(vi.fn().mockResolvedValue([PAGES[0]]));
+      localStorage.setItem('blok-recent-links', JSON.stringify([{ url: 'https://a.com', title: 'A', checked: true }]));
+      addHeading(2, 'Intro');
+
+      const { itemWrapper, input } = openCreating();
+
+      await vi.waitFor(() => expect(pageRows(itemWrapper)).toHaveLength(1));
+
+      const picked = (): string | undefined => itemWrapper.querySelector('[aria-selected="true"]')?.id;
+
+      press(input, 'ArrowDown');
+      expect(picked()).toBe(itemWrapper.querySelector('[data-link-recent-row]')?.id);
+      press(input, 'ArrowDown');
+      expect(picked()).toBe(pageRows(itemWrapper)[0].id);
+      press(input, 'ArrowDown');
+      expect(picked()).toBe(itemWrapper.querySelector('[data-link-heading-row]')?.id);
+    });
+
+    it('drops an answer that arrives after the field closed, and a pending search with it', async () => {
+      vi.useFakeTimers();
+
+      const answers: ((hits: PageHit[]) => void)[] = [];
+      const search = vi.fn(() => new Promise<readonly PageHit[]>((resolve) => {
+        answers.push(resolve);
+      }));
+
+      pageHost.config = hostWith(search);
+
+      const { itemWrapper, input, close } = openCreating();
+
+      type(input, 'ro');
+      close();
+      await vi.advanceTimersByTimeAsync(150);
+
+      expect(search).toHaveBeenCalledTimes(1);
+
+      answers[0](PAGES);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(pageRows(itemWrapper)).toHaveLength(0);
+      expect(pageSection(itemWrapper)?.hidden).toBe(true);
+    });
+
+    it('shows no pages when the host search fails', async () => {
+      pageHost.config = hostWith(vi.fn().mockRejectedValue(new Error('offline')));
+
+      const { itemWrapper } = openCreating();
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(pageSection(itemWrapper)?.hidden).toBe(true);
+    });
+
+    it('offers the link kinds only when there are no pages either', async () => {
+      pageHost.config = hostWith(vi.fn().mockResolvedValue(PAGES));
+
+      const { itemWrapper } = openCreating();
+      const kinds = itemWrapper.querySelector<HTMLElement>('[data-link-kinds]');
+
+      expect(kinds?.hidden).toBe(false);
+      await vi.waitFor(() => expect(pageRows(itemWrapper)).toHaveLength(2));
+      expect(kinds?.hidden).toBe(true);
     });
   });
 

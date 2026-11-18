@@ -140,6 +140,7 @@ const createHarness = (options: { link?: LinkConfig; translations?: Record<strin
       has: (phrase: string): boolean => phrase in dictionary,
     },
     blocks: { getBlocksCount: () => 0, getBlockByIndex: () => undefined },
+    tools: { getBlockTools: () => [] },
     config: { link: options.link },
   } as unknown as API;
 

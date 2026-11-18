@@ -6,7 +6,7 @@ import type {
   SanitizerConfig
 } from '../../../types';
 import type { BlokConfig } from '../../../types/configs/blok-config';
-import type { Blocks, Notifier, Toolbar, I18n, InlineToolbar } from '../../../types/api';
+import type { Blocks, Notifier, Toolbar, I18n, InlineToolbar, Tools } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR, createSelector, INLINE_TOOLBAR_INTERFACE_VALUE } from '../constants';
 import { IconLink, IconGlobe, IconMail, IconHash, IconTrash, IconReturn, IconWarning } from '../icons';
@@ -22,6 +22,10 @@ import { MetadataFetcher } from '../../tools/link/metadata-fetcher';
 import { coverColors } from './link-cover';
 import { getRecentLinks, recordRecentLink, updateRecentLinkMeta, type RecentLink } from './link-history';
 import { PAGE_REFERENCE_ATTR } from '../../shared/page-reference';
+import { PAGE_PATH_SEPARATOR } from '../../tools/page/constants';
+import { pageIconNode } from '../../tools/page/icon-node';
+import { searchVisiblePages } from '../../tools/page/search-pages';
+import type { PageConfig, PageSearchResult } from '../../tools/page/types';
 
 const SUGGESTION_ROW_BASE = 'flex items-center gap-2.5 w-full mt-0.5 px-1.5 py-1.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) text-left appearance-none border-0 bg-transparent font-[inherit] outline-hidden';
 const SUGGESTION_ROW_VALID = `${SUGGESTION_ROW_BASE} cursor-pointer can-hover:hover:bg-item-hover-bg focus-visible:bg-item-hover-bg transition-colors`;
@@ -42,6 +46,9 @@ const SUGGESTION_TYPE_TEXT = 'block text-[11px] leading-[14px] text-gray-text mt
 const ENTER_HINT_CLASSES = 'items-center justify-center size-5 shrink-0 text-gray-text [&_svg]:size-3.5';
 
 const HEADING_LIMIT = 6;
+const PAGE_LIMIT = 6;
+// Pause after the last keystroke before the host is asked for pages.
+const PAGE_SEARCH_DELAY = 150;
 // Headings step in under their parent, never deeper than this.
 const HEADING_MAX_DEPTH = 2;
 
@@ -78,6 +85,7 @@ const OPTION_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 te
 // A section that follows a visible one gets extra room above its label.
 const SECTION_CLASSES = 'w-0 min-w-full [[data-link-group]:not([hidden])~&]:pt-1.5';
 const SECTION_LABEL_CLASSES = 'px-2 pt-2 pb-1 text-[11px] leading-4 font-semibold tracking-[0.06em] uppercase text-gray-text';
+const PAGE_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 text-base leading-none [&_img]:size-4 [&_img]:rounded-(--blok-radius-control-sm) [&_svg]:size-4 text-gray-text';
 // Recent links stand on a shelf. Its look lives in link-picker.css, keyed
 // off the data-link-recent-* attributes.
 const RECENT_SPINE_CLASSES = 'group motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
@@ -154,6 +162,8 @@ export class LinkInlineTool implements InlineTool {
     options: HTMLElement | null;
     recent: HTMLElement | null;
     recentList: HTMLElement | null;
+    pages: HTMLElement | null;
+    pageList: HTMLElement | null;
     headings: HTMLElement | null;
     headingList: HTMLElement | null;
     kinds: HTMLElement | null;
@@ -168,6 +178,8 @@ export class LinkInlineTool implements InlineTool {
       options: null,
       recent: null,
       recentList: null,
+      pages: null,
+      pageList: null,
       headings: null,
       headingList: null,
       kinds: null,
@@ -193,6 +205,23 @@ export class LinkInlineTool implements InlineTool {
    * the field: the popover's Flipper owns arrow keys on any other target.
    */
   private activeOptionIndex = -1;
+
+  /**
+   * The host's pages for the field's value, as last answered.
+   */
+  private pageHits: PageSearchResult[] = [];
+
+  /**
+   * Page rows by page id, reused so a row that stays never replays its entrance.
+   */
+  private pageRows = new Map<string, HTMLElement>();
+
+  /**
+   * Bumped on every new search and on close: an answer with an old number is dropped.
+   */
+  private pageSearchToken = 0;
+
+  private pageSearchTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Links with a lookup in flight, so one link is never asked for twice at once.
@@ -256,6 +285,11 @@ export class LinkInlineTool implements InlineTool {
   private blocks: Blocks;
 
   /**
+   * Tools API, read for the page tool's config
+   */
+  private tools: Tools;
+
+  /**
    * Global anchor-building config (target / rel / transformHref)
    */
   private linkConfig: NonNullable<BlokConfig['link']>;
@@ -269,12 +303,14 @@ export class LinkInlineTool implements InlineTool {
     this.notifier = api.notifier;
     this.i18n = api.i18n;
     this.blocks = api.blocks;
+    this.tools = api.tools;
     this.linkConfig = api.config.link ?? {};
     this.selection = new SelectionUtils();
     this.nodes.urlLabel = this.createFieldLabel(this.i18n.t('tools.link.pageOrUrl'), 'inline-tool-url-label', false);
     this.nodes.input = this.createInput();
     this.nodes.suggestion = this.createSuggestion();
     this.nodes.recent = this.createRecent();
+    this.nodes.pages = this.createPages();
     this.nodes.headings = this.createHeadings();
     this.nodes.kinds = this.createKinds();
     this.nodes.options = this.createOptions();
@@ -365,6 +401,7 @@ export class LinkInlineTool implements InlineTool {
   private refreshForValue(): void {
     this.clearValidationError();
     this.updateSuggestion(this.nodes.input?.value ?? '');
+    this.searchPages();
     this.updateOptions();
   }
 
@@ -645,7 +682,7 @@ export class LinkInlineTool implements InlineTool {
 
     options.className = 'pt-1';
     options.setAttribute(DATA_ATTR.popoverScroller, '');
-    options.append(...[this.nodes.recent, this.nodes.headings, this.nodes.kinds].filter((node) => node !== null));
+    options.append(...[this.nodes.recent, this.nodes.pages, this.nodes.headings, this.nodes.kinds].filter((node) => node !== null));
 
     return options;
   }
@@ -764,6 +801,177 @@ export class LinkInlineTool implements InlineTool {
     this.nodes.recentList = list;
 
     return section;
+  }
+
+  /**
+   * "Pages": the host's pages a link can point at.
+   */
+  private createPages(): HTMLElement {
+    const { section, list } = this.createSection(`${this.errorId}-pages`, 'data-link-pages', this.i18n.t('tools.database.moveToPages'));
+
+    this.nodes.pageList = list;
+
+    return section;
+  }
+
+  /**
+   * The page tool's config, when the host can both search pages and give
+   * their addresses. Without either there is nothing to link to.
+   */
+  private pageHost(): PageConfig | null {
+    const page = this.tools.getBlockTools().find((tool) => tool.name === 'page')?.settings as PageConfig | undefined;
+
+    return page?.search !== undefined && page.href !== undefined ? page : null;
+  }
+
+  /**
+   * A page's address, or '' when the host gives none or an unsafe one.
+   * @param host - the page tool's config
+   * @param pageId - the page to link to
+   */
+  private pageHref(host: PageConfig, pageId: string): string {
+    try {
+      const href = host.href?.(pageId) ?? '';
+
+      return hasUnsafeScheme(href) ? '' : href;
+    } catch {
+      return '';
+    }
+  }
+
+  /**
+   * Drop the pending page search and any answer still on its way.
+   */
+  private cancelPageSearch(): void {
+    this.pageSearchToken += 1;
+
+    if (this.pageSearchTimer !== null) {
+      clearTimeout(this.pageSearchTimer);
+      this.pageSearchTimer = null;
+    }
+  }
+
+  /**
+   * Ask the host for the pages that fit the field's value: at once for an
+   * empty field (its recent pages), after a short pause while typing. A
+   * typed link, a "#" heading search and edit mode ask for nothing.
+   */
+  private searchPages(): void {
+    const host = this.pageHost();
+    const value = this.nodes.input?.value.trim() ?? '';
+
+    this.cancelPageSearch();
+
+    if (host === null || this.editing || value.startsWith('#') || (value !== '' && this.isLinkComplete(value))) {
+      this.pageHits = [];
+
+      return;
+    }
+
+    // Until the answer comes, keep the pages that still fit: the list does not blink on every key.
+    this.pageHits = this.pageHits.filter((hit) => (hit.title ?? '').toLowerCase().includes(value.toLowerCase()));
+
+    const token = this.pageSearchToken;
+    const ask = (): void => {
+      this.pageSearchTimer = null;
+      searchVisiblePages(host, value)
+        .then((hits) => {
+          if (token !== this.pageSearchToken) {
+            return;
+          }
+
+          this.pageHits = hits.filter((hit) => this.pageHref(host, hit.pageId) !== '').slice(0, PAGE_LIMIT);
+          // The row the user is on keeps Enter: late pages never take it.
+          this.updateOptions(this.getOptionRows()[this.activeOptionIndex]);
+        })
+        .catch(() => undefined);
+    };
+
+    if (value === '') {
+      ask();
+    } else {
+      this.pageSearchTimer = setTimeout(ask, PAGE_SEARCH_DELAY);
+    }
+  }
+
+  /**
+   * Bring the page rows in line with the last answer.
+   */
+  private renderPages(): void {
+    const list = this.nodes.pageList;
+    const host = this.pageHost();
+
+    if (!list || host === null) {
+      return;
+    }
+
+    const query = (this.nodes.input?.value ?? '').trim().toLowerCase();
+    const fresh = this.pageHits.filter((hit) => !this.pageRows.has(hit.pageId));
+    const rows = this.pageHits.map((hit) => {
+      const cached = this.pageRows.get(hit.pageId);
+      const title = hit.title || this.i18n.t('tools.page.unresolved');
+
+      if (cached) {
+        this.markMatch(cached, 'page', title, query);
+
+        return cached;
+      }
+
+      const icon = hit.icon === undefined ? null : document.createElement('span');
+      const href = this.pageHref(host, hit.pageId);
+      const meta = [
+        hit.status === 'draft' ? this.i18n.t('tools.page.draft') : '',
+        (hit.path ?? []).join(PAGE_PATH_SEPARATOR),
+      ].filter((part) => part !== '').join(' · ');
+
+      if (icon) {
+        icon.className = PAGE_ICON_CLASSES;
+        icon.setAttribute('aria-hidden', 'true');
+        icon.setAttribute('data-link-page-icon', '');
+        icon.append(pageIconNode(hit.icon));
+      }
+
+      const row = this.createOptionRow(
+        'page',
+        '',
+        icon,
+        title,
+        meta,
+        () => this.applyPageLink(href)
+      );
+
+      this.markMatch(row, 'page', title, query);
+      row.style.animationDelay = `${fresh.indexOf(hit) * 30}ms`;
+      this.pageRows.set(hit.pageId, row);
+
+      return row;
+    });
+
+    // Patched, not rebuilt, for the same reason as the heading rows.
+    Array.from(list.children).forEach((child) => {
+      if (!rows.includes(child as HTMLElement)) {
+        child.remove();
+      }
+    });
+    rows.forEach((row, index) => {
+      if (list.children[index] !== row) {
+        list.insertBefore(row, list.children[index] ?? null);
+      }
+      row.setAttribute('id', `${this.errorId}-page-${index}`);
+    });
+  }
+
+  /**
+   * Link the selection to a page. The address is the host's own, so it skips
+   * the typed-link rules, and a page is not a web link for the Recent shelf.
+   * @param href - the page's address
+   */
+  private applyPageLink(href: string): void {
+    this.clearValidationError();
+    this.selection.removeFakeBackground();
+    this.selection.restore();
+    this.insertLink(href);
+    this.inlineToolbar.close();
   }
 
   /**
@@ -1022,13 +1230,14 @@ export class LinkInlineTool implements InlineTool {
   }
 
   /**
-   * Set a heading row's title, with the part the search matched in bold.
-   * @param row - the heading's row
-   * @param text - the heading text
+   * Set a row's title, with the part the search matched in bold.
+   * @param row - a heading's or a page's row
+   * @param kind - the row kind its data markers are named after
+   * @param text - the title
    * @param query - lowercase search text, empty for none
    */
-  private markMatch(row: HTMLElement, text: string, query: string): void {
-    const title = row.querySelector('[data-link-heading-title]');
+  private markMatch(row: HTMLElement, kind: 'heading' | 'page', text: string, query: string): void {
+    const title = row.querySelector(`[data-link-${kind}-title]`);
     const at = query === '' ? -1 : text.toLowerCase().indexOf(query);
 
     if (!title) {
@@ -1044,7 +1253,7 @@ export class LinkInlineTool implements InlineTool {
     const match = document.createElement('span');
 
     match.className = 'font-bold';
-    match.setAttribute('data-link-heading-match', '');
+    match.setAttribute(`data-link-${kind}-match`, '');
     match.textContent = text.slice(at, at + query.length);
     title.replaceChildren(text.slice(0, at), match, text.slice(at + query.length));
   }
@@ -1066,7 +1275,7 @@ export class LinkInlineTool implements InlineTool {
       const cached = this.headingRows.get(heading.blockId);
 
       if (cached) {
-        this.markMatch(cached, heading.text, query);
+        this.markMatch(cached, 'heading', heading.text, query);
 
         return cached;
       }
@@ -1089,7 +1298,7 @@ export class LinkInlineTool implements InlineTool {
       row.style.setProperty('--_blok-link-heading-depth', String(heading.depth));
       row.setAttribute('data-link-heading-level', String(heading.level));
       row.setAttribute('data-link-heading-depth', String(heading.depth));
-      this.markMatch(row, heading.text, query);
+      this.markMatch(row, 'heading', heading.text, query);
       this.headingRows.set(heading.blockId, row);
 
       return row;
@@ -1111,14 +1320,15 @@ export class LinkInlineTool implements InlineTool {
   }
 
   /**
-   * Show the sections that fit the field's value. Empty field: recent links
-   * and headings, or the link kinds when there are neither. Typed value:
-   * the headings it matches.
+   * Show the sections that fit the field's value. Empty field: recent links,
+   * pages and headings, or the link kinds when there are none. Typed value:
+   * the pages and headings it matches.
+   * @param keep - the row that stays highlighted, when it is still listed
    */
-  private updateOptions(): void {
-    const { recent, headings, kinds, options, suggestion, input } = this.nodes;
+  private updateOptions(keep?: HTMLElement): void {
+    const { recent, pages, headings, kinds, options, suggestion, input } = this.nodes;
 
-    if (!recent || !headings || !kinds || !options || !input) {
+    if (!recent || !pages || !headings || !kinds || !options || !input) {
       return;
     }
 
@@ -1128,23 +1338,27 @@ export class LinkInlineTool implements InlineTool {
     const incomplete = value !== '' && !this.isLinkComplete(value);
 
     this.renderHeadings(matches, this.headingQuery(value));
+    this.renderPages();
     recent.hidden = this.editing || value !== '' || recentCount === 0;
+    pages.hidden = this.pageHits.length === 0;
     headings.hidden = matches.length === 0;
-    kinds.hidden = this.editing || value !== '' || !recent.hidden || !headings.hidden;
-    options.hidden = recent.hidden && headings.hidden && kinds.hidden;
+    kinds.hidden = this.editing || value !== '' || !recent.hidden || !pages.hidden || !headings.hidden;
+    options.hidden = recent.hidden && pages.hidden && headings.hidden && kinds.hidden;
     input.setAttribute('aria-expanded', String(!options.hidden));
 
-    // A typed search picks its first heading (row 0: the other sections hide
-    // once there is a value), so Enter jumps to it. The suggestion row would
-    // then promise a different Enter, so it hides. A typed web link keeps
-    // Enter for itself.
-    const searching = matches.length > 0 && (value.startsWith('#') || incomplete);
+    // A typed search picks its first row (row 0: Recent hides once there is
+    // a value), so Enter goes there. The suggestion row would then promise a
+    // different Enter, so it hides. A typed web link keeps Enter for itself.
+    const searching = (matches.length > 0 || !pages.hidden) && (value.startsWith('#') || incomplete);
+    const kept = keep ? this.getOptionRows().indexOf(keep) : -1;
 
     if (searching) {
       suggestion?.classList.add('hidden');
     }
 
-    this.setActiveOption(searching ? 0 : -1);
+    const first = searching ? 0 : -1;
+
+    this.setActiveOption(kept !== -1 ? kept : first);
   }
 
   /**
@@ -1162,7 +1376,7 @@ export class LinkInlineTool implements InlineTool {
    * Option rows of the visible sections, in order.
    */
   private getOptionRows(): HTMLElement[] {
-    const sections = [this.nodes.recent, this.nodes.headings, this.nodes.kinds];
+    const sections = [this.nodes.recent, this.nodes.pages, this.nodes.headings, this.nodes.kinds];
 
     return sections
       .filter((section) => section !== null && !section.hidden)
@@ -1398,6 +1612,10 @@ export class LinkInlineTool implements InlineTool {
     this.headingTargets = this.editing ? [] : this.readHeadings();
     this.headingRows.clear();
     this.nodes.headingList?.replaceChildren();
+    this.pageHits = [];
+    this.pageRows.clear();
+    this.nodes.pageList?.replaceChildren();
+    this.searchPages();
     this.updateOptions();
 
     this.nodes.input.className = this.INPUT_OPEN_CLASSES;
@@ -1551,7 +1769,11 @@ export class LinkInlineTool implements InlineTool {
     this.headingTargets = [];
     this.headingRows.clear();
     this.nodes.headingList?.replaceChildren();
-    [this.nodes.options, this.nodes.recent, this.nodes.headings, this.nodes.kinds].forEach((node) => node?.toggleAttribute('hidden', true));
+    this.cancelPageSearch();
+    this.pageHits = [];
+    this.pageRows.clear();
+    this.nodes.pageList?.replaceChildren();
+    [this.nodes.options, this.nodes.recent, this.nodes.pages, this.nodes.headings, this.nodes.kinds].forEach((node) => node?.toggleAttribute('hidden', true));
     this.nodes.input.setAttribute('aria-expanded', 'false');
     this.setActiveOption(-1);
     this.updateButtonStateAttributes(false);

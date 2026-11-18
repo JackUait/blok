@@ -1149,7 +1149,10 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     BlockSelection.clearSelection();
-    (blocks.transact ?? ((fn: () => void): void => fn()))(() => {
+    // A move group, not blocks.transact: transact records the moves as tracked
+    // writes, and undo refuses to reverse those on a block another client wrote,
+    // which is every block of a reopened document.
+    this.Blok.YjsManager.transactMoves(() => {
       roots.forEach((root) => blocks.moveTo(root.id, { parentId: rowId, position: 'end' }));
     });
   }

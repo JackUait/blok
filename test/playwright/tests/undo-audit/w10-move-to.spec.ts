@@ -302,6 +302,8 @@ test.describe('W10 Move to', () => {
     await expect(page.getByTestId('notification-message-text')).toHaveCount(0);
 
     await undo(page);
+    // The undo puts the block back here. It must not open the page it left.
+    await expect(page.locator('[data-blok-database-drawer]')).toHaveCount(0);
     expect(await save(page)).toEqual(before);
     await expect(page.locator('[data-blok-id="p-a"]')).toBeVisible();
     await expect(page.locator('[data-blok-id="p-a"] [data-blok-element-content]')).toHaveCSS('opacity', '1');
@@ -357,6 +359,57 @@ test.describe('W10 Move to', () => {
     await expect(selected('p-a')).toHaveCount(0);
     await expect(selected('p-b')).toHaveCount(0);
     expect(await save(page)).toEqual(before);
+  });
+
+  test('W10-10: undo brings back a block that was written in an earlier session, and opens no page', async ({ page }) => {
+    // A saved document, reopened: every block was written by another Yjs client.
+    await page.evaluate(async ({ holder, initial }) => {
+      type Yjs = { encodeStateAsUpdate: () => Uint8Array; applyRemoteUpdate: (update: Uint8Array, origin: string) => void };
+      type WithModules = Blok & { module: { yjsManager: Yjs } };
+      const mount = async (id: string, blocks: OutputData['blocks']): Promise<WithModules> => {
+        document.getElementById(id)?.remove();
+        const container = document.createElement('div');
+
+        container.id = id;
+        document.body.appendChild(container);
+        const blok = new window.Blok({ holder: id, data: { blocks } }) as WithModules;
+
+        await blok.isReady;
+
+        return blok;
+      };
+
+      if (window.blokInstance) {
+        await window.blokInstance.destroy?.();
+      }
+      const author = await mount('blok-author', initial);
+      const saved = author.module.yjsManager.encodeStateAsUpdate();
+
+      await author.destroy?.();
+      document.getElementById('blok-author')?.remove();
+      const blok = await mount(holder, []);
+
+      blok.module.yjsManager.applyRemoteUpdate(saved, 'peer');
+      window.blokInstance = blok;
+    }, { holder: HOLDER_ID, initial: DOC });
+    await expect(page.locator('[data-blok-id="p-a"]')).toBeVisible();
+    await gap(page);
+
+    await openTunes(page, 'p-a');
+    await moveToItem(page).click();
+    await pickerRows(page).filter({ hasText: 'Card two' }).click();
+    await landed(page);
+    await gap(page, 500);
+    expect((await save(page)).find(block => block.id === 'p-a')?.parent).toBe('row-2');
+
+    await undo(page);
+    // First: the move is reversed. A step that is used up without reversing it is the bug.
+    expect((await save(page)).find(block => block.id === 'p-a')?.parent).toBeUndefined();
+    await expect(page.locator('[data-blok-database-drawer]')).toHaveCount(0);
+    await expect(page.locator('[data-blok-id="p-a"]')).toBeVisible();
+
+    await redo(page);
+    expect((await save(page)).find(block => block.id === 'p-a')?.parent).toBe('row-2');
   });
 
   test('W10-3: Escape closes the picker and changes nothing', async ({ page }) => {

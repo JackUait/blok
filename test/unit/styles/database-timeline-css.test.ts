@@ -764,6 +764,11 @@ describe('timeline Week and Bi-week weekday letters (Round 48 A4)', () => {
     expect(ruleBody('[data-blok-database-timeline-bar]:has([data-blok-database-timeline-title-input]) [data-blok-database-timeline-link-handle]')).toContain('visibility: hidden');
   });
 
+  // notion-motion.md Round 72 §2 B "Height with no lanes": Notion's 212 canvas ends 108 under "+ New" (413.2 → 521.2).
+  it('ends the view 108px under "+ New" when it is the only lane (107 + the scroller\'s 1)', () => {
+    expect(ruleBody('[data-blok-database-timeline-canvas][data-no-lanes]')).toContain('padding-block-end: 107px');
+  });
+
   // notion-motion.md Round 70 §3 "Timeline at rest": the view ends 4px under its last row.
   it('ends the canvas 4px under its last row, with no fixed floor', () => {
     const canvas = ruleBody('[data-blok-database-timeline-canvas]');

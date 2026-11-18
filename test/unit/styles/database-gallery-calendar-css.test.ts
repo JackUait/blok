@@ -29,6 +29,7 @@ const TOKENS = [
   '--blok-database-gallery-card-hover-bg',
   '--blok-database-gallery-preview-bg',
   '--blok-database-gallery-preview-border',
+  '--blok-database-gallery-new-ring',
   '--blok-database-gallery-preview-text',
   '--blok-database-gallery-title-text',
   '--blok-database-gallery-muted-text',
@@ -107,9 +108,16 @@ describe('database gallery and calendar styles', () => {
   it('draws the "+ New page" tile at card height with the card ring', () => {
     const tile = ruleBody('[data-blok-database-gallery-new]');
 
-    expect(tile).toContain('box-shadow: 0 0 0 1px var(--blok-database-gallery-preview-border)');
+    expect(tile).toContain('box-shadow: 0 0 0 1px var(--blok-database-gallery-new-ring)');
     expect(tile).toContain('font-size: 15px');
     expect(tile).not.toContain('min-height: 80px');
+  });
+
+  // notion-motion.md Round 75 §3: the tile ring is rgba(42,28,0,0.07) in light (the cover line) and rgba(255,255,235,0.1) in dark, where the cover line has none.
+  it('rings the "+ New page" tile in dark too', () => {
+    const values = Array.from(css.matchAll(/--blok-database-gallery-new-ring:\s*([^;]+);/g), (match) => match[1].trim());
+
+    expect(values).toEqual(['var(--blok-database-gallery-preview-border)', 'rgba(255, 255, 235, 0.1)', 'rgba(255, 255, 235, 0.1)']);
   });
 
   // notion-motion.md Round 70 §3 "Gallery New page tile": glyph 15×15, words 6px after it.

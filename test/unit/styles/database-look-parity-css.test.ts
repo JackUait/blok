@@ -337,6 +337,15 @@ describe('view overflow list (research/13:81, notion-measure5/51-one-more.json)'
     expect(reducedMotion()).toMatch(/\[data-blok-database-tab-overflow-dropdown\][^{]*\{[^}]*animation: none/);
   });
 
+  // notion-motion.md Round 75 §2: the close is the open in reverse, 200ms ease, every run.
+  it('closes with the open in reverse, and not under reduced motion', () => {
+    const closing = '[data-blok-database-tab-overflow-dropdown][data-blok-closing]';
+
+    expect(ruleBody(closing)).toContain('animation: blok-prop-popover-out 200ms ease both');
+    expect(ruleBody(closing)).toContain('pointer-events: none');
+    expect(reducedMotion()).toMatch(/\[data-blok-database-tab-overflow-dropdown\]\[data-blok-closing\][^{]*\{[^}]*animation: none/);
+  });
+
   // notion-motion.md Round 74 §3: field 12 under the top, rows 12 under the field, New data source 29 after New view (318 tall).
   it('spaces the search and the rows as Notion\'s 318px menu', () => {
     const search = ruleBody('[data-blok-database-tab-overflow-dropdown] > [data-blok-field="search"]');

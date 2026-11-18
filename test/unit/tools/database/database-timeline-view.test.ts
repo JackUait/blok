@@ -1061,6 +1061,15 @@ describe('DatabaseTimelineView', () => {
       expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-09/2026-10-13' });
     });
 
+    // notion-motion.md Round 72 §2 B "Height with no lanes": with no dated row (or no row) the view keeps room under "+ New".
+    it('marks the canvas when "+ New" is its only lane', () => {
+      expect(canvas(mount({ groups: single([row('r3', 'Someday', null)]) }).root).hasAttribute('data-no-lanes')).toBe(true);
+      document.body.innerHTML = '';
+      expect(canvas(mount({ groups: single([]) }).root).hasAttribute('data-no-lanes')).toBe(true);
+      document.body.innerHTML = '';
+      expect(canvas(mount().root).hasAttribute('data-no-lanes')).toBe(false);
+    });
+
     // notion-motion.md Round 24 §4 Timeline: hovering the "+ New" lane shows a 197x34 ghost bar at the hovered day.
     describe('"+ New" lane ghost bar', () => {
       const lane = (root: HTMLElement): HTMLElement => {

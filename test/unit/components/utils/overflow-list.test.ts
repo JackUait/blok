@@ -363,3 +363,76 @@ describe('OverflowList fixed rows', () => {
     expect(onSelect).toHaveBeenCalledWith('c');
   });
 });
+
+// notion-motion.md Round 75 §2: the open plays in reverse (opacity and scale 0.96, 200ms ease) before the list leaves.
+describe('OverflowList close fade', () => {
+  let anchor: HTMLElement;
+  let finish: () => void;
+  const onClose = vi.fn();
+  const dropdowns = (): NodeListOf<HTMLElement> => document.querySelectorAll<HTMLElement>(`[${P}-dropdown]`);
+  const make = (): OverflowList => new OverflowList({
+    anchor,
+    prefix: P,
+    idAttribute: 'data-id',
+    rows: ROWS,
+    labels: { search: 'Search', handle: 'Drag', menu: 'More', newItem: 'New view', noResults: 'No results' },
+    readOnly: false,
+    onSelect: vi.fn(),
+    ownsNode: () => false,
+    closeLayer: () => false,
+    ownsEscape: () => false,
+    onClose,
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    anchor = document.createElement('button');
+    document.body.appendChild(anchor);
+    const finished = new Promise<void>((resolve) => { finish = resolve; });
+
+    Object.defineProperty(HTMLElement.prototype, 'getAnimations', {
+      configurable: true,
+      value: () => [{ finished }],
+    });
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(HTMLElement.prototype, 'getAnimations');
+    dropdowns().forEach((el) => el.remove());
+    anchor.remove();
+    vi.restoreAllMocks();
+  });
+
+  it('keeps the list on screen, closed and inert, until the fade ends', async () => {
+    const list = make();
+
+    list.open();
+    const el = dropdowns()[0];
+
+    list.close();
+
+    expect(el.isConnected).toBe(true);
+    expect(el.hasAttribute('data-blok-closing')).toBe(true);
+    expect(el.hasAttribute('inert')).toBe(true);
+    expect(list.isOpen).toBe(false);
+    expect(list.contains(el)).toBe(false);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    finish();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(el.isConnected).toBe(false);
+  });
+
+  it('drops a fading list at once when it opens again', () => {
+    const list = make();
+
+    list.open();
+    list.close();
+    list.open();
+
+    expect(dropdowns()).toHaveLength(1);
+    expect(dropdowns()[0].hasAttribute('data-blok-closing')).toBe(false);
+    list.close();
+  });
+});

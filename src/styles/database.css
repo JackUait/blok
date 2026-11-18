@@ -297,6 +297,8 @@
   --blok-database-gallery-card-active-bg: rgba(55, 53, 47, 0.06);
   --blok-database-gallery-preview-bg: rgba(66, 35, 3, 0.03);
   --blok-database-gallery-preview-border: rgba(42, 28, 0, 0.07);
+  /* notion-motion.md Round 75 §3: the "+ New page" tile ring; dark keeps it where the cover line has none. */
+  --blok-database-gallery-new-ring: var(--blok-database-gallery-preview-border);
   --blok-database-gallery-preview-text: var(--blok-database-ink-secondary);
   --blok-database-gallery-title-text: rgb(44, 44, 43);
   --blok-database-gallery-muted-text: var(--blok-database-ink-tertiary);
@@ -697,6 +699,7 @@
     --blok-database-gallery-card-hover-bg: rgb(47, 47, 47);
     --blok-database-gallery-preview-bg: rgba(252, 252, 252, 0.03);
     --blok-database-gallery-preview-border: transparent;
+    --blok-database-gallery-new-ring: rgba(255, 255, 235, 0.1);
     --blok-database-gallery-preview-text: var(--blok-database-ink-secondary);
     --blok-database-gallery-title-text: rgb(240, 239, 237);
     --blok-database-gallery-muted-text: var(--blok-database-ink-tertiary);
@@ -1061,6 +1064,7 @@
   --blok-database-gallery-card-hover-bg: rgb(47, 47, 47);
   --blok-database-gallery-preview-bg: rgba(252, 252, 252, 0.03);
   --blok-database-gallery-preview-border: transparent;
+  --blok-database-gallery-new-ring: rgba(255, 255, 235, 0.1);
   --blok-database-gallery-preview-text: var(--blok-database-ink-secondary);
   --blok-database-gallery-title-text: rgb(240, 239, 237);
   --blok-database-gallery-muted-text: var(--blok-database-ink-tertiary);
@@ -4165,6 +4169,12 @@ button[data-blok-database-board-lane-count]:hover {
 
 [data-blok-database-tab-overflow-dropdown][dir="rtl"] {
   transform-origin: top right;
+}
+
+/* notion-motion.md Round 75 §2: the open in reverse. The script removes the list when it ends. */
+[data-blok-database-tab-overflow-dropdown][data-blok-closing] {
+  animation: blok-prop-popover-out 200ms ease both;
+  pointer-events: none;
 }
 
 /* The list opens in the top layer; its reset would drop this width and padding. */
@@ -7775,7 +7785,8 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
 
   [data-blok-database-property-type-popover],
   [data-blok-database-property-type-popover][data-blok-closing],
-  [data-blok-database-tab-overflow-dropdown] {
+  [data-blok-database-tab-overflow-dropdown],
+  [data-blok-database-tab-overflow-dropdown][data-blok-closing] {
     animation: none;
   }
 }
@@ -15802,7 +15813,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   justify-content: center;
   gap: var(--blok-space-1-5);
   background-color: transparent;
-  box-shadow: 0 0 0 1px var(--blok-database-gallery-preview-border);
+  box-shadow: 0 0 0 1px var(--blok-database-gallery-new-ring);
   color: var(--blok-database-gallery-muted-text);
   font-size: 15px;
   transition: background-color 20ms ease-in;
@@ -16843,6 +16854,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   min-block-size: 100%;
   /* notion-motion.md Round 70 §3: the view ends 4px under its last row. */
   padding-block-end: var(--blok-space-1);
+}
+
+/* notion-motion.md Round 72 §2 B: with "+ New" its only lane, Notion's 212 canvas ends 108 under it.
+   107: the scroller's 1px under the canvas makes up the rest. */
+[data-blok-database-timeline-canvas][data-no-lanes] {
+  padding-block-end: 107px;
 }
 
 [data-blok-database-timeline-header] {

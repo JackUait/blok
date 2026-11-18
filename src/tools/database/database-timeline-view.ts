@@ -649,6 +649,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     const firstDated = this.sections.flatMap((group) => group.rows).find((row) => this.spanOf(row) !== null)?.id;
     const tableShown = resolveShowTimelineTable(this.options.view);
 
+    const lanes = { count: 0 };
+
     for (const group of this.sections) {
       if (this.options.grouped) {
         canvas.appendChild(this.createGroupHeader(group, 'canvas'));
@@ -656,6 +658,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       // findings C03: with the table hidden, an undated item has no lane; the toolbar's "No date" lists it.
       for (const row of group.rows.filter((r) => tableShown || this.spanOf(r) !== null)) {
         canvas.appendChild(this.createRow(row, group.key, row.id === firstDated));
+        lanes.count += 1;
       }
       if (group.total > group.rows.length) {
         const more = document.createElement('button');
@@ -672,6 +675,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
     if (this.canEdit) {
       canvas.appendChild(this.createNewLane());
+      // notion-motion.md Round 72 §2 B: measured ungrouped only.
+      canvas.toggleAttribute('data-no-lanes', lanes.count === 0 && !this.options.grouped);
     }
     scroller.appendChild(canvas);
 

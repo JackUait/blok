@@ -81,6 +81,8 @@ export const tabsThatFit = (widths: readonly number[], current: number, budget: 
  * view tabs and the tabs block.
  */
 const listIds = { next: 0 };
+/** Past the 200ms close, for a fade that never settles. */
+const CLOSE_FALLBACK_MS = 300;
 
 export class OverflowList {
   private readonly options: OverflowListOptions;
@@ -92,6 +94,8 @@ export class OverflowList {
   /** A layer was open when the press began; the popover registry closes it before mousedown. */
   private pressPeeled = false;
   private readonly listId = `blok-overflow-list-${++listIds.next}`;
+  /** Removes a list still fading out; a new open drops it at once. */
+  private fading: (() => void) | null = null;
 
   constructor(options: OverflowListOptions) {
     this.options = options;
@@ -109,6 +113,8 @@ export class OverflowList {
   public open(): void {
     const { anchor, prefix, rows, labels } = this.options;
     const dropdown = document.createElement('div');
+
+    this.fading?.();
 
     dropdown.setAttribute('data-blok-popover', '');
     dropdown.setAttribute(`${prefix}-dropdown`, '');
@@ -198,10 +204,39 @@ export class OverflowList {
     window.removeEventListener('keydown', this.handleKeyDown, true);
     document.removeEventListener('pointerdown', this.handleOutsidePointerDown, true);
     document.removeEventListener('mousedown', this.handleOutsideMouseDown);
-    removeFromTopLayer(this.element);
-    this.element.remove();
+    const element = this.element;
+
     this.element = null;
+    this.fadeOut(element);
     this.options.onClose?.();
+  }
+
+  /** notion-motion.md Round 75 §2: the open in reverse, then the list leaves. */
+  private fadeOut(element: HTMLElement): void {
+    // Closed for every purpose but paint while it fades.
+    element.setAttribute('data-blok-closing', '');
+    element.setAttribute('inert', '');
+    if (document.activeElement instanceof HTMLElement && element.contains(document.activeElement)) document.activeElement.blur();
+    // No running animation (jsdom, reduced motion): nothing to wait for.
+    const animations = element.getAnimations?.() ?? [];
+
+    if (animations.length === 0) {
+      removeFromTopLayer(element);
+      element.remove();
+
+      return;
+    }
+    const remove = (): void => {
+      window.clearTimeout(timer);
+      removeFromTopLayer(element);
+      element.remove();
+      if (this.fading === remove) this.fading = null;
+    };
+    // A cancelled animation never settles.
+    const timer = window.setTimeout(remove, CLOSE_FALLBACK_MS);
+
+    this.fading = remove;
+    void Promise.all(animations.map((animation) => animation.finished)).then(remove, remove);
   }
 
   private readonly handleOutsidePointerDown = (): void => {

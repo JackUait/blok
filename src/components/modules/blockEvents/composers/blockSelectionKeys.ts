@@ -7,6 +7,7 @@ import { focus } from '../../../utils/caret/index';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
 import { announceDeletedRoots, selectionRoots } from '../../../utils/selection-roots';
 import { LIST_TOOL_NAME } from '../constants';
+import { isPrintableKeyEvent } from '../utils/keyboard';
 
 import { BlockEventComposer } from './__base';
 import { canOutdent, getAdoptedSiblings, getIndentTarget } from './structural-siblings';
@@ -520,7 +521,8 @@ export class BlockSelectionKeys extends BlockEventComposer {
   /**
    * A typed character over a selection that holds a block whose tool asks
    * before it goes does nothing: the selection stays (notion-motion.md Round 67 §2).
-   * Shortcuts and named keys (Enter, Dead) keep their paths.
+   * A dead key or an IME's first key counts too: navigation mode would otherwise
+   * put the caret in the block for the composed letter. Shortcuts and Enter keep their paths.
    * @param event - the keydown
    * @returns true when the key was swallowed
    */
@@ -530,7 +532,7 @@ export class BlockSelectionKeys extends BlockEventComposer {
     // A text range keeps native typing, as in BlockSelection.clearSelection.
     const textSelected = SelectionUtils.isSelectionExists && SelectionUtils.isCollapsed === false;
 
-    if (event.key.length !== 1 || isShortcut || event.isComposing || !BlockSelection.anyBlockSelected || textSelected) {
+    if (!isPrintableKeyEvent(event) || event.key === 'Enter' || isShortcut || event.isComposing || !BlockSelection.anyBlockSelected || textSelected) {
       return false;
     }
     if (!selectionHoldsAsker(BlockManager.blocks)) {

@@ -203,6 +203,20 @@ describe('input over a selected block whose tool asks before it goes', () => {
       expect(event.defaultPrevented).toBe(true);
     });
 
+    it('a dead key does nothing in navigation mode either, so the composed letter has nowhere to go', async () => {
+      const instance = await boot();
+
+      instance.module.blockSelection.clearSelection();
+      instance.module.blockManager.currentBlock = block(instance, 'ask');
+      instance.module.blockSelection.enableNavigationMode();
+      const event = press('Dead');
+
+      await settle();
+
+      expect(instance.module.blockSelection.navigationModeEnabled).toBe(true);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
     it('does nothing to a selection that also holds an ordinary block', async () => {
       const instance = await boot();
 

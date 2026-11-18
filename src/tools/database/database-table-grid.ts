@@ -189,6 +189,7 @@ export class DatabaseTableGrid {
   private keyInFlight: string | null = null;
   /** The caret sat at offset 0 when keyInFlight was pressed. */
   private caretAtStartInFlight = false;
+  private editorOpenedEmpty = false;
   /** The new row whose title was just committed; commit clears freshRowId before the editor closes. */
   private committedFreshRowId: string | undefined;
 
@@ -308,6 +309,9 @@ export class DatabaseTableGrid {
     window.addEventListener('keydown', this.recordKey, true);
 
     const reminder = row.reminders?.[property.id]?.remind;
+    const shown = initialText ?? readPropertyValue(row, property);
+
+    this.editorOpenedEmpty = shown === undefined || shown === null || shown === '';
     const closed = { done: false, committed: false };
     const onDateDisplayChange = property.type === 'date' ? this.callbacks.dateDisplayChanger?.(property.id) : undefined;
     const handle = openCellEditor(property, readPropertyValue(row, property), anchor, {
@@ -382,6 +386,7 @@ export class DatabaseTableGrid {
   private editorClosed(ref: CellRef, committed: boolean): void {
     const key = this.keyInFlight;
     const caretAtStart = this.caretAtStartInFlight;
+    const openedEmpty = this.editorOpenedEmpty;
 
     this.editor = null;
     this.state.editing = false;
@@ -419,9 +424,9 @@ export class DatabaseTableGrid {
     const down = key === 'Enter' && !fresh ? this.offset(ref, 1, 0) : ref;
     const target = step === undefined ? down : this.offset(ref, 0, step);
     // notion-motion.md Round 57 §1, Text editors only: Tab after a change and Shift+Tab leave no cell selected.
-    // Round 74 §1: an unchanged Shift+Tab with the caret at 0 selects the cell to the left.
+    // Round 74/75: Shift+Tab with the caret at 0, or out of a field that opened empty, selects the left cell, changed or not.
     const text = this.columns.find((p) => p.id === ref.propertyId)?.type === 'text';
-    const deselect = text && ((key === 'Shift+Tab' && (committed || !caretAtStart)) || (key === 'Tab' && committed));
+    const deselect = text && ((key === 'Shift+Tab' && !caretAtStart && !openedEmpty) || (key === 'Tab' && committed));
 
     this.state.selection = deselect ? null : { kind: 'cell', anchor: target, focus: target };
     this.paint();

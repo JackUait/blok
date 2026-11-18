@@ -957,6 +957,25 @@ describe('DatabaseTableView', () => {
       expect(grid(root)).toHaveFocus();
     });
 
+    // notion-motion.md Round 75 §2: a change does not matter; caret at 0 (7/7) or a field that opened empty (1/1) selects left.
+    it.each([
+      ['a changed value with the caret moved to 0', 'r1', 'zshort', 0],
+      ['a field that opened empty, typed into', 'r3', 'z', 1],
+    ])('Shift+Tab in a Text cell editor with %s saves and selects the cell to the left', (_case, rowId, value, caret) => {
+      const { root, handlers } = mount();
+
+      cell(root, rowId, 'p-notes').click();
+      editorField().value = value;
+      editorField().dispatchEvent(new Event('input', { bubbles: true }));
+      editorField().setSelectionRange(caret, caret);
+      press(editorField(), 'Tab', { shiftKey: true });
+
+      expect(selectedCells(root)).toEqual([`${rowId}/p-title`]);
+      expect(handlers.commitCell).toHaveBeenCalledWith(rowId, 'p-notes', value);
+      expect(editor()).toBeNull();
+      expect(grid(root)).toHaveFocus();
+    });
+
     // feel/findings-table T13: Notion's bar shows the first 4 properties; the rest wait under "…".
     it('shows glyph segments for the first 4 properties and keeps the rest under "…"', () => {
       const extra = ['Owner', 'Due', 'Link'].map((name, i): PropertyDefinition => ({ id: `p-x${i}`, name, type: 'text', position: `b${i}` }));

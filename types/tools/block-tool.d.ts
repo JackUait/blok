@@ -196,7 +196,8 @@ export interface BlockTool extends BaseTool {
    * Ids of blocks under this one that are its content, such as a database's
    * rows. When it returns any, the block menu's Duplicate offers "Duplicate
    * without content" (Cmd/Ctrl+Shift+D on the selected block), which copies
-   * the block without them and without the blocks under them.
+   * the block without them and without the blocks under them. Cmd/Ctrl+Shift+D
+   * works on any block whose tool has this method, even when it returns none.
    */
   contentBlockIds?(): string[];
 

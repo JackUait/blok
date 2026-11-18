@@ -338,6 +338,46 @@ describe('the database block menu in core', () => {
     expect(copy.contentIds).toEqual(copy.contentIds.filter((id) => instance.moduleInstances.BlockManager.getBlockById(id)?.preservedData.template === true));
   });
 
+  /** notion-motion.md Round 69 §2: ⌘⇧D names the copy " (1)" too. */
+  it('Cmd+Shift+D titles the copy " (1)", like Notion', async () => {
+    const instance = await boot(setUpDatabase());
+
+    instance.moduleInstances.BlockSelection.selectBlock(block(instance, 'db'));
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'D', code: 'KeyD', metaKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+
+    expect((await (await copyOf(instance, 'db')).save())?.data.title).toBe('Tasks (1)');
+  });
+
+  // Notion's ⌘⇧D on a database with no rows is unread: it still has views and columns to copy.
+  it('Cmd+Shift+D copies a database with no rows, with its views, and selects the copy', async () => {
+    const instance = await boot(databaseBlocks('db', []));
+
+    instance.moduleInstances.BlockSelection.selectBlock(block(instance, 'db'));
+    const event = new KeyboardEvent('keydown', { key: 'D', code: 'KeyD', metaKey: true, shiftKey: true, bubbles: true, cancelable: true });
+
+    document.body.dispatchEvent(event);
+    const copy = await copyOf(instance, 'db');
+    const saved = await copy.save();
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(saved?.data.title).toBe('db (1)');
+    expect(saved?.data.views).toHaveLength(1);
+    await vi.waitFor(() => expect(copy.selected).toBe(true));
+  });
+
+  // Notion's ⌘⇧D on a linked view is unread. It has no rows of its own, so it copies whole, as its Duplicate does.
+  it('Cmd+Shift+D copies a linked view', async () => {
+    const instance = await boot([...setUpDatabase(), { id: 'linked', type: 'database', data: { title: '', source: { databaseId: 'db' }, views: [], activeViewId: '' } }]);
+
+    instance.moduleInstances.BlockSelection.selectBlock(block(instance, 'linked'));
+    const event = new KeyboardEvent('keydown', { key: 'D', code: 'KeyD', metaKey: true, shiftKey: true, bubbles: true, cancelable: true });
+
+    document.body.dispatchEvent(event);
+
+    await vi.waitFor(() => expect(instance.moduleInstances.BlockManager.blocks.filter((candidate) => candidate.name === 'database')).toHaveLength(3));
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it('Cmd+Shift+D also works when the selection holds the database\'s rows with it', async () => {
     const instance = await boot(setUpDatabase());
 

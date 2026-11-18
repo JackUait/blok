@@ -2309,17 +2309,18 @@ export class BlockManager extends Module {
 
   /**
    * Notion's Cmd/Ctrl+Shift+D: copies the one selected block without its
-   * content (a database without its rows). False when there is no such block.
+   * content (a database without its rows), titled " (1)" as Notion's copy is
+   * (notion-motion.md Round 69 §2). A database with no rows is still copied.
+   * False when no selected block has content to leave out.
    */
   public duplicateSelectedWithoutContent(): boolean {
     // A selected database may carry its selected rows: count roots only.
     const roots = selectionRoots(this.Blok.BlockSelection.selectedBlocks);
-    const content = roots.length === 1 ? roots[0].contentBlockIds() : [];
 
-    if (this.Blok.DragManager?.isDragging || content.length === 0) {
+    if (this.Blok.DragManager?.isDragging || roots.length !== 1 || !roots[0].hasContentBlocks) {
       return false;
     }
-    void this.Blok.DragManager?.duplicateBlocksInPlace(roots[0], { leaveOut: content });
+    void this.Blok.DragManager?.duplicateBlocksInPlace(roots[0], { leaveOut: roots[0].contentBlockIds(), numberCopies: true });
 
     return true;
   }

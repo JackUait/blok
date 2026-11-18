@@ -217,6 +217,7 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
         reparentFromHistoryReplay: (block: Block, parentId: string | null): void => {
           inMemoryReparent(block, parentId);
         },
+        flushMoveReplaySync: (): void => yjsSync.flushMoveSync(),
       },
     } as unknown as BlokModules;
 

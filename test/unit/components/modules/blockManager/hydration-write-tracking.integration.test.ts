@@ -192,6 +192,7 @@ describe('hydration write-back is not an undo entry (integration)', () => {
         getBlockByChildNode: (): undefined => undefined,
         currentBlock: undefined,
         reparentFromHistoryReplay: (): void => undefined,
+        flushMoveReplaySync: (): void => yjsSync.flushMoveSync(),
       },
     } as unknown as BlokModules;
 

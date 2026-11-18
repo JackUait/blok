@@ -365,14 +365,14 @@ test.describe('W10 Move to', () => {
     // A saved document, reopened: every block was written by another Yjs client.
     await page.evaluate(async ({ holder, initial }) => {
       type Yjs = { encodeStateAsUpdate: () => Uint8Array; applyRemoteUpdate: (update: Uint8Array, origin: string) => void };
-      type WithModules = Blok & { module: { yjsManager: Yjs } };
-      const mount = async (id: string, blocks: OutputData['blocks']): Promise<WithModules> => {
+      const yjsOf = (blok: Blok): Yjs => (blok as unknown as { module: { yjsManager: Yjs } }).module.yjsManager;
+      const mount = async (id: string, blocks: OutputData['blocks']): Promise<Blok> => {
         document.getElementById(id)?.remove();
         const container = document.createElement('div');
 
         container.id = id;
         document.body.appendChild(container);
-        const blok = new window.Blok({ holder: id, data: { blocks } }) as WithModules;
+        const blok = new window.Blok({ holder: id, data: { blocks } });
 
         await blok.isReady;
 
@@ -383,13 +383,13 @@ test.describe('W10 Move to', () => {
         await window.blokInstance.destroy?.();
       }
       const author = await mount('blok-author', initial);
-      const saved = author.module.yjsManager.encodeStateAsUpdate();
+      const saved = yjsOf(author).encodeStateAsUpdate();
 
       await author.destroy?.();
       document.getElementById('blok-author')?.remove();
       const blok = await mount(holder, []);
 
-      blok.module.yjsManager.applyRemoteUpdate(saved, 'peer');
+      yjsOf(blok).applyRemoteUpdate(saved, 'peer');
       window.blokInstance = blok;
     }, { holder: HOLDER_ID, initial: DOC });
     await expect(page.locator('[data-blok-id="p-a"]')).toBeVisible();
@@ -410,6 +410,34 @@ test.describe('W10 Move to', () => {
 
     await redo(page);
     expect((await save(page)).find(block => block.id === 'p-a')?.parent).toBe('row-2');
+  });
+
+  test('W10-11: undo of a move keeps the page where it is, however far away the block had gone', async ({ page }) => {
+    // Tall enough that the database sits several screens under the moved block.
+    const filler: SavedBlock[] = Array.from({ length: 80 }, (_, index) => ({ id: `fill-${index}`, type: 'paragraph', data: { text: `filler ${index}` } }));
+    const databaseAt = DOC.findIndex(block => block.id === 'db-1');
+
+    await createBlok(page, [...DOC.slice(0, databaseAt), ...filler, ...DOC.slice(databaseAt)]);
+    await gap(page);
+    await page.evaluate(() => window.scrollTo(0, 0));
+
+    await openTunes(page, 'p-a');
+    await moveToItem(page).click();
+    await pickerRows(page).filter({ hasText: 'Card two' }).click();
+    await landed(page);
+    await gap(page, 500);
+    const scrollBefore = await page.evaluate(() => window.scrollY);
+
+    await undo(page);
+    // A smooth scroll takes a while to get going: wait it out before judging.
+    await gap(page, 1200);
+    expect(Math.abs(await page.evaluate(() => window.scrollY) - scrollBefore)).toBeLessThanOrEqual(2);
+    await expect(page.locator('[data-blok-id="p-a"]')).toBeInViewport();
+    expect((await save(page)).find(block => block.id === 'p-a')?.parent).toBeUndefined();
+
+    await redo(page);
+    await gap(page, 1200);
+    expect(Math.abs(await page.evaluate(() => window.scrollY) - scrollBefore)).toBeLessThanOrEqual(2);
   });
 
   test('W10-3: Escape closes the picker and changes nothing', async ({ page }) => {

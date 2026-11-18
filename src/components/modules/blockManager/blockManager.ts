@@ -1760,6 +1760,14 @@ export class BlockManager extends Module {
   }
 
   /**
+   * Puts replayed moves' holders at their places now, instead of a microtask
+   * later. See BlockYjsSync.flushMoveSync.
+   */
+  public flushMoveReplaySync(): void {
+    this.yjsSync.flushMoveSync();
+  }
+
+  /**
    * Reparent a block in response to UndoHistory replaying a drag move.
    *
    * The replay path has ALREADY written the new parentId to Yjs under

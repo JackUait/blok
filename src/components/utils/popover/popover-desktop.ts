@@ -2128,7 +2128,14 @@ export class PopoverDesktop extends PopoverAbstract {
       container.style.minWidth = this.params.minWidth ?? '';
     }
 
-    document.body.appendChild(popoverClone);
+    // A submenu is styled through its parent menu (the block menu pads its
+    // submenus). Measured alone in the body it loses those rules and --width
+    // comes out short by the missing padding.
+    const cloneHost = this.nodes.popover.hasAttribute(DATA_ATTR.nested)
+      ? this.nodes.popover.parentElement ?? document.body
+      : document.body;
+
+    cloneHost.appendChild(popoverClone);
 
     size.height = container.offsetHeight;
     // offsetWidth rounds to the nearest pixel. Rounding down locks --width a

@@ -2693,10 +2693,11 @@ describe('view settings panel', () => {
     it.each(['txt', 'num', 'stage', 'due'])('leaves nothing focused after a new %s rule', (id) => {
       const h = open();
 
-      add(h, id);
+      const rule = add(h, id);
 
       expect(document.activeElement).toBe(document.body);
       expect(q('database-color-add')).not.toHaveFocus();
+      expect(q(`database-color-rule-${rule.id}`)).not.toBeNull();
     });
 
     // notion-motion.md Round 22 §3: a Number formula starts on "=" with its input. The panel gets it as its result type.

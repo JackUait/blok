@@ -1068,6 +1068,9 @@ describe('DatabaseTimelineView', () => {
       expect(canvas(mount({ groups: single([]) }).root).hasAttribute('data-no-lanes')).toBe(true);
       document.body.innerHTML = '';
       expect(canvas(mount().root).hasAttribute('data-no-lanes')).toBe(false);
+      document.body.innerHTML = '';
+      // Measured with the table hidden only.
+      expect(canvas(mount({ groups: single([]), view: timelineView({ showTimelineTable: true }) }).root).hasAttribute('data-no-lanes')).toBe(false);
     });
 
     // notion-motion.md Round 24 §4 Timeline: hovering the "+ New" lane shows a 197x34 ghost bar at the hovered day.

@@ -675,8 +675,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
     if (this.canEdit) {
       canvas.appendChild(this.createNewLane());
-      // notion-motion.md Round 72 §2 B: measured ungrouped only.
-      canvas.toggleAttribute('data-no-lanes', lanes.count === 0 && !this.options.grouped);
+      // notion-motion.md Round 72 §2 B: measured ungrouped, with the table hidden.
+      canvas.toggleAttribute('data-no-lanes', lanes.count === 0 && !this.options.grouped && !tableShown);
     }
     scroller.appendChild(canvas);
 

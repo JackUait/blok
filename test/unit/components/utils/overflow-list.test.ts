@@ -435,4 +435,19 @@ describe('OverflowList close fade', () => {
     expect(dropdowns()[0].hasAttribute('data-blok-closing')).toBe(false);
     list.close();
   });
+
+  // The tab bar makes a new list on every open.
+  it('drops a fading list at once when a new list with its prefix opens', () => {
+    const first = make();
+
+    first.open();
+    first.close();
+    const second = make();
+
+    second.open();
+
+    expect(dropdowns()).toHaveLength(1);
+    expect(dropdowns()[0].hasAttribute('data-blok-closing')).toBe(false);
+    second.close();
+  });
 });

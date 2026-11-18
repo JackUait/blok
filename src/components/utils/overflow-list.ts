@@ -83,6 +83,8 @@ export const tabsThatFit = (widths: readonly number[], current: number, budget: 
 const listIds = { next: 0 };
 /** Past the 200ms close, for a fade that never settles. */
 const CLOSE_FALLBACK_MS = 300;
+/** Per prefix, the remover of a list still fading out. Owners make a new list per open, so this cannot live on the instance. */
+const fading = new Map<string, () => void>();
 
 export class OverflowList {
   private readonly options: OverflowListOptions;
@@ -94,8 +96,6 @@ export class OverflowList {
   /** A layer was open when the press began; the popover registry closes it before mousedown. */
   private pressPeeled = false;
   private readonly listId = `blok-overflow-list-${++listIds.next}`;
-  /** Removes a list still fading out; a new open drops it at once. */
-  private fading: (() => void) | null = null;
 
   constructor(options: OverflowListOptions) {
     this.options = options;
@@ -114,7 +114,7 @@ export class OverflowList {
     const { anchor, prefix, rows, labels } = this.options;
     const dropdown = document.createElement('div');
 
-    this.fading?.();
+    fading.get(prefix)?.();
 
     dropdown.setAttribute('data-blok-popover', '');
     dropdown.setAttribute(`${prefix}-dropdown`, '');
@@ -213,6 +213,8 @@ export class OverflowList {
 
   /** notion-motion.md Round 75 §2: the open in reverse, then the list leaves. */
   private fadeOut(element: HTMLElement): void {
+    const { prefix } = this.options;
+
     // Closed for every purpose but paint while it fades.
     element.setAttribute('data-blok-closing', '');
     element.setAttribute('inert', '');
@@ -230,12 +232,12 @@ export class OverflowList {
       window.clearTimeout(timer);
       removeFromTopLayer(element);
       element.remove();
-      if (this.fading === remove) this.fading = null;
+      if (fading.get(prefix) === remove) fading.delete(prefix);
     };
     // A cancelled animation never settles.
     const timer = window.setTimeout(remove, CLOSE_FALLBACK_MS);
 
-    this.fading = remove;
+    fading.set(prefix, remove);
     void Promise.all(animations.map((animation) => animation.finished)).then(remove, remove);
   }
 

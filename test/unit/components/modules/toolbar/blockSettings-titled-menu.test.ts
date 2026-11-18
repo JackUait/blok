@@ -116,6 +116,7 @@ const createBlokMock = (): Record<string, unknown> => ({
     allBlocksSelected: false,
   },
   BlockManager: {
+    blocks: [] as Block[],
     currentBlock: undefined as Block | undefined,
     convert: vi.fn(async () => createBlock()),
   },
@@ -342,6 +343,20 @@ describe('BlockSettings — a block that asks before its menu Delete', () => {
     await Promise.resolve();
 
     expect(removeBlock).not.toHaveBeenCalled();
+  });
+
+  // notion-motion.md Round 66 §2: after Escape or Cancel the database stays selected.
+  it('leaves the block selected after a no', async () => {
+    const block = Object.assign(askingBlock(Promise.resolve(false)), { id: 'asks', selected: false });
+    const other = Object.assign(createBlock(), { id: 'other', selected: true });
+
+    Object.assign(blok.BlockManager as Record<string, unknown>, { blocks: [other, block] });
+    const remove = await deleteItem(block, vi.fn());
+
+    remove?.onActivate(remove);
+
+    await vi.waitFor(() => expect(block.selected).toBe(true));
+    expect(other.selected).toBe(false);
   });
 
   it('closes the menu before it asks, and deletes this block on yes', async () => {

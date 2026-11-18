@@ -180,9 +180,11 @@ export interface BlockTool extends BaseTool {
   pageHeaderActions?(): PageHeaderAction[];
 
   /**
-   * Asked when the block menu's Delete is chosen, after the menu closes.
-   * Answer `false` to keep the block. A throw or a rejection deletes it.
-   * Other deletes (keys on a selected block, the API, redo) do not ask.
+   * Asked when the user deletes the block: the block menu's Delete (after the
+   * menu closes), or Backspace/Delete on a selection that holds it. One answer
+   * covers the whole selection. Answer `false` to keep the block, still
+   * selected. A throw or a rejection deletes it. Other deletes (the API,
+   * redo) do not ask.
    */
   confirmDelete?(): boolean | Promise<boolean>;
 

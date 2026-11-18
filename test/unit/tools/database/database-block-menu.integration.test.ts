@@ -259,6 +259,53 @@ describe('the database block menu', () => {
     expect(document.querySelector('[data-blok-database-confirm-dialog]')).toBeNull();
   });
 
+  // notion-motion.md Round 66 §2: Backspace on the selected database asks too; Escape keeps it selected.
+  it('Backspace on the selected database asks, Escape keeps it selected, and a yes undoes with its rows', async () => {
+    const instance = await boot() as Runtime & {
+      history: { undo: () => void };
+      module: { blockSelection: { selectBlock: (block: Block) => void } };
+    };
+    const dialog = async (): Promise<HTMLButtonElement> => vi.waitFor(() => {
+      const found = document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-action="confirm"]');
+
+      if (found === null) throw new Error('no dialog');
+
+      return found;
+    });
+    const ids = (): string[] => instance.module.blockManager.blocks.map(candidate => candidate.id);
+    const database = (): Block | undefined => instance.module.blockManager.blocks.find(candidate => candidate.id === 'db');
+    const select = (): void => {
+      const found = database();
+
+      if (found === undefined) throw new Error('no database');
+      instance.module.blockSelection.selectBlock(found);
+    };
+
+    select();
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+    const escapeAt = await dialog();
+
+    expect(ids()).toContain('db');
+    escapeAt.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    // The answer lands a task after the key that gave it.
+    await settle();
+    expect(database()?.selected).toBe(true);
+    expect(ids()).toEqual(['db', 'r1']);
+
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true }));
+    const confirm = await dialog();
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+
+    confirm.dispatchEvent(enter);
+    // Enter must stay the button's, or its click never comes.
+    expect(enter.defaultPrevented).toBe(false);
+    confirm.click();
+    await vi.waitFor(() => expect(ids()).not.toContain('db'));
+
+    instance.history.undo();
+    await vi.waitFor(() => expect(ids()).toEqual(expect.arrayContaining(['db', 'r1'])));
+  });
+
   it('a reader gets none of them', async () => {
     const instance = await boot({ readOnly: true });
 

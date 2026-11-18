@@ -28,6 +28,7 @@ import { isToolConvertable, translateToolTitle } from '../../utils/tools';
 import { prepareImportString } from '../blockManager/block-mutation';
 import { isBlockReadOnly } from '../../utils/read-only-blocks';
 import { deleteWithTrashToast, showTrashToast } from '../../utils/trash-toast';
+import { askBeforeDelete } from '../../utils/delete-confirm';
 import { assertCanMoveAll, type BlockTree } from '../api/block-placement';
 import { PagePicker } from '../../../tools/page/page-picker';
 import { createMoveFlight, type MoveFlight } from './move-flight';
@@ -578,7 +579,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
   /**
    * For a block that asks before it goes: the menu closes, the block asks,
-   * and only a yes runs the delete, on this block.
+   * and only a yes runs the delete, on this block. A no leaves it selected.
    * @param tune - the delete tune
    * @param block - the block it deletes
    */
@@ -594,7 +595,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       onActivate: (item: PopoverItemParams, event?: PointerEvent): Promise<void> => {
         this.Blok.Toolbar.close();
 
-        return block.confirmDelete().then(async (confirmed) => {
+        return askBeforeDelete(this.Blok, block, [block]).then(async (confirmed) => {
           if (!confirmed || this.Blok.BlockManager.getBlockById(block.id) === undefined) {
             return;
           }

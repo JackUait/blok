@@ -13,6 +13,7 @@ import { canOutdent, getAdoptedSiblings, getIndentTarget } from './structural-si
 import { isChildToolAllowed } from '../../../utils/child-tools';
 import { carriesReadOnly } from '../../../utils/read-only-blocks';
 import { deleteWithTrashToast } from '../../../utils/trash-toast';
+import { askBeforeDelete, deleteAsker, isAskingBeforeDelete } from '../../../utils/delete-confirm';
 
 const EDITING_HOST_SELECTOR = '[contenteditable]:not([contenteditable="false"])';
 
@@ -465,7 +466,7 @@ export class BlockSelectionKeys extends BlockEventComposer {
    * @returns true if event was handled
    */
   public handleDeletion(event: KeyboardEvent): boolean {
-    const { BlockSelection, BlockManager, Caret, BlockSettings } = this.Blok;
+    const { BlockSelection, BlockManager, BlockSettings } = this.Blok;
 
     /**
      * Ignore delete/backspace from inside the BlockSettings popover (e.g., search input)
@@ -480,6 +481,13 @@ export class BlockSelectionKeys extends BlockEventComposer {
       return false;
     }
 
+    // A question is open: the key must not ask again or edit a block.
+    if (isAskingBeforeDelete(this.Blok)) {
+      event.preventDefault();
+
+      return true;
+    }
+
     const selectionExists = SelectionUtils.isSelectionExists;
     const selectionCollapsed = SelectionUtils.isCollapsed === true;
     const shouldHandleSelectionDeletion = BlockSelection.anyBlockSelected &&
@@ -489,6 +497,32 @@ export class BlockSelectionKeys extends BlockEventComposer {
       return false;
     }
 
+    const selected = BlockManager.blocks.filter((block) => block.selected);
+    const asker = deleteAsker(selectionRoots(selected));
+
+    if (asker === undefined) {
+      this.removeSelectedBlocks(event);
+    } else {
+      void askBeforeDelete(this.Blok, asker, selected).then((confirmed) => {
+        if (confirmed) {
+          this.removeSelectedBlocks(event);
+        }
+      });
+    }
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    event.stopPropagation();
+
+    return true;
+  }
+
+  /**
+   * Removes the selected blocks, after any question their tools asked.
+   * @param event - the remove key
+   */
+  private removeSelectedBlocks(event: KeyboardEvent): void {
+    const { BlockSelection, BlockManager, Caret } = this.Blok;
     const selected = BlockManager.blocks.filter((block) => block.selected);
     const nestedContainer = findCommonNestedContainer(selected);
     const roots = selectionRoots(selected);
@@ -508,12 +542,6 @@ export class BlockSelectionKeys extends BlockEventComposer {
     }
 
     BlockSelection.clearSelection(event);
-
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    event.stopPropagation();
-
-    return true;
   }
 
   /**

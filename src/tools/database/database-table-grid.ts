@@ -187,6 +187,8 @@ export class DatabaseTableGrid {
 
   /** The key being handled while an editor closes: tells Enter and Escape from an outside press. */
   private keyInFlight: string | null = null;
+  /** The caret sat at offset 0 when keyInFlight was pressed. */
+  private caretAtStartInFlight = false;
   /** The new row whose title was just committed; commit clears freshRowId before the editor closes. */
   private committedFreshRowId: string | undefined;
 
@@ -379,6 +381,7 @@ export class DatabaseTableGrid {
 
   private editorClosed(ref: CellRef, committed: boolean): void {
     const key = this.keyInFlight;
+    const caretAtStart = this.caretAtStartInFlight;
 
     this.editor = null;
     this.state.editing = false;
@@ -415,9 +418,10 @@ export class DatabaseTableGrid {
     const step = key === null ? undefined : tabStep[key];
     const down = key === 'Enter' && !fresh ? this.offset(ref, 1, 0) : ref;
     const target = step === undefined ? down : this.offset(ref, 0, step);
-    // notion-motion.md Round 57 §1, Text editors only: Tab after a change and every Shift+Tab leave no cell selected.
+    // notion-motion.md Round 57 §1, Text editors only: Tab after a change and Shift+Tab leave no cell selected.
+    // Round 74 §1: an unchanged Shift+Tab with the caret at 0 selects the cell to the left.
     const text = this.columns.find((p) => p.id === ref.propertyId)?.type === 'text';
-    const deselect = text && (key === 'Shift+Tab' || (key === 'Tab' && committed));
+    const deselect = text && ((key === 'Shift+Tab' && (committed || !caretAtStart)) || (key === 'Tab' && committed));
 
     this.state.selection = deselect ? null : { kind: 'cell', anchor: target, focus: target };
     this.paint();
@@ -452,7 +456,10 @@ export class DatabaseTableGrid {
   }
 
   private readonly recordKey = (event: KeyboardEvent): void => {
+    const field = event.target;
+
     this.keyInFlight = event.key === 'Tab' && event.shiftKey ? 'Shift+Tab' : event.key;
+    this.caretAtStartInFlight = (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) && field.selectionStart === 0 && field.selectionEnd === 0;
     setTimeout(() => {
       this.keyInFlight = null;
     }, 0);

@@ -922,7 +922,7 @@ describe('DatabaseTableView', () => {
       expect(handlers.commitCell).toHaveBeenCalledWith('r2', 'p-amount', 42);
     });
 
-    // notion-motion.md Round 57 §1: Shift+Tab out of a Text editor leaves no cell selected, changed or not.
+    // notion-motion.md Round 57 §1: Shift+Tab out of a Text editor with the caret past 0 leaves no cell selected.
     it.each([
       ['unchanged', 'short'],
       ['changed', 'typed'],
@@ -938,6 +938,23 @@ describe('DatabaseTableView', () => {
       expect(anchorCell(root)).toBeNull();
       expect(editor()).toBeNull();
       expect(document.body).toHaveFocus();
+    });
+
+    // notion-motion.md Round 74 §1: with the caret at offset 0 (13/13), Shift+Tab selects the cell to the left.
+    it.each([
+      ['an empty field', 'r3'],
+      ['the caret moved to the start', 'r1'],
+    ])('Shift+Tab in an unchanged Text cell editor with %s selects the cell to the left', (_case, rowId) => {
+      const { root, handlers } = mount();
+
+      cell(root, rowId, 'p-notes').click();
+      editorField().setSelectionRange(0, 0);
+      press(editorField(), 'Tab', { shiftKey: true });
+
+      expect(selectedCells(root)).toEqual([`${rowId}/p-title`]);
+      expect(editor()).toBeNull();
+      expect(handlers.commitCell).not.toHaveBeenCalled();
+      expect(grid(root)).toHaveFocus();
     });
 
     // feel/findings-table T13: Notion's bar shows the first 4 properties; the rest wait under "…".

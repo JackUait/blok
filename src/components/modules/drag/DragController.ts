@@ -816,7 +816,13 @@ export class DragController extends Module {
     };
 
     if (!targetBlock || !targetEdge) {
+      const locked = this.carriesLock;
+
       this.cleanup();
+      // The drag start cleared the selection; Notion leaves a locked database selected (notion-motion.md Round 68 §1).
+      if (locked) {
+        this.Blok.BlockSelection.selectBlock(sourceBlock);
+      }
       return;
     }
 
@@ -1903,6 +1909,7 @@ export class DragController extends Module {
 
     const sourceBlock = this.stateMachine.getSourceBlock();
     this.stateMachine.reset();
+    this.carriesLock = false;
 
     if (this.targetDetector) {
       this.targetDetector.setSourceBlocks([]);

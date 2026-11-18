@@ -241,6 +241,7 @@ describe('a selected locked block', () => {
 
     expect(lineShown).toBe(false);
     expect(ids(instance)).toEqual(['p1', 'lk', 'child', 'p2']);
+    expect(selectedIds(instance)).toEqual(['lk']);
   });
 
   it('a drag of the same block once unlocked draws the line and moves it', async () => {

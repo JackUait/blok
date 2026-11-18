@@ -170,8 +170,8 @@ describe('view filter undo', () => {
   });
 
   /**
-   * notion-motion.md Round 65 §2: keys 160ms apart, "no", a pause, "te". A 300ms pause
-   * keeps one step; 500ms splits it after "no". The run ends after an idle gap.
+   * notion-motion.md Round 65 §2, re-read in Round 67 §5: keys 160ms apart, "no", a pause, "te".
+   * "note" saves ~620ms after "no" with a 300ms pause (one step) and ~820ms with 500ms (two).
    */
   const typeWithPause = async (pause: number): Promise<HTMLInputElement> => {
     await addFilter('x');
@@ -230,6 +230,70 @@ describe('view filter undo', () => {
     expect(chips()).toHaveLength(1);
     expect(chipText()).not.toContain('no');
   }, 10000);
+
+  /**
+   * notion-motion.md Round 67 §5: the value saves after ~200 ms of idle, and a step takes
+   * every save within 700 ms of its first. Keys at a steady gap, read back step by step.
+   */
+  const typeRun = async (gap: number, text: string): Promise<void> => {
+    await addFilter('x');
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      for (let i = 1; i <= text.length; i++) {
+        const input = q('database-filter-value');
+
+        if (!(input instanceof HTMLInputElement)) throw new Error('no value input');
+        input.value = text.slice(0, i);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        vi.advanceTimersByTime(gap);
+      }
+      vi.advanceTimersByTime(2000);
+    } finally {
+      vi.useRealTimers();
+    }
+    await escape();
+  };
+  const filterValue = (): string => chipText().split(':').slice(1).join(':').trim().replace(/^Contains\s*/, '');
+  const undoValues = async (blok: TestEditor, steps: number): Promise<string[]> => {
+    const values: string[] = [];
+
+    for (let i = 0; i < steps; i++) {
+      blok.history.undo();
+      await quiet();
+      values.push(filterValue());
+    }
+
+    return values;
+  };
+
+  it('keeps keys 160ms apart in one step', async () => {
+    const blok = await make();
+
+    await typeRun(160, 'abcdef');
+    expect(filterValue()).toBe('abcdef');
+
+    expect(await undoValues(blok, 1)).toEqual(['']);
+    expect(chips()).toHaveLength(1);
+  });
+
+  it('splits keys 250ms apart into steps of three, like Notion', async () => {
+    const blok = await make();
+
+    await typeRun(250, 'abcdfg');
+    expect(filterValue()).toBe('abcdfg');
+
+    expect(await undoValues(blok, 2)).toEqual(['abc', '']);
+    expect(chips()).toHaveLength(1);
+  });
+
+  it('splits keys 500ms apart into steps of two, like Notion', async () => {
+    const blok = await make();
+
+    await typeRun(500, 'abc');
+
+    expect(await undoValues(blok, 2)).toEqual(['ab', '']);
+    expect(chips()).toHaveLength(1);
+  });
 
   // notion-motion.md Round 66 §3: "ab", an ignored ⌘Z, "cd" with short gaps is one step.
   it('keeps one typing run across an undo key the open popover ignores', async () => {

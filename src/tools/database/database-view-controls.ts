@@ -124,10 +124,16 @@ const sortSteps = new Map<string, { viewId: string; personal: PersonalViewPatch 
 const SORT_UNDO_ID_KEY = 'sort-undo-id';
 
 /**
- * notion-motion.md Round 65 §2: typed filter text is one step until typing pauses. Keys 160 ms
- * apart kept one step over a 460 ms gap and split over a 660 ms one; this sits between.
+ * notion-motion.md Round 67 §5: typed filter text saves once keys pause (Notion: ~165–255 ms),
+ * so keys 160 ms apart save once.
  */
-const TYPING_RUN_IDLE_MS = 560;
+const TYPING_SAVE_IDLE_MS = 200;
+
+/**
+ * notion-motion.md Round 67 §5: one undo step takes every save less than ~700 ms after its
+ * first save (675 ms joined, 700 and 725 ms did not). The step is not timed from the first key.
+ */
+const TYPING_STEP_WINDOW_MS = 700;
 
 /** The controls now drawn for each key: a rebuilt tool replays steps the old one wrote. A block's widgets share its key. */
 const liveSortControls = new Map<string, Set<DatabaseViewControls>>();
@@ -216,8 +222,18 @@ export class DatabaseViewControls {
   /** An undo or redo is writing the sorts: that write is not a new step. */
   private replayingSorts = false;
   private undoId: string | null = null;
-  /** Typed filter text not yet an undo step: it becomes one when typing pauses. */
-  private typingRun: { viewId: string; before: PersonalViewPatch; after: PersonalViewPatch; timer: ReturnType<typeof setTimeout> } | null = null;
+  /**
+   * Typed filter text not yet an undo step. `saved` is what the last idle save took;
+   * `stepTimer` runs from the first save of the open step.
+   */
+  private typingRun: {
+    viewId: string;
+    before: PersonalViewPatch;
+    saved: PersonalViewPatch;
+    after: PersonalViewPatch;
+    saveTimer: ReturnType<typeof setTimeout> | null;
+    stepTimer: ReturnType<typeof setTimeout> | null;
+  } | null = null;
   private destroyed = false;
 
   constructor(host: ViewControlsHost) {
@@ -625,9 +641,8 @@ export class DatabaseViewControls {
     const run = this.typingRun;
 
     if (options.typing === true && run?.viewId === viewId) {
-      clearTimeout(run.timer);
       run.after = next;
-      run.timer = setTimeout(() => this.endTypingRun(), TYPING_RUN_IDLE_MS);
+      this.scheduleTypingSave();
 
       return;
     }
@@ -638,8 +653,36 @@ export class DatabaseViewControls {
 
       return;
     }
-    this.typingRun = { viewId, before, after: next, timer: setTimeout(() => this.endTypingRun(), TYPING_RUN_IDLE_MS) };
+    this.typingRun = { viewId, before, saved: before, after: next, saveTimer: null, stepTimer: null };
+    this.scheduleTypingSave();
     window.addEventListener('keydown', this.endTypingRunOnHistoryKey, true);
+  }
+
+  private scheduleTypingSave(): void {
+    const run = this.typingRun;
+
+    if (run === null) return;
+    if (run.saveTimer !== null) clearTimeout(run.saveTimer);
+    run.saveTimer = setTimeout(() => {
+      run.saveTimer = null;
+      run.saved = run.after;
+      run.stepTimer ??= setTimeout(() => this.closeTypingStep(), TYPING_STEP_WINDOW_MS);
+    }, TYPING_SAVE_IDLE_MS);
+  }
+
+  /** The open step's window ends: its saves become one step, and a save still waiting starts the next. */
+  private closeTypingStep(): void {
+    const run = this.typingRun;
+
+    if (run === null) return;
+    run.stepTimer = null;
+    if (run.saveTimer === null) {
+      this.endTypingRun();
+
+      return;
+    }
+    if (!samePersonal(run.before, run.saved)) this.recordSorts(run.viewId, run.before, run.saved);
+    run.before = run.saved;
   }
 
   get typingRunOpen(): boolean {
@@ -652,7 +695,8 @@ export class DatabaseViewControls {
 
     if (run === null) return;
     this.typingRun = null;
-    clearTimeout(run.timer);
+    if (run.saveTimer !== null) clearTimeout(run.saveTimer);
+    if (run.stepTimer !== null) clearTimeout(run.stepTimer);
     window.removeEventListener('keydown', this.endTypingRunOnHistoryKey, true);
     if (!samePersonal(run.before, run.after)) this.recordSorts(run.viewId, run.before, run.after);
   }

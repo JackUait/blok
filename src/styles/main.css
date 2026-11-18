@@ -792,6 +792,7 @@ span[data-blok-annotation]:hover::highlight(blok-annotation-open) {
 @import './find.css';
 [data-blok-sheet='askai'] { --blok-sheet: askai; }
 @import './field.css';
+@import './link-picker.css';
 @import './notifier-card.css';
 @import './spotlight.css';
 @import './loading.css';

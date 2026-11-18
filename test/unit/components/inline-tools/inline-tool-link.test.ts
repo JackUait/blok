@@ -1143,7 +1143,7 @@ describe('LinkInlineTool', () => {
       return { ...setup, itemWrapper, input: getInputFromWrapper(itemWrapper) };
     };
 
-    const seed = (entries: { url: string; title?: string; favicon?: string }[]): void => {
+    const seed = (entries: { url: string; title?: string; image?: string }[]): void => {
       localStorage.setItem('blok-recent-links', JSON.stringify(entries));
     };
 
@@ -1197,23 +1197,65 @@ describe('LinkInlineTool', () => {
       expect(itemWrapper.querySelector('[data-link-recent-label]')?.textContent).toBe('Recent');
     });
 
-    it('lays the recent links out as cards: icon tile, then title, then site', () => {
+    it('lays the recent links out as a shelf: a cover, then a caption with title and site', () => {
       seed([
         { url: 'https://github.com/jackuait/blok', title: 'Blok editor' },
         { url: 'https://www.figma.com/file/1', title: 'Design tokens' },
       ]);
 
       const { itemWrapper } = openCreating();
-      const [card] = recentRows(itemWrapper);
-      const tile = card.firstElementChild;
-      const title = card.querySelector('[data-link-recent-title]');
-      const meta = card.querySelector('[data-link-recent-meta]');
+      const [spine] = recentRows(itemWrapper);
+      const title = spine.querySelector('[data-link-recent-title]');
+      const meta = spine.querySelector('[data-link-recent-meta]');
 
-      expect(card.parentElement?.className.split(' ')).toEqual(expect.arrayContaining(['grid', 'grid-cols-3']));
-      expect(card.className.split(' ')).toContain('flex-col');
-      expect(tile?.hasAttribute('data-link-recent-tile')).toBe(true);
+      expect(spine.parentElement?.hasAttribute('data-link-recent-list')).toBe(true);
+      expect(spine.firstElementChild?.hasAttribute('data-link-recent-cover')).toBe(true);
+      expect(title?.closest('[data-link-recent-caption]')).not.toBeNull();
       expect(title?.compareDocumentPosition(meta as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-      expect(card.querySelector('[data-link-option-enter-hint]')).not.toBeNull();
+      expect(spine.querySelector('[data-link-option-enter-hint]')).not.toBeNull();
+    });
+
+    it('opens the first link on the shelf, then the one the pointer or the arrows aim at', () => {
+      seed([
+        { url: 'https://a.com', title: 'A' },
+        { url: 'https://b.com', title: 'B' },
+        { url: 'https://c.com', title: 'C' },
+      ]);
+
+      const { itemWrapper, input } = openCreating();
+      const rows = recentRows(itemWrapper);
+      const open = (): number[] => rows.flatMap((row, index) => row.hasAttribute('data-link-recent-open') ? [index] : []);
+
+      expect(open()).toEqual([0]);
+
+      rows[2].dispatchEvent(new MouseEvent('mouseenter'));
+      expect(open()).toEqual([2]);
+
+      rows[2].dispatchEvent(new MouseEvent('mouseleave'));
+      expect(open()).toEqual([2]);
+
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      expect(open()).toEqual([0]);
+
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      expect(open()).toEqual([1]);
+    });
+
+    it('keeps the last opened link open while the arrows walk the headings', () => {
+      seed([
+        { url: 'https://a.com', title: 'A' },
+        { url: 'https://b.com', title: 'B' },
+      ]);
+      addHeading(2, 'Intro');
+
+      const { itemWrapper, input } = openCreating();
+      const rows = recentRows(itemWrapper);
+
+      ['ArrowDown', 'ArrowDown', 'ArrowDown'].forEach((key) =>
+        input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })));
+
+      expect(rows[1].hasAttribute('data-link-recent-open')).toBe(true);
+      expect(rows[1]).toHaveAttribute('aria-selected', 'false');
     });
 
     it('names a page by its path when its title only repeats the site name', () => {
@@ -1231,7 +1273,7 @@ describe('LinkInlineTool', () => {
       expect(rowText(home, 'meta')).toBe('youtube.com');
     });
 
-    it('tints a letter tile with a hue that follows the site', () => {
+    it('gives a link with no picture a letter cover in a color that follows the site', () => {
       seed([
         { url: 'https://alpha.dev/one', title: 'One' },
         { url: 'https://alpha.dev/two', title: 'Two' },
@@ -1239,16 +1281,16 @@ describe('LinkInlineTool', () => {
       ]);
 
       const { itemWrapper } = openCreating();
-      const hues = recentRows(itemWrapper).map((card) =>
-        card.querySelector<HTMLElement>('[data-link-recent-tile]')?.style.getPropertyValue('--blok-link-tile-hue'));
+      const rows = recentRows(itemWrapper);
+      const color = (row: HTMLElement, name: string): string => row.style.getPropertyValue(name);
 
-      // `text-[color-mix(…)]` is ambiguous to Tailwind (color or size?) and
-      // compiles to nothing; the `color:` hint is what makes it a color.
-      expect(recentRows(itemWrapper)[0].querySelector('[data-link-recent-tile]')?.className)
-        .toContain('text-[color:color-mix(');
-      expect(hues[0]).toMatch(/^\d+$/);
-      expect(hues[1]).toBe(hues[0]);
-      expect(hues[2]).not.toBe(hues[0]);
+      expect(rows.map((row) => row.querySelector('[data-link-recent-letter]')?.textContent)).toEqual(['A', 'A', 'Z']);
+      expect(rows.every((row) => row.hasAttribute('data-link-recent-plain'))).toBe(true);
+      expect(rows.every((row) => row.querySelector('svg[data-link-recent-icon], img') === null)).toBe(true);
+      expect(color(rows[0], '--_blok-link-cover-bg')).toMatch(/^hsl\(\d+ 68% \d+%\)$/);
+      expect(color(rows[0], '--_blok-link-cover-letter')).toMatch(/^hsl\(\d+ 78% \d+%\)$/);
+      expect(color(rows[1], '--_blok-link-cover-bg')).toBe(color(rows[0], '--_blok-link-cover-bg'));
+      expect(color(rows[2], '--_blok-link-cover-bg')).not.toBe(color(rows[0], '--_blok-link-cover-bg'));
     });
 
     it('falls back to the site name and path when the title is unknown', () => {
@@ -1334,7 +1376,7 @@ describe('LinkInlineTool', () => {
     it('looks up the page title through the unfurl endpoint and stores it', async () => {
       const fetchMock = vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ success: 1, meta: { title: 'Example Domain', favicon: 'https://example.com/favicon.ico' } }),
+        json: async () => ({ success: 1, meta: { title: 'Example Domain', image: { url: 'https://example.com/cover.png' }, favicon: 'https://example.com/favicon.ico' } }),
       });
 
       vi.stubGlobal('fetch', fetchMock);
@@ -1348,7 +1390,7 @@ describe('LinkInlineTool', () => {
         expect(readStored()[0]).toEqual({
           url: 'https://example.com',
           title: 'Example Domain',
-          favicon: 'https://example.com/favicon.ico',
+          image: 'https://example.com/cover.png',
         });
       });
       expect(fetchMock).toHaveBeenCalledWith('/unfurl?url=https%3A%2F%2Fexample.com', { headers: undefined });
@@ -1392,18 +1434,43 @@ describe('LinkInlineTool', () => {
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
-    it('shows a web favicon and falls back to a letter tile for anything else', () => {
+    it('shows the page picture and falls back to the letter cover for anything else', () => {
       seed([
-        { url: 'https://a.com', title: 'Alpha', favicon: 'https://a.com/icon.png' },
-        { url: 'https://b.com', title: 'Beta', favicon: 'javascript:alert(1)' },
+        { url: 'https://a.com', title: 'Alpha', image: 'https://a.com/cover.png' },
+        { url: 'https://b.com', title: 'Beta', image: 'javascript:alert(1)' },
       ]);
 
       const { itemWrapper } = openCreating();
       const [first, second] = recentRows(itemWrapper);
 
-      expect(first.querySelector('img')?.getAttribute('src')).toBe('https://a.com/icon.png');
+      expect(first.querySelector('img[data-link-recent-picture]')?.getAttribute('src')).toBe('https://a.com/cover.png');
+      expect(first.hasAttribute('data-link-recent-plain')).toBe(false);
+      expect(first.querySelector('[data-link-recent-letter]')).toBeNull();
       expect(second.querySelector('img')).toBeNull();
-      expect(second.querySelector('[data-link-recent-monogram]')?.textContent).toBe('B');
+      expect(second.querySelector('[data-link-recent-letter]')?.textContent).toBe('B');
+    });
+
+    it('swaps a picture that fails to load for the letter cover', () => {
+      seed([{ url: 'https://a.com', title: 'Alpha', image: 'https://a.com/gone.png' }]);
+
+      const { itemWrapper } = openCreating();
+      const [row] = recentRows(itemWrapper);
+
+      row.querySelector('img')?.dispatchEvent(new Event('error'));
+
+      expect(row.querySelector('img')).toBeNull();
+      expect(row.querySelector('[data-link-recent-letter]')?.textContent).toBe('A');
+      expect(row.hasAttribute('data-link-recent-plain')).toBe(true);
+    });
+
+    it('never draws a site icon, even for a link stored with one', () => {
+      localStorage.setItem('blok-recent-links', JSON.stringify([
+        { url: 'https://a.com', title: 'Alpha', favicon: 'https://a.com/icon.png' },
+      ]));
+
+      const { itemWrapper } = openCreating();
+
+      expect(recentRows(itemWrapper)[0].querySelector('img')).toBeNull();
     });
 
     it('walks the rows with the arrow keys while focus stays in the field', () => {
@@ -1542,6 +1609,52 @@ describe('LinkInlineTool', () => {
       expect(itemWrapper.querySelector('[data-link-headings-label]')?.textContent).toBe('On this page');
       expect(headingTitles(itemWrapper)).toEqual(['Intro', 'Setup', 'Install']);
       expect(headingRows(itemWrapper).map((row) => row.getAttribute('data-link-heading-level'))).toEqual(['1', '2', '3']);
+    });
+
+    it('sets the headings as an outline: no icons, stepped in by depth, the level at the edge', () => {
+      addHeading(2, 'Pages');
+      addHeading(6, 'Smallest');
+      addHeading(3, 'Ordered');
+      addHeading(3, 'Checklist');
+      addHeading(5, 'Toggles');
+      addHeading(1, 'Top');
+
+      const { itemWrapper } = openCreating();
+      const rows = headingRows(itemWrapper);
+
+      expect(rows.map((row) => row.getAttribute('data-link-heading-depth'))).toEqual(['0', '1', '1', '1', '2', '0']);
+      expect(rows.map((row) => row.querySelector('[data-link-heading-tag]')?.getAttribute('data-link-heading-tag'))).toEqual(['H2', 'H6', 'H3', 'H3', 'H5', 'H1']);
+      expect(rows.map((row) => row.textContent?.trim())).toEqual(['Pages', 'Smallest', 'Ordered', 'Checklist', 'Toggles', 'Top']);
+      expect(rows[0].firstElementChild?.querySelector('[data-link-heading-title]')).not.toBeNull();
+      expect(rows[0].querySelectorAll('svg')).toHaveLength(1);
+      expect(rows[0].querySelector('[data-link-option-enter-hint] svg')).not.toBeNull();
+    });
+
+    it('never steps a heading in more than two levels', () => {
+      [1, 2, 3, 4, 5].forEach((level) => addHeading(level, `Level ${level}`));
+
+      const { itemWrapper } = openCreating();
+
+      expect(headingRows(itemWrapper).map((row) => row.getAttribute('data-link-heading-depth'))).toEqual(['0', '1', '2', '2', '2']);
+    });
+
+    it('marks the part of a heading the search matched, and clears it with the search', () => {
+      addHeading(2, 'Inline Formatting');
+
+      const { itemWrapper, input } = openCreating();
+      const title = (): Element | null => headingRows(itemWrapper)[0].querySelector('[data-link-heading-title]');
+
+      input.value = 'form';
+      input.dispatchEvent(new Event('input'));
+
+      expect(title()?.querySelector('[data-link-heading-match]')?.textContent).toBe('Form');
+      expect(title()?.textContent).toBe('Inline Formatting');
+
+      input.value = '';
+      input.dispatchEvent(new Event('input'));
+
+      expect(title()?.querySelector('[data-link-heading-match]')).toBeNull();
+      expect(title()?.textContent).toBe('Inline Formatting');
     });
 
     it('skips empty headings and reads a nested child\'s heading only once, from the child', () => {

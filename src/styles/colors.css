@@ -583,6 +583,10 @@
   --blok-video-menu-icon: rgba(255, 255, 255, 0.9);
   --blok-video-menu-row-active: color-mix(in srgb, var(--blok-video-accent) 14%, transparent);
   --blok-video-theater-scrim: rgba(0, 0, 0, 0.8);
+  /* Link picker: the caption over a recent link's picture, and its Enter chip. */
+  --blok-link-cover-text: #fff;
+  --blok-link-cover-scrim: rgba(0, 0, 0, 0.78);
+  --blok-link-cover-chip: rgba(0, 0, 0, 0.5);
   --blok-video-theater-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6);
   --blok-video-scrim-strong: rgba(0, 0, 0, 0.6);
   --blok-video-scrim-mid: rgba(0, 0, 0, 0.2);

@@ -902,6 +902,9 @@
   --blok-crop-handle-edge-drop-hover: 0 2px 6px rgba(0, 0, 0, 0.3);
   --blok-crop-pill-fg: #fff;
   --blok-crop-modal-btn-shadow: rgba(0, 0, 0, 0.3);
+  --blok-link-cover-text: #fff;
+  --blok-link-cover-scrim: rgba(0, 0, 0, 0.78);
+  --blok-link-cover-chip: rgba(0, 0, 0, 0.5);
   --blok-ease-spring-island: cubic-bezier(0.34, 1.56, 0.64, 1);
   --blok-find-match-bg: rgba(255, 212, 0, 0.32);
   --blok-find-match-active-bg: rgba(255, 138, 0, 0.5);

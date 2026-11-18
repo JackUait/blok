@@ -22,13 +22,15 @@ describe('link history', () => {
     expect(getRecentLinks()).toEqual([]);
   });
 
-  it('keeps only the three newest links, newest first', () => {
+  it('keeps only the four newest links, newest first', () => {
     recordRecentLink('https://a.com');
     recordRecentLink('https://b.com');
     recordRecentLink('https://c.com');
     recordRecentLink('https://d.com');
+    recordRecentLink('https://e.com');
 
     expect(getRecentLinks().map((entry) => entry.url)).toEqual([
+      'https://e.com',
       'https://d.com',
       'https://c.com',
       'https://b.com',
@@ -52,12 +54,12 @@ describe('link history', () => {
     expect(getRecentLinks()[0]).toEqual({ url: 'https://a.com', title: 'A site' });
   });
 
-  it('stores the title and favicon for a recorded link', () => {
+  it('stores the title and picture for a recorded link', () => {
     recordRecentLink('https://a.com');
-    updateRecentLinkMeta('https://a.com', { title: 'A site', favicon: 'https://a.com/icon.png' });
+    updateRecentLinkMeta('https://a.com', { title: 'A site', image: 'https://a.com/cover.png' });
 
     expect(getRecentLinks()).toEqual([
-      { url: 'https://a.com', title: 'A site', favicon: 'https://a.com/icon.png' },
+      { url: 'https://a.com', title: 'A site', image: 'https://a.com/cover.png' },
     ]);
   });
 
@@ -66,6 +68,7 @@ describe('link history', () => {
     recordRecentLink('https://b.com');
     recordRecentLink('https://c.com');
     recordRecentLink('https://d.com');
+    recordRecentLink('https://e.com');
     updateRecentLinkMeta('https://a.com', { title: 'A site' });
 
     expect(getRecentLinks().map((entry) => entry.url)).not.toContain('https://a.com');
@@ -80,12 +83,12 @@ describe('link history', () => {
 
   it('treats www, http(s) and a trailing slash as the same link, keeping what it knew', () => {
     recordRecentLink('https://youtube.com');
-    updateRecentLinkMeta('https://youtube.com', { title: 'YouTube', favicon: 'https://youtube.com/favicon.ico' });
+    updateRecentLinkMeta('https://youtube.com', { title: 'YouTube', image: 'https://youtube.com/cover.jpg' });
     recordRecentLink('https://b.com');
     recordRecentLink('http://www.youtube.com/');
 
     expect(getRecentLinks()).toEqual([
-      { url: 'http://www.youtube.com/', title: 'YouTube', favicon: 'https://youtube.com/favicon.ico' },
+      { url: 'http://www.youtube.com/', title: 'YouTube', image: 'https://youtube.com/cover.jpg' },
       { url: 'https://b.com' },
     ]);
   });
@@ -96,6 +99,14 @@ describe('link history', () => {
     recordRecentLink('https://a.com/docs#intro');
 
     expect(getRecentLinks()).toHaveLength(3);
+  });
+
+  it('drops a site icon stored by an older version', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([
+      { url: 'https://a.com', title: 'A', favicon: 'https://a.com/icon.png' },
+    ]));
+
+    expect(getRecentLinks()).toEqual([{ url: 'https://a.com', title: 'A' }]);
   });
 
   it('shows duplicates already in storage once, newest first', () => {

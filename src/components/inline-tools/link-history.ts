@@ -3,12 +3,13 @@
  * editor on the origin, like the color picker's recent colors.
  */
 const STORAGE_KEY = 'blok-recent-links';
-const LIMIT = 3;
+const LIMIT = 4;
 
 export interface RecentLink {
   url: string;
   title?: string;
-  favicon?: string;
+  /** The page's own picture, shown as the link's cover. */
+  image?: string;
 }
 
 /**
@@ -59,7 +60,7 @@ const toRecentLink = (value: unknown): RecentLink | null => {
     return null;
   }
 
-  const { url, title, favicon } = value as Record<string, unknown>;
+  const { url, title, image } = value as Record<string, unknown>;
 
   if (typeof url !== 'string') {
     return null;
@@ -70,7 +71,7 @@ const toRecentLink = (value: unknown): RecentLink | null => {
   return {
     url,
     ...(cleaned !== '' ? { title: cleaned } : {}),
-    ...(typeof favicon === 'string' ? { favicon } : {}),
+    ...(typeof image === 'string' ? { image } : {}),
   };
 };
 
@@ -115,12 +116,12 @@ export function recordRecentLink(url: string): void {
 }
 
 /**
- * Attach the page title/favicon once the lookup answers. A link that has
+ * Attach the page title/picture once the lookup answers. A link that has
  * already been pushed out of the history is not brought back.
  * @param url - the recorded href
  * @param meta - what the unfurl endpoint returned
  */
-export function updateRecentLinkMeta(url: string, meta: { title?: string; favicon?: string }): void {
+export function updateRecentLinkMeta(url: string, meta: { title?: string; image?: string }): void {
   const entries = getRecentLinks();
 
   if (!entries.some((entry) => entry.url === url)) {
@@ -132,6 +133,6 @@ export function updateRecentLinkMeta(url: string, meta: { title?: string; favico
   write(entries.map((entry) => entry.url !== url ? entry : {
     ...entry,
     ...(title ? { title } : {}),
-    ...(meta.favicon ? { favicon: meta.favicon } : {}),
+    ...(meta.image ? { image: meta.image } : {}),
   }));
 }

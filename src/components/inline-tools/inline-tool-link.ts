@@ -9,7 +9,7 @@ import type { BlokConfig } from '../../../types/configs/blok-config';
 import type { Blocks, Notifier, Toolbar, I18n, InlineToolbar } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR, createSelector, INLINE_TOOLBAR_INTERFACE_VALUE } from '../constants';
-import { IconLink, IconGlobe, IconMail, IconHash, IconTrash, IconReturn, IconWarning, IconH1, IconH2, IconH3, IconH4, IconH5, IconH6 } from '../icons';
+import { IconLink, IconGlobe, IconMail, IconHash, IconTrash, IconReturn, IconWarning } from '../icons';
 import { SelectionUtils } from '../selection/index';
 import { log } from '../utils';
 import { PopoverItemType } from '../utils/popover';
@@ -19,6 +19,7 @@ import { hasUnsafeScheme } from '../utils/sanitize-url';
 import { twMerge } from '../utils/tw';
 import { isHttpUrl } from '../../tools/link/registry';
 import { MetadataFetcher } from '../../tools/link/metadata-fetcher';
+import { coverColors } from './link-cover';
 import { getRecentLinks, recordRecentLink, updateRecentLinkMeta, type RecentLink } from './link-history';
 import { PAGE_REFERENCE_ATTR } from '../../shared/page-reference';
 
@@ -41,7 +42,8 @@ const SUGGESTION_TYPE_TEXT = 'block text-[11px] leading-[14px] text-gray-text mt
 const ENTER_HINT_CLASSES = 'items-center justify-center size-5 shrink-0 text-gray-text [&_svg]:size-3.5';
 
 const HEADING_LIMIT = 6;
-const HEADING_ICONS: Record<number, string> = { 1: IconH1, 2: IconH2, 3: IconH3, 4: IconH4, 5: IconH5, 6: IconH6 };
+// Headings step in under their parent, never deeper than this.
+const HEADING_MAX_DEPTH = 2;
 
 /**
  * Link kinds offered when the field has nothing else to show. Picking one
@@ -59,6 +61,8 @@ interface HeadingTarget {
   blockId: string;
   level: number;
   text: string;
+  /** Steps in from the left edge: 0 for a heading with no parent above it. */
+  depth: number;
 }
 
 /**
@@ -71,18 +75,12 @@ const OPTION_TEXT_CLASSES = 'flex-1 min-w-0 flex items-baseline gap-2';
 const OPTION_TITLE_CLASSES = 'min-w-0 text-sm leading-5 text-text-primary truncate';
 const OPTION_META_CLASSES = 'shrink-0 max-w-[45%] text-xs leading-4 text-gray-text truncate';
 const OPTION_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 text-gray-text [&_svg]:size-5';
-const HEADING_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 text-gray-text opacity-60 [&_svg]:size-4';
 // A section that follows a visible one gets extra room above its label.
 const SECTION_CLASSES = 'w-0 min-w-full [[data-link-group]:not([hidden])~&]:pt-1.5';
-const SECTION_LABEL_CLASSES = 'px-2 pt-1.5 pb-1 text-xs leading-4 font-medium text-gray-text';
-// Recent links are cards in a row of three: tile, then title, then site.
-const RECENT_LIST_CLASSES = 'grid grid-cols-3 gap-1';
-const RECENT_CARD_CLASSES = 'group relative flex flex-col items-start gap-2 min-w-0 p-2 rounded-(--blok-radius-control-lg) cursor-pointer outline-1 outline-transparent can-hover:hover:bg-item-hover-bg can-hover:hover:-translate-y-px aria-selected:bg-item-hover-bg aria-selected:outline-search-input-focus-border transition-[background-color,outline-color,translate] duration-150 motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
-const RECENT_TILE_CLASSES = 'flex items-center justify-center size-9 shrink-0 rounded-(--blok-radius-control-lg) overflow-hidden shadow-[inset_0_0_0_1px_rgba(13,20,33,0.06)]';
-// Mixed toward the theme's text color, so one hue reads in light and dark.
-const RECENT_MONOGRAM_CLASSES = 'bg-[color-mix(in_oklch,hsl(var(--blok-link-tile-hue)_70%_55%)_18%,transparent)] text-[color:color-mix(in_oklch,hsl(var(--blok-link-tile-hue)_65%_45%)_55%,var(--blok-text-primary))] text-sm font-semibold';
-const RECENT_TITLE_CLASSES = 'block w-full text-[13px] leading-[18px] font-medium text-text-primary truncate';
-const RECENT_META_CLASSES = 'block w-full min-h-[14px] text-[11px] leading-[14px] text-gray-text truncate';
+const SECTION_LABEL_CLASSES = 'px-2 pt-2 pb-1 text-[11px] leading-4 font-semibold tracking-[0.06em] uppercase text-gray-text';
+// Recent links stand on a shelf. Its look lives in link-picker.css, keyed
+// off the data-link-recent-* attributes.
+const RECENT_SPINE_CLASSES = 'group motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
 
 /**
  * Link Tool
@@ -639,11 +637,8 @@ export class LinkInlineTool implements InlineTool {
     options.setAttribute('data-link-options', '');
     options.hidden = true;
 
-    const divider = document.createElement('div');
-
-    divider.className = 'mt-1.5 mb-1 h-px bg-link-input-border';
-
-    options.append(divider, ...[this.nodes.recent, this.nodes.headings, this.nodes.kinds].filter((node) => node !== null));
+    options.className = 'pt-1';
+    options.append(...[this.nodes.recent, this.nodes.headings, this.nodes.kinds].filter((node) => node !== null));
 
     return options;
   }
@@ -691,12 +686,12 @@ export class LinkInlineTool implements InlineTool {
    * field.
    * @param kind - names the row's data markers: data-link-<kind>-row/-title/-meta
    * @param id - element id, used by aria-activedescendant
-   * @param leading - icon or tile in front of the text
+   * @param leading - icon in front of the text, or null for none
    * @param title - main line
    * @param meta - second line, skipped when empty
    * @param onPick - what a click or Enter does
    */
-  private createOptionRow(kind: string, id: string, leading: HTMLElement, title: string, meta: string, onPick: () => void): HTMLElement {
+  private createOptionRow(kind: string, id: string, leading: HTMLElement | null, title: string, meta: string, onPick: () => void): HTMLElement {
     const row = document.createElement('div');
 
     row.id = id;
@@ -733,7 +728,7 @@ export class LinkInlineTool implements InlineTool {
     enterHint.setAttribute('data-link-option-enter-hint', '');
     enterHint.innerHTML = IconReturn;
 
-    row.append(leading, textEl, enterHint);
+    row.append(...(leading ? [leading] : []), textEl, enterHint);
     // Keep the saved selection and the field's focus while the row takes the click.
     row.addEventListener('mousedown', (event) => event.preventDefault());
     row.addEventListener('click', onPick);
@@ -757,7 +752,8 @@ export class LinkInlineTool implements InlineTool {
   private createRecent(): HTMLElement {
     const { section, list } = this.createSection(`${this.errorId}-recent`, 'data-link-recent', this.i18n.t('tools.link.recent'));
 
-    list.className = RECENT_LIST_CLASSES;
+    list.className = '';
+    list.setAttribute('data-link-recent-list', '');
     this.nodes.recentList = list;
 
     return section;
@@ -825,14 +821,31 @@ export class LinkInlineTool implements InlineTool {
    * added in another editor on the page shows up too.
    */
   private renderRecent(): void {
-    this.nodes.recentList?.replaceChildren(
-      ...getRecentLinks().map((entry, index) => this.createRecentRow(entry, index))
-    );
+    const spines = getRecentLinks().map((entry, index) => this.createRecentRow(entry, index));
+
+    this.nodes.recentList?.replaceChildren(...spines);
+    this.openRecent(spines[0]);
   }
 
   /**
-   * One recent link as a card: favicon or letter tile, the page title, then
-   * the site name. A title that only names the site ("YouTube") gives its
+   * Open one link on the shelf to full width; the rest stay spines. The
+   * last one aimed at stays open when the pointer or the arrows move on.
+   * @param spine - the link to open
+   */
+  private openRecent(spine: HTMLElement | undefined): void {
+    if (!spine) {
+      return;
+    }
+
+    Array.from(this.nodes.recentList?.children ?? []).forEach((child) => {
+      child.toggleAttribute('data-link-recent-open', child === spine);
+    });
+  }
+
+  /**
+   * One recent link as a spine on the shelf: the page's picture, or the
+   * site's first letter on a color of its own, under the page title and the
+   * site name. A title that only names the site ("YouTube") gives its
    * slot to the path, so two pages of one site stay apart. Without a title
    * the site name takes the title slot and the path goes under it.
    * @param entry - the stored link
@@ -854,76 +867,75 @@ export class LinkInlineTool implements InlineTool {
     const title = namesOnlySite && path !== '' ? path : entry.title ?? site;
     const meta = entry.title !== undefined ? site : path;
 
-    const tile = document.createElement('span');
-
-    tile.className = `${RECENT_TILE_CLASSES} bg-item-hover-bg`;
-    tile.setAttribute('aria-hidden', 'true');
-    tile.setAttribute('data-link-recent-tile', '');
-    tile.style.setProperty('--blok-link-tile-hue', String(Array.from(site).reduce((hue, char) => (hue * 31 + (char.codePointAt(0) ?? 0)) % 360, 0)));
-
-    const showMonogram = (): void => {
-      const monogram = document.createElement('span');
-
-      monogram.setAttribute('data-link-recent-monogram', '');
-      monogram.textContent = (Array.from(site)[0] ?? '').toUpperCase();
-      // Joined, not twMerge'd: twMerge takes text-[color:…] and text-sm for
-      // the same utility and drops the color.
-      tile.className = `${RECENT_TILE_CLASSES} ${RECENT_MONOGRAM_CLASSES}`;
-      tile.replaceChildren(monogram);
-    };
-
-    if (entry.favicon !== undefined && isHttpUrl(entry.favicon)) {
-      const img = document.createElement('img');
-
-      img.className = 'size-5';
-      img.alt = '';
-      img.referrerPolicy = 'no-referrer';
-      img.addEventListener('error', showMonogram, { once: true });
-      img.src = entry.favicon;
-      tile.append(img);
-    } else {
-      showMonogram();
-    }
-
     // Not a <button>: every button in a popover HTML item becomes a Flipper
     // stop, and Flipper would steal the arrow keys from the field.
     const card = document.createElement('div');
+    const colors = coverColors(site);
 
     card.id = `${this.errorId}-recent-${index}`;
-    card.className = RECENT_CARD_CLASSES;
+    card.className = RECENT_SPINE_CLASSES;
     card.title = entry.url;
     card.style.animationDelay = `${index * 40}ms`;
+    card.style.setProperty('--_blok-link-cover-bg', colors.background);
+    card.style.setProperty('--_blok-link-cover-letter', colors.letter);
+    card.style.setProperty('--_blok-link-cover-ink', colors.ink);
     card.setAttribute('role', 'option');
     card.setAttribute('aria-selected', 'false');
     card.setAttribute('data-link-recent-row', '');
 
+    const cover = document.createElement('span');
+
+    cover.setAttribute('aria-hidden', 'true');
+    cover.setAttribute('data-link-recent-cover', '');
+
+    const showLetter = (): void => {
+      const letter = document.createElement('span');
+
+      letter.setAttribute('data-link-recent-letter', '');
+      letter.textContent = (Array.from(site)[0] ?? '').toUpperCase();
+      cover.replaceChildren(letter);
+      card.setAttribute('data-link-recent-plain', '');
+    };
+
+    if (entry.image !== undefined && isHttpUrl(entry.image)) {
+      const img = document.createElement('img');
+
+      img.alt = '';
+      img.referrerPolicy = 'no-referrer';
+      img.setAttribute('data-link-recent-picture', '');
+      img.addEventListener('error', showLetter, { once: true });
+      img.src = entry.image;
+      cover.append(img);
+    } else {
+      showLetter();
+    }
+
     const textEl = document.createElement('span');
 
-    textEl.className = 'block w-full min-w-0';
+    textEl.setAttribute('data-link-recent-caption', '');
 
     const titleEl = document.createElement('span');
 
-    titleEl.className = RECENT_TITLE_CLASSES;
     titleEl.setAttribute('data-link-recent-title', '');
     titleEl.textContent = title;
 
     const metaEl = document.createElement('span');
 
-    metaEl.className = RECENT_META_CLASSES;
     metaEl.setAttribute('data-link-recent-meta', '');
     metaEl.textContent = meta;
 
     const enterHint = document.createElement('span');
 
-    enterHint.className = `hidden group-aria-selected:flex absolute top-1.5 right-1.5 ${ENTER_HINT_CLASSES}`;
+    enterHint.className = `hidden group-aria-selected:flex ${ENTER_HINT_CLASSES}`;
     enterHint.setAttribute('aria-hidden', 'true');
     enterHint.setAttribute('data-link-option-enter-hint', '');
     enterHint.innerHTML = IconReturn;
 
     textEl.append(titleEl, metaEl);
-    card.append(tile, textEl, enterHint);
+    card.append(cover, textEl, enterHint);
     // Keep the saved selection and the field's focus while the card takes the click.
     card.addEventListener('mousedown', (event) => event.preventDefault());
+    card.addEventListener('mouseenter', () => this.openRecent(card));
     card.addEventListener('click', () => this.applyLink(entry.url));
 
     return card;
@@ -945,7 +957,25 @@ export class LinkInlineTool implements InlineTool {
         return block !== undefined && heading && heading.closest(holderSelector) === block.holder && text !== ''
           ? [{ blockId: block.id, level: Number(heading.tagName.slice(1)), text }]
           : [];
-      });
+      })
+      .reduce<{ targets: HeadingTarget[]; parents: number[] }>((outline, heading) => {
+        // A heading sits one step under the nearest smaller level above it.
+        const parents = outline.parents.filter((level) => level < heading.level);
+
+        return {
+          targets: [...outline.targets, { ...heading, depth: Math.min(parents.length, HEADING_MAX_DEPTH) }],
+          parents: [...parents, heading.level],
+        };
+      }, { targets: [], parents: [] })
+      .targets;
+  }
+
+  /**
+   * The text a heading search looks for: the value without its "#".
+   * @param value - the trimmed field value
+   */
+  private headingQuery(value: string): string {
+    return (value.startsWith('#') ? value.slice(1) : value).trim().toLowerCase();
   }
 
   /**
@@ -954,7 +984,7 @@ export class LinkInlineTool implements InlineTool {
    * @param value - the trimmed field value
    */
   private matchHeadings(value: string): HeadingTarget[] {
-    const query = (value.startsWith('#') ? value.slice(1) : value).trim().toLowerCase();
+    const query = this.headingQuery(value);
 
     return this.headingTargets
       .filter((heading) => heading.text.toLowerCase().includes(query))
@@ -962,9 +992,38 @@ export class LinkInlineTool implements InlineTool {
   }
 
   /**
-   * @param matches - headings to list
+   * Set a heading row's title, with the part the search matched in bold.
+   * @param row - the heading's row
+   * @param text - the heading text
+   * @param query - lowercase search text, empty for none
    */
-  private renderHeadings(matches: HeadingTarget[]): void {
+  private markMatch(row: HTMLElement, text: string, query: string): void {
+    const title = row.querySelector('[data-link-heading-title]');
+    const at = query === '' ? -1 : text.toLowerCase().indexOf(query);
+
+    if (!title) {
+      return;
+    }
+
+    if (at === -1) {
+      title.textContent = text;
+
+      return;
+    }
+
+    const match = document.createElement('span');
+
+    match.className = 'font-bold';
+    match.setAttribute('data-link-heading-match', '');
+    match.textContent = text.slice(at, at + query.length);
+    title.replaceChildren(text.slice(0, at), match, text.slice(at + query.length));
+  }
+
+  /**
+   * @param matches - headings to list
+   * @param query - lowercase search text, empty for none
+   */
+  private renderHeadings(matches: HeadingTarget[], query: string): void {
     const list = this.nodes.headingList;
 
     if (!list) {
@@ -977,20 +1036,30 @@ export class LinkInlineTool implements InlineTool {
       const cached = this.headingRows.get(heading.blockId);
 
       if (cached) {
+        this.markMatch(cached, heading.text, query);
+
         return cached;
       }
 
       const row = this.createOptionRow(
         'heading',
         '',
-        this.createIcon(HEADING_ICONS[heading.level] ?? IconHash, HEADING_ICON_CLASSES),
+        null,
         heading.text,
         '',
         () => this.applyLink(`#${heading.blockId}`)
       );
+      const tag = document.createElement('span');
 
+      // Drawn by link-picker.css from the attribute, so the row's text stays the heading alone.
+      tag.setAttribute('aria-hidden', 'true');
+      tag.setAttribute('data-link-heading-tag', `H${heading.level}`);
+      row.lastElementChild?.before(tag);
       row.style.animationDelay = `${fresh.indexOf(heading) * 30}ms`;
+      row.style.setProperty('--_blok-link-heading-depth', String(heading.depth));
       row.setAttribute('data-link-heading-level', String(heading.level));
+      row.setAttribute('data-link-heading-depth', String(heading.depth));
+      this.markMatch(row, heading.text, query);
       this.headingRows.set(heading.blockId, row);
 
       return row;
@@ -1028,7 +1097,7 @@ export class LinkInlineTool implements InlineTool {
     const recentCount = this.nodes.recentList?.childElementCount ?? 0;
     const incomplete = value !== '' && !this.isLinkComplete(value);
 
-    this.renderHeadings(matches);
+    this.renderHeadings(matches, this.headingQuery(value));
     recent.hidden = this.editing || value !== '' || recentCount === 0;
     headings.hidden = matches.length === 0;
     kinds.hidden = this.editing || value !== '' || !recent.hidden || !headings.hidden;
@@ -1106,6 +1175,11 @@ export class LinkInlineTool implements InlineTool {
     if (active) {
       active.setAttribute('aria-selected', 'true');
       this.nodes.input?.setAttribute('aria-activedescendant', active.id);
+
+      if (active.hasAttribute('data-link-recent-row')) {
+        this.openRecent(active);
+      }
+
       active.scrollIntoView?.({ block: 'nearest' });
     } else {
       this.nodes.input?.removeAttribute('aria-activedescendant');
@@ -1132,7 +1206,7 @@ export class LinkInlineTool implements InlineTool {
 
     new MetadataFetcher(unfurl)
       .fetch(url)
-      .then((meta) => updateRecentLinkMeta(url, { title: meta.title, favicon: meta.favicon }))
+      .then((meta) => updateRecentLinkMeta(url, { title: meta.title, image: meta.image }))
       .catch(() => undefined);
   }
 

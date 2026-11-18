@@ -1397,16 +1397,81 @@ describe('DatabaseTableView', () => {
         expect(selectedCells(root)).toEqual(['r2/p-done']);
       });
 
-      // Notion scrolls the table to its last column.
-      it('Cmd+Shift+Right scrolls the last column into view', () => {
-        const { root } = mount({ rows });
-        const scrolled = vi.fn();
+      // notion-motion.md Round 73 §1: Notion smooth-scrolls the scroller all the way to its end.
+      describe('scrolling', () => {
+        const scrollerOf = (root: HTMLElement): HTMLElement => {
+          const scroller = root.querySelector<HTMLElement>('[data-blok-database-table-scroller]');
 
-        cell(root, 'r2', 'p-done').scrollIntoView = scrolled;
-        selectCell(root, 'r2', 'p-notes');
-        press(grid(root), 'ArrowRight', { metaKey: true, shiftKey: true });
+          if (scroller === null) {
+            throw new Error('no scroller');
+          }
+          Object.defineProperty(scroller, 'scrollWidth', { configurable: true, value: 2288 });
+          Object.defineProperty(scroller, 'clientWidth', { configurable: true, value: 1242 });
+          scroller.scrollLeft = 300;
+          scroller.scrollTo = vi.fn() as typeof scroller.scrollTo;
 
-        expect(scrolled).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+          return scroller;
+        };
+
+        afterEach(() => {
+          vi.unstubAllGlobals();
+        });
+
+        it.each([
+          ['Cmd+Right', 'ArrowRight', { metaKey: true }, 1046],
+          ['Cmd+Shift+Right', 'ArrowRight', { metaKey: true, shiftKey: true }, 1046],
+          ['Cmd+Left', 'ArrowLeft', { metaKey: true }, 0],
+          ['Cmd+Shift+Left', 'ArrowLeft', { metaKey: true, shiftKey: true }, 0],
+        ])('%s smooth-scrolls the table to its edge, not just to the cell', (_label, key, mod, left) => {
+          const { root } = mount({ rows });
+          const scroller = scrollerOf(root);
+          const nearest = vi.fn();
+
+          cell(root, 'r2', 'p-done').scrollIntoView = nearest;
+          cell(root, 'r2', 'p-title').scrollIntoView = nearest;
+          selectCell(root, 'r2', 'p-notes');
+          press(grid(root), key, mod);
+
+          expect(scroller.scrollTo).toHaveBeenCalledWith({ left, behavior: 'smooth' });
+          expect(nearest).not.toHaveBeenCalled();
+        });
+
+        it('Cmd+Right jumps to the end under reduced motion', () => {
+          vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce'), addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+          const { root } = mount({ rows });
+          const scroller = scrollerOf(root);
+
+          selectCell(root, 'r2', 'p-notes');
+          press(grid(root), 'ArrowRight', { metaKey: true });
+
+          expect(scroller.scrollTo).toHaveBeenCalledWith({ left: 1046, behavior: 'instant' });
+        });
+
+        it('a plain Right arrow still scrolls only as far as the next cell', () => {
+          const { root } = mount({ rows });
+          const scroller = scrollerOf(root);
+          const nearest = vi.fn();
+
+          cell(root, 'r2', 'p-amount').scrollIntoView = nearest;
+          selectCell(root, 'r2', 'p-notes');
+          press(grid(root), 'ArrowRight');
+
+          expect(nearest).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+          expect(scroller.scrollTo).not.toHaveBeenCalled();
+        });
+
+        it('Cmd+Down still scrolls only as far as the last row', () => {
+          const { root } = mount({ rows });
+          const scroller = scrollerOf(root);
+          const nearest = vi.fn();
+
+          cell(root, 'r4', 'p-notes').scrollIntoView = nearest;
+          selectCell(root, 'r2', 'p-notes');
+          press(grid(root), 'ArrowDown', { metaKey: true });
+
+          expect(nearest).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+          expect(scroller.scrollTo).not.toHaveBeenCalled();
+        });
       });
     });
 

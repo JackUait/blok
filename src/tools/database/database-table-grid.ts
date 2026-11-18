@@ -6,6 +6,7 @@ import type { DateDisplayChange } from './cells/date-format';
 import { CELLS_MIME, cellText, gridToClipboard, parseClipboard, parseTypedCells, typedCells, typedValue, valueFromText } from './database-table-clipboard';
 import { isReadOnlyType, readPropertyValue } from './property-values';
 import { isPlaceValue, placeText } from './tier3-values';
+import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 
 /** One cell write of a paste or fill. */
 export interface CellChange {
@@ -1154,7 +1155,18 @@ export class DatabaseTableGrid {
         this.state.selection = { kind: 'cell', anchor: next, focus: next };
       }
       this.paint();
-      this.cellEl(this.state.selection.kind === 'cell' ? this.state.selection.focus : selection.anchor)?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+      const target = this.cellEl(this.state.selection.kind === 'cell' ? this.state.selection.focus : selection.anchor);
+      const scroller = target?.closest<HTMLElement>('[data-blok-database-table-scroller]');
+
+      // notion-motion.md Round 73 §1: a Cmd step across columns scrolls the whole way, with the browser's own smooth scroll.
+      if (reach > 1 && dc !== 0 && scroller) {
+        const end = Math.max(0, scroller.scrollWidth - scroller.clientWidth) * (rtl ? -1 : 1);
+
+        scroller.scrollTo({ left: dc > 0 ? end : 0, behavior: prefersReducedMotion() ? 'instant' : 'smooth' });
+
+        return;
+      }
+      target?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
 
       return;
     }

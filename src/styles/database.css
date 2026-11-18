@@ -13189,7 +13189,7 @@ button[data-blok-database-table-group-count]:hover {
   inset-inline-start: -1px;
   inline-size: 22px;
   block-size: 22px;
-  margin-inline-end: 6px;
+  margin-inline-end: var(--blok-space-1-5);
 }
 
 [data-blok-database-icon="green"] {

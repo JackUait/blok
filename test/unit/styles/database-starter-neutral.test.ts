@@ -58,7 +58,7 @@ describe('an emoji database icon', () => {
 
     expect(body).toMatch(/inline-size:\s*22px/);
     expect(body).toMatch(/block-size:\s*22px/);
-    expect(body).toMatch(/margin-inline-end:\s*6px/);
+    expect(body).toContain('margin-inline-end: var(--blok-space-1-5)');
     expect(body).toMatch(/position:\s*relative/);
     expect(body).toMatch(/inset-inline-start:\s*-1px/);
   });

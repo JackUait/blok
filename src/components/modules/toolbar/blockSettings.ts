@@ -402,6 +402,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       popoverRef.current = this.popover.getElement();
       popoverRef.current.setAttribute('data-blok-testid', 'block-tunes-popover');
       popoverRef.current.id = SETTINGS_POPOVER_ID;
+      // The block menu grows with its rows; popover-animation.css still caps it at the window.
+      popoverRef.current.style.setProperty('--max-height', '100dvh');
 
       /**
        * Remember the trigger (settings toggler) so focus can be returned to it

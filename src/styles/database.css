@@ -51,9 +51,12 @@
      The first alpha that gives 3:1 on the menu and its hover fill. */
   --blok-database-switch-off-bg: rgba(135, 131, 120, 0.92);
   --blok-database-switch-knob-bg: var(--blok-toggle-thumb-on-bg);
-  /* The property menu's name field at rest. Light is unmeasured: the hover fill, as the shared field's. */
+  /* The Add property name field at rest. Light is unmeasured: the hover fill, as the shared field's. */
   --blok-database-name-field-bg: var(--blok-database-hover-bg);
   --blok-database-name-field-ring: transparent;
+  /* notion-motion.md Round 73 §2 (r73-n-hdrmenu.raw): the header menu's name field at rest. The Add property field keeps the tokens above. */
+  --blok-database-property-menu-name-bg: rgba(66, 35, 3, 0.03);
+  --blok-database-property-menu-name-ring: rgba(28, 19, 1, 0.11);
   /* "More templates" card and search borders (research/26 §2). Dark is unmeasured: Blok's border. */
   --blok-database-tpl-border: rgb(230, 229, 227);
   /* Default column = the plain column (research/08:72); blue and green measured light (research/21 §1f).
@@ -619,6 +622,8 @@
     /* findings K04 (live): Notion's name field fill and 1px ring. */
     --blok-database-name-field-bg: rgba(252, 252, 252, 0.03);
     --blok-database-name-field-ring: rgba(255, 255, 235, 0.1);
+  --blok-database-property-menu-name-bg: var(--blok-database-name-field-bg);
+  --blok-database-property-menu-name-ring: var(--blok-database-name-field-ring);
     --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
     /* notion-spec-2 §23.2: OPEN holds a 65x20 rgb(37,37,37) box, radius 4, in its 2px rgb(32,32,32) frame. */
     --blok-database-table-open-button-bg: rgb(37, 37, 37);
@@ -987,6 +992,8 @@
   /* findings K04 (live): Notion's name field fill and 1px ring. */
   --blok-database-name-field-bg: rgba(252, 252, 252, 0.03);
   --blok-database-name-field-ring: rgba(255, 255, 235, 0.1);
+  --blok-database-property-menu-name-bg: var(--blok-database-name-field-bg);
+  --blok-database-property-menu-name-ring: var(--blok-database-name-field-ring);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   /* notion-spec-2 §23.2: OPEN holds a 65x20 rgb(37,37,37) box, radius 4, in its 2px rgb(32,32,32) frame. */
   --blok-database-table-open-button-bg: rgb(37, 37, 37);
@@ -8372,6 +8379,8 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
 /* notion-spec-2 §24.10: the header menu is 220 wide. The input's own width (about 160) would widen it; flex fills the row. */
 [data-blok-database-property-menu-name] > [data-blok-database-property-menu-name-input] {
   width: 0;
+  border-color: var(--blok-database-property-menu-name-ring);
+  background-color: var(--blok-database-property-menu-name-bg);
 }
 
 /* notion-spec-2 §17.1: the Add related property dialog is 250x119 (4 + 28 Enable + 83 + 4), the input 218x28.

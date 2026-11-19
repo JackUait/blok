@@ -493,6 +493,13 @@ describe('calendar day digits and weekday row (Round 32)', () => {
     expect(body).toContain('margin-block-start: var(--blok-space-0-5)');
   });
 
+  // notion-motion.md Round 79 §5 "Calendar": the left line starts at the grid top (y 374), under the weekday row's line.
+  it('runs the left line down the weeks only, with the weekday row kept on their columns', () => {
+    expect(ruleBody('[data-blok-database-calendar-grid]')).not.toContain('border-inline-start');
+    expect(ruleBody('[data-blok-database-calendar-week]')).toContain('border-inline-start: 1px solid var(--blok-database-calendar-border)');
+    expect(ruleBody('[data-blok-database-calendar-weekdays]')).toContain('margin-inline-start: var(--blok-border-width-hairline)');
+  });
+
   it('sizes a day number to its text, and only today to a 24px circle 4px in', () => {
     const number = ruleBody('[data-blok-database-calendar-day-number]');
     const today = ruleBody('[data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number]');

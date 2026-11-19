@@ -355,7 +355,7 @@ describe('form builder question card (research/21 §1k)', () => {
   it('draws the builder\'s option marks as Notion\'s 15px ringed boxes', () => {
     const mark = ruleBody('[data-blok-database-form-option] input:is([type="radio"], [type="checkbox"])');
 
-    expect(ruleBody(':is([data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input[type="checkbox"]:not(:checked)')).toBe(mark);
+    expect(ruleBody(':is([data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input[type="checkbox"]')).toBe(mark);
 
     expect(mark).toContain('appearance: none');
     expect(mark).toContain('inline-size: 15px');
@@ -429,7 +429,7 @@ describe('form builder question card (research/21 §1k)', () => {
   // Dark is unmeasured: the builder mark's dark ring (Round 77 §4).
   it('draws a respondent\'s checkbox as the builder\'s 18px box and 15px mark, with a darker ring', () => {
     const slot = ruleBody(':is([data-blok-database-form-option], [data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input:is([type="radio"], [type="checkbox"])');
-    const mark = ruleBody(':is([data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input[type="checkbox"]:not(:checked)');
+    const mark = ruleBody(':is([data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input[type="checkbox"]');
 
     expect(slot).toContain('inline-size: 18px');
     expect(mark).toContain('inline-size: 15px');
@@ -438,6 +438,20 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(mark).toContain('box-shadow: 0 0 0 1.5px var(--blok-database-form-mark-ring, var(--blok-database-table-border))');
     expect(ruleBody('[data-blok-database-form-checkbox-answer]')).toContain('--blok-database-form-mark-ring: var(--blok-database-form-answer-mark-ring)');
     expect(tokenValues('--blok-database-form-answer-mark-ring')).toEqual(['rgba(27, 21, 0, 0.19)', 'rgba(255, 255, 243, 0.082)', 'rgba(255, 255, 243, 0.082)']);
+  });
+
+  // Round 79 §3 "Respondent checkbox, checked": the 15 mark fills and rings in one colour, a 14 white check at +2,+2.
+  // The fill is the database Checkbox cell's checked colour, the look Blok already ships for a checked box.
+  it('draws a checked respondent checkbox as the database checkbox\'s checked mark', () => {
+    const checked = ruleBody(':is([data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input[type="checkbox"]:checked');
+
+    expect(checked).toContain('background-color: var(--blok-database-checkbox-checked-bg)');
+    expect(checked).toContain('box-shadow: 0 0 0 1.5px var(--blok-database-checkbox-checked-bg)');
+    expect(checked).toContain('background-size: 14px 14px');
+    expect(checked).toContain('background-position: center');
+    expect(checked).toContain('background-repeat: no-repeat');
+    expect(checked).toMatch(/background-image: url\("data:image\/svg\+xml,[^"]*M4 10 8 14 16 6[^"]*stroke='white'/);
+    expect(tokenValues('--blok-database-checkbox-check')).toEqual(['#ffffff', '#ffffff', '#ffffff']);
   });
 
   // Round 76 §3 "Checkbox label": a 26-tall textarea 12 after the box, no padding, 16px; the row pads 5 10.
@@ -496,6 +510,13 @@ describe('form builder question card (research/21 §1k)', () => {
 
   it('a card does not light up while the pointer is on the "+" above it', () => {
     expect(database).toContain(`${card}:hover:not(:has([data-blok-database-form-gap]:hover))`);
+  });
+
+  // Round 79 §5 "Form builder": Notion pads the title 0 2 and the description 0 4; the placeholder ink stays Blok's AA ink.
+  it('insets the builder\'s title 2px and description 4px, keeping the AA placeholder ink', () => {
+    expect(ruleBody('[data-blok-database-form-header] input[data-blok-database-form-header-title]')).toContain('padding-inline: var(--blok-space-0-5)');
+    expect(ruleBody('[data-blok-database-form-header] input[data-blok-database-form-header-description]')).toContain('padding-inline: var(--blok-space-1)');
+    expect(ruleBody('[data-blok-database-form-header] input::placeholder')).toContain('color: var(--blok-database-title-placeholder)');
   });
 
   // Round 31 §1: "Form title" H1 40px 700 / 48 and "Description (optional)" 16px / 24, 600 wide.

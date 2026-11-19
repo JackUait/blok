@@ -587,9 +587,19 @@ describe('Hours zoom 15-minute lines and day period (Round 35)', () => {
       expect(css.slice(at, css.indexOf('}', at))).toContain('margin-inline-start: calc(-1 * var(--blok-space-1))');
     });
 
-    it('gives the zoom chevron a 10 wide box 6 after the label', () => {
+    // Round 79 §5: Notion's Month ⌄ ink is 9.9x5.6 and ‹ › are 5.6x9.9; the 20-unit chevron at 28 draws 9.8x4.9.
+    it('gives the zoom chevron a 10 wide box 6 after the label, drawn at 28', () => {
+      const chevron = ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom] svg');
+
       expect(ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom]')).toContain('gap: var(--blok-space-1-5)');
-      expect(ruleBody('[data-blok-database-timeline-zoom] svg')).toContain('margin-inline: calc(-1 * var(--blok-space-0-75))');
+      expect(chevron).toMatch(/inline-size:\s*28px;\s*block-size:\s*28px;\s*max-block-size:\s*none/);
+      expect(chevron).toContain('margin-inline: calc(-1 * var(--blok-space-2-25))');
+    });
+
+    it('draws ‹ and › at 28 in their 24 buttons, like the calendar', () => {
+      ['prev', 'next'].forEach((arrow) => {
+        expect(ruleBody(`[data-blok-database-timeline-toolbar] [data-blok-database-timeline-${arrow}] svg`)).toMatch(/inline-size:\s*28px;\s*block-size:\s*28px;\s*max-block-size:\s*none/);
+      });
     });
 
     it('sets the zoom menu items 14px regular', () => {

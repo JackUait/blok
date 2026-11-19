@@ -1903,6 +1903,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R194_BYTES = -227;
     // Lane r195: Round 78 §3 a respondent's checkbox takes the builder's 18px box and 15px mark with a darker ring; §2 the Delete option confirm's 600 title. Net database.css growth against origin/main.
     const DATABASE_R195_BYTES = 821;
+    // Lane r197: Round 79 §3 a respondent's checkbox keeps its mark with no label and when checked; §5 the timeline's 28px nav glyphs, the calendar's left line under the weekday row and the form header's 2 and 4px insets. Net database.css growth against origin/main.
+    const DATABASE_R197_BYTES = 1973;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2546,6 +2548,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R192_BYTES
       + DATABASE_R194_BYTES
       + DATABASE_R195_BYTES
+      + DATABASE_R197_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

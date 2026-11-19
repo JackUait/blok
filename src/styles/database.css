@@ -16003,7 +16003,6 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   position: relative;
   display: flex;
   flex-direction: column;
-  border-inline-start: 1px solid var(--blok-database-calendar-border);
 }
 
 /* The drag box from empty grid space: core's lasso look (research/23 §2c). */
@@ -16021,8 +16020,15 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   grid-template-columns: repeat(var(--blok-database-calendar-columns, 7), minmax(0, 1fr));
 }
 
+/* notion-motion.md Round 79 §5: the grid's left line starts under the weekday row's line, so only weeks draw it.
+   The weekday row starts 1px in to stay on the weeks' columns. */
+[data-blok-database-calendar-week] {
+  border-inline-start: 1px solid var(--blok-database-calendar-border);
+}
+
 /* notion-motion.md Round 32 §3 Calendar: 24px cells at y 349.2, over the 1px line. */
 [data-blok-database-calendar-weekdays] {
+  margin-inline-start: var(--blok-border-width-hairline);
   min-height: 25px;
   margin-block-start: var(--blok-space-0-5);
   border-block-end: 1px solid var(--blok-database-calendar-border);
@@ -16526,8 +16532,19 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   gap: var(--blok-space-1-5);
 }
 
-[data-blok-database-timeline-zoom] svg {
-  margin-inline: calc(-1 * var(--blok-space-0-75));
+/* notion-motion.md Round 79 §5: Notion's Month ⌄ ink is 9.9x5.6 and ‹ › are 5.6x9.9. The 20-unit chevron at 28
+   draws 9.8x4.9, as the calendar's arrows do. Prefixed to beat `[data-blok-database-timeline] svg`.
+   The -9 margins keep the chevron's 10 wide box. */
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom] svg,
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-prev] svg,
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-next] svg {
+  inline-size: 28px;
+  block-size: 28px;
+  max-block-size: none;
+}
+
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom] svg {
+  margin-inline: calc(-1 * var(--blok-space-2-25));
 }
 
 [data-blok-database-timeline-toolbar] :is([data-blok-database-timeline-prev], [data-blok-database-timeline-next]) {
@@ -20599,6 +20616,15 @@ button[data-blok-database-feed-reaction]:hover,
   color: var(--blok-database-title-placeholder);
 }
 
+/* notion-motion.md Round 79 §5: the builder's title pads 0 2 and its description 0 4, so text and placeholder sit there. */
+[data-blok-database-form-header] input[data-blok-database-form-header-title] {
+  padding-inline: var(--blok-space-0-5);
+}
+
+[data-blok-database-form-header] input[data-blok-database-form-header-description] {
+  padding-inline: var(--blok-space-1);
+}
+
 [data-blok-database-form-header] [data-blok-database-form-header-title] {
   font-size: 40px;
   font-weight: 700;
@@ -21157,10 +21183,9 @@ button[data-blok-database-feed-reaction]:hover,
   color: var(--blok-database-title-placeholder);
 }
 
-/* Round 76 §3: a builder mark is a 15x15 white box with a 1.5px ring, 1.5 in its 18px slot.
-   A checked builder checkbox keeps the native look: Notion's checked mark is unmeasured. */
+/* Round 76 §3: a builder mark is a 15x15 white box with a 1.5px ring, 1.5 in its 18px slot. */
 [data-blok-database-form-option] input:is([type="radio"], [type="checkbox"]),
-:is([data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input[type="checkbox"]:not(:checked) {
+:is([data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input[type="checkbox"] {
   appearance: none;
   inline-size: 15px;
   block-size: 15px;
@@ -21173,6 +21198,17 @@ button[data-blok-database-feed-reaction]:hover,
 
 [data-blok-database-form-option] input[type="radio"] {
   border-radius: 50%;
+}
+
+/* Round 79 §3: a checked mark fills and rings in one colour, with a 14px check centred (+2 in the slot).
+   The fill and check are the database Checkbox cell's checked look; the check is white in every theme. */
+:is([data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input[type="checkbox"]:checked {
+  background-color: var(--blok-database-checkbox-checked-bg);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 10 8 14 16 6' stroke='white' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-size: 14px 14px;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 0 0 0 1.5px var(--blok-database-checkbox-checked-bg);
 }
 
 /* Round 76 §3 "Option row hover": the row fills; the drag handle (16x24, 2 in) and Delete option (24x24, 4 from the end) show. */

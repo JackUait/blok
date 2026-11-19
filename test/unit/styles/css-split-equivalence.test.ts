@@ -1905,6 +1905,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R195_BYTES = 821;
     // Lane r197: Round 79 §3 a respondent's checkbox keeps its mark with no label and when checked; §5 the timeline's 28px nav glyphs, the calendar's left line under the weekday row and the form header's 2 and 4px insets. Net database.css growth against origin/main.
     const DATABASE_R197_BYTES = 1973;
+    // Lane r198: Round 80 the respondent's filled check, the database ink on panel checkmarks, the Month chevron's icon ink and the No date panel's insets. Net database.css growth against origin/main.
+    const DATABASE_R198_BYTES = 48;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2549,6 +2551,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R194_BYTES
       + DATABASE_R195_BYTES
       + DATABASE_R197_BYTES
+      + DATABASE_R198_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

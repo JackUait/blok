@@ -440,8 +440,8 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(tokenValues('--blok-database-form-answer-mark-ring')).toEqual(['rgba(27, 21, 0, 0.19)', 'rgba(255, 255, 243, 0.082)', 'rgba(255, 255, 243, 0.082)']);
   });
 
-  // Round 79 §3 "Respondent checkbox, checked": the 15 mark fills and rings in one colour, a 14 white check at +2,+2.
-  // The fill is the database Checkbox cell's checked colour, the look Blok already ships for a checked box.
+  // Round 79 §3 "Respondent checkbox, checked": the 15 mark fills and rings in one colour, a 14 check at +2,+2.
+  // r79-n-respondent-cb-checked.raw: the check is Notion's filled 16-unit path in rgb(243, 249, 253), not a stroke.
   it('draws a checked respondent checkbox as the database checkbox\'s checked mark', () => {
     const checked = ruleBody(':is([data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input[type="checkbox"]:checked');
 
@@ -450,7 +450,8 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(checked).toContain('background-size: 14px 14px');
     expect(checked).toContain('background-position: center');
     expect(checked).toContain('background-repeat: no-repeat');
-    expect(checked).toMatch(/background-image: url\("data:image\/svg\+xml,[^"]*M4 10 8 14 16 6[^"]*stroke='white'/);
+    expect(checked).toMatch(/background-image: url\("data:image\/svg\+xml,[^"]*viewBox='0 0 16 16'[^"]*d='M11\.62 3\.18a\.876\.876 0 0 1 1\.5\.9l-5\.244 8\.74a\.876\.876 0 0 1-1\.414\.12L2\.966 8\.86a\.875\.875 0 1 1 1\.328-1\.138L7 10\.879z' fill='%23f3f9fd'/);
+    expect(checked).not.toMatch(/background-image:[^;]*stroke/);
     expect(tokenValues('--blok-database-checkbox-check')).toEqual(['#ffffff', '#ffffff', '#ffffff']);
   });
 

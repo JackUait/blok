@@ -4902,6 +4902,7 @@ span[data-blok-slash-search] {
   --blok-database-calendar-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-calendar-day-text: rgb(44, 44, 43);
   --blok-database-calendar-nav-icon: rgb(142, 139, 134);
+  --blok-database-timeline-zoom-chevron: rgb(142, 139, 134);
   --blok-database-date-help-text: var(--blok-database-table-header-text);
   --blok-database-csv-help-text: rgb(142, 139, 134);
   --blok-database-csv-help-icon: rgb(142, 139, 134);
@@ -5225,6 +5226,7 @@ span[data-blok-slash-search] {
   --blok-database-calendar-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-calendar-day-text: rgb(240, 239, 237);
   --blok-database-calendar-nav-icon: rgb(173, 169, 163);
+  --blok-database-timeline-zoom-chevron: rgb(142, 139, 134);
   --blok-database-date-help-text: rgb(155, 152, 147);
   --blok-database-csv-help-text: rgb(150, 147, 142);
   --blok-database-calendar-event-bg: rgb(47, 47, 47);
@@ -5544,6 +5546,7 @@ span[data-blok-slash-search] {
   --blok-database-calendar-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-calendar-day-text: rgb(240, 239, 237);
   --blok-database-calendar-nav-icon: rgb(173, 169, 163);
+  --blok-database-timeline-zoom-chevron: rgb(142, 139, 134);
   --blok-database-date-help-text: rgb(155, 152, 147);
   --blok-database-csv-help-text: rgb(150, 147, 142);
   --blok-database-calendar-event-bg: rgb(47, 47, 47);
@@ -19171,7 +19174,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom] svg {
   margin-inline: calc(-1 * var(--blok-space-2-25));
-  color: var(--blok-database-calendar-nav-icon);
+  color: var(--blok-database-timeline-zoom-chevron);
 }
 
 [data-blok-database-timeline-toolbar] :is([data-blok-database-timeline-prev], [data-blok-database-timeline-next]) {

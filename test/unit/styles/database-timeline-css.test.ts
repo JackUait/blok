@@ -612,8 +612,10 @@ describe('Hours zoom 15-minute lines and day period (Round 35)', () => {
     });
 
     // r79-n-tl-nav.raw: Notion's Month ⌄ is ink 142,139,134, as ‹ › are. The label keeps its AA text ink.
-    it('inks the zoom chevron like ‹ and ›, not like its label', () => {
-      expect(ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom] svg')).toContain('color: var(--blok-database-calendar-nav-icon)');
+    // notion-motion.md Round 81 dark (r81-n-tl-month-dark.raw): in dark the ⌄ stays 142 while ‹ › go 173.
+    it('inks the zoom chevron 142, 139, 134 in light and dark, not like its label', () => {
+      expect(ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom] svg')).toContain('color: var(--blok-database-timeline-zoom-chevron)');
+      expect([...css.matchAll(/--blok-database-timeline-zoom-chevron:\s*([^;]+);/g)].map((m) => m[1].trim())).toEqual(Array(3).fill('rgb(142, 139, 134)'));
     });
 
     it('draws ‹ and › at 28 in their 24 buttons, like the calendar', () => {

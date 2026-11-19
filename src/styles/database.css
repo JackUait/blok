@@ -1456,17 +1456,21 @@
   block-size: 16px;
 }
 
-/* notion-motion.md Round 81 §2 (r81-n-gallery-cardtools.raw): Notion's gallery tool buttons are r0 in an r4 group
-   that clips them. Rounding only the outer corners paints the same and leaves a focus ring unclipped. */
+/* notion-motion.md Round 81 §2 (r81-n-gallery-cardtools.raw), Round 82 §1 (r82-n-a4-bd-cardtools.raw): Notion's
+   gallery and board tool buttons are r0 in an r4 group that clips them. Rounding only the outer corners paints the
+   same and leaves a focus ring unclipped. */
+[data-blok-database-card] [data-blok-database-card-actions] > button,
 [data-blok-database-gallery-card] [data-blok-database-card-actions] > button {
   border-radius: 0;
 }
 
+[data-blok-database-card] [data-blok-database-card-actions] > button:first-child,
 [data-blok-database-gallery-card] [data-blok-database-card-actions] > button:first-child {
   border-start-start-radius: inherit;
   border-end-start-radius: inherit;
 }
 
+[data-blok-database-card] [data-blok-database-card-actions] > button:last-child,
 [data-blok-database-gallery-card] [data-blok-database-card-actions] > button:last-child {
   border-start-end-radius: inherit;
   border-end-end-radius: inherit;

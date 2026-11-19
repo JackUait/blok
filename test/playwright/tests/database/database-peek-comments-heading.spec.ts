@@ -128,6 +128,7 @@ for (const theme of THEMES) {
         composer: { padding: getComputedStyle(composer).padding, top: round(composerBox.top - labelBox.bottom) },
         avatar: { x: round(avatarBox.left - x), size: round(avatarBox.width), fromLabel: round(avatarBox.top - labelBox.bottom) },
         inputTextX: round(input.getBoundingClientRect().left + parseFloat(inputStyle.paddingLeft) - x),
+        inputBox: { x: round(input.getBoundingClientRect().left - x), width: round(input.getBoundingClientRect().width), height: round(input.getBoundingClientRect().height) },
         inputPadding: inputStyle.padding,
         line: { fromComposer: round(lineBox.top - composerBox.bottom), color: getComputedStyle(line).borderTopColor, width: getComputedStyle(line).borderTopWidth },
         bodyFromLine: round(editor.getBoundingClientRect().top - lineBox.bottom),
@@ -140,7 +141,9 @@ for (const theme of THEMES) {
     expect(read.composer).toEqual({ padding: '8px 4px 12px 0px', top: 0 });
     expect(read.avatar).toEqual({ x: 84, size: 24, fromLabel: 8 });
     expect(read.inputTextX).toBe(116);
-    expect(read.inputPadding).toBe('3.5px 4px 3px');
+    // notion-motion.md Round 83 §7: the box is 560×27, 5.5 after the avatar; its text still starts at 116.
+    expect(read.inputBox).toEqual({ x: 113.5, width: 560, height: 27 });
+    expect(read.inputPadding).toBe('3.5px 2.5px 3px');
     // The section's bottom line: right under the composer, then the body 8px below.
     expect(read.line).toEqual({ fromComposer: 0, color: theme.line, width: '1px' });
     expect(read.bodyFromLine).toBe(8);

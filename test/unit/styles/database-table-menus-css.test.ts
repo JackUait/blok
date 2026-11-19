@@ -933,3 +933,13 @@ describe('card menu chevrons (Round 82)', () => {
     expect(declared(`${CARD} [data-blok-popover-item-icon-chevron-right] svg`, 'height')).toEqual(['16px']);
   });
 });
+
+// notion-motion.md Round 82 §1 "…Escape on the confirm" (r82-n-a1-prop-confirm-escape.raw): focus goes back to the
+// header menu list with outline none. The keyboard cursor stays on the Edit property row, so the list needs no ring.
+describe('header menu list after the option confirm (Round 82)', () => {
+  const LIST = `${HEADER} > [data-blok-popover-container] > [data-blok-popover-items]:focus-visible`;
+
+  it('paints no ring round the focused list', () => {
+    expect(declared(LIST, 'outline')).toEqual(['none']);
+  });
+});

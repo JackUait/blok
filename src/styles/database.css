@@ -14901,12 +14901,14 @@ input[data-blok-database-picker-search]:focus {
   font-weight: 400;
 }
 
+/* R75 §1 (r75-n-ccfocus.raw): the trash ends 25 in from the 290 panel's right edge. */
 [data-blok-database-color-rule-delete] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 24px;
   height: 24px;
+  margin-inline-end: var(--blok-space-1);
   padding: 0;
   border: none;
   border-radius: var(--blok-radius-control);

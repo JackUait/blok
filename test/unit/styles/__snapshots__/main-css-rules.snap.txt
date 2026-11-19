@@ -17594,6 +17594,7 @@ input[data-blok-database-picker-search]:focus {
   justify-content: center;
   width: 24px;
   height: 24px;
+  margin-inline-end: var(--blok-space-1);
   padding: 0;
   border: none;
   border-radius: var(--blok-radius-control);

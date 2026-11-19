@@ -546,6 +546,11 @@ describe('conditional color page (notion-motion.md Round 20 §4, r20-cc-intro.ra
     expect(ruleBody(database, '[data-blok-database-color-rule-delete] svg')).toContain('width: 16px');
   });
 
+  // notion-motion.md Round 75 §1 (r75-n-ccfocus.raw): the trash ends 25 in from the 290 panel's right, 4 more than the card's own inset.
+  it('keeps the trash 4px in from the rule card\'s end', () => {
+    expect(ruleBody(database, '[data-blok-database-color-rule-delete]')).toContain('margin-inline-end: var(--blok-space-1)');
+  });
+
   it('draws the value as a 30-tall field with a 1px ring', () => {
     const field = ruleBody(database, '[data-blok-database-color-rule-field]');
 

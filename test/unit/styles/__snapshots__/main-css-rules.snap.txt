@@ -8873,6 +8873,7 @@ button[data-blok-database-board-lane-count]:hover {
 
 [data-blok-database-list-group-actions] {
   display: inline-flex;
+  margin-inline-start: var(--blok-space-0-25);
   opacity: 0;
   transition: opacity 80ms ease;
 }

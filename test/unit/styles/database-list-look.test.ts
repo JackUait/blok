@@ -616,3 +616,11 @@ describe('grouped list header (Round 81)', () => {
     expect(ruleBody(database, '[data-blok-database-list-group-label]')).toContain('font-weight: 500');
   });
 });
+
+// notion-motion.md Round 82 §1 "Grouped list header" (r81-n-glist.raw, r82-b-a4-glist.raw): Notion's "…" and "+" sit at
+// 609.6 / 633.6, Blok's at 608.6 / 632.6.
+describe('grouped list header (Round 82)', () => {
+  it('starts the "…" and "+" 1px further along', () => {
+    expect(ruleBody(database, '[data-blok-database-list-group-actions]')).toContain('margin-inline-start: var(--blok-space-0-25)');
+  });
+});

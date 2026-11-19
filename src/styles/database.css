@@ -5114,8 +5114,10 @@ button[data-blok-database-board-lane-count]:hover {
   transform: rotate(90deg);
 }
 
+/* notion-motion.md Round 82 §1 (r81-n-glist.raw): Notion's "…" and "+" sit 1px further along than the header gap puts them. */
 [data-blok-database-list-group-actions] {
   display: inline-flex;
+  margin-inline-start: var(--blok-space-0-25);
   opacity: 0;
   transition: opacity 80ms ease;
 }

@@ -1912,7 +1912,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r202: Round 81 small look items (grouped list header, card menu search, No date pitch, gallery tools, Calculate chevrons, Month chevron, menu icon ink). Net database.css growth against origin/main.
     const DATABASE_R202_BYTES = 4524;
     // Lane r205: Round 82 small look items (card menu chevrons, board card tools, header menu outline, grouped list header). Net database.css growth against origin/main.
-    const DATABASE_R205_BYTES = 1442;
+    const DATABASE_R205_BYTES = 1620;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

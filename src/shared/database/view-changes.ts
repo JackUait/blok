@@ -49,26 +49,19 @@ export const withEntryIds = <T extends { id?: string }>(entries: readonly T[]): 
   entries.map((entry, index) => (typeof entry.id === 'string' && entry.id !== '' ? entry as T & { id: string } : { ...entry, id: `legacy-${index}` }));
 
 /**
- * Group-by types whose new grouping starts with Hide empty groups on.
- * Multi-select, checkbox, date and text are unmeasured: Notion's switch was
- * already on when they were picked (notion-motion.md Round 78 §4).
- */
-const HIDES_EMPTY_GROUPS: readonly PropertyType[] = ['number', 'status', 'select'];
-
-/**
- * The write when people pick what a view groups by. A switch to another
- * property starts from that type's defaults: a number hides empty groups
- * (research/23 §2e), so do a status (notion-motion.md Round 42 §1, Round 77 §2)
- * and a select (Round 78 §4). A new board's own grouping is not a pick and
- * keeps them. Re-picking the same property keeps the settings.
+ * The write when people pick what a view groups by. Every pick turns Hide
+ * empty groups on, whatever the type, and so does a re-pick of the property
+ * already grouped on (notion-motion.md Round 79 §2). A re-pick keeps the other
+ * settings; a switch to another property starts from that type's defaults.
+ * A new board's own grouping is not a pick and keeps the switch off (Round 78).
  */
 export const groupByChange = (
   view: DatabaseViewConfig | undefined,
   property: PropertyDefinition
 ): Pick<DatabaseViewConfig, 'groupBy' | 'groupSettings'> => {
-  if (property.id === view?.groupBy) return { groupBy: property.id };
+  const kept = property.id === view?.groupBy ? view.groupSettings : undefined;
 
-  return { groupBy: property.id, groupSettings: HIDES_EMPTY_GROUPS.includes(property.type) ? { hideEmptyGroups: true } : {} };
+  return { groupBy: property.id, groupSettings: { ...kept, hideEmptyGroups: true } };
 };
 
 /**

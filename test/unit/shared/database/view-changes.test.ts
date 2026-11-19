@@ -55,8 +55,22 @@ describe('groupByChange', () => {
     expect(groupByChange({ ...table(), type: 'board', groupBy: 's', groupSettings: {} }, kind)).toEqual({ groupBy: 'k', groupSettings: { hideEmptyGroups: true } });
   });
 
-  it('re-picking the same Status keeps its settings', () => {
-    expect(groupByChange({ ...table(), groupBy: 's', groupSettings: {} }, schema[2])).toEqual({ groupBy: 's' });
+  // notion-motion.md Round 79 §2 (r79-n-hideempty.raw): with the switch off, every pick turned it on, whatever the type.
+  it('a new grouping of any type starts with Hide empty groups on', () => {
+    const types: PropertyDefinition['type'][] = ['multiSelect', 'checkbox', 'date', 'text', 'number'];
+
+    for (const type of types) {
+      const property: PropertyDefinition = { id: 'x', name: 'X', type, position: 'a3' };
+
+      expect(groupByChange({ ...table(), type: 'board', groupBy: 's', groupSettings: { hideEmptyGroups: false } }, property)).toEqual({ groupBy: 'x', groupSettings: { hideEmptyGroups: true } });
+      expect(groupByChange({ ...table(), type: 'timeline' }, property)).toEqual({ groupBy: 'x', groupSettings: { hideEmptyGroups: true } });
+    }
+  });
+
+  // Round 79 §2: Status → Status on a board and Select → Select on a timeline both turned the switch back on.
+  it('re-picking the same property turns Hide empty groups on and keeps its other settings', () => {
+    expect(groupByChange({ ...table(), groupBy: 's', groupSettings: { hideEmptyGroups: false, sort: 'manual' } }, schema[2]))
+      .toEqual({ groupBy: 's', groupSettings: { hideEmptyGroups: true, sort: 'manual' } });
   });
 });
 

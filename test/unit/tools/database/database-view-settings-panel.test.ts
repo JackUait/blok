@@ -2347,14 +2347,15 @@ describe('view settings panel', () => {
       expect(hideEmpty()).toBe('true');
     });
 
-    it('keeps the settings when the same number property is picked again', () => {
-      const h = harness({ type: 'board', groupBy: 'num', groupSettings: { numberBy: 'range' } });
+    // notion-motion.md Round 79 §2: a re-pick turns Hide empty groups back on.
+    it('keeps the other settings and turns Hide empty groups on when the same number property is picked again', () => {
+      const h = harness({ type: 'board', groupBy: 'num', groupSettings: { numberBy: 'range', hideEmptyGroups: false } });
 
       h.open('group');
       click('database-group-by');
       click('database-pick-property-num');
 
-      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ groupBy: 'num' });
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ groupBy: 'num', groupSettings: { numberBy: 'range', hideEmptyGroups: true } });
     });
 
     it('does not touch a view already grouped by a number when it opens', () => {

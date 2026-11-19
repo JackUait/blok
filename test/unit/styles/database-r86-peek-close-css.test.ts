@@ -37,3 +37,12 @@ describe('side peek close glyph size', () => {
     expect(body).toContain('height: 20px');
   });
 });
+
+// notion-motion.md Round 56 §1 and r66-n-headers.raw: each 1x14 rule sits 8 from the buttons beside it
+// (side: Open 794, rule 826, Switch 835, Previous 876), so a button step across a rule is 41.
+describe('peek header rules', () => {
+  it('spaces each rule 6px inside the toolbar\'s 2px gap', () => {
+    expect(ruleBody('[data-blok-database-drawer-toolbar]')).toContain('gap: var(--blok-space-0-5)');
+    expect(ruleBody('[data-blok-database-peek-separator]')).toContain('margin-inline: var(--blok-space-1-5)');
+  });
+});

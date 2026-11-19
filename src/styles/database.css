@@ -2037,12 +2037,13 @@
   margin-inline-start: auto;
 }
 
-/* Notion's 1x14 rules between close+expand, the mode and the row steps (R03). */
+/* Notion's 1x14 rules between close+expand, the mode and the row steps (R03).
+   R56 §1, r66-n-headers.raw: 8 from each button = 6 here + the toolbar's 2px gap. */
 [data-blok-database-peek-separator] {
   flex-shrink: 0;
   width: 1px;
   height: 14px;
-  margin-inline: var(--blok-space-1-75);
+  margin-inline: var(--blok-space-1-5);
   background-color: var(--blok-database-peek-separator);
 }
 

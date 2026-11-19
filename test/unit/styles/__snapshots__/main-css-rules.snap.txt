@@ -6315,7 +6315,7 @@ span[data-blok-slash-search] {
   flex-shrink: 0;
   width: 1px;
   height: 14px;
-  margin-inline: var(--blok-space-1-75);
+  margin-inline: var(--blok-space-1-5);
   background-color: var(--blok-database-peek-separator);
 }
 

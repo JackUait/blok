@@ -1907,8 +1907,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R197_BYTES = 1973;
     // Lane r198: Round 80 the respondent's filled check, the database ink on panel checkmarks, the Month chevron's icon ink and the No date panel's insets. Net database.css growth against origin/main.
     const DATABASE_R198_BYTES = 1064;
-    // Lane r199: backlog items Notion measured earlier (R64, R66, R73, R75): the header menu name field at rest. Net database.css growth against origin/main.
-    const DATABASE_R199_BYTES = 713;
+    // Lane r199: backlog items Notion measured earlier (R64, R66, R73, R75): the header menu name field at rest, the peek header rules 8 from each button. Net database.css growth against origin/main.
+    const DATABASE_R199_BYTES = 796;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

@@ -112,7 +112,12 @@ export class InlineKeyboardHandler {
      * we should keep the toolbar open and let the flipper handle navigation.
      */
     const shouldCheckForClose = isVerticalArrowKey && !event.shiftKey && opened;
-    const shouldKeepOpen = mainFlipperHasFocus || hasNestedPopover;
+    // A text field in the toolbar's own card keeps its arrows: the link field
+    // opened with Cmd+K walks its list with them.
+    const target = event.target;
+    const fromOwnField = (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) &&
+      (popover?.hasNode(target) ?? false);
+    const shouldKeepOpen = mainFlipperHasFocus || hasNestedPopover || fromOwnField;
 
     if (shouldCheckForClose && !shouldKeepOpen) {
       this.closeToolbar();

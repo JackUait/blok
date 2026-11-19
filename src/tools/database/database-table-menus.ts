@@ -141,6 +141,8 @@ export const calculationItems = (
     name: `database-calc-${fn}`,
     title: i18n.t(CALCULATION_LABEL_KEYS[fn]),
     isActive: current === fn,
+    // notion-motion.md Round 81 §1: a pick closes every menu. The column header menu outlives the redraw, so it must be told.
+    closeOnActivate: true,
     onActivate: () => onPick(fn),
   });
   const group = (titleKey: string, fns: readonly CalculationFn[], lead: PopoverItemParams[] = []): PopoverItemParams => ({
@@ -169,6 +171,7 @@ export const calculationItems = (
       name: 'database-calc-none',
       title: i18n.t('tools.database.calcNone'),
       isActive: current === undefined,
+      closeOnActivate: true,
       onActivate: () => onPick(null),
     },
     group('tools.database.calcCount', checkbox ? CHECKBOX_COUNT_FNS : COUNT_FNS, capToggle),

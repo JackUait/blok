@@ -590,6 +590,9 @@ describe('local form question builder', () => {
 
     await mount(tagged);
     requireElement<HTMLButtonElement>(`${question('tags')} [data-blok-database-form-option="one"] [data-blok-database-form-option-delete]`).click();
+    // notion-motion.md Round 77 §4: Delete option asks first.
+    requireElement<HTMLButtonElement>('[data-blok-database-confirm-action="confirm"]').click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
     const saved = await save();
     const schemaOptions = (saved.blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined)?.schema
       .find((property) => property.id === 'tags')?.config?.options;

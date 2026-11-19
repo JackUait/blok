@@ -9,6 +9,7 @@ const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
   { id: 's', name: 'Status', type: 'select', position: 'a1', config: { options: [{ id: 'o1', label: 'Todo', position: 'a0' }] } },
   { id: 'tags', name: 'Tags', type: 'multiSelect', position: 'a2', config: { options: [{ id: 't1', label: 'Red', position: 'a0' }] } },
+  { id: 'due', name: 'Due', type: 'date', position: 'a3' },
 ];
 
 const tools: Array<ReturnType<typeof buildTool>['tool']> = [];
@@ -55,7 +56,8 @@ describe('undo and the form view', () => {
   });
 
   it('keeps a form question editor open', () => {
-    const { el, emitUndo } = mount({ type: 'form', properties: [{ id: 'tags', visible: true, showOptionsAs: 'dropdown' }] });
+    // The builder's date answer opens a cell editor; its dropdown choices are editable rows (notion-motion.md Round 77 §4).
+    const { el, emitUndo } = mount({ type: 'form', properties: [{ id: 'due', visible: true }] });
 
     el.querySelector('[data-blok-database-form-provider-answer]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(openEditors()).toBe(1);

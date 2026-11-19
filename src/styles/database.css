@@ -20784,9 +20784,22 @@ button[data-blok-database-feed-reaction]:hover,
   background: var(--blok-database-hover-bg);
 }
 
+/* notion-motion.md Round 77 §4 "Option drag": passed form option rows slide 0.2s ease; the dragged row has no fill and lands at once.
+   Kept above the last reduced-motion block, which must stay last. */
+[data-blok-database-option-reordering] [data-blok-database-form-option] {
+  transition: transform 200ms ease;
+}
+
+[data-blok-database-option-reordering] [data-blok-database-form-option][data-dragging] {
+  z-index: 1;
+  background-color: transparent;
+  transition: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-new] > button,
-  [data-blok-database-subitem-toggle] svg {
+  [data-blok-database-subitem-toggle] svg,
+  [data-blok-database-option-reordering] [data-blok-database-form-option] {
     transition: none;
   }
 
@@ -21148,7 +21161,8 @@ button[data-blok-database-feed-reaction]:hover,
   block-size: 15px;
   margin: 1.5px;
   border-radius: var(--blok-radius-mark);
-  background-color: var(--blok-database-card-bg);
+  /* Round 77 §4: the page colour, rgb(25,25,25) in dark, not the 32 card fill. */
+  background-color: var(--blok-bg-primary);
   box-shadow: 0 0 0 1.5px var(--blok-database-table-border);
 }
 
@@ -21185,11 +21199,13 @@ button[data-blok-database-feed-reaction]:hover,
   visibility: visible;
 }
 
+/* Round 77 §4: the handle draws a 20 glyph in the 16 box, ink 173,169,163 (dark 125,122,117); the delete glyph is 18, ink 142,139,134 (dark 173,169,163). */
 [data-blok-database-form-option-handle] {
   inset-inline-start: 2px;
   inline-size: 16px;
   block-size: 24px;
   border-radius: var(--blok-radius-control-sm);
+  color: var(--blok-database-table-gutter-icon);
   cursor: grab;
 }
 
@@ -21197,11 +21213,31 @@ button[data-blok-database-feed-reaction]:hover,
   inset-inline-end: var(--blok-space-1);
   inline-size: 24px;
   block-size: 24px;
+  color: var(--blok-database-table-header-icon);
 }
 
-:is([data-blok-database-form-option-handle], [data-blok-database-form-option-delete]) svg {
-  inline-size: 16px;
-  block-size: 16px;
+[data-blok-database-form-option-handle] svg {
+  flex: none;
+  inline-size: 20px;
+  block-size: 20px;
+}
+
+[data-blok-database-form-option-delete] svg {
+  inline-size: 18px;
+  block-size: 18px;
+}
+
+/* Round 77 §4 "Respondents": the label is 16px text 12 after the box. */
+[data-blok-database-form-checkbox-answer] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-3);
+}
+
+[data-blok-database-form-checkbox-text] {
+  color: var(--blok-database-ink);
+  font-size: 16px;
+  line-height: 24px;
 }
 
 /* Round 76 §3 "Dropdown mode": a 38-tall hint field with a chevron 6 from its end; the rows start 4 under it. */

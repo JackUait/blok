@@ -16,6 +16,7 @@ import { OptionDrag, newSelectOption, placeDroppedOption } from './cells/option-
 import type { CellContext, CellEditorHandle } from './cells';
 import { accessLine, openFormShare } from './database-form-share';
 import type { FormShareHost } from './database-form-share';
+import { openDatabaseConfirm } from './database-confirm-dialog';
 import { DatabaseFormQuestionDrag } from './database-form-question-drag';
 import { nameTakenError } from './database-name-taken-error';
 import { DatabasePanel, panelInput, panelLabel, panelRow, panelSwitch } from './database-panel';
@@ -134,6 +135,8 @@ export class DatabaseFormView implements DatabaseViewRenderer {
   /** The header's icon and cover controls: their pickers live in <body> and close with them. */
   private headerControls: Array<{ destroy(): void }> = [];
   private drag: DatabaseFormQuestionDrag | null = null;
+  /** Closes an open Delete option prompt when the view goes away. */
+  private confirmAbort: AbortController | null = null;
 
   constructor(private readonly options: DatabaseFormViewOptions) {
     this.submitted = options.submitted === true;
@@ -217,6 +220,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     this.editor?.cancel();
     this.editor = null;
     this.drag?.cleanup();
+    this.confirmAbort?.abort();
   }
 
   createView(): HTMLDivElement {
@@ -697,7 +701,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     } else {
       field.required = required;
     }
-    wrapper.appendChild(this.isBuilder() && property.type === 'checkbox' ? this.checkboxRow(property, field, setting) : field);
+    wrapper.appendChild(this.answerBox(property, field, setting));
 
     const maxSelections = PICKS_MANY.includes(property.type) ? setting.maxSelections : undefined;
 
@@ -718,8 +722,8 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       && showOptionsAs(property, setting) === 'list') {
       return this.optionRows(property, options, id, property.type === 'select' ? 'radio' : 'checkbox');
     }
-    // notion-motion.md Round 76 §3: a Select dropdown keeps editable rows, with no mark, under a hint field. Multi-select's is unmeasured.
-    if (builder && this.options.changeOptions !== undefined && property.type === 'select') {
+    // notion-motion.md Round 76 §3, Round 77 §4: a dropdown keeps editable rows, with no mark, under a hint field.
+    if (builder && this.options.changeOptions !== undefined && (property.type === 'select' || property.type === 'multiSelect')) {
       return this.optionRows(property, options, id, null);
     }
     if (property.type === 'select' && showOptionsAs(property, setting) === 'list') {
@@ -816,8 +820,19 @@ export class DatabaseFormView implements DatabaseViewRenderer {
         if (owner.id !== null && property.optionSort === undefined) drag.start(event, owner.id);
       });
       remove.addEventListener('click', () => {
-        row.remove();
-        if (owner.id !== null) send(state.options.filter((entry) => entry.id !== owner.id));
+        const doomed = owner.id;
+
+        // An unnamed new row holds no option, so it goes without asking (Notion's case is unmeasured).
+        if (doomed === null) {
+          row.remove();
+
+          return;
+        }
+        void this.confirmDeleteOption(set).then((confirmed) => {
+          if (!confirmed) return;
+          row.remove();
+          send(state.options.filter((entry) => entry.id !== doomed));
+        });
       });
 
       name.defaultValue = saved();
@@ -868,6 +883,24 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     set.appendChild(add);
 
     return set;
+  }
+
+  /** notion-motion.md Round 77 §4 "Delete option": Notion asks first, Delete focused. */
+  private confirmDeleteOption(source: Element): Promise<boolean> {
+    const { t } = this.options.i18n;
+
+    this.confirmAbort?.abort();
+    this.confirmAbort = new AbortController();
+
+    return openDatabaseConfirm({
+      title: t('tools.database.optionDeleteConfirm'),
+      confirmLabel: t('tools.database.optionDelete'),
+      cancelLabel: t('tools.database.optionDeleteCancel'),
+      destructive: true,
+      focusConfirm: true,
+      directionSource: source,
+      signal: this.confirmAbort.signal,
+    });
   }
 
   /**
@@ -937,6 +970,8 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     const label = document.createElement('textarea');
 
     row.setAttribute('data-blok-database-form-checkbox-row', '');
+    // notion-motion.md Round 77 §4 "Builder checkbox": the builder's box is disabled.
+    if (field instanceof HTMLInputElement) field.disabled = true;
     label.rows = 1;
     label.value = setting.checkboxLabel ?? '';
     label.placeholder = this.options.i18n.t('tools.database.formCheckboxLabelPlaceholder');
@@ -949,7 +984,30 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       this.write(() => this.options.setQuestionSetting?.(property.id, { checkboxLabel: next === '' ? undefined : next }));
     });
     label.addEventListener('focusout', (event) => this.endEdit(event));
+    // notion-motion.md Round 77 §4: Enter in the label does nothing; the label stays one line.
+    label.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.isComposing) event.preventDefault();
+    });
     row.append(field, label);
+
+    return row;
+  }
+
+  /** What a question shows under its title: the field, or a checkbox row around it. */
+  private answerBox(property: PropertyDefinition, field: Field, setting: ViewPropertySetting): HTMLElement {
+    if (property.type !== 'checkbox') return field;
+    if (this.isBuilder()) return this.checkboxRow(property, field, setting);
+    if (setting.checkboxLabel === undefined) return field;
+
+    // notion-motion.md Round 77 §4 "Respondents": the label shows as text 12 after the box.
+    // It wraps the box, not `for`: a Preview's ids repeat the builder's behind it.
+    const row = document.createElement('label');
+    const text = document.createElement('span');
+
+    row.setAttribute('data-blok-database-form-checkbox-answer', '');
+    text.setAttribute('data-blok-database-form-checkbox-text', '');
+    text.textContent = setting.checkboxLabel;
+    row.append(field, text);
 
     return row;
   }

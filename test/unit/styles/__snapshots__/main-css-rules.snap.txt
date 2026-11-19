@@ -22943,7 +22943,17 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   background: var(--blok-database-hover-bg);
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-new] > button, [data-blok-database-subitem-toggle] svg {
+[data-blok-database-option-reordering] [data-blok-database-form-option] {
+  transition: transform 200ms ease;
+}
+
+[data-blok-database-option-reordering] [data-blok-database-form-option][data-dragging] {
+  z-index: 1;
+  background-color: transparent;
+  transition: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-new] > button, [data-blok-database-subitem-toggle] svg, [data-blok-database-option-reordering] [data-blok-database-form-option] {
   transition: none;
 }
 
@@ -23269,7 +23279,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   block-size: 15px;
   margin: 1.5px;
   border-radius: var(--blok-radius-mark);
-  background-color: var(--blok-database-card-bg);
+  background-color: var(--blok-bg-primary);
   box-shadow: 0 0 0 1.5px var(--blok-database-table-border);
 }
 
@@ -23309,6 +23319,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   inline-size: 16px;
   block-size: 24px;
   border-radius: var(--blok-radius-control-sm);
+  color: var(--blok-database-table-gutter-icon);
   cursor: grab;
 }
 
@@ -23316,11 +23327,30 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   inset-inline-end: var(--blok-space-1);
   inline-size: 24px;
   block-size: 24px;
+  color: var(--blok-database-table-header-icon);
 }
 
-:is([data-blok-database-form-option-handle], [data-blok-database-form-option-delete]) svg {
-  inline-size: 16px;
-  block-size: 16px;
+[data-blok-database-form-option-handle] svg {
+  flex: none;
+  inline-size: 20px;
+  block-size: 20px;
+}
+
+[data-blok-database-form-option-delete] svg {
+  inline-size: 18px;
+  block-size: 18px;
+}
+
+[data-blok-database-form-checkbox-answer] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-3);
+}
+
+[data-blok-database-form-checkbox-text] {
+  color: var(--blok-database-ink);
+  font-size: 16px;
+  line-height: 24px;
 }
 
 [data-blok-database-form-dropdown-hint] {

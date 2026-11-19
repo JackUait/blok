@@ -1280,16 +1280,40 @@ describe('DatabaseFormView builder answers', () => {
     expect(root.querySelector('[data-blok-database-form-checkbox-label]')).toBeNull();
   });
 
-  // notion-motion.md Round 76 §3 "Option row hover": a row shows "Drag to move" and "Delete option".
-  it('Delete option removes the option from the property options and its row', () => {
+  const confirmAction = (name: 'confirm' | 'cancel'): HTMLButtonElement | null =>
+    document.querySelector<HTMLButtonElement>(`[data-blok-database-confirm-action="${name}"]`);
+
+  // notion-motion.md Round 76 §3 "Option row hover", Round 77 §4 "Delete option": Notion asks first.
+  it('Delete option asks first, then removes the option from the property options and its row', async () => {
     const { root, changeOptions } = build();
     const remove = question(root, 'pick')?.querySelector<HTMLButtonElement>('[data-blok-database-form-option-delete]');
 
     expect(remove?.getAttribute('aria-label')).toBe('tools.database.formDeleteOption');
     remove?.click();
 
-    expect(changeOptions).toHaveBeenCalledWith('pick', [{ id: 'o2', label: 'Two', position: 'a1' }]);
+    expect(changeOptions).not.toHaveBeenCalled();
+    expect(names(root, 'pick')).toHaveLength(2);
+    expect(document.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('tools.database.optionDeleteConfirm');
+    expect(confirmAction('confirm')?.textContent).toBe('tools.database.optionDelete');
+    expect(confirmAction('confirm')?.hasAttribute('data-destructive')).toBe(true);
+    expect(confirmAction('confirm')).toHaveFocus();
+    expect(confirmAction('cancel')?.textContent).toBe('tools.database.optionDeleteCancel');
+    confirmAction('confirm')?.click();
+
+    await vi.waitFor(() => expect(changeOptions).toHaveBeenCalledWith('pick', [{ id: 'o2', label: 'Two', position: 'a1' }]));
     expect(names(root, 'pick').map((input) => input.value)).toEqual(['Two']);
+  });
+
+  it('Cancel in the Delete option prompt keeps the option', async () => {
+    const { root, changeOptions } = build();
+
+    question(root, 'pick')?.querySelector<HTMLButtonElement>('[data-blok-database-form-option-delete]')?.click();
+    confirmAction('cancel')?.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(changeOptions).not.toHaveBeenCalled();
+    expect(names(root, 'pick').map((input) => input.value)).toEqual(['One', 'Two']);
   });
 
   it('Delete option on an unnamed new row removes the row and sends nothing', () => {
@@ -1366,6 +1390,67 @@ describe('DatabaseFormView builder answers', () => {
     expect(hint?.firstChild?.textContent).toBe('tools.database.formDropdownHint');
     expect(hint?.querySelector('[data-blok-database-form-dropdown-chevron] svg')).not.toBeNull();
     expect(names(root, 'pick').map((input) => input.value)).toEqual(['One', 'Two']);
+    expect(set?.querySelector('input:is([type="radio"], [type="checkbox"])')).toBeNull();
+    expect(set?.querySelector('[data-blok-database-form-add-option]')).not.toBeNull();
+  });
+
+  // notion-motion.md Round 77 §4 "Builder checkbox": disabled, a click changes nothing.
+  it('the builder checkbox cannot be checked', () => {
+    const { root } = build();
+    const box = question(root, 'agree')?.querySelector<HTMLInputElement>('[data-blok-database-form-checkbox-row] input[type="checkbox"]');
+
+    expect(box?.disabled).toBe(true);
+    box?.click();
+    expect(box?.checked).toBe(false);
+  });
+
+  // notion-motion.md Round 77 §4 "Enter in the checkbox label": the value and the focus stay.
+  it('Enter in the checkbox label adds no line and keeps the focus', () => {
+    const { root } = build();
+    const label = question(root, 'agree')?.querySelector<HTMLTextAreaElement>('[data-blok-database-form-checkbox-label]');
+
+    if (label === null || label === undefined) throw new Error('no label');
+    label.focus();
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+
+    label.dispatchEvent(enter);
+
+    expect(enter.defaultPrevented).toBe(true);
+    expect(label).toHaveFocus();
+  });
+
+  // notion-motion.md Round 77 §4 "Respondents": the label shows as text beside the box.
+  it('a respondent sees the checkbox label beside the box, naming it', () => {
+    const withLabel = properties.map((entry) => (entry.id === 'agree' ? { ...entry, checkboxLabel: 'I agree' } : entry));
+    const root = mount({ schema: [...schema, tags, due], view: view({ properties: withLabel }) }).root;
+    const box = question(root, 'agree')?.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    const text = question(root, 'agree')?.querySelector('[data-blok-database-form-checkbox-text]');
+
+    expect(text?.textContent).toBe('I agree');
+    expect(text?.previousElementSibling).toBe(box);
+    // The label wraps its box: the builder behind a Preview reuses the box's id.
+    expect(text?.parentElement).toBeInstanceOf(HTMLLabelElement);
+    expect(text?.parentElement?.hasAttribute('data-blok-database-form-checkbox-answer')).toBe(true);
+    expect(box?.disabled).toBe(false);
+    text?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(box?.checked).toBe(true);
+  });
+
+  it('a respondent sees no checkbox label text when the question has none', () => {
+    const root = mount({ schema: [...schema, tags, due], view: view({ properties }) }).root;
+
+    expect(question(root, 'agree')?.querySelector('[data-blok-database-form-checkbox-text]')).toBeNull();
+  });
+
+  // notion-motion.md Round 77 §4 "Multi-select, dropdown": editable rows with no mark under the hint, then Add option.
+  it('a multiple choice question shown as a dropdown keeps editable option rows under a hint field', () => {
+    const dropdown = properties.map((entry) => (entry.id === 'tags' ? { ...entry, showOptionsAs: 'dropdown' as const } : entry));
+    const { root } = mount({ schema: [...schema, tags, due], view: view({ properties: dropdown }), setQuestionSetting: vi.fn(), changeOptions: vi.fn() });
+    const set = question(root, 'tags')?.querySelector('[data-blok-database-form-options]');
+
+    expect(question(root, 'tags')?.querySelector('[data-blok-database-form-provider-answer]')).toBeNull();
+    expect(set?.firstElementChild?.hasAttribute('data-blok-database-form-dropdown-hint')).toBe(true);
+    expect(names(root, 'tags').map((input) => input.value)).toEqual(['Red', 'Blue']);
     expect(set?.querySelector('input:is([type="radio"], [type="checkbox"])')).toBeNull();
     expect(set?.querySelector('[data-blok-database-form-add-option]')).not.toBeNull();
   });

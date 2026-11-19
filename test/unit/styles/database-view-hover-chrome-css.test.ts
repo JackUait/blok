@@ -362,7 +362,8 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(mark).toContain('block-size: 15px');
     expect(mark).toContain('margin: 1.5px');
     expect(mark).toContain('box-shadow: 0 0 0 1.5px var(--blok-database-table-border)');
-    expect(mark).toContain('background-color: var(--blok-database-card-bg)');
+    // Round 77 §4 "Dark marks": the fill is the page colour, white in light and rgb(25,25,25) in dark.
+    expect(mark).toContain('background-color: var(--blok-bg-primary)');
     expect(mark).toContain('border-radius: var(--blok-radius-mark)');
     expect(ruleBody('[data-blok-database-form-option] input[type="radio"]')).toContain('border-radius: 50%');
   });
@@ -384,6 +385,44 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(remove).toContain('inline-size: 24px');
     expect(remove).toContain('block-size: 24px');
     expect(remove).toContain('inset-inline-end: var(--blok-space-1)');
+  });
+
+  // Round 77 §4: the handle's glyph is a 20 box in ink 173,169,163 (dark 125,122,117); the delete glyph is 18 in 142,139,134 (dark 173,169,163).
+  it('draws the option row glyphs in Notion\'s sizes and inks', () => {
+    const handleSvg = ruleBody('[data-blok-database-form-option-handle] svg');
+    const removeSvg = ruleBody('[data-blok-database-form-option-delete] svg');
+
+    expect(handleSvg).toContain('inline-size: 20px');
+    expect(handleSvg).toContain('block-size: 20px');
+    expect(handleSvg).toContain('flex: none');
+    expect(removeSvg).toContain('inline-size: 18px');
+    expect(removeSvg).toContain('block-size: 18px');
+    expect(ruleBody('[data-blok-database-form-option-handle]')).toContain('color: var(--blok-database-table-gutter-icon)');
+    expect(ruleBody('[data-blok-database-form-option-delete]')).toContain('color: var(--blok-database-table-header-icon)');
+    expect(tokenValues('--blok-database-table-gutter-icon')).toEqual(['rgb(173, 169, 163)', 'rgb(125, 122, 117)', 'rgb(125, 122, 117)']);
+    expect(tokenValues('--blok-database-table-header-icon')).toEqual(['rgb(142, 139, 134)', 'rgb(173, 169, 163)', 'rgb(173, 169, 163)']);
+  });
+
+  // Round 77 §4 "Option drag": passed rows slide transform 0.2s ease; the dragged row has no fill and does not slide.
+  it('slides the passed option rows and keeps the dragged row unfilled', () => {
+    const rows = ruleBody('[data-blok-database-option-reordering] [data-blok-database-form-option]');
+    const dragged = ruleBody('[data-blok-database-option-reordering] [data-blok-database-form-option][data-dragging]');
+
+    expect(rows).toContain('transition: transform 200ms ease');
+    expect(dragged).toContain('background-color: transparent');
+    expect(dragged).toContain('transition: none');
+    expect(dragged).toContain('z-index: 1');
+  });
+
+  // Round 77 §4 "Respondents": the label is 16px text 12 after the 18 box.
+  it('sets a respondent\'s checkbox label beside the box', () => {
+    const row = ruleBody('[data-blok-database-form-checkbox-answer]');
+
+    expect(row).toContain('display: flex');
+    expect(row).toContain('align-items: center');
+    expect(row).toContain('gap: var(--blok-space-3)');
+    expect(ruleBody('[data-blok-database-form-checkbox-text]')).toContain('font-size: 16px');
+    expect(ruleBody('[data-blok-database-form-checkbox-text]')).toContain('color: var(--blok-database-ink)');
   });
 
   // Round 76 §3 "Checkbox label": a 26-tall textarea 12 after the box, no padding, 16px; the row pads 5 10.

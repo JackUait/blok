@@ -1698,7 +1698,7 @@
   "tools.database.formDeleteOption": "Delete option",
   "tools.database.formCheckboxLabelPlaceholder": "Checkbox label (optional)",
   "tools.database.formDropdownHint": "Options below will appear in the dropdown",
-  "tools.database.formAnswerPlaceholder": "Respondent's answer",
+  "tools.database.formAnswerPlaceholder": "Respondent’s answer",
   "tools.database.formIcon": "Form icon",
   "tools.database.formCover": "Form cover",
   "tools.database.formChooseAnswer": "Choose an answer",

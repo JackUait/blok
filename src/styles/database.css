@@ -7410,7 +7410,6 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   opacity: 0.5;
 }
 
-/* Text fields never show a ring. */
 [data-blok-database-autofill-instructions] {
   box-sizing: border-box;
   width: 100%;
@@ -8429,7 +8428,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
 
 /* findings K04: Notion's field box, beside the icon. The ring is the field's
    border, not a shadow. Kept below field.css's focus rule in specificity, so
-   focus still swaps the border and fill there. */
+   focus still paints the blue ring there. */
 [data-blok-database-property-menu-name] > [data-blok-database-property-menu-name-input],
 [data-blok-database-property-type-header] > [data-blok-database-property-name-input] {
   flex: 1 1 auto;
@@ -14289,10 +14288,27 @@ button[data-blok-database-table-group-count]:hover {
   border: var(--blok-border-width-hairline) solid transparent;
 }
 
-/* The shared field look (field.css): a border, no fill, no ring. */
-input[data-blok-database-picker-search]:focus {
-  border-color: var(--blok-database-table-control-border);
-  background-color: transparent;
+/* Every boxed text field shows Notion's focus ring, however focus came: 2px of
+   --blok-focus-ring inside the box (field.css). A bordered box paints its border
+   plus a 1px inset; a borderless one paints a 2px inset. Never an outer halo. */
+:is([data-blok-database-panel-input], [data-blok-database-autofill-instructions]):focus {
+  box-shadow: inset 0 0 0 2px var(--blok-focus-ring);
+}
+
+:is(input[data-blok-database-picker-search], [data-blok-database-option-name], [data-blok-database-tpl-gallery-search], [data-blok-database-tab-rename-input], [data-blok-database-template-cadence-row] input, [data-blok-database-template-cadence-field] input):focus,
+[data-blok-database-ai-prompt]:has(textarea:focus) {
+  border-color: var(--blok-focus-ring);
+  box-shadow: inset 0 0 0 1px var(--blok-focus-ring);
+}
+
+/* A form answer: an invalid question keeps it red while typing. */
+[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name], [data-blok-database-form-option-name]), textarea):not([data-blok-database-form-checkbox-label]):focus {
+  border-color: var(--_blok-field-ring, var(--blok-focus-ring));
+  box-shadow: inset 0 0 0 1px var(--_blok-field-ring, var(--blok-focus-ring));
+}
+
+[data-blok-database-form-question][data-invalid] {
+  --_blok-field-ring: var(--blok-color-red-text);
 }
 
 /* findings V10 (09-notion-rename-full.png): a 28px glyph tile, then the "View name" field. */

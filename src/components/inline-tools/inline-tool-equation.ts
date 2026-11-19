@@ -266,8 +266,10 @@ export class EquationInlineTool implements InlineTool {
 
     // The wrapper is the field; Done sits inside it, inset 4px from the edge
     // (1px border + 3px padding), which the inner radius subtracts.
-    wrapper.className = 'relative flex items-center gap-2 w-[300px] h-9 pl-3 pr-(--blok-space-0-75) rounded-(--blok-radius-field) [--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-field)-var(--blok-border-width-hairline)-var(--blok-space-0-75)))] border border-transparent bg-item-hover-bg transition-[background-color,border-color] duration-150 ease-out focus-within:bg-popover-bg focus-within:border-search-input-focus-border';
+    wrapper.className = 'relative flex items-center gap-2 w-[300px] h-9 pl-3 pr-(--blok-space-0-75) rounded-(--blok-radius-field) [--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-field)-var(--blok-border-width-hairline)-var(--blok-space-0-75)))]';
     wrapper.setAttribute('data-blok-equation-tool', '');
+    // The fill, border and focus ring come from the shared field look.
+    wrapper.setAttribute('data-blok-field', 'text');
 
     const input = document.createElement('input');
 

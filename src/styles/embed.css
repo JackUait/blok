@@ -429,7 +429,6 @@
   background-color: var(--blok-bg-primary);
   border-color: var(--blok-border-subtle);
 }
-[data-blok-field].blok-embed-empty__bar:has(> input:focus) { border-color: var(--blok-popover-border); }
 [data-blok-field].blok-embed-empty__bar:has(> input[aria-invalid='true']) { border-color: var(--blok-color-danger); }
 @media (max-width: 650px) {
   [data-blok-field].blok-embed-empty__bar { min-height: 36px; }

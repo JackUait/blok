@@ -35,15 +35,18 @@ describe('database property picker css', () => {
     expect(list).toContain('flex: 1 1 auto');
   });
 
-  it('the picker search keeps 28px and its text inset, and takes the shared field look on focus', () => {
+  it('the picker search keeps 28px and its text inset, and paints the 2px blue field ring on focus', () => {
     const rest = rulesFor('[data-blok-database-picker-search]');
-    const focused = rulesFor('input[data-blok-database-picker-search]:focus');
+    const focused = [ ...database.matchAll(/(?<=^|\})\s*([^{}@]+)\{([^{}]*)\}/g) ]
+      .filter((match) => match[1].includes('input[data-blok-database-picker-search]') && match[1].includes(':focus'))
+      .map((match) => match[2])
+      .join(' ');
 
     expect(rest).toContain('border: var(--blok-border-width-hairline) solid transparent');
     expect(rest).toContain('padding-block: calc(var(--blok-space-0-75) - var(--blok-border-width-hairline))');
     expect(rest).toContain('padding-inline: calc(var(--blok-space-1-5) - var(--blok-border-width-hairline))');
-    expect(focused).toContain('border-color: var(--blok-database-table-control-border)');
-    expect(focused).toContain('background-color: transparent');
-    expect(focused).not.toMatch(/box-shadow|outline: [^n]/);
+    expect(focused).toContain('border-color: var(--blok-focus-ring)');
+    expect(focused).toContain('box-shadow: inset 0 0 0 1px var(--blok-focus-ring)');
+    expect(focused).not.toMatch(/outline: [^n]/);
   });
 });

@@ -4,7 +4,8 @@ import type { Locator } from '@playwright/test';
 /**
  * Every Blok text field shares one look (the "Turn into" menu's search field):
  * a filled rounded box, 28px tall on desktop and 36px on phones, a transparent
- * 1px border that takes the popover border color on focus, never a halo.
+ * 1px border. Focus draws Notion's 2px blue ring inside the box (the border plus
+ * a 1px inset shadow, both --blok-focus-ring) and keeps the fill, however focus came.
  * Search fields add the search glyph.
  * @param field - the element carrying `data-blok-field`
  * @param input - the text input inside it (or the field itself)
@@ -72,17 +73,18 @@ export const expectBlokField = async (
   const focused = await field.evaluate(element => {
     const probe = document.createElement('span');
 
-    probe.style.borderColor = 'var(--blok-popover-border)';
+    probe.style.borderColor = 'var(--blok-focus-ring)';
+    probe.style.backgroundColor = 'var(--blok-item-hover-bg)';
     element.parentElement?.append(probe);
-    const border = getComputedStyle(probe).borderTopColor;
+    const ring = getComputedStyle(probe).borderTopColor;
 
     probe.remove();
     const style = getComputedStyle(element);
 
-    return { border, borderColor: style.borderTopColor, background: style.backgroundColor, shadow: style.boxShadow };
+    return { ring, borderColor: style.borderTopColor, background: style.backgroundColor, shadow: style.boxShadow };
   });
 
-  expect(focused.borderColor, 'focus darkens the border').toBe(focused.border);
-  expect(focused.background).toBe('rgba(0, 0, 0, 0)');
-  expect(focused.shadow, 'no focus halo').toBe('none');
+  expect(focused.borderColor, 'focus paints the border blue').toBe(focused.ring);
+  expect(focused.shadow, 'a 1px blue inset makes the ring 2px, never an outer halo').toBe(`${focused.ring} 0px 0px 0px 1px inset`);
+  expect(focused.background, 'focus keeps the fill').toBe(rest.background);
 };

@@ -880,3 +880,10 @@ describe('card menu search field (Round 81)', () => {
     expect(declared(`${FIELD} > input`, 'line-height')).toEqual(['20px']);
   });
 });
+
+// notion-motion.md Round 81 §1 "Header menu name field at rest" (r81-n-hdrmenu.raw): the input text is 14px.
+describe('header menu name field text (Round 81)', () => {
+  it('sets the name 14px, not the shared field\'s 13', () => {
+    expect(declared('[data-blok-database-property-menu-name] > [data-blok-database-property-menu-name-input]', 'font-size')).toEqual(['14px']);
+  });
+});

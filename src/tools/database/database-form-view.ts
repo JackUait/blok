@@ -13,11 +13,10 @@ import type { I18n } from '../../../types';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { DEFAULT_MAX_SIZE } from '../file/constants';
 import { openCellEditor, renderCellValue } from './cells';
-import { OptionDrag, newSelectOption, placeDroppedOption } from './cells/option-editing';
+import { OptionDrag, confirmOptionDelete, newSelectOption, placeDroppedOption } from './cells/option-editing';
 import type { CellContext, CellEditorHandle } from './cells';
 import { accessLine, openFormShare } from './database-form-share';
 import type { FormShareHost } from './database-form-share';
-import { openDatabaseConfirm } from './database-confirm-dialog';
 import { DatabaseFormQuestionDrag } from './database-form-question-drag';
 import { nameTakenError } from './database-name-taken-error';
 import { DatabasePanel, panelInput, panelLabel, panelRow, panelSwitch } from './database-panel';
@@ -886,23 +885,12 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     return set;
   }
 
-  /** notion-motion.md Round 77 §4 "Delete option": Notion asks first, Delete focused. Round 78 §2: the title is 600. */
+  /** notion-motion.md Round 77 §4 "Delete option": Notion asks first. */
   private confirmDeleteOption(source: Element): Promise<boolean> {
-    const { t } = this.options.i18n;
-
     this.confirmAbort?.abort();
     this.confirmAbort = new AbortController();
 
-    return openDatabaseConfirm({
-      title: t('tools.database.optionDeleteConfirm'),
-      confirmLabel: t('tools.database.optionDelete'),
-      cancelLabel: t('tools.database.optionDeleteCancel'),
-      destructive: true,
-      focusConfirm: true,
-      boldTitle: true,
-      directionSource: source,
-      signal: this.confirmAbort.signal,
-    });
+    return confirmOptionDelete((key) => this.options.i18n.t(key), { directionSource: source, signal: this.confirmAbort.signal });
   }
 
   /**

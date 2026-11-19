@@ -662,7 +662,7 @@ describe('DatabaseTool', () => {
         expect(propertyWrites(row)).toEqual([]);
       });
 
-      it('deleting an option empties it on every row, and the rows stay', () => {
+      it('deleting an option empties it on every row, and the rows stay', async () => {
         const first = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One', 'prop-status': 'opt-b', 'prop-tags': ['tag-x'] }, position: 'a0' });
         const second = createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Two', 'prop-status': 'opt-a', 'prop-tags': ['tag-x', 'tag-y'] }, position: 'a1' });
         const third = createMockRowBlock({ id: 'row-3', properties: { 'prop-title': 'Three', 'prop-status': 'opt-a' }, position: 'a2' });
@@ -671,16 +671,16 @@ describe('DatabaseTool', () => {
         openValue(element, 'prop-status');
         document.querySelector<HTMLElement>('[data-blok-database-select-option="opt-a"] [data-blok-database-select-option-menu]')?.click();
         document.querySelector<HTMLElement>('[data-blok-database-option-delete]')?.click();
-        document.querySelector<HTMLElement>('[data-blok-database-option-delete-confirm]')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-confirm-action="confirm"]')?.click();
 
-        expect(propertyWrites(second)).toContainEqual({ 'prop-status': null });
+        await vi.waitFor(() => expect(propertyWrites(second)).toContainEqual({ 'prop-status': null }));
         expect(propertyWrites(third)).toContainEqual({ 'prop-status': null });
         expect(propertyWrites(first)).not.toContainEqual({ 'prop-status': null });
         expect(api.blocks.delete).not.toHaveBeenCalled();
         tool.destroy();
       });
 
-      it('deleting an option also empties it on a row a filter hides', () => {
+      it('deleting an option also empties it on a row a filter hides', async () => {
         const shown = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Shown', 'prop-status': 'opt-a' }, position: 'a0' });
         const hidden = createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Hidden', 'prop-status': 'opt-a' }, position: 'a1' });
         const options = createDatabaseOptions({
@@ -698,14 +698,14 @@ describe('DatabaseTool', () => {
         openValue(element, 'prop-status');
         document.querySelector<HTMLElement>('[data-blok-database-select-option="opt-a"] [data-blok-database-select-option-menu]')?.click();
         document.querySelector<HTMLElement>('[data-blok-database-option-delete]')?.click();
-        document.querySelector<HTMLElement>('[data-blok-database-option-delete-confirm]')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-confirm-action="confirm"]')?.click();
 
-        expect(propertyWrites(hidden)).toContainEqual({ 'prop-status': null });
+        await vi.waitFor(() => expect(propertyWrites(hidden)).toContainEqual({ 'prop-status': null }));
         expect(options.api.blocks.delete).not.toHaveBeenCalled();
         tool.destroy();
       });
 
-      it('deleting a multi-select option drops just that id from every row', () => {
+      it('deleting a multi-select option drops just that id from every row', async () => {
         const first = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One', 'prop-tags': ['tag-y'] }, position: 'a0' });
         const second = createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Two', 'prop-tags': ['tag-x', 'tag-y'] }, position: 'a1' });
         const { tool, element } = mount([first, second]);
@@ -713,9 +713,9 @@ describe('DatabaseTool', () => {
         openValue(element, 'prop-tags');
         document.querySelector<HTMLElement>('[data-blok-database-select-option="tag-x"] [data-blok-database-select-option-menu]')?.click();
         document.querySelector<HTMLElement>('[data-blok-database-option-delete]')?.click();
-        document.querySelector<HTMLElement>('[data-blok-database-option-delete-confirm]')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-confirm-action="confirm"]')?.click();
 
-        expect(propertyWrites(second)).toContainEqual({ 'prop-tags': ['tag-y'] });
+        await vi.waitFor(() => expect(propertyWrites(second)).toContainEqual({ 'prop-tags': ['tag-y'] }));
         expect(propertyWrites(first)).toEqual([]);
         tool.destroy();
       });

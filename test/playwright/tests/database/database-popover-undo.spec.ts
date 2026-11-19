@@ -99,8 +99,13 @@ const tableRow = (page: Page, rowId: string): Locator => page.locator(`[data-blo
 const cell = (page: Page, rowId: string, propertyId: string): Locator => tableRow(page, rowId).locator(`[role="gridcell"][data-property-id="${propertyId}"]`);
 const openMenu = (page: Page): Locator => page.locator('[data-blok-popover-opened="true"]');
 const cellEditor = (page: Page): Locator => page.locator('[data-blok-database-cell-editor][data-blok-database-select-editor]');
-/** notion-motion.md Round 55 §4: an option's ⋯ menu is its own popover over the editor. */
-const optionMenu = (page: Page): Locator => page.locator("[data-blok-popover-custom-class~='blok-database-option-menu']");
+/**
+ * notion-motion.md Round 55 §4: an option's ⋯ menu is its own popover over the editor.
+ * Only the open one: a menu closed under the delete confirm still fades out for a moment.
+ */
+const optionMenu = (page: Page): Locator => page.locator("[data-blok-popover-custom-class~='blok-database-option-menu'][data-blok-popover-opened='true']");
+/** notion-motion.md Round 79 §4: the centred confirm the form's Delete option uses. */
+const deleteConfirm = (page: Page): Locator => page.getByRole('alertdialog', { name: 'Are you sure you want to delete this option?' }).getByRole('button', { name: 'Delete' });
 const peek = (page: Page): Locator => page.locator('[data-blok-database-drawer]');
 const builder = (page: Page): Locator => page.getByRole('dialog', { name: 'Customize page layout' });
 const added = (page: Page): Locator => page.locator('[data-blok-id="added"]');
@@ -117,7 +122,7 @@ const createThenFocusDeleteConfirm = async (page: Page): Promise<Locator> => {
   await editor.locator('[data-blok-database-select-option="t-x"]').hover();
   await editor.locator('[data-blok-database-select-option="t-x"] [data-blok-database-select-option-menu]').click();
   await optionMenu(page).locator('[data-blok-database-option-delete]').click();
-  const confirm = optionMenu(page).locator('[data-blok-database-option-delete-confirm]');
+  const confirm = deleteConfirm(page);
 
   await expect(confirm).toBeFocused();
 
@@ -208,11 +213,11 @@ test.describe('undo with a database popover open', () => {
     await cellEditor(page).locator('[data-blok-database-select-option="t-x"]').hover();
     await cellEditor(page).locator('[data-blok-database-select-option="t-x"] [data-blok-database-select-option-menu]').click();
     await optionMenu(page).locator('[data-blok-database-option-delete]').click();
-    await expect(optionMenu(page).locator('[data-blok-database-option-delete-confirm]')).toBeFocused();
+    await expect(deleteConfirm(page)).toBeFocused();
     await page.keyboard.press('ControlOrMeta+Shift+z');
 
     await expect(cellEditor(page)).toHaveCount(0);
-    await expect(optionMenu(page).locator('[data-blok-database-option-delete-confirm]')).toHaveCount(0);
+    await expect(deleteConfirm(page)).toHaveCount(0);
     await expect.poll(() => optionLabels(page, 'p-tags')).toContain('Review');
   });
 

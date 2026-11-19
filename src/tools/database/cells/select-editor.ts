@@ -6,7 +6,7 @@ import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { CellPopover, coverMinWidth } from './cell-popover';
 import { createOptionPill, optionsFor } from './display';
 import { pickOptionColor, shownStatusOption } from './option-colors';
-import { OptionDrag, buildDeletePrompt, buildOptionPanel, newSelectOption, placeDroppedOption } from './option-editing';
+import { OptionDrag, buildOptionPanel, confirmOptionDelete, newSelectOption, placeDroppedOption } from './option-editing';
 import type { CellEditorContext, CellEditorHandle } from './types';
 
 const listIds = { next: 0 };
@@ -49,7 +49,14 @@ class SelectEditor {
   private readonly body = document.createElement('div');
   private readonly popover: CellPopover;
   /** The open option ⋯ menu. The editor is held open under it. */
-  private menu: { popover: CellPopover; root: HTMLElement; optionId: string; release: () => void } | null = null;
+  private menu: {
+    popover: CellPopover;
+    root: HTMLElement;
+    optionId: string;
+    release: () => void;
+    /** Takes the delete confirm away when the menu closes under it, or its modal leaves the page inert. */
+    confirm?: AbortController;
+  } | null = null;
   private readonly drag = new OptionDrag(
     this.body,
     () => this.options,
@@ -64,7 +71,6 @@ class SelectEditor {
     },
     () => this.renderList()
   );
-  private deletePromptOpen = false;
 
   constructor(
     private readonly property: PropertyDefinition,
@@ -504,7 +510,7 @@ class SelectEditor {
       minWidth: `${OPTION_MENU_WIDTH}px`,
       gap: 0,
       flip: true,
-      onEscape: () => (this.deletePromptOpen ? this.renderPanel() : this.closeMenu()),
+      onEscape: () => this.closeMenu(),
       onDismiss: () => this.closeMenu(),
     });
 
@@ -523,7 +529,7 @@ class SelectEditor {
       return;
     }
     this.menu = null;
-    this.setDeletePromptOpen(false);
+    menu.confirm?.abort();
     if (this.open) {
       this.search.focus();
     }
@@ -537,19 +543,12 @@ class SelectEditor {
     this.renderList();
   }
 
-  /** The editor goes inert under the prompt, so the prompt stays modal. */
-  private setDeletePromptOpen(open: boolean): void {
-    this.deletePromptOpen = open;
-    this.chips.toggleAttribute('inert', open);
-  }
-
   private renderPanel(): void {
     const menu = this.menu;
 
     if (menu === null) {
       return;
     }
-    this.setDeletePromptOpen(false);
     const option = this.options.find((o) => o.id === menu.optionId);
 
     if (option === undefined) {
@@ -572,30 +571,45 @@ class SelectEditor {
     name.focus();
   }
 
+  /**
+   * notion-motion.md Round 79 §4: the form's centred confirm. It mounts in the menu, as the
+   * status default confirm does: focus on a dialog outside it would close the menus. The hold
+   * keeps the menu's Escape and outside presses off it while the dialog is up.
+   */
   private confirmDelete(optionId: string): void {
     const menu = this.menu;
 
     if (menu === null) {
       return;
     }
-    const { prompt, confirm } = buildDeletePrompt({
-      t: (key) => this.t(key),
-      onConfirm: () => {
-        this.closeMenu();
-        this.setOptions(this.options.filter((o) => o.id !== optionId));
-        if (this.selected.includes(optionId)) {
-          this.selected = this.selected.filter((id) => id !== optionId);
-          this.commit();
-        }
-        this.renderChips();
-        this.renderList();
-      },
-      onCancel: () => this.renderPanel(),
-    });
+    const release = menu.popover.hold();
+    const host = menu.root.closest<HTMLElement>('[data-blok-popover]');
 
-    menu.root.replaceChildren(prompt);
-    this.setDeletePromptOpen(true);
-    confirm.focus();
+    menu.confirm = new AbortController();
+    void confirmOptionDelete((key) => this.t(key), {
+      directionSource: menu.root,
+      signal: menu.confirm.signal,
+      ...(host === null ? {} : { container: host, topLayer: true }),
+    }).then((confirmed) => {
+      release();
+      if (this.menu !== menu) {
+        return;
+      }
+      menu.confirm = undefined;
+      if (!confirmed) {
+        menu.root.querySelector<HTMLElement>('[data-blok-database-option-name]')?.focus();
+
+        return;
+      }
+      this.closeMenu();
+      this.setOptions(this.options.filter((o) => o.id !== optionId));
+      if (this.selected.includes(optionId)) {
+        this.selected = this.selected.filter((id) => id !== optionId);
+        this.commit();
+      }
+      this.renderChips();
+      this.renderList();
+    });
   }
 }
 export const openSelectEditor = (

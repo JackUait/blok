@@ -2,6 +2,8 @@ import { nanoid } from 'nanoid';
 
 import { IconCheck, IconChevronRight, IconEmojiFlag, IconGroup, IconTrash } from '../../../components/icons';
 import { getTabbables } from '../../../components/utils/modal-dialog';
+import { openDatabaseConfirm } from '../database-confirm-dialog';
+import type { DatabaseConfirmOptions } from '../database-confirm-dialog';
 import { DatabaseModel } from '../database-model';
 import { statusGroupOf } from '../property-values';
 import type { PropertyDefinition, SelectOption } from '../types';
@@ -137,6 +139,24 @@ export const buildOptionPanel = (option: SelectOption, handlers: {
 
   return { panel, name };
 };
+
+/**
+ * The centred "delete this option?" confirm, Delete focused. The form's Delete option
+ * (notion-motion.md Round 77 §4, Round 78 §2: a 600 title) and the cell editor's option
+ * menu (Round 79 §4) show the same one.
+ */
+export const confirmOptionDelete = (
+  t: Translate,
+  placement: Pick<DatabaseConfirmOptions, 'directionSource' | 'signal' | 'container' | 'topLayer'>
+): Promise<boolean> => openDatabaseConfirm({
+  title: t('tools.database.optionDeleteConfirm'),
+  confirmLabel: t('tools.database.optionDelete'),
+  cancelLabel: t('tools.database.optionDeleteCancel'),
+  destructive: true,
+  focusConfirm: true,
+  boldTitle: true,
+  ...placement,
+});
 
 /** Notion asks before deleting an option (research/08); rows keep existing, the value is cleared. */
 export const buildDeletePrompt = (handlers: { t: Translate; onConfirm: () => void; onCancel: () => void }): { prompt: HTMLElement; confirm: HTMLButtonElement } => {

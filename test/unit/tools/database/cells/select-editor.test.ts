@@ -481,69 +481,89 @@ describe('select cell editor', () => {
       expect(menuPopover()).not.toBeNull();
     });
 
-    it('deletes an option, closes the menu and drops it from the value', () => {
+    const confirmAction = (name: 'confirm' | 'cancel'): HTMLButtonElement => {
+      const el = document.querySelector<HTMLButtonElement>(`[data-blok-database-confirm-action="${name}"]`);
+
+      if (el === null) {
+        throw new Error(`no ${name} button in the delete confirm`);
+      }
+
+      return el;
+    };
+    const confirmDialog = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-database-confirm-dialog]');
+
+    it('deletes an option, closes the menu and drops it from the value', async () => {
       const ctx = openSelect(['o1', 'o2'], {}, true);
 
       openMenu('o1');
       m('[data-blok-database-option-delete]').click();
       expect(ctx.onOptionsChange).not.toHaveBeenCalled();
-      m('[data-blok-database-option-delete-confirm]').click();
+      confirmAction('confirm').click();
 
-      expect(lastOptions(ctx).map((o) => o.id).sort()).toEqual(['o2', 'o3']);
+      await vi.waitFor(() => expect(lastOptions(ctx).map((o) => o.id).sort()).toEqual(['o2', 'o3']));
       expect(ctx.onCommit).toHaveBeenLastCalledWith(['o2']);
       expect(rowIds()).toEqual(['o2', 'o3']);
       expect(menuPopover()).toBeNull();
       expect(search()).toHaveFocus();
     });
 
-    it('asks before deleting, as Notion does, and Cancel keeps the option', () => {
-      const ctx = openSelect(['o1']);
-
-      openMenu('o1');
-      m('[data-blok-database-option-delete]').click();
-      expect(m('[data-blok-database-option-delete-prompt]').textContent).toContain('tools.database.optionDeleteConfirm');
-      m('[data-blok-database-option-delete-cancel]').click();
-
-      expect(ctx.onOptionsChange).not.toHaveBeenCalled();
-      expect(ctx.onCommit).not.toHaveBeenCalled();
-      expect(m('[data-blok-database-option-name]')).not.toBeNull();
-    });
-
-    it('the delete prompt is a labelled modal that keeps focus on its two buttons', () => {
+    // notion-motion.md Round 79 §4: the cell editor asks in the same centred dialog as the form's Delete option (Round 77 §4, 78 §2).
+    it('asks in the form\'s Delete option dialog: 600 title, bordered red Delete focused, bordered Cancel', () => {
       openSelect(['o1']);
 
       openMenu('o1');
       m('[data-blok-database-option-delete]').click();
-      const prompt = m('[data-blok-database-option-delete-prompt]');
-      const confirm = m('[data-blok-database-option-delete-confirm]');
-      const cancel = m('[data-blok-database-option-delete-cancel]');
 
-      expect(prompt.getAttribute('role')).toBe('alertdialog');
-      expect(prompt.getAttribute('aria-modal')).toBe('true');
-      expect(prompt.getAttribute('aria-label')).toBe('tools.database.optionDeleteConfirm');
-      expect(confirm).toHaveFocus();
-      expect(q('[data-blok-database-select-chips]').hasAttribute('inert')).toBe(true);
-
-      cancel.focus();
-      expect(press(cancel, 'Tab').defaultPrevented).toBe(true);
-      expect(confirm).toHaveFocus();
-
-      expect(press(confirm, 'Tab', { shiftKey: true }).defaultPrevented).toBe(true);
-      expect(cancel).toHaveFocus();
+      expect(document.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('tools.database.optionDeleteConfirm');
+      expect(confirmDialog()?.hasAttribute('data-bold-title')).toBe(true);
+      expect(confirmDialog()?.getAttribute('role')).toBe('alertdialog');
+      expect(confirmAction('confirm').textContent).toBe('tools.database.optionDelete');
+      expect(confirmAction('confirm').hasAttribute('data-destructive')).toBe(true);
+      expect(confirmAction('confirm')).toHaveFocus();
+      expect(confirmAction('cancel').textContent).toBe('tools.database.optionDeleteCancel');
+      expect(confirmAction('cancel').hasAttribute('data-quiet')).toBe(false);
+      expect(menuPopover()?.querySelector('[data-blok-database-option-delete-prompt]')).toBeNull();
     });
 
-    it('Escape in the delete prompt cancels back to the option menu', () => {
+    it('Cancel keeps the option and gives focus back to the option menu', async () => {
       const ctx = openSelect(['o1']);
 
       openMenu('o1');
       m('[data-blok-database-option-delete]').click();
-      press(m('[data-blok-database-option-delete-confirm]'), 'Escape');
+      confirmAction('cancel').click();
 
-      expect(menuPopover()?.querySelector('[data-blok-database-option-delete-prompt]')).toBeNull();
-      expect(m('[data-blok-database-option-name]')).not.toBeNull();
-      expect(q('[data-blok-database-select-chips]').hasAttribute('inert')).toBe(false);
+      await vi.waitFor(() => expect(m('[data-blok-database-option-name]')).toHaveFocus());
+      expect(confirmDialog()).toBeNull();
+      expect(ctx.onOptionsChange).not.toHaveBeenCalled();
+      expect(ctx.onCommit).not.toHaveBeenCalled();
+    });
+
+    it('Escape in the delete confirm closes only the confirm', async () => {
+      const ctx = openSelect(['o1']);
+
+      openMenu('o1');
+      m('[data-blok-database-option-delete]').click();
+      press(confirmAction('confirm'), 'Escape');
+
+      await vi.waitFor(() => expect(m('[data-blok-database-option-name]')).toHaveFocus());
+      expect(confirmDialog()).toBeNull();
+      expect(menuPopover()).not.toBeNull();
       expect(ctx.onOptionsChange).not.toHaveBeenCalled();
       expect(ctx.onClose).not.toHaveBeenCalled();
+    });
+
+    it('closing the editor under the delete confirm takes the confirm away and leaves nothing inert', async () => {
+      const ctx = makeEditorContext({ options: OPTIONS, onOptionsChange: vi.fn() });
+      const handle = openCellEditor(makeProperty('select'), null, makeAnchor(), ctx);
+
+      openMenu('o1');
+      m('[data-blok-database-option-delete]').click();
+      expect(confirmDialog()).not.toBeNull();
+      handle.close();
+
+      await vi.waitFor(() => expect(confirmDialog()).toBeNull());
+      expect(document.querySelectorAll('body > [inert]')).toHaveLength(0);
+      expect(ctx.onOptionsChange).not.toHaveBeenCalled();
     });
 
     it('Escape closes only the menu: the editor stays open with focus back in its search', () => {

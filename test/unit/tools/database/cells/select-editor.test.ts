@@ -522,32 +522,49 @@ describe('select cell editor', () => {
       expect(confirmAction('confirm')).toHaveFocus();
       expect(confirmAction('cancel').textContent).toBe('tools.database.optionDeleteCancel');
       expect(confirmAction('cancel').hasAttribute('data-quiet')).toBe(false);
-      expect(menuPopover()?.querySelector('[data-blok-database-option-delete-prompt]')).toBeNull();
+      expect(document.querySelector('[data-blok-database-option-delete-prompt]')).toBeNull();
     });
 
-    it('Cancel keeps the option and gives focus back to the option menu', async () => {
+    // notion-motion.md Round 81 §1: the option menu closes as the confirm opens; the editor stays.
+    it('closes the option menu when the confirm opens and keeps the editor', () => {
+      const ctx = openSelect(['o1']);
+
+      openMenu('o1');
+      m('[data-blok-database-option-delete]').click();
+
+      expect(menuPopover()).toBeNull();
+      expect(confirmDialog()).not.toBeNull();
+      expect(confirmAction('confirm')).toHaveFocus();
+      expect(search().isConnected).toBe(true);
+      expect(ctx.onClose).not.toHaveBeenCalled();
+    });
+
+    // notion-motion.md Round 81 §1: after Cancel focus is in the editor's search; the option menu stays closed.
+    it('Cancel keeps the option and gives focus back to the search', async () => {
       const ctx = openSelect(['o1']);
 
       openMenu('o1');
       m('[data-blok-database-option-delete]').click();
       confirmAction('cancel').click();
 
-      await vi.waitFor(() => expect(m('[data-blok-database-option-name]')).toHaveFocus());
+      await vi.waitFor(() => expect(search()).toHaveFocus());
+      expect(menuPopover()).toBeNull();
       expect(confirmDialog()).toBeNull();
       expect(ctx.onOptionsChange).not.toHaveBeenCalled();
       expect(ctx.onCommit).not.toHaveBeenCalled();
+      expect(ctx.onClose).not.toHaveBeenCalled();
     });
 
-    it('Escape in the delete confirm closes only the confirm', async () => {
+    it('Escape in the delete confirm acts as Cancel: the editor stays with focus in its search', async () => {
       const ctx = openSelect(['o1']);
 
       openMenu('o1');
       m('[data-blok-database-option-delete]').click();
       press(confirmAction('confirm'), 'Escape');
 
-      await vi.waitFor(() => expect(m('[data-blok-database-option-name]')).toHaveFocus());
+      await vi.waitFor(() => expect(search()).toHaveFocus());
       expect(confirmDialog()).toBeNull();
-      expect(menuPopover()).not.toBeNull();
+      expect(menuPopover()).toBeNull();
       expect(ctx.onOptionsChange).not.toHaveBeenCalled();
       expect(ctx.onClose).not.toHaveBeenCalled();
     });

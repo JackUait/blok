@@ -54,9 +54,9 @@ class SelectEditor {
     root: HTMLElement;
     optionId: string;
     release: () => void;
-    /** Takes the delete confirm away when the menu closes under it, or its modal leaves the page inert. */
-    confirm?: AbortController;
   } | null = null;
+  /** Takes the delete confirm away when the editor closes under it, or its modal leaves the page inert. */
+  private deleteConfirm: AbortController | null = null;
   private readonly drag = new OptionDrag(
     this.body,
     () => this.options,
@@ -141,6 +141,7 @@ class SelectEditor {
       return;
     }
     this.open = false;
+    this.deleteConfirm?.abort();
     this.closeMenu();
     this.drag.stop();
     if (closePopover) {
@@ -529,7 +530,6 @@ class SelectEditor {
       return;
     }
     this.menu = null;
-    menu.confirm?.abort();
     if (this.open) {
       this.search.focus();
     }
@@ -572,36 +572,34 @@ class SelectEditor {
   }
 
   /**
-   * notion-motion.md Round 79 §4: the form's centred confirm. It mounts in the menu, as the
-   * status default confirm does: focus on a dialog outside it would close the menus. The hold
-   * keeps the menu's Escape and outside presses off it while the dialog is up.
+   * notion-motion.md Round 79 §4: the form's centred confirm. Round 81 §1: the option menu
+   * closes as it opens, and Cancel gives focus back to the search. It mounts in the editor:
+   * focus on a dialog outside it would close the editor. The hold keeps the editor's Escape
+   * and outside presses off it while the dialog is up; it starts after the menu's release,
+   * which would clear it.
    */
   private confirmDelete(optionId: string): void {
-    const menu = this.menu;
+    const host = this.root.closest<HTMLElement>('[data-blok-popover]');
 
-    if (menu === null) {
-      return;
-    }
-    const release = menu.popover.hold();
-    const host = menu.root.closest<HTMLElement>('[data-blok-popover]');
+    this.closeMenu();
+    const release = this.popover.hold();
+    const confirm = new AbortController();
 
-    menu.confirm = new AbortController();
+    this.deleteConfirm = confirm;
     void confirmOptionDelete((key) => this.t(key), {
-      directionSource: menu.root,
-      signal: menu.confirm.signal,
+      directionSource: this.root,
+      signal: confirm.signal,
       ...(host === null ? {} : { container: host, topLayer: true }),
     }).then((confirmed) => {
       release();
-      if (this.menu !== menu) {
+      if (this.deleteConfirm !== confirm || !this.open) {
         return;
       }
-      menu.confirm = undefined;
+      this.deleteConfirm = null;
+      this.search.focus();
       if (!confirmed) {
-        menu.root.querySelector<HTMLElement>('[data-blok-database-option-name]')?.focus();
-
         return;
       }
-      this.closeMenu();
       this.setOptions(this.options.filter((o) => o.id !== optionId));
       if (this.selected.includes(optionId)) {
         this.selected = this.selected.filter((id) => id !== optionId);

@@ -1910,7 +1910,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r199: backlog items Notion measured earlier (R64, R66, R73, R75): the header menu name field at rest, the peek header rules 8 from each button, the colour rule trash 4px further in. Net database.css growth against origin/main.
     const DATABASE_R199_BYTES = 927;
     // Lane r202: Round 81 small look items (grouped list header, card menu search, No date pitch, gallery tools, Calculate chevrons, Month chevron, menu icon ink). Net database.css growth against origin/main.
-    const DATABASE_R202_BYTES = 2302;
+    const DATABASE_R202_BYTES = 3159;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

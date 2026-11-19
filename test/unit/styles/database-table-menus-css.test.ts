@@ -887,3 +887,21 @@ describe('header menu name field text (Round 81)', () => {
     expect(declared('[data-blok-database-property-menu-name] > [data-blok-database-property-menu-name-input]', 'font-size')).toEqual(['14px']);
   });
 });
+
+// notion-motion.md Round 81 §1 "Calculate menu …chevrons" (r81-n-calc-menu.raw; dark r81-n-calc-sumset-dark.raw):
+// 16x16 at +168,+6 of a 192 row, ink rgb(142, 139, 134) (173 in dark), from the header and the footer alike.
+describe('Calculate menu chevrons (Round 81)', () => {
+  const CALC = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu']";
+
+  it('ends a group row 8px after its chevron', () => {
+    expect(declared(`${CALC} [data-blok-popover-item][data-blok-has-children]`, 'padding-inline-end')).toEqual(['var(--blok-space-2)']);
+  });
+
+  it('draws the chevron 16px in a 16px slot, in the header icon grey', () => {
+    expect(declared(`${CALC} [data-blok-popover-item-icon-chevron-right]`, 'width')).toEqual(['16px']);
+    expect(declared(`${CALC} [data-blok-popover-item-icon-chevron-right]`, 'margin-inline-end')).toEqual(['0']);
+    expect(declared(`${CALC} [data-blok-popover-item-icon-chevron-right]`, 'color')).toEqual(['var(--blok-database-table-header-icon)']);
+    expect(declared(`${CALC} [data-blok-popover-item-icon-chevron-right] svg`, 'width')).toEqual(['16px']);
+    expect(declared(`${CALC} [data-blok-popover-item-icon-chevron-right] svg`, 'height')).toEqual(['16px']);
+  });
+});

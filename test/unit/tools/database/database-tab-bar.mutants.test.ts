@@ -1555,12 +1555,12 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(el.hasAttribute('data-dragging')).toBe(false);
     });
 
-    it('drops before the tab whose left half the pointer is over', () => {
+    it('drops before the tab whose centre the dragged tab\'s right edge has not reached', () => {
       const { el } = mount(threeViews(), 'v1');
 
       dragFrom(el, 'v1', 50);
-      document.dispatchEvent(pointer('pointermove', 120));
-      document.dispatchEvent(pointer('pointerup', 120));
+      document.dispatchEvent(pointer('pointermove', 95));
+      document.dispatchEvent(pointer('pointerup', 95));
 
       expect(onReorder).toHaveBeenCalledTimes(1);
       expect(onReorder).toHaveBeenCalledWith('v1', positionBetween(null, 'a1'));
@@ -1579,18 +1579,18 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(positionBetween(null, 'a2')).not.toBe(positionBetween(null, null));
 
       dragFrom(el, 'v1', 50);
-      document.dispatchEvent(pointer('pointermove', 120));
-      document.dispatchEvent(pointer('pointerup', 120));
+      document.dispatchEvent(pointer('pointermove', 95));
+      document.dispatchEvent(pointer('pointerup', 95));
 
       expect(onReorder).toHaveBeenCalledWith('v1', positionBetween(null, 'a2'));
     });
 
-    it('drops between the two tabs the pointer sits between', () => {
+    it('drops between the two tabs the dragged tab\'s right edge sits between', () => {
       const { el } = mount(threeViews(), 'v1');
 
       dragFrom(el, 'v1', 50);
-      document.dispatchEvent(pointer('pointermove', 220));
-      document.dispatchEvent(pointer('pointerup', 220));
+      document.dispatchEvent(pointer('pointermove', 180));
+      document.dispatchEvent(pointer('pointerup', 180));
 
       expect(onReorder).toHaveBeenCalledWith('v1', positionBetween('a1', 'a2'));
     });
@@ -1612,8 +1612,8 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       });
 
       tabOf(el, 'v0').dispatchEvent(pointer('pointerdown', 50));
-      document.dispatchEvent(pointer('pointermove', 220));
-      document.dispatchEvent(pointer('pointerup', 220));
+      document.dispatchEvent(pointer('pointermove', 180));
+      document.dispatchEvent(pointer('pointerup', 180));
 
       expect(onReorder).toHaveBeenCalledWith('v0', positionBetween('a1', 'a2'));
     });

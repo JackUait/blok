@@ -141,6 +141,10 @@ export class DatabaseTabBar {
   /** The dragged tab's own slot among them, and how far a passed tab slides: its width and the bar's gap. */
   private dragHome = 0;
   private dragStep = 0;
+  /** The dragged tab's box at pickup, and the left of the first shown tab: the tab stops there. */
+  private dragLeft = 0;
+  private dragWidth = 0;
+  private dragMinDx = 0;
   private readonly boundDragMove: (e: PointerEvent) => void;
   private readonly boundDragUp: (e: PointerEvent) => void;
   private readonly boundDragCancel: () => void;
@@ -970,8 +974,7 @@ export class DatabaseTabBar {
    * database.css's 200ms ease.
    */
   private handleDragMove(e: PointerEvent): void {
-    const dx = e.clientX - this.dragStartX;
-    if (!this.isDragging && Math.abs(dx) < DRAG_THRESHOLD) return;
+    if (!this.isDragging && Math.abs(e.clientX - this.dragStartX) < DRAG_THRESHOLD) return;
     const sourceTab = this.dragSource();
 
     if (!this.isDragging) {
@@ -990,12 +993,17 @@ export class DatabaseTabBar {
 
       this.dragHome = this.dragSlots.filter((slot) => slot.center < sourceCenter).length;
       this.dragStep = (source?.width ?? 0) + this.tabGap();
+      this.dragLeft = source?.left ?? 0;
+      this.dragWidth = source?.width ?? 0;
+      const lefts = this.dragSlots.map((slot) => slot.tab.getBoundingClientRect().left);
+
+      this.dragMinDx = Math.min(0, ...lefts.map((left) => left - this.dragLeft));
     }
     if (sourceTab === null) return;
-    sourceTab.style.transform = `translateX(${dx}px)`;
+    sourceTab.style.transform = `translateX(${this.dragDx(e)}px)`;
 
     const { dragHome: home, dragStep: step } = this;
-    const drop = this.dropSlot(e.clientX);
+    const drop = this.dropSlot(this.leadingEdge(e));
 
     this.dragSlots.forEach(({ tab }, index) => {
       const right = index < home && index >= drop;
@@ -1003,6 +1011,23 @@ export class DatabaseTabBar {
 
       Object.assign(tab.style, { transform: right || left ? `translateX(${right ? step : -step}px)` : '' });
     });
+  }
+
+  /** notion-motion.md Round 83 §6: the dragged tab stops at the bar start. */
+  private dragDx(e: PointerEvent): number {
+    return Math.max(this.dragMinDx, e.clientX - this.dragStartX);
+  }
+
+  /**
+   * notion-motion.md Round 83 §6: a neighbour slides once the dragged tab's
+   * leading edge passes its centre, not the pointer. Moving right leads with
+   * the right edge (Notion was read moving left only).
+   */
+  private leadingEdge(e: PointerEvent): number {
+    const dx = this.dragDx(e);
+    const left = this.dragLeft + dx;
+
+    return dx > 0 ? left + this.dragWidth : left;
   }
 
   private tabGap(): number {
@@ -1024,7 +1049,7 @@ export class DatabaseTabBar {
     // a drop between shown tabs lands right after the one on its left; past
     // the row it goes after every view.
     const shown = this.dragSlots.map((slot) => slot.tab);
-    const slot = this.dropSlot(e.clientX);
+    const slot = this.dropSlot(this.leadingEdge(e));
     const dropIndex = slot === shown.length ? -1 : slot;
     const afterTab = dropIndex === -1 ? tabs.at(-1) : shown[dropIndex - 1];
     const nextIndex = afterTab === undefined ? 0 : tabs.indexOf(afterTab) + 1;

@@ -733,8 +733,8 @@ describe('DatabaseTabBar', () => {
       const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
 
       tab.dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
-      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 220, clientY: 15 }));
-      document.dispatchEvent(new PointerEvent('pointerup', { clientX: 220, clientY: 15 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 180, clientY: 15 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { clientX: 180, clientY: 15 }));
 
       expect(onReorder).toHaveBeenCalledTimes(1);
       const key = onReorder.mock.calls[0][1];
@@ -800,12 +800,59 @@ describe('DatabaseTabBar', () => {
       const tab = (id: string): HTMLElement => el.querySelector(`[data-view-id="${id}"]`) as HTMLElement;
 
       tab('v1').dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
-      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 15 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 180, clientY: 15 }));
       expect(tab('v2').style.transform).toBe('translateX(-100px)');
       expect(tab('v3').style.transform).toBe('');
 
       document.dispatchEvent(new PointerEvent('pointermove', { clientX: 60, clientY: 15 }));
       expect(tab('v2').style.transform).toBe('');
+      bar.destroy();
+      el.remove();
+    });
+
+    // notion-motion.md Round 83 §6: Table slid once Board's left edge (580) passed Table's centre (582).
+    it('slides a neighbour aside once the dragged tab\'s leading edge passes its centre', () => {
+      const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' }), makeView({ id: 'v3', position: 'a2' })];
+      const { bar, el } = createBarWithLayout(views, 'v1');
+      const tab = (id: string): HTMLElement => el.querySelector(`[data-view-id="${id}"]`) as HTMLElement;
+
+      tab('v2').dispatchEvent(new PointerEvent('pointerdown', { clientX: 150, clientY: 15, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 105, clientY: 15 }));
+      expect(tab('v1').style.transform).toBe('');
+
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 95, clientY: 15 }));
+      expect(tab('v1').style.transform).toBe('translateX(100px)');
+
+      document.dispatchEvent(new PointerEvent('pointerup', { clientX: 95, clientY: 15 }));
+      expect(onReorder).toHaveBeenCalledTimes(1);
+      expect(onReorder.mock.calls[0][1] < 'a0').toBe(true);
+      bar.destroy();
+      el.remove();
+    });
+
+    it('slides a neighbour aside once the dragged tab\'s right edge passes its centre when dragged right', () => {
+      const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' }), makeView({ id: 'v3', position: 'a2' })];
+      const { bar, el } = createBarWithLayout(views, 'v1');
+      const tab = (id: string): HTMLElement => el.querySelector(`[data-view-id="${id}"]`) as HTMLElement;
+
+      tab('v1').dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 110, clientY: 15 }));
+
+      expect(tab('v2').style.transform).toBe('translateX(-100px)');
+      bar.destroy();
+      el.remove();
+    });
+
+    // notion-motion.md Round 83 §6: Board stopped at the bar start (539) while the pointer went on.
+    it('stops the dragged tab at the start of the bar', () => {
+      const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' })];
+      const { bar, el } = createBarWithLayout(views, 'v1');
+      const tab = (id: string): HTMLElement => el.querySelector(`[data-view-id="${id}"]`) as HTMLElement;
+
+      tab('v2').dispatchEvent(new PointerEvent('pointerdown', { clientX: 150, clientY: 15, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: -200, clientY: 15 }));
+
+      expect(tab('v2').style.transform).toBe('translateX(-100px)');
       bar.destroy();
       el.remove();
     });

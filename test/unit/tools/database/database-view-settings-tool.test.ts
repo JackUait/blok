@@ -291,6 +291,19 @@ describe('DatabaseTool — view settings', () => {
     expect(tool.save(root).views[0].groupSettings).toEqual({ hideEmptyGroups: true });
   });
 
+  // notion-motion.md Round 81 (r81-n-bd-repick.raw): the same property re-picked drops the sort and shows hidden groups.
+  it('saves a re-pick of the grouped property with the sort reset and no hidden groups', () => {
+    const { tool, root } = mount({ type: 'board', groupBy: 'p-stage', groupSettings: { sort: 'descending', colorColumns: false }, hiddenGroups: [{ id: 'o-idea' }] });
+
+    click('database-toolbar-settings');
+    click('database-settings-group');
+    click('database-group-by');
+    click('database-pick-property-p-stage');
+
+    expect(tool.save(root).views[0].groupSettings).toEqual({ hideEmptyGroups: true, colorColumns: false });
+    expect(tool.save(root).views[0].hiddenGroups ?? []).toEqual([]);
+  });
+
   // research/23 §2e: a select starts with Hide empty groups off.
   it('resets the group settings when the grouping switches from a number to a select', () => {
     const { tool, root } = mount({ type: 'board', groupBy: 'p-num', groupSettings: { hideEmptyGroups: true, numberBy: 'range' } });

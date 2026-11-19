@@ -574,6 +574,21 @@ describe('Round 45 gallery, calendar and settings panel', () => {
   });
 });
 
+// notion-motion.md Round 81 §2 "Gallery card tools" (r81-n-gallery-cardtools.raw): Notion's buttons are r0 in an r4 group
+// that clips them. Blok rounds only the group's outer corners, so a focus ring is not clipped.
+describe('gallery card tools (Round 81)', () => {
+  const TOOLS = '[data-blok-database-gallery-card] [data-blok-database-card-actions]';
+
+  it('squares the inner corners of the two tool buttons', () => {
+    expect(ruleBody(`${TOOLS} > button`)).toMatch(/border-radius:\s*0/);
+  });
+
+  it('keeps the group\'s 4px radius on its outer corners', () => {
+    expect(ruleBody(`${TOOLS} > button:first-child`)).toMatch(/border-start-start-radius:\s*inherit;\s*border-end-start-radius:\s*inherit/);
+    expect(ruleBody(`${TOOLS} > button:last-child`)).toMatch(/border-start-end-radius:\s*inherit;\s*border-end-end-radius:\s*inherit/);
+  });
+});
+
 // notion-motion.md "Round 60 re-reads" §1 and §5.
 describe('Round 60 small look gaps', () => {
   it('sizes the gallery card tool glyphs 16px, like Notion (818 / 847, y 333.2)', () => {

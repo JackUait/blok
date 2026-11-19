@@ -5830,6 +5830,20 @@ span[data-blok-slash-search] {
   block-size: 16px;
 }
 
+[data-blok-database-gallery-card] [data-blok-database-card-actions] > button {
+  border-radius: 0;
+}
+
+[data-blok-database-gallery-card] [data-blok-database-card-actions] > button:first-child {
+  border-start-start-radius: inherit;
+  border-end-start-radius: inherit;
+}
+
+[data-blok-database-gallery-card] [data-blok-database-card-actions] > button:last-child {
+  border-start-end-radius: inherit;
+  border-end-end-radius: inherit;
+}
+
 [data-blok-database-edit-card] {
   box-sizing: border-box;
   width: 29px;

@@ -1452,6 +1452,22 @@
   block-size: 16px;
 }
 
+/* notion-motion.md Round 81 §2 (r81-n-gallery-cardtools.raw): Notion's gallery tool buttons are r0 in an r4 group
+   that clips them. Rounding only the outer corners paints the same and leaves a focus ring unclipped. */
+[data-blok-database-gallery-card] [data-blok-database-card-actions] > button {
+  border-radius: 0;
+}
+
+[data-blok-database-gallery-card] [data-blok-database-card-actions] > button:first-child {
+  border-start-start-radius: inherit;
+  border-end-start-radius: inherit;
+}
+
+[data-blok-database-gallery-card] [data-blok-database-card-actions] > button:last-child {
+  border-start-end-radius: inherit;
+  border-end-end-radius: inherit;
+}
+
 /* Measured 29x24 with a 1px end border, so the pill stays 57px (research/21 §1f). */
 [data-blok-database-edit-card] {
   box-sizing: border-box;

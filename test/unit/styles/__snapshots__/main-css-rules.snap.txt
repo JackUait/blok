@@ -4780,6 +4780,7 @@ span[data-blok-slash-search] {
   --blok-database-form-respondent-bg: var(--blok-database-column-bg);
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(42, 28, 0, 0.07);
+  --blok-database-form-answer-mark-ring: rgba(27, 21, 0, 0.19);
   --blok-database-table-header-text: var(--blok-database-ink-secondary);
   --blok-database-table-header-icon: rgb(142, 139, 134);
   --blok-database-table-title-icon: var(--blok-database-table-header-icon);
@@ -5096,6 +5097,7 @@ span[data-blok-slash-search] {
   --blok-database-card-drag-source-bg: initial;
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(255, 255, 243, 0.082);
+  --blok-database-form-answer-mark-ring: rgba(255, 255, 243, 0.082);
   --blok-database-table-header-text: rgb(173, 169, 163);
   --blok-database-table-header-icon: rgb(173, 169, 163);
   --blok-database-table-title-icon: rgb(125, 122, 117);
@@ -5412,6 +5414,7 @@ span[data-blok-slash-search] {
   --blok-database-card-drag-source-bg: initial;
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(255, 255, 243, 0.082);
+  --blok-database-form-answer-mark-ring: rgba(255, 255, 243, 0.082);
   --blok-database-table-header-text: rgb(173, 169, 163);
   --blok-database-table-header-icon: rgb(173, 169, 163);
   --blok-database-table-title-icon: rgb(125, 122, 117);
@@ -10536,6 +10539,10 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 
 [data-blok-database-confirm-title]:first-child ~ [data-blok-database-confirm-action] + [data-blok-database-confirm-action] {
   margin-top: var(--blok-space-2-25);
+}
+
+[data-blok-database-confirm-dialog][data-bold-title] [data-blok-database-confirm-title] {
+  font-weight: 600;
 }
 
 [data-blok-database-confirm-dialog][data-trash] [data-blok-database-confirm-title] {
@@ -23195,7 +23202,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   border-radius: var(--blok-radius-control);
 }
 
-:is([data-blok-database-form-option], [data-blok-database-form-checkbox-row]) input:is([type="radio"], [type="checkbox"]) {
+:is([data-blok-database-form-option], [data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input:is([type="radio"], [type="checkbox"]) {
   flex: none;
   inline-size: 18px;
   block-size: 18px;
@@ -23269,14 +23276,14 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   color: var(--blok-database-title-placeholder);
 }
 
-[data-blok-database-form-option] input:is([type="radio"], [type="checkbox"]), [data-blok-database-form-checkbox-row] input[type="checkbox"]:not(:checked) {
+[data-blok-database-form-option] input:is([type="radio"], [type="checkbox"]), :is([data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input[type="checkbox"]:not(:checked) {
   appearance: none;
   inline-size: 15px;
   block-size: 15px;
   margin: 1.5px;
   border-radius: var(--blok-radius-mark);
   background-color: var(--blok-bg-primary);
-  box-shadow: 0 0 0 1.5px var(--blok-database-table-border);
+  box-shadow: 0 0 0 1.5px var(--blok-database-form-mark-ring, var(--blok-database-table-border));
 }
 
 [data-blok-database-form-option] input[type="radio"] {
@@ -23338,6 +23345,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-form-checkbox-answer] {
+  --blok-database-form-mark-ring: var(--blok-database-form-answer-mark-ring);
   display: flex;
   align-items: center;
   gap: var(--blok-space-3);

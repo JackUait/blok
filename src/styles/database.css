@@ -169,6 +169,8 @@
   /* Table view (research/07 and 08). */
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(42, 28, 0, 0.07);
+  /* notion-motion.md Round 78 §3: a respondent's checkbox ring. Dark is unmeasured: the builder mark's dark ring. */
+  --blok-database-form-answer-mark-ring: rgba(27, 21, 0, 0.19);
   --blok-database-table-header-text: var(--blok-database-ink-secondary);
   --blok-database-table-header-icon: rgb(142, 139, 134);
   --blok-database-table-title-icon: var(--blok-database-table-header-icon);
@@ -580,6 +582,7 @@
     /* Table view (research/07, 08; research/21 §1a, §1d; research/22 §12 for OPEN and "+ New page"). The gutter is unmeasured in dark. */
     --blok-database-table-bg: var(--blok-bg-primary);
     --blok-database-table-border: rgba(255, 255, 243, 0.082);
+    --blok-database-form-answer-mark-ring: rgba(255, 255, 243, 0.082);
     --blok-database-table-header-text: rgb(173, 169, 163);
     --blok-database-table-header-icon: rgb(173, 169, 163);
     /* notion-spec-2 §23.1: an icon, so 3:1 is enough (4.11:1 on the page). */
@@ -947,6 +950,7 @@
   /* Table view (research/07, 08; research/21 §1a, §1d; research/22 §12 for OPEN and "+ New page"). The gutter is unmeasured in dark. */
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(255, 255, 243, 0.082);
+  --blok-database-form-answer-mark-ring: rgba(255, 255, 243, 0.082);
   --blok-database-table-header-text: rgb(173, 169, 163);
   --blok-database-table-header-icon: rgb(173, 169, 163);
   /* notion-spec-2 §23.1: an icon, so 3:1 is enough (4.11:1 on the page). */
@@ -6971,6 +6975,11 @@ button[data-blok-database-layout-pin-name]:focus-visible {
 
 [data-blok-database-confirm-title]:first-child ~ [data-blok-database-confirm-action] + [data-blok-database-confirm-action] {
   margin-top: var(--blok-space-2-25);
+}
+
+/* notion-motion.md Round 78 §2 "Delete option": the title is 600. */
+[data-blok-database-confirm-dialog][data-bold-title] [data-blok-database-confirm-title] {
+  font-weight: 600;
 }
 
 /* notion-motion.md Round 65 §1 "Move database to Trash?": title 20-44, body box 44-80, confirm at 88, Cancel at 129. */
@@ -21070,7 +21079,8 @@ button[data-blok-database-feed-reaction]:hover,
   border-radius: var(--blok-radius-control);
 }
 
-:is([data-blok-database-form-option], [data-blok-database-form-checkbox-row]) input:is([type="radio"], [type="checkbox"]) {
+/* Round 78 §3: a respondent's labelled checkbox takes the same 18 box and 15 mark; its ring is darker. */
+:is([data-blok-database-form-option], [data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input:is([type="radio"], [type="checkbox"]) {
   flex: none;
   inline-size: 18px;
   block-size: 18px;
@@ -21150,7 +21160,7 @@ button[data-blok-database-feed-reaction]:hover,
 /* Round 76 §3: a builder mark is a 15x15 white box with a 1.5px ring, 1.5 in its 18px slot.
    A checked builder checkbox keeps the native look: Notion's checked mark is unmeasured. */
 [data-blok-database-form-option] input:is([type="radio"], [type="checkbox"]),
-[data-blok-database-form-checkbox-row] input[type="checkbox"]:not(:checked) {
+:is([data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input[type="checkbox"]:not(:checked) {
   appearance: none;
   inline-size: 15px;
   block-size: 15px;
@@ -21158,7 +21168,7 @@ button[data-blok-database-feed-reaction]:hover,
   border-radius: var(--blok-radius-mark);
   /* Round 77 §4: the page colour, rgb(25,25,25) in dark, not the 32 card fill. */
   background-color: var(--blok-bg-primary);
-  box-shadow: 0 0 0 1.5px var(--blok-database-table-border);
+  box-shadow: 0 0 0 1.5px var(--blok-database-form-mark-ring, var(--blok-database-table-border));
 }
 
 [data-blok-database-form-option] input[type="radio"] {
@@ -21224,6 +21234,7 @@ button[data-blok-database-feed-reaction]:hover,
 
 /* Round 77 §4 "Respondents": the label is 16px text 12 after the box. */
 [data-blok-database-form-checkbox-answer] {
+  --blok-database-form-mark-ring: var(--blok-database-form-answer-mark-ring);
   display: flex;
   align-items: center;
   gap: var(--blok-space-3);

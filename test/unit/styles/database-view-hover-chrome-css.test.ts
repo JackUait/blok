@@ -332,7 +332,7 @@ describe('form builder question card (research/21 §1k)', () => {
     const builder = '[data-blok-database-form-question]:has(> [data-blok-database-form-question-header])';
     const options = ruleBody(`${builder} > [data-blok-database-form-question-name-error] + :is([data-blok-database-form-options], [data-blok-database-form-date], [data-blok-database-form-selection-limit])`);
     const row = ruleBody('[data-blok-database-form-option]');
-    const box = ruleBody(':is([data-blok-database-form-option], [data-blok-database-form-checkbox-row]) input:is([type="radio"], [type="checkbox"])');
+    const box = ruleBody(':is([data-blok-database-form-option], [data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input:is([type="radio"], [type="checkbox"])');
     const hint = ruleBody(`${builder} > [data-blok-database-form-selection-limit]`);
     const check = ruleBody('[data-blok-database-form-checkbox-row]');
 
@@ -355,13 +355,13 @@ describe('form builder question card (research/21 §1k)', () => {
   it('draws the builder\'s option marks as Notion\'s 15px ringed boxes', () => {
     const mark = ruleBody('[data-blok-database-form-option] input:is([type="radio"], [type="checkbox"])');
 
-    expect(ruleBody('[data-blok-database-form-checkbox-row] input[type="checkbox"]:not(:checked)')).toBe(mark);
+    expect(ruleBody(':is([data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input[type="checkbox"]:not(:checked)')).toBe(mark);
 
     expect(mark).toContain('appearance: none');
     expect(mark).toContain('inline-size: 15px');
     expect(mark).toContain('block-size: 15px');
     expect(mark).toContain('margin: 1.5px');
-    expect(mark).toContain('box-shadow: 0 0 0 1.5px var(--blok-database-table-border)');
+    expect(mark).toContain('box-shadow: 0 0 0 1.5px var(--blok-database-form-mark-ring, var(--blok-database-table-border))');
     // Round 77 §4 "Dark marks": the fill is the page colour, white in light and rgb(25,25,25) in dark.
     expect(mark).toContain('background-color: var(--blok-bg-primary)');
     expect(mark).toContain('border-radius: var(--blok-radius-mark)');
@@ -423,6 +423,21 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(row).toContain('gap: var(--blok-space-3)');
     expect(ruleBody('[data-blok-database-form-checkbox-text]')).toContain('font-size: 16px');
     expect(ruleBody('[data-blok-database-form-checkbox-text]')).toContain('color: var(--blok-database-ink)');
+  });
+
+  // Round 78 §3 "Respondent checkbox": an 18 box holding a 15x15 white mark at +1.5, r2, ring rgba(27,21,0,0.19) 1.5px.
+  // Dark is unmeasured: the builder mark's dark ring (Round 77 §4).
+  it('draws a respondent\'s checkbox as the builder\'s 18px box and 15px mark, with a darker ring', () => {
+    const slot = ruleBody(':is([data-blok-database-form-option], [data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input:is([type="radio"], [type="checkbox"])');
+    const mark = ruleBody(':is([data-blok-database-form-checkbox-row], [data-blok-database-form-checkbox-answer]) input[type="checkbox"]:not(:checked)');
+
+    expect(slot).toContain('inline-size: 18px');
+    expect(mark).toContain('inline-size: 15px');
+    expect(mark).toContain('margin: 1.5px');
+    expect(mark).toContain('border-radius: var(--blok-radius-mark)');
+    expect(mark).toContain('box-shadow: 0 0 0 1.5px var(--blok-database-form-mark-ring, var(--blok-database-table-border))');
+    expect(ruleBody('[data-blok-database-form-checkbox-answer]')).toContain('--blok-database-form-mark-ring: var(--blok-database-form-answer-mark-ring)');
+    expect(tokenValues('--blok-database-form-answer-mark-ring')).toEqual(['rgba(27, 21, 0, 0.19)', 'rgba(255, 255, 243, 0.082)', 'rgba(255, 255, 243, 0.082)']);
   });
 
   // Round 76 §3 "Checkbox label": a 26-tall textarea 12 after the box, no padding, 16px; the row pads 5 10.

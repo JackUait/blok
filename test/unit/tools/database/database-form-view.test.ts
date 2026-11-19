@@ -1294,6 +1294,9 @@ describe('DatabaseFormView builder answers', () => {
     expect(changeOptions).not.toHaveBeenCalled();
     expect(names(root, 'pick')).toHaveLength(2);
     expect(document.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('tools.database.optionDeleteConfirm');
+    // notion-motion.md Round 78 §2: the title is 16px/600; Cancel keeps its border.
+    expect(document.querySelector('[data-blok-database-confirm-dialog]')?.hasAttribute('data-bold-title')).toBe(true);
+    expect(confirmAction('cancel')?.hasAttribute('data-quiet')).toBe(false);
     expect(confirmAction('confirm')?.textContent).toBe('tools.database.optionDelete');
     expect(confirmAction('confirm')?.hasAttribute('data-destructive')).toBe(true);
     expect(confirmAction('confirm')).toHaveFocus();

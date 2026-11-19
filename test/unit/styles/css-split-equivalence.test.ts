@@ -1901,6 +1901,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R192_BYTES = 1256;
     // Lane r194: Round 78 §1 the undated timeline panel keeps its Calculate row, so r189's 32px room goes. Net database.css change against origin/main (a shrink).
     const DATABASE_R194_BYTES = -227;
+    // Lane r195: Round 78 §3 a respondent's checkbox takes the builder's 18px box and 15px mark with a darker ring; §2 the Delete option confirm's 600 title. Net database.css growth against origin/main.
+    const DATABASE_R195_BYTES = 821;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2543,6 +2545,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R190_BYTES
       + DATABASE_R192_BYTES
       + DATABASE_R194_BYTES
+      + DATABASE_R195_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

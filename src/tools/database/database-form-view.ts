@@ -886,7 +886,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     return set;
   }
 
-  /** notion-motion.md Round 77 §4 "Delete option": Notion asks first, Delete focused. */
+  /** notion-motion.md Round 77 §4 "Delete option": Notion asks first, Delete focused. Round 78 §2: the title is 600. */
   private confirmDeleteOption(source: Element): Promise<boolean> {
     const { t } = this.options.i18n;
 
@@ -899,6 +899,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       cancelLabel: t('tools.database.optionDeleteCancel'),
       destructive: true,
       focusConfirm: true,
+      boldTitle: true,
       directionSource: source,
       signal: this.confirmAbort.signal,
     });

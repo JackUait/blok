@@ -4905,6 +4905,7 @@ span[data-blok-slash-search] {
   --blok-database-calendar-event-bg: #ffffff;
   --blok-database-calendar-event-shadow: rgba(0, 0, 0, 0.04) 0 2px 4px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-calendar-event-hover-bg: rgba(84, 72, 49, 0.08);
+  --blok-database-calendar-add-bg: #ffffff;
   --blok-database-reminder-text: rgb(35, 119, 211);
   --blok-database-calendar-today-text: #ffffff;
   --blok-database-calendar-day-today-text: #ffffff;
@@ -5222,6 +5223,7 @@ span[data-blok-slash-search] {
   --blok-database-calendar-event-bg: rgb(47, 47, 47);
   --blok-database-calendar-event-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-calendar-event-hover-bg: rgb(55, 55, 55);
+  --blok-database-calendar-add-bg: rgb(37, 37, 37);
   --blok-database-reminder-text: rgb(41, 137, 232);
   --blok-database-calendar-today-text: #ffffff;
   --blok-database-timeline-bar-bg: rgb(37, 37, 37);
@@ -5536,6 +5538,7 @@ span[data-blok-slash-search] {
   --blok-database-calendar-event-bg: rgb(47, 47, 47);
   --blok-database-calendar-event-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-calendar-event-hover-bg: rgb(55, 55, 55);
+  --blok-database-calendar-add-bg: rgb(37, 37, 37);
   --blok-database-reminder-text: rgb(41, 137, 232);
   --blok-database-calendar-today-text: #ffffff;
   --blok-database-timeline-bar-bg: rgb(37, 37, 37);
@@ -18757,7 +18760,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   padding: 0;
   border: none;
   border-radius: var(--blok-radius-control-lg);
-  background-color: var(--blok-database-calendar-event-bg);
+  background-color: var(--blok-database-calendar-add-bg);
   box-shadow: var(--blok-database-popover-shadow);
   color: var(--blok-database-calendar-nav-icon);
   cursor: pointer;

@@ -41,6 +41,7 @@ const TOKENS = [
   '--blok-database-calendar-event-bg',
   '--blok-database-calendar-event-shadow',
   '--blok-database-calendar-event-hover-bg',
+  '--blok-database-calendar-add-bg',
   '--blok-database-calendar-today-text',
 ];
 
@@ -273,7 +274,7 @@ describe('database gallery and calendar styles', () => {
     expect(add).toMatch(/inset-inline-start:\s*6px/);
     expect(add).toMatch(/inline-size:\s*24px/);
     expect(add).toMatch(/block-size:\s*24px/);
-    expect(add).toMatch(/background-color:\s*var\(--blok-database-calendar-event-bg\)/);
+    expect(add).toMatch(/background-color:\s*var\(--blok-database-calendar-add-bg\)/);
     expect(add).toMatch(/box-shadow:\s*var\(--blok-database-popover-shadow\)/);
     expect(ruleBody('[data-blok-database-calendar-add] svg')).toMatch(/inline-size:\s*20px/);
 
@@ -459,6 +460,8 @@ describe('gallery and calendar in dark (research/21 §1g, §1h)', () => {
     ['--blok-database-calendar-event-bg', 'rgb(47, 47, 47)'],
     ['--blok-database-calendar-event-shadow', 'rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px'],
     ['--blok-database-calendar-event-hover-bg', 'rgb(55, 55, 55)'],
+    // notion-motion.md Round 76 §7 (r76-b-calendar-dayplus.raw): Notion's dark day "+" is rgb(37, 37, 37), darker than an event.
+    ['--blok-database-calendar-add-bg', 'rgb(37, 37, 37)'],
   ])('%s is %s in both dark blocks', (token, value) => {
     expect(darkValues(token)).toEqual([value, value]);
   });

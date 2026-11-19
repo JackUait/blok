@@ -331,6 +331,17 @@ describe('date cell editor', () => {
       expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-02/2026-10-12');
     });
 
+    // notion-motion.md Round 83 §1 (r83-n-date-enddate.raw, r83-n-date-time.raw): focus stays on the clicked switch.
+    it.each(['data-blok-database-date-end-toggle', 'data-blok-database-date-time-toggle'])('keeps focus on the %s switch after a click', (attribute) => {
+      openDate('2026-10-09');
+      const toggle = q(`[${attribute}]`);
+
+      toggle.focus();
+      toggle.click();
+
+      expect(q(`[${attribute}]`)).toHaveFocus();
+    });
+
     it('turning End date off keeps only the start', () => {
       const ctx = openDate('2026-10-09/2026-10-12');
 

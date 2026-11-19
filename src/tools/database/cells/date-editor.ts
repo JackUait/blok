@@ -98,6 +98,8 @@ const createSwitch = (attribute: string, label: string, checked: boolean, onTogg
   return button;
 };
 
+const SWITCH_ATTRIBUTES = ['data-blok-database-date-end-toggle', 'data-blok-database-date-time-toggle'];
+
 const zoneMenus = { count: 0 };
 
 interface ZoneEntry {
@@ -417,10 +419,15 @@ class DateEditor {
     const focusedDay = this.root.contains(document.activeElement)
       ? document.activeElement?.getAttribute('data-blok-database-date-day')
       : null;
+    // notion-motion.md Round 83 §1: a clicked switch keeps the focus across the redraw.
+    const focusedSwitch = SWITCH_ATTRIBUTES.find((attribute) => this.root.contains(document.activeElement) && document.activeElement?.hasAttribute(attribute));
 
     this.root.replaceChildren(this.renderFields(), this.calendar.header(), this.calendar.grid(), this.renderOptions());
     if (focusedDay !== null && focusedDay !== undefined) {
       this.calendar.focusDay();
+    }
+    if (focusedSwitch !== undefined) {
+      this.root.querySelector<HTMLElement>(`[${focusedSwitch}]`)?.focus();
     }
   }
 
@@ -545,7 +552,7 @@ class DateEditor {
     const clear = document.createElement('button');
 
     options.setAttribute('data-blok-database-date-options', '');
-    options.appendChild(createSwitch('data-blok-database-date-end-toggle', this.t('tools.database.dateEndDate'), this.rangeOn, () => {
+    options.appendChild(createSwitch(SWITCH_ATTRIBUTES[0], this.t('tools.database.dateEndDate'), this.rangeOn, () => {
       this.rangeOn = !this.rangeOn;
       if (this.rangeOn) {
         // research/30 B2: an empty cell gets today → today at once. A bulk picker writes nothing: Notion's
@@ -563,7 +570,7 @@ class DateEditor {
     if (this.ctx.onDateDisplayChange !== undefined) {
       options.appendChild(this.renderDateFormatRow());
     }
-    options.appendChild(createSwitch('data-blok-database-date-time-toggle', this.t('tools.database.dateIncludeTime'), this.timeOn, () => {
+    options.appendChild(createSwitch(SWITCH_ATTRIBUTES[1], this.t('tools.database.dateIncludeTime'), this.timeOn, () => {
       this.timeOn = !this.timeOn;
       if (this.timeOn) {
         const today = toIsoDay(new Date());

@@ -988,9 +988,12 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     label.addEventListener('focusout', (event) => this.endEdit(event));
     // notion-motion.md Round 77 §4: Enter in the label does nothing; the label stays one line.
     // Round 78 §3: End leaves the page where it is; macOS End in a one-line textarea scrolls the page instead.
+    // Only plain End was measured, so chords stay the browser's.
     label.addEventListener('keydown', (event) => {
       if (event.isComposing) return;
-      if (event.key === 'Enter' || (event.key === 'End' && getUserOS().mac)) event.preventDefault();
+      const plainEnd = event.key === 'End' && !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey;
+
+      if (event.key === 'Enter' || (plainEnd && getUserOS().mac)) event.preventDefault();
     });
     row.append(field, label);
 

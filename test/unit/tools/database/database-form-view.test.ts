@@ -1425,7 +1425,7 @@ describe('DatabaseFormView builder answers', () => {
   // notion-motion.md Round 78 §3 "End in the builder's checkbox label": value, caret and page scroll stay.
   // macOS End in a one-line textarea scrolls the page to its end instead.
   describe('End in the checkbox label', () => {
-    const pressEnd = (userAgent: string): { label: HTMLTextAreaElement; end: KeyboardEvent } => {
+    const pressEnd = (userAgent: string, modifiers: KeyboardEventInit = {}): { label: HTMLTextAreaElement; end: KeyboardEvent } => {
       vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(userAgent);
       const { root } = build();
       const label = question(root, 'agree')?.querySelector<HTMLTextAreaElement>('[data-blok-database-form-checkbox-label]');
@@ -1433,7 +1433,7 @@ describe('DatabaseFormView builder answers', () => {
       if (label === null || label === undefined) throw new Error('no label');
       label.value = 'r78 lbl';
       label.focus();
-      const end = new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true });
+      const end = new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true, ...modifiers });
 
       label.dispatchEvent(end);
 
@@ -1446,6 +1446,12 @@ describe('DatabaseFormView builder answers', () => {
       expect(end.defaultPrevented).toBe(true);
       expect(label).toHaveFocus();
       expect(label.value).toBe('r78 lbl');
+    });
+
+    it.each(['shiftKey', 'metaKey', 'ctrlKey', 'altKey'] as const)('on macOS End with %s is left to the browser', (modifier) => {
+      const { end } = pressEnd('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', { [modifier]: true });
+
+      expect(end.defaultPrevented).toBe(false);
     });
 
     it('off macOS is left to the browser, which moves the caret', () => {

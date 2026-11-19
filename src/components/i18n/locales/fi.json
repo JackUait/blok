@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Pakistanin rupia",
   "tools.database.numberFormat.nigerian_naira": "Nigerian naira",
   "tools.database.numberFormat.bitcoin": "Bitcoin",
+  "tools.database.filterFormats": "Suodata muotoja…",
   "tools.database.statusGroupTodo": "Tehtävät",
   "tools.database.statusGroupInProgress": "Käynnissä",
   "tools.database.statusGroupComplete": "Valmis",

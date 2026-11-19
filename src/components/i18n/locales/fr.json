@@ -2034,6 +2034,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Roupie pakistanaise",
   "tools.database.numberFormat.nigerian_naira": "Naira nigérian",
   "tools.database.numberFormat.bitcoin": "Bitcoin",
+  "tools.database.filterFormats": "Filtrer les formats…",
   "tools.database.statusGroupTodo": "À faire",
   "tools.database.statusGroupInProgress": "En cours",
   "tools.database.statusGroupComplete": "Terminé",

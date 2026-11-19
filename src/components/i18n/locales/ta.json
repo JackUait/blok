@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "பாகிஸ்தானி ரூபாய்",
   "tools.database.numberFormat.nigerian_naira": "நைஜீரியன் நைரா",
   "tools.database.numberFormat.bitcoin": "பிட்காயின்",
+  "tools.database.filterFormats": "வடிவங்களை வடிகட்டு…",
   "tools.database.statusGroupTodo": "செய்ய வேண்டியவை",
   "tools.database.statusGroupInProgress": "செயலில்",
   "tools.database.statusGroupComplete": "முடிந்தது",

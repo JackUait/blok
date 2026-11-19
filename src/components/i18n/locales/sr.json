@@ -2034,6 +2034,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Пакистанска рупија",
   "tools.database.numberFormat.nigerian_naira": "Нигеријска наира",
   "tools.database.numberFormat.bitcoin": "Биткоин",
+  "tools.database.filterFormats": "Филтрирај формате…",
   "tools.database.statusGroupTodo": "Треба урадити",
   "tools.database.statusGroupInProgress": "У току",
   "tools.database.statusGroupComplete": "Завршено",

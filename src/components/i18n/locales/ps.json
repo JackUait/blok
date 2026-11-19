@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "پاکستانۍ کلداره",
   "tools.database.numberFormat.nigerian_naira": "نايجيري نايرا",
   "tools.database.numberFormat.bitcoin": "بټ کواین",
+  "tools.database.filterFormats": "بڼې فلټر کړئ…",
   "tools.database.statusGroupTodo": "د ترسره کولو لپاره",
   "tools.database.statusGroupInProgress": "روان دی",
   "tools.database.statusGroupComplete": "بشپړ",

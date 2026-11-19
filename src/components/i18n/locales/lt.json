@@ -2050,6 +2050,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Pakistano rupija",
   "tools.database.numberFormat.nigerian_naira": "Nigerijos naira",
   "tools.database.numberFormat.bitcoin": "Bitkoinas",
+  "tools.database.filterFormats": "Filtruoti formatus…",
   "tools.database.statusGroupTodo": "Reikia atlikti",
   "tools.database.statusGroupInProgress": "Vykdoma",
   "tools.database.statusGroupComplete": "Užbaigta",

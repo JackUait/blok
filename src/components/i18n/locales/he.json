@@ -2034,6 +2034,7 @@
   "tools.database.numberFormat.pakistani_rupee": "רופי פקיסטני",
   "tools.database.numberFormat.nigerian_naira": "נאירה ניגרי",
   "tools.database.numberFormat.bitcoin": "ביטקוין",
+  "tools.database.filterFormats": "סינון תבניות…",
   "tools.database.statusGroupTodo": "לביצוע",
   "tools.database.statusGroupInProgress": "בתהליך",
   "tools.database.statusGroupComplete": "הושלם",

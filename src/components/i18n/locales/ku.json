@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "ڕووپیەی پاکستانی",
   "tools.database.numberFormat.nigerian_naira": "نایرای نیجیری",
   "tools.database.numberFormat.bitcoin": "بیتکۆین",
+  "tools.database.filterFormats": "پاڵاوتنی شێوازەکان…",
   "tools.database.statusGroupTodo": "بۆ ئەنجامدان",
   "tools.database.statusGroupInProgress": "لە بەڕێوەچووندایە",
   "tools.database.statusGroupComplete": "تەواوبوو",

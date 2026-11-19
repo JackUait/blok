@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "រូពីប៉ាគីស្ថាន",
   "tools.database.numberFormat.nigerian_naira": "ណៃរ៉ា​នីហ្សេរីយ៉ា",
   "tools.database.numberFormat.bitcoin": "ប៊ីតខញ",
+  "tools.database.filterFormats": "ត្រងទម្រង់…",
   "tools.database.statusGroupTodo": "ត្រូវធ្វើ",
   "tools.database.statusGroupInProgress": "កំពុងដំណើរការ",
   "tools.database.statusGroupComplete": "បានបញ្ចប់",

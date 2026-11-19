@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "ਪਾਕਿਸਤਾਨੀ ਰੁਪਇਆ",
   "tools.database.numberFormat.nigerian_naira": "ਨਾਇਜੀਰੀਆਈ ਨਾਇਰਾ",
   "tools.database.numberFormat.bitcoin": "ਬਿਟਕੋਇਨ",
+  "tools.database.filterFormats": "ਫਾਰਮੈਟ ਫਿਲਟਰ ਕਰੋ…",
   "tools.database.statusGroupTodo": "ਕਰਨਾ ਹੈ",
   "tools.database.statusGroupInProgress": "ਚੱਲ ਰਿਹਾ",
   "tools.database.statusGroupComplete": "ਪੂਰਾ",

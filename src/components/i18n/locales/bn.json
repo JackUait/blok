@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "পাকিস্তানি রুপি",
   "tools.database.numberFormat.nigerian_naira": "নাইজেরিয়ান নায়রা",
   "tools.database.numberFormat.bitcoin": "বিটকয়েন",
+  "tools.database.filterFormats": "ফরম্যাট ফিল্টার করুন…",
   "tools.database.statusGroupTodo": "করণীয়",
   "tools.database.statusGroupInProgress": "চলমান",
   "tools.database.statusGroupComplete": "সম্পন্ন",

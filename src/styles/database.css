@@ -9015,6 +9015,11 @@ textarea[data-blok-database-cell-input] {
   }
 }
 
+/* notion-motion.md Round 83 §4: "Filter formats…" is 14px. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-format-list'] > [data-blok-popover-container] > [data-blok-field='search'] > input {
+  font-size: 14px;
+}
+
 /* §17.10: the row holding the current value opens in the hover tint. Literals: the selected-state law rejects an alias of an alias. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] {
   --blok-item-focus-bg: rgba(33, 27, 23, 0.051);

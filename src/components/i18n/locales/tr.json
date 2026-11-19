@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Pakistan rupisi",
   "tools.database.numberFormat.nigerian_naira": "Nijerya nairası",
   "tools.database.numberFormat.bitcoin": "Bitcoin",
+  "tools.database.filterFormats": "Biçimleri filtrele…",
   "tools.database.statusGroupTodo": "Yapılacak",
   "tools.database.statusGroupInProgress": "Devam ediyor",
   "tools.database.statusGroupComplete": "Tamamlandı",

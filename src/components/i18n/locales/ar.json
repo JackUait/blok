@@ -2082,6 +2082,7 @@
   "tools.database.numberFormat.pakistani_rupee": "روبية باكستاني",
   "tools.database.numberFormat.nigerian_naira": "نايرا نيجيري",
   "tools.database.numberFormat.bitcoin": "بيتكوين",
+  "tools.database.filterFormats": "تصفية التنسيقات…",
   "tools.database.statusGroupTodo": "للتنفيذ",
   "tools.database.statusGroupInProgress": "قيد التنفيذ",
   "tools.database.statusGroupComplete": "مكتمل",

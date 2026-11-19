@@ -999,6 +999,7 @@ export type BlokMessageKey =
   | 'tools.database.filterDirectionThis'
   | 'tools.database.filterDuplicate'
   | 'tools.database.filterExactDate'
+  | 'tools.database.filterFormats'
   | 'tools.database.filterGone'
   | 'tools.database.filterInvalidDate'
   | 'tools.database.filterMe'

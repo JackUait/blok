@@ -12411,6 +12411,10 @@ textarea[data-blok-database-cell-input] {
   line-height: 20px;
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-format-list'] > [data-blok-popover-container] > [data-blok-field='search'] > input {
+  font-size: 14px;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] {
   --blok-item-focus-bg: rgba(33, 27, 23, 0.051);
 }

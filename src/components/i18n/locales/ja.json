@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "パキスタン ルピー",
   "tools.database.numberFormat.nigerian_naira": "ナイジェリア ナイラ",
   "tools.database.numberFormat.bitcoin": "ビットコイン",
+  "tools.database.filterFormats": "形式を絞り込む…",
   "tools.database.statusGroupTodo": "未着手",
   "tools.database.statusGroupInProgress": "進行中",
   "tools.database.statusGroupComplete": "完了",

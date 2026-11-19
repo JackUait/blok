@@ -2050,6 +2050,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Pákistánská rupie",
   "tools.database.numberFormat.nigerian_naira": "Nigerijská naira",
   "tools.database.numberFormat.bitcoin": "Bitcoin",
+  "tools.database.filterFormats": "Filtrovat formáty…",
   "tools.database.statusGroupTodo": "K vyřízení",
   "tools.database.statusGroupInProgress": "Probíhá",
   "tools.database.statusGroupComplete": "Dokončeno",

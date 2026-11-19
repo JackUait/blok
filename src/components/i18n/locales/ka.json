@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Პაკისტანური რუპია",
   "tools.database.numberFormat.nigerian_naira": "Ნიგერიული ნაირა",
   "tools.database.numberFormat.bitcoin": "ბიტკოინი",
+  "tools.database.filterFormats": "ფორმატების გაფილტვრა…",
   "tools.database.statusGroupTodo": "გასაკეთებელი",
   "tools.database.statusGroupInProgress": "მიმდინარეობს",
   "tools.database.statusGroupComplete": "დასრულებული",

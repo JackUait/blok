@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "ޕާކިސްތާން ރުޕީ",
   "tools.database.numberFormat.nigerian_naira": "ނައިޖީރިއާ ނައިރާ",
   "tools.database.numberFormat.bitcoin": "ބިޓްކޮއިން",
+  "tools.database.filterFormats": "ފޯމެޓްތައް ފިލްޓަރ ކުރޭ…",
   "tools.database.statusGroupTodo": "ކުރަންޖެހޭ",
   "tools.database.statusGroupInProgress": "ކުރިއަށް ދަނީ",
   "tools.database.statusGroupComplete": "ނިމިއްޖެ",

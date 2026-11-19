@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Pakistansk rupee",
   "tools.database.numberFormat.nigerian_naira": "Nigeriansk naira",
   "tools.database.numberFormat.bitcoin": "Bitcoin",
+  "tools.database.filterFormats": "Filtrer formater…",
   "tools.database.statusGroupTodo": "Skal gøres",
   "tools.database.statusGroupInProgress": "I gang",
   "tools.database.statusGroupComplete": "Fuldført",

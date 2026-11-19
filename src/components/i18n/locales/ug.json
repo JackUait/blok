@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "پاكىستان رۇپىسى",
   "tools.database.numberFormat.nigerian_naira": "نىگېرىيە نايراسى",
   "tools.database.numberFormat.bitcoin": "بىتكوين",
+  "tools.database.filterFormats": "فورماتلارنى سۈزۈش…",
   "tools.database.statusGroupTodo": "قىلىدىغان ئىشلار",
   "tools.database.statusGroupInProgress": "داۋاملىشىۋاتىدۇ",
   "tools.database.statusGroupComplete": "تاماملانغان",

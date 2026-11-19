@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Ρουπία Πακιστάν",
   "tools.database.numberFormat.nigerian_naira": "Νάιρα Νιγηρίας",
   "tools.database.numberFormat.bitcoin": "Μπιτκόιν",
+  "tools.database.filterFormats": "Φιλτράρισμα μορφών…",
   "tools.database.statusGroupTodo": "Προς υλοποίηση",
   "tools.database.statusGroupInProgress": "Σε εξέλιξη",
   "tools.database.statusGroupComplete": "Ολοκληρωμένο",

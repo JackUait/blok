@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Rupee Pakistan",
   "tools.database.numberFormat.nigerian_naira": "Naira Nigeria",
   "tools.database.numberFormat.bitcoin": "Bitcoin",
+  "tools.database.filterFormats": "Lọc định dạng…",
   "tools.database.statusGroupTodo": "Cần làm",
   "tools.database.statusGroupInProgress": "Đang thực hiện",
   "tools.database.statusGroupComplete": "Hoàn thành",

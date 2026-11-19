@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "巴基斯坦卢比",
   "tools.database.numberFormat.nigerian_naira": "尼日利亚奈拉",
   "tools.database.numberFormat.bitcoin": "比特币",
+  "tools.database.filterFormats": "筛选格式…",
   "tools.database.statusGroupTodo": "待办",
   "tools.database.statusGroupInProgress": "进行中",
   "tools.database.statusGroupComplete": "已完成",

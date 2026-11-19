@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Пакистаны рупи",
   "tools.database.numberFormat.nigerian_naira": "Нигерийн найра",
   "tools.database.numberFormat.bitcoin": "Биткойн",
+  "tools.database.filterFormats": "Формат шүүх…",
   "tools.database.statusGroupTodo": "Хийх",
   "tools.database.statusGroupInProgress": "Хийгдэж байна",
   "tools.database.statusGroupComplete": "Дууссан",

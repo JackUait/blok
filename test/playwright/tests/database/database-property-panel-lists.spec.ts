@@ -247,13 +247,31 @@ test('Target property\'s search field has Notion\'s size, so the list is Notion\
   expect(list.height).toBe(52 + count * 29 - 1 + 4);
 });
 
-test('other searchable lists keep the shared search field', async ({ page }) => {
+// notion-motion.md Round 83 §4: "Filter formats…" 14px, 156x20 at +18,+16; the first row 52 down.
+test('Number format\'s search field is Notion\'s "Filter formats…" field', async ({ page }) => {
+  await openPanel(page);
+  await page.locator('[data-blok-item-name="numberFormat"]').click();
+  const list = await listBox(page, 'format-number');
+  const field = page.locator('[data-blok-popover-container]:has([data-blok-item-name="format-number"]) [data-blok-testid="popover-search-input"]');
+  const input = await field.boundingBox();
+  const first = await box(page, 'format-number');
+
+  await expect(field).toHaveAttribute('placeholder', 'Filter formats…');
+  await expect(field).toHaveCSS('font-size', '14px');
+  expect({ x: (input?.x ?? 0) - list.x, y: (input?.y ?? 0) - list.y, width: input?.width, height: input?.height }).toEqual({ x: 18, y: 16, width: 156, height: 20 });
+  expect(first.y - list.y).toBe(52);
+});
+
+// notion-motion.md Round 83 §4: Escape closes the list and leaves focus on the Number format row.
+test('Escape on Number format puts focus back on its row', async ({ page }) => {
   await openPanel(page);
   await page.locator('[data-blok-item-name="numberFormat"]').click();
   await listBox(page, 'format-number');
-  const input = await page.locator('[data-blok-popover-container]:has([data-blok-item-name="format-number"]) [data-blok-testid="popover-search-input"]').boundingBox();
+  await page.keyboard.press('Escape');
 
-  expect(input?.height).toBe(22);
+  await expect(page.locator('[data-blok-item-name^="format-"]')).toHaveCount(0);
+  await expect(page.locator('[data-blok-item-name="numberFormat"]')).toBeFocused();
+  await expect(page.locator('[data-blok-item-name="decimals"]')).toBeVisible();
 });
 
 // §17.8: Notion's box is 156 wide; other hints keep the 300 max-width.

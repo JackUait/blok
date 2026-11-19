@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Pakistaanse roepie",
   "tools.database.numberFormat.nigerian_naira": "Nigeriaanse naira",
   "tools.database.numberFormat.bitcoin": "Bitcoin",
+  "tools.database.filterFormats": "Notaties filteren…",
   "tools.database.statusGroupTodo": "Te doen",
   "tools.database.statusGroupInProgress": "Bezig",
   "tools.database.statusGroupComplete": "Voltooid",

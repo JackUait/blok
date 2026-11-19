@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "පාකිස්ථාන රුපියල්",
   "tools.database.numberFormat.nigerian_naira": "නයිජීරියානු නයිරා",
   "tools.database.numberFormat.bitcoin": "බිට්කොයින්",
+  "tools.database.filterFormats": "ආකෘති පෙරන්න…",
   "tools.database.statusGroupTodo": "කළ යුතු",
   "tools.database.statusGroupInProgress": "ක්‍රියාත්මක වෙමින්",
   "tools.database.statusGroupComplete": "සම්පූර්ණයි",

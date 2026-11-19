@@ -651,8 +651,13 @@ describe('property menu — click-only lists (notion-spec-2 §16.1)', () => {
     expect(byName(panel(sum), 'rollupFunction').children?.class).toBe('blok-database-panel-list');
   });
 
-  it('Number format is 192 wide, in the same look', () => {
-    expect(byName(panel(sum), 'numberFormat').children).toMatchObject({ width: '192px', class: 'blok-database-panel-list' });
+  // notion-motion.md Round 83 §4: its search field is "Filter formats…", placed like Target property's.
+  it('Number format is 192 wide, in the same look, with a "Filter formats…" field', () => {
+    expect(byName(panel(sum), 'numberFormat').children).toMatchObject({
+      width: '192px',
+      class: 'blok-database-panel-list blok-database-target-list blok-database-format-list',
+      searchPlaceholder: 'tools.database.filterFormats',
+    });
   });
 
   const calculate = (targetPropertyId: string): CapturedItem[] =>

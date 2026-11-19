@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Pakisztáni rúpia",
   "tools.database.numberFormat.nigerian_naira": "Nigériai naira",
   "tools.database.numberFormat.bitcoin": "Bitcoin",
+  "tools.database.filterFormats": "Formátumok szűrése…",
   "tools.database.statusGroupTodo": "Teendő",
   "tools.database.statusGroupInProgress": "Folyamatban",
   "tools.database.statusGroupComplete": "Befejezve",

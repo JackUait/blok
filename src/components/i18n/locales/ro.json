@@ -2034,6 +2034,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Rupie pakistaneză",
   "tools.database.numberFormat.nigerian_naira": "Naira nigeriană",
   "tools.database.numberFormat.bitcoin": "Bitcoin",
+  "tools.database.filterFormats": "Filtrați formatele…",
   "tools.database.statusGroupTodo": "De făcut",
   "tools.database.statusGroupInProgress": "În lucru",
   "tools.database.statusGroupComplete": "Finalizat",

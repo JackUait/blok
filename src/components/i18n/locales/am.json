@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "የፓኪስታን ሩፒ",
   "tools.database.numberFormat.nigerian_naira": "የናይጄሪያ ናይራ",
   "tools.database.numberFormat.bitcoin": "ቢትኮይን",
+  "tools.database.filterFormats": "ቅርጸቶችን ፈልግ…",
   "tools.database.statusGroupTodo": "የሚደረጉ",
   "tools.database.statusGroupInProgress": "በሂደት ላይ",
   "tools.database.statusGroupComplete": "ተጠናቋል",

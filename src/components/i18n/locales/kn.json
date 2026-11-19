@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "ಪಾಕಿಸ್ತಾನದ ರುಪೀ",
   "tools.database.numberFormat.nigerian_naira": "ನೈಜೀರಿಯಾದ ನೇರಾ",
   "tools.database.numberFormat.bitcoin": "ಬಿಟ್‌ಕಾಯಿನ್",
+  "tools.database.filterFormats": "ಸ್ವರೂಪಗಳನ್ನು ಫಿಲ್ಟರ್ ಮಾಡಿ…",
   "tools.database.statusGroupTodo": "ಮಾಡಬೇಕಾದವು",
   "tools.database.statusGroupInProgress": "ಪ್ರಗತಿಯಲ್ಲಿದೆ",
   "tools.database.statusGroupComplete": "ಪೂರ್ಣಗೊಂಡಿದೆ",

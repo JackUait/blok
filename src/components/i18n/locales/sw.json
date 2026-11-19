@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Rupia ya Pakistan",
   "tools.database.numberFormat.nigerian_naira": "Naira ya Nigeria",
   "tools.database.numberFormat.bitcoin": "Bitcoin",
+  "tools.database.filterFormats": "Chuja miundo…",
   "tools.database.statusGroupTodo": "Za kufanya",
   "tools.database.statusGroupInProgress": "Inaendelea",
   "tools.database.statusGroupComplete": "Imekamilika",

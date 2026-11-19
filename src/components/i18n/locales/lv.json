@@ -2034,6 +2034,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Pakistānas rūpija",
   "tools.database.numberFormat.nigerian_naira": "Nigērijas naira",
   "tools.database.numberFormat.bitcoin": "Bitkoins",
+  "tools.database.filterFormats": "Filtrēt formātus…",
   "tools.database.statusGroupTodo": "Darāmie darbi",
   "tools.database.statusGroupInProgress": "Procesā",
   "tools.database.statusGroupComplete": "Pabeigts",

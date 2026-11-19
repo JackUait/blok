@@ -222,6 +222,8 @@ const CHANGE_TYPE_LIST_CLASS = 'blok-database-change-type';
 const TARGET_LIST = { clickOnly: true, placement: 'under', width: '280px', class: PANEL_LIST_CLASS } as const;
 /** notion-spec-2 §17.2: Target property's own search field size, in database.css. */
 const TARGET_SEARCH_LIST_CLASS = `${PANEL_LIST_CLASS} blok-database-target-list`;
+/** notion-motion.md Round 83 §4: Number format's "Filter formats…" field sits like Target property's, at 14px. */
+const FORMAT_SEARCH_LIST_CLASS = `${TARGET_SEARCH_LIST_CLASS} blok-database-format-list`;
 
 /** The Calculate menu's groups (notion-spec-2 §14.4, §15.2). */
 const CALCULATE_GROUPS: ReadonlyArray<readonly [string, readonly RollupFunction[]]> = [
@@ -1596,9 +1598,10 @@ export class DatabasePropertyMenu {
         valueLabel: this.t(`tools.database.numberFormat.${number.format ?? 'number'}`),
         children: {
           ...CLICK_ONLY_UNDER,
-          class: PANEL_LIST_CLASS,
+          class: FORMAT_SEARCH_LIST_CLASS,
           width: '192px',
           searchable: true,
+          searchPlaceholder: this.t('tools.database.filterFormats'),
           items: NUMBER_FORMATS.map((format) => ({
             name: `format-${format}`,
             title: this.t(`tools.database.numberFormat.${format}`),

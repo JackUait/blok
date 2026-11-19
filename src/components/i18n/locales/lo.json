@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "ປາ​ກິ​ສຖານ ຣູ​ປີ",
   "tools.database.numberFormat.nigerian_naira": "ໄນ​ຣາ ​ໄນເຈີ​ຣຽນ",
   "tools.database.numberFormat.bitcoin": "ບິດຄອຍ",
+  "tools.database.filterFormats": "ກັ່ນຕອງຮູບແບບ…",
   "tools.database.statusGroupTodo": "ສິ່ງທີ່ຕ້ອງເຮັດ",
   "tools.database.statusGroupInProgress": "ກຳລັງດຳເນີນ",
   "tools.database.statusGroupComplete": "ສຳເລັດແລ້ວ",

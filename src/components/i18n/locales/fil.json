@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Rupee ng Pakistan",
   "tools.database.numberFormat.nigerian_naira": "Naira ng Nigeria",
   "tools.database.numberFormat.bitcoin": "Bitcoin",
+  "tools.database.filterFormats": "I-filter ang mga format…",
   "tools.database.statusGroupTodo": "Gagawin",
   "tools.database.statusGroupInProgress": "Ginagawa",
   "tools.database.statusGroupComplete": "Tapos na",

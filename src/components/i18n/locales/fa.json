@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "روپیهٔ پاکستان",
   "tools.database.numberFormat.nigerian_naira": "نایرای نیجریه",
   "tools.database.numberFormat.bitcoin": "بیت‌کوین",
+  "tools.database.filterFormats": "فیلتر کردن قالب‌ها…",
   "tools.database.statusGroupTodo": "برای انجام",
   "tools.database.statusGroupInProgress": "در حال انجام",
   "tools.database.statusGroupComplete": "تکمیل‌شده",

@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "รูปีปากีสถาน",
   "tools.database.numberFormat.nigerian_naira": "ไนราไนจีเรีย",
   "tools.database.numberFormat.bitcoin": "บิตคอยน์",
+  "tools.database.filterFormats": "กรองรูปแบบ…",
   "tools.database.statusGroupTodo": "สิ่งที่ต้องทำ",
   "tools.database.statusGroupInProgress": "กำลังดำเนินการ",
   "tools.database.statusGroupComplete": "เสร็จสมบูรณ์",

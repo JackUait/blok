@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Պակիստանյան ռուփի",
   "tools.database.numberFormat.nigerian_naira": "Նիգերիական նայրա",
   "tools.database.numberFormat.bitcoin": "Բիթքոին",
+  "tools.database.filterFormats": "Զտել ձևաչափերը…",
   "tools.database.statusGroupTodo": "Անելիք",
   "tools.database.statusGroupInProgress": "Ընթացքում",
   "tools.database.statusGroupComplete": "Ավարտված",

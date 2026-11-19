@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "ပါကစ္စတန် ရူပီး",
   "tools.database.numberFormat.nigerian_naira": "နိုင်ဂျီးရီးယား နိုင်းရာ",
   "tools.database.numberFormat.bitcoin": "ဘစ်ကွိုင်",
+  "tools.database.filterFormats": "ပုံစံများကို စစ်ထုတ်ပါ…",
   "tools.database.statusGroupTodo": "လုပ်ရန်",
   "tools.database.statusGroupInProgress": "ဆောင်ရွက်ဆဲ",
   "tools.database.statusGroupComplete": "ပြီးဆုံး",

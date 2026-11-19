@@ -2050,6 +2050,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Пакистанская рупия",
   "tools.database.numberFormat.nigerian_naira": "Нигерийская найра",
   "tools.database.numberFormat.bitcoin": "Биткоин",
+  "tools.database.filterFormats": "Фильтр форматов…",
   "tools.database.statusGroupTodo": "К выполнению",
   "tools.database.statusGroupInProgress": "В работе",
   "tools.database.statusGroupComplete": "Завершено",

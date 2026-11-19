@@ -2018,6 +2018,7 @@
   "tools.database.numberFormat.pakistani_rupee": "Пакистанска рупија",
   "tools.database.numberFormat.nigerian_naira": "Нигериска наира",
   "tools.database.numberFormat.bitcoin": "Биткоин",
+  "tools.database.filterFormats": "Филтрирај формати…",
   "tools.database.statusGroupTodo": "За правење",
   "tools.database.statusGroupInProgress": "Во тек",
   "tools.database.statusGroupComplete": "Завршено",

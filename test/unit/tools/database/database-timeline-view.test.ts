@@ -1073,6 +1073,16 @@ describe('DatabaseTimelineView', () => {
       expect(canvas(mount({ groups: single([]), view: timelineView({ showTimelineTable: true }) }).root).hasAttribute('data-no-lanes')).toBe(false);
     });
 
+    // notion-motion.md Round 76 §6 (r76-n-tl-empty.raw): with the table shown and no dated row, Notion draws no Calculate row.
+    it('drops the panel footer when no row is dated and no calculation is set', () => {
+      const footer = (root: HTMLElement): Element | null => root.querySelector('[data-blok-database-timeline-table-footer]');
+      const shown = timelineView({ showTimelineTable: true });
+
+      expect(footer(mount({ groups: single([row('r3', 'Someday', null)]), view: shown }).root)).toBeNull();
+      document.body.innerHTML = '';
+      expect(footer(mount({ view: shown }).root)).not.toBeNull();
+    });
+
     // notion-motion.md Round 24 §4 Timeline: hovering the "+ New" lane shows a 197x34 ghost bar at the hovered day.
     describe('"+ New" lane ghost bar', () => {
       const lane = (root: HTMLElement): HTMLElement => {

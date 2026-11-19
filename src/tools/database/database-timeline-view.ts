@@ -533,7 +533,13 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       add.append(this.t('tools.database.timelineNew'));
       panel.appendChild(add);
     }
-    panel.appendChild(this.createTableFooter(properties));
+    const rows = this.sections.flatMap((group) => group.rows);
+    const calculations = (this.options.view.calculations ?? []).length;
+
+    // notion-motion.md Round 76 §6: no dated row, no calculation: Notion draws no Calculate row. Measured ungrouped.
+    if (this.options.grouped || calculations > 0 || rows.some((row) => this.spanOf(row) !== null)) {
+      panel.appendChild(this.createTableFooter(properties));
+    }
 
     return panel;
   }

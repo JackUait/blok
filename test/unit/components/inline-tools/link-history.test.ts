@@ -22,7 +22,7 @@ describe('link history', () => {
     expect(getRecentLinks()).toEqual([]);
   });
 
-  it('keeps only the four newest links, newest first', () => {
+  it('keeps only the three newest links, newest first', () => {
     recordRecentLink('https://a.com');
     recordRecentLink('https://b.com');
     recordRecentLink('https://c.com');
@@ -33,8 +33,13 @@ describe('link history', () => {
       'https://e.com',
       'https://d.com',
       'https://c.com',
-      'https://b.com',
     ]);
+  });
+
+  it('reads no more than three links from storage an older version wrote', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(['a', 'b', 'c', 'd'].map((name) => ({ url: `https://${name}.com` }))));
+
+    expect(getRecentLinks().map((entry) => entry.url)).toEqual(['https://a.com', 'https://b.com', 'https://c.com']);
   });
 
   it('moves a re-added link to the top without duplicating it', () => {
@@ -54,12 +59,12 @@ describe('link history', () => {
     expect(getRecentLinks()[0]).toEqual({ url: 'https://a.com', title: 'A site', checked: true });
   });
 
-  it('stores the title and picture for a recorded link', () => {
+  it('stores the title for a recorded link', () => {
     recordRecentLink('https://a.com');
-    updateRecentLinkMeta('https://a.com', { title: 'A site', image: 'https://a.com/cover.png' });
+    updateRecentLinkMeta('https://a.com', { title: 'A site' });
 
     expect(getRecentLinks()).toEqual([
-      { url: 'https://a.com', title: 'A site', image: 'https://a.com/cover.png', checked: true },
+      { url: 'https://a.com', title: 'A site', checked: true },
     ]);
   });
 
@@ -98,12 +103,12 @@ describe('link history', () => {
 
   it('treats www, http(s) and a trailing slash as the same link, keeping what it knew', () => {
     recordRecentLink('https://youtube.com');
-    updateRecentLinkMeta('https://youtube.com', { title: 'YouTube', image: 'https://youtube.com/cover.jpg' });
+    updateRecentLinkMeta('https://youtube.com', { title: 'YouTube' });
     recordRecentLink('https://b.com');
     recordRecentLink('http://www.youtube.com/');
 
     expect(getRecentLinks()).toEqual([
-      { url: 'http://www.youtube.com/', title: 'YouTube', image: 'https://youtube.com/cover.jpg', checked: true },
+      { url: 'http://www.youtube.com/', title: 'YouTube', checked: true },
       { url: 'https://b.com' },
     ]);
   });

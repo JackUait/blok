@@ -310,7 +310,7 @@ describe('LinkInlineTool', () => {
     const { tool } = createTool(undefined, { 'tools.link.addLink': defaultDictionary['tools.link.addLink'] });
     const renderResult = tool.render() as unknown as LinkToolRenderResult;
 
-    expect(getInputFromWrapper(renderResult.children.items[0].element).placeholder).toBe('Paste a link or search headings');
+    expect(getInputFromWrapper(renderResult.children.items[0].element).placeholder).toBe('Paste link or search pages');
   });
 
   it('renders actions input and invokes enter handler when Enter key is pressed', () => {
@@ -1208,73 +1208,71 @@ describe('LinkInlineTool', () => {
       expect(recentRows(itemWrapper).map((row) => rowText(row, 'title'))).toEqual(['From another tab']);
     });
 
-    it('labels the list "Recent"', () => {
+    it('labels the list "Recents"', () => {
       seed([{ url: 'https://a.com', title: 'A' }]);
 
       const { itemWrapper } = openCreating();
 
-      expect(itemWrapper.querySelector('[data-link-recent-label]')?.textContent).toBe('Recent');
+      expect(itemWrapper.querySelector('[data-link-recent-label]')?.textContent).toBe('Recents');
     });
 
-    it('lays the recent links out as a shelf: a cover, then a caption with title and site', () => {
+    it('lays each recent link out as a row: the link sign, then the title with the site under it', () => {
       seed([
         { url: 'https://github.com/jackuait/blok', title: 'Blok editor' },
         { url: 'https://www.figma.com/file/1', title: 'Design tokens' },
       ]);
 
       const { itemWrapper } = openCreating();
-      const [spine] = recentRows(itemWrapper);
-      const title = spine.querySelector('[data-link-recent-title]');
-      const meta = spine.querySelector('[data-link-recent-meta]');
+      const [row] = recentRows(itemWrapper);
+      const title = row.querySelector('[data-link-recent-title]');
+      const meta = row.querySelector('[data-link-recent-meta]');
 
-      expect(spine.parentElement?.hasAttribute('data-link-recent-list')).toBe(true);
-      expect(spine.firstElementChild?.hasAttribute('data-link-recent-cover')).toBe(true);
-      expect(title?.closest('[data-link-recent-caption]')).not.toBeNull();
+      expect(row.parentElement?.hasAttribute('data-link-recent-list')).toBe(true);
+      expect(row.firstElementChild?.hasAttribute('data-link-recent-icon')).toBe(true);
+      expect(row.firstElementChild?.querySelector('svg')).not.toBeNull();
+      expect(row.firstElementChild).toHaveAttribute('aria-hidden', 'true');
+      expect(title?.parentElement).toBe(meta?.parentElement);
       expect(title?.compareDocumentPosition(meta as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-      expect(spine.querySelector('[data-link-option-enter-hint]')).not.toBeNull();
+      expect(row.querySelector('[data-link-option-enter-hint]')).not.toBeNull();
+      expect(row.title).toBe('https://github.com/jackuait/blok');
     });
 
-    it('opens the first link on the shelf, then the one the pointer or the arrows aim at', () => {
+    it('draws every recent link with the same sign: no cover, no letter, no color of its own', () => {
+      seed([
+        { url: 'https://alpha.dev/one', title: 'One' },
+        { url: 'https://zeta.io', title: 'Zeta' },
+      ]);
+
+      const { itemWrapper } = openCreating();
+      const rows = recentRows(itemWrapper);
+      const signs = rows.map((row) => row.querySelector('[data-link-recent-icon]')?.innerHTML);
+
+      expect(signs[0]).toBe(signs[1]);
+      expect(itemWrapper.querySelector('[data-link-recent-cover], [data-link-recent-letter], [data-link-recent-caption], [data-link-recent-open], [data-link-recent-plain]')).toBeNull();
+      expect(rows.every((row) => row.style.getPropertyValue('--_blok-link-cover-bg') === '')).toBe(true);
+    });
+
+    it('shows the three newest links, even when storage still holds more', () => {
       seed([
         { url: 'https://a.com', title: 'A' },
         { url: 'https://b.com', title: 'B' },
         { url: 'https://c.com', title: 'C' },
+        { url: 'https://d.com', title: 'D' },
       ]);
 
-      const { itemWrapper, input } = openCreating();
-      const rows = recentRows(itemWrapper);
-      const open = (): number[] => rows.flatMap((row, index) => row.hasAttribute('data-link-recent-open') ? [index] : []);
+      const { itemWrapper } = openCreating();
 
-      expect(open()).toEqual([0]);
-
-      rows[2].dispatchEvent(new MouseEvent('mouseenter'));
-      expect(open()).toEqual([2]);
-
-      rows[2].dispatchEvent(new MouseEvent('mouseleave'));
-      expect(open()).toEqual([2]);
-
-      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
-      expect(open()).toEqual([0]);
-
-      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
-      expect(open()).toEqual([1]);
+      expect(recentRows(itemWrapper).map((row) => rowText(row, 'title'))).toEqual(['A', 'B', 'C']);
     });
 
-    it('keeps the last opened link open while the arrows walk the headings', () => {
-      seed([
-        { url: 'https://a.com', title: 'A' },
-        { url: 'https://b.com', title: 'B' },
-      ]);
-      addHeading(2, 'Intro');
+    it('leaves a link with no title and no path on one line', () => {
+      seed([{ url: 'https://youtube.com' }]);
 
-      const { itemWrapper, input } = openCreating();
-      const rows = recentRows(itemWrapper);
+      const { itemWrapper } = openCreating();
+      const [row] = recentRows(itemWrapper);
 
-      ['ArrowDown', 'ArrowDown', 'ArrowDown'].forEach((key) =>
-        input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })));
-
-      expect(rows[1].hasAttribute('data-link-recent-open')).toBe(true);
-      expect(rows[1]).toHaveAttribute('aria-selected', 'false');
+      expect(rowText(row, 'title')).toBe('youtube.com');
+      expect(row.querySelector('[data-link-recent-meta]')).toBeNull();
     });
 
     it('names a page by its path when its title only repeats the site name', () => {
@@ -1290,26 +1288,6 @@ describe('LinkInlineTool', () => {
       expect(rowText(video, 'meta')).toBe('youtube.com');
       expect(rowText(home, 'title')).toBe('YouTube');
       expect(rowText(home, 'meta')).toBe('youtube.com');
-    });
-
-    it('gives a link with no picture a letter cover in a color that follows the site', () => {
-      seed([
-        { url: 'https://alpha.dev/one', title: 'One' },
-        { url: 'https://alpha.dev/two', title: 'Two' },
-        { url: 'https://zeta.io', title: 'Zeta' },
-      ]);
-
-      const { itemWrapper } = openCreating();
-      const rows = recentRows(itemWrapper);
-      const color = (row: HTMLElement, name: string): string => row.style.getPropertyValue(name);
-
-      expect(rows.map((row) => row.querySelector('[data-link-recent-letter]')?.textContent)).toEqual(['A', 'A', 'Z']);
-      expect(rows.every((row) => row.hasAttribute('data-link-recent-plain'))).toBe(true);
-      expect(rows.every((row) => row.querySelector('svg[data-link-recent-icon], img') === null)).toBe(true);
-      expect(color(rows[0], '--_blok-link-cover-bg')).toMatch(/^hsl\(\d+ 68% \d+%\)$/);
-      expect(color(rows[0], '--_blok-link-cover-letter')).toMatch(/^hsl\(\d+ 78% \d+%\)$/);
-      expect(color(rows[1], '--_blok-link-cover-bg')).toBe(color(rows[0], '--_blok-link-cover-bg'));
-      expect(color(rows[2], '--_blok-link-cover-bg')).not.toBe(color(rows[0], '--_blok-link-cover-bg'));
     });
 
     it('falls back to the site name and path when the title is unknown', () => {
@@ -1409,14 +1387,13 @@ describe('LinkInlineTool', () => {
         expect(readStored()[0]).toEqual({
           url: 'https://example.com',
           title: 'Example Domain',
-          image: 'https://example.com/cover.png',
           checked: true,
         });
       });
       expect(fetchMock).toHaveBeenCalledWith('/unfurl?url=https%3A%2F%2Fexample.com', { headers: undefined });
     });
 
-    it('looks up a link stored before pictures were kept when the field opens, and draws its picture', async () => {
+    it('looks up a link that was never looked up when the field opens, and shows its title', async () => {
       const fetchMock = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({ success: 1, meta: { title: 'Escaping the Underworld', image: { url: 'https://i.example.com/cover.jpg' } } }),
@@ -1430,21 +1407,18 @@ describe('LinkInlineTool', () => {
 
       const { itemWrapper } = openCreating({ unfurl: { endpoint: '/unfurl' } });
 
-      expect(recentRows(itemWrapper)[0].querySelector('img')).toBeNull();
-
       await vi.waitFor(() => {
-        expect(recentRows(itemWrapper)[0].querySelector('img')?.getAttribute('src')).toBe('https://i.example.com/cover.jpg');
+        expect(rowText(recentRows(itemWrapper)[0], 'title')).toBe('Escaping the Underworld');
       });
-      expect(rowText(recentRows(itemWrapper)[0], 'title')).toBe('Escaping the Underworld');
-      expect(recentRows(itemWrapper)[0].hasAttribute('data-link-recent-open')).toBe(true);
+      expect(recentRows(itemWrapper)[0].querySelector('img')).toBeNull();
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(fetchMock).toHaveBeenCalledWith('/unfurl?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc', { headers: undefined });
     });
 
-    it('keeps the spine and the row the user was on when a late picture arrives', async () => {
+    it('keeps the row the user was on when a late title arrives', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ success: 1, meta: { image: { url: 'https://i.example.com/cover.jpg' } } }),
+        json: async () => ({ success: 1, meta: { title: 'Alpha' } }),
       }));
       seed([
         { url: 'https://a.com', title: 'A' },
@@ -1457,12 +1431,11 @@ describe('LinkInlineTool', () => {
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
 
       await vi.waitFor(() => {
-        expect(recentRows(itemWrapper)[0].querySelector('img')).not.toBeNull();
+        expect(rowText(recentRows(itemWrapper)[0], 'title')).toBe('Alpha');
       });
 
       const rows = recentRows(itemWrapper);
 
-      expect(rows[1].hasAttribute('data-link-recent-open')).toBe(true);
       expect(rows[1]).toHaveAttribute('aria-selected', 'true');
       expect(input.getAttribute('aria-activedescendant')).toBe(rows[1].id);
     });
@@ -1515,33 +1488,12 @@ describe('LinkInlineTool', () => {
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
-    it('shows the page picture and falls back to the letter cover for anything else', () => {
-      seed([
-        { url: 'https://a.com', title: 'Alpha', image: 'https://a.com/cover.png' },
-        { url: 'https://b.com', title: 'Beta', image: 'javascript:alert(1)' },
-      ]);
+    it('never draws a page picture, even for a link stored with one', () => {
+      seed([{ url: 'https://a.com', title: 'Alpha', image: 'https://a.com/cover.png' }]);
 
       const { itemWrapper } = openCreating();
-      const [first, second] = recentRows(itemWrapper);
 
-      expect(first.querySelector('img[data-link-recent-picture]')?.getAttribute('src')).toBe('https://a.com/cover.png');
-      expect(first.hasAttribute('data-link-recent-plain')).toBe(false);
-      expect(first.querySelector('[data-link-recent-letter]')).toBeNull();
-      expect(second.querySelector('img')).toBeNull();
-      expect(second.querySelector('[data-link-recent-letter]')?.textContent).toBe('B');
-    });
-
-    it('swaps a picture that fails to load for the letter cover', () => {
-      seed([{ url: 'https://a.com', title: 'Alpha', image: 'https://a.com/gone.png' }]);
-
-      const { itemWrapper } = openCreating();
-      const [row] = recentRows(itemWrapper);
-
-      row.querySelector('img')?.dispatchEvent(new Event('error'));
-
-      expect(row.querySelector('img')).toBeNull();
-      expect(row.querySelector('[data-link-recent-letter]')?.textContent).toBe('A');
-      expect(row.hasAttribute('data-link-recent-plain')).toBe(true);
+      expect(recentRows(itemWrapper)[0].querySelector('img')).toBeNull();
     });
 
     it('never draws a site icon, even for a link stored with one', () => {
@@ -1552,6 +1504,143 @@ describe('LinkInlineTool', () => {
       const { itemWrapper } = openCreating();
 
       expect(recentRows(itemWrapper)[0].querySelector('img')).toBeNull();
+    });
+
+    describe('the scrolling list', () => {
+      const THREE = [
+        { url: 'https://a.com', title: 'A' },
+        { url: 'https://b.com', title: 'B' },
+        { url: 'https://c.com', title: 'C' },
+      ];
+
+      /** jsdom lays nothing out, so the list and its rows get their sizes by hand. */
+      const sized = (itemWrapper: HTMLElement, box: { clientHeight: number; scrollHeight: number }): HTMLElement => {
+        const listbox = itemWrapper.querySelector<HTMLElement>('[role="listbox"]');
+
+        if (!listbox) {
+          throw new Error('no listbox');
+        }
+
+        Object.defineProperty(listbox, 'clientHeight', { configurable: true, value: box.clientHeight });
+        Object.defineProperty(listbox, 'scrollHeight', { configurable: true, value: box.scrollHeight });
+
+        return listbox;
+      };
+
+      const placed = (row: HTMLElement, offsetTop: number, offsetHeight: number): void => {
+        Object.defineProperty(row, 'offsetTop', { configurable: true, value: offsetTop });
+        Object.defineProperty(row, 'offsetHeight', { configurable: true, value: offsetHeight });
+      };
+
+      it('marks the edges that have more rows behind them', () => {
+        seed(THREE);
+
+        const { itemWrapper } = openCreating();
+        const listbox = sized(itemWrapper, { clientHeight: 300, scrollHeight: 600 });
+        const edges = (): string[] => ['up', 'down'].filter((edge) => listbox.hasAttribute(`data-link-more-${edge}`));
+
+        listbox.dispatchEvent(new Event('scroll'));
+        expect(edges()).toEqual(['down']);
+
+        listbox.scrollTop = 120;
+        listbox.dispatchEvent(new Event('scroll'));
+        expect(edges()).toEqual(['up', 'down']);
+
+        listbox.scrollTop = 300;
+        listbox.dispatchEvent(new Event('scroll'));
+        expect(edges()).toEqual(['up']);
+      });
+
+      it('marks no edge when every row fits', () => {
+        seed(THREE);
+
+        const { itemWrapper } = openCreating();
+        const listbox = sized(itemWrapper, { clientHeight: 300, scrollHeight: 300 });
+
+        listbox.dispatchEvent(new Event('scroll'));
+
+        expect(listbox.hasAttribute('data-link-more-up')).toBe(false);
+        expect(listbox.hasAttribute('data-link-more-down')).toBe(false);
+      });
+
+      it('scrolls a row picked with the arrows clear of the bottom fade', () => {
+        seed(THREE);
+
+        const { itemWrapper, input } = openCreating();
+        const listbox = sized(itemWrapper, { clientHeight: 100, scrollHeight: 400 });
+        const rows = recentRows(itemWrapper);
+
+        placed(rows[0], 38, 46);
+        placed(rows[1], 84, 46);
+
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+        expect(listbox.scrollTop).toBe(12);
+
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+        // The row ends at 130; the last 28px of the 100px list are fade.
+        expect(listbox.scrollTop).toBe(58);
+        expect(listbox.hasAttribute('data-link-more-up')).toBe(true);
+      });
+
+      it('scrolls a row picked with the arrows clear of the top fade', () => {
+        seed(THREE);
+
+        const { itemWrapper, input } = openCreating();
+        const listbox = sized(itemWrapper, { clientHeight: 100, scrollHeight: 400 });
+        const rows = recentRows(itemWrapper);
+
+        placed(rows[0], 150, 46);
+        placed(rows[1], 196, 46);
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+        listbox.scrollTop = 200;
+
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+
+        // The row starts at 150 and stays 24px under the list's top edge.
+        expect(listbox.scrollTop).toBe(126);
+      });
+
+      it('ends a list that overflows on a whole row, with a sliver of the next', () => {
+        seed(THREE);
+
+        const { itemWrapper, input } = openCreating();
+        const listbox = sized(itemWrapper, { clientHeight: 300, scrollHeight: 600 });
+        const rows = recentRows(itemWrapper);
+
+        placed(rows[0], 10, 90);
+        placed(rows[1], 110, 90);
+        placed(rows[2], 210, 90);
+        input.dispatchEvent(new Event('input'));
+
+        // Row 2 ends at 200 and row 3 at 300, past the 300px list less its 22px tail.
+        expect(listbox.style.maxHeight).toBe('222px');
+      });
+
+      it('leaves a list that fits at its own height', () => {
+        seed(THREE);
+
+        const { itemWrapper, input } = openCreating();
+        const listbox = sized(itemWrapper, { clientHeight: 300, scrollHeight: 300 });
+
+        listbox.style.maxHeight = '120px';
+        input.dispatchEvent(new Event('input'));
+
+        expect(listbox.style.maxHeight).toBe('');
+      });
+
+      it('does not resize a list the user has scrolled', () => {
+        seed(THREE);
+
+        const { itemWrapper, input } = openCreating();
+        const listbox = sized(itemWrapper, { clientHeight: 300, scrollHeight: 600 });
+
+        listbox.style.maxHeight = '222px';
+        listbox.scrollTop = 40;
+        input.dispatchEvent(new Event('input'));
+
+        expect(listbox.style.maxHeight).toBe('222px');
+      });
     });
 
     it('walks the rows with the arrow keys while focus stays in the field', () => {

@@ -106,7 +106,7 @@ test.describe('link field: recent links', () => {
     const recent = page.locator(RECENT_SELECTOR);
     const row = recent.locator(RECENT_ROW_SELECTOR);
 
-    await expect(recent.getByText('Recent')).toBeVisible();
+    await expect(recent.getByText('Recents', { exact: true })).toBeVisible();
     await expect(row).toHaveCount(1);
     await expect(row).toContainText('Example Domain');
     await expect(row).toContainText('example.com');

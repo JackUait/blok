@@ -19,7 +19,6 @@ import { hasUnsafeScheme } from '../utils/sanitize-url';
 import { twMerge } from '../utils/tw';
 import { isHttpUrl } from '../../tools/link/registry';
 import { MetadataFetcher } from '../../tools/link/metadata-fetcher';
-import { coverColors } from './link-cover';
 import { getRecentLinks, recordRecentLink, updateRecentLinkMeta, type RecentLink } from './link-history';
 import { PAGE_REFERENCE_ATTR } from '../../shared/page-reference';
 import { PAGE_PATH_SEPARATOR } from '../../tools/page/constants';
@@ -27,7 +26,8 @@ import { pageIconNode } from '../../tools/page/icon-node';
 import { searchVisiblePages } from '../../tools/page/search-pages';
 import type { PageConfig, PageSearchResult } from '../../tools/page/types';
 
-const SUGGESTION_ROW_BASE = 'flex items-center gap-2.5 w-full mt-0.5 px-1.5 py-1.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) text-left appearance-none border-0 bg-transparent font-[inherit] outline-hidden';
+// ps-0.5 and gap-2 put its 24px icon box and its text on the list rows' columns.
+const SUGGESTION_ROW_BASE = 'flex items-center gap-2 w-full mt-0.5 ps-0.5 pe-2 py-1.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) text-left appearance-none border-0 bg-transparent font-[inherit] outline-hidden';
 const SUGGESTION_ROW_VALID = `${SUGGESTION_ROW_BASE} cursor-pointer can-hover:hover:bg-item-hover-bg focus-visible:bg-item-hover-bg transition-colors`;
 const SUGGESTION_ROW_INVALID = `${SUGGESTION_ROW_BASE} pointer-events-none`;
 
@@ -43,7 +43,7 @@ const SUGGESTION_TYPE_TEXT = 'block text-[11px] leading-[14px] text-gray-text mt
  * ⏎ affordance on the confirmable suggestion row. Shown only when pressing
  * Enter would actually insert the link.
  */
-const ENTER_HINT_CLASSES = 'items-center justify-center size-5 shrink-0 text-gray-text [&_svg]:size-3.5';
+const ENTER_HINT_CLASSES = 'items-center justify-center self-center size-5 shrink-0 text-gray-text [&_svg]:size-3.5';
 
 const HEADING_LIMIT = 6;
 const PAGE_LIMIT = 6;
@@ -61,6 +61,9 @@ const LINK_KINDS = [
   { icon: IconMail, titleKey: 'tools.link.emailAddress', prefix: 'mailto:' },
 ] as const;
 
+/** A search hit, with the mark a host puts on a full-page database. */
+type LinkPage = PageSearchResult & { kind?: 'database' };
+
 /**
  * A heading in this document that a link can jump to.
  */
@@ -75,20 +78,26 @@ interface HeadingTarget {
 /**
  * Rows cascade in with the suggestion row's keyframes. Each row sets its own
  * animation-delay; motion-safe drops the whole cascade for reduced motion.
+ * The row starts 4px in from the field's edge and ends at the field's end.
  */
-const OPTION_ROW_CLASSES = 'group flex items-center gap-2.5 w-full h-8 px-2 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer can-hover:hover:bg-item-hover-bg aria-selected:bg-item-hover-bg transition-colors motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
-// One line per row: the title truncates first, the site name keeps its room.
-const OPTION_TEXT_CLASSES = 'flex-1 min-w-0 flex items-baseline gap-2';
+const OPTION_ROW_CLASSES = 'group flex items-start gap-2.5 w-full min-h-8 py-[5px] ps-1 pe-2 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer can-hover:hover:bg-item-hover-bg aria-selected:bg-item-hover-bg transition-colors motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
+// The title, with where it leads on a second line under it.
+const OPTION_TEXT_CLASSES = 'flex-1 min-w-0 flex flex-col';
 const OPTION_TITLE_CLASSES = 'min-w-0 text-sm leading-5 text-text-primary truncate';
-const OPTION_META_CLASSES = 'shrink-0 max-w-[45%] text-xs leading-4 text-gray-text truncate';
+const OPTION_META_CLASSES = 'min-w-0 text-xs leading-4 text-gray-text truncate';
 const OPTION_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 text-gray-text [&_svg]:size-5';
 // A section that follows a visible one gets extra room above its label.
-const SECTION_CLASSES = 'w-0 min-w-full [[data-link-group]:not([hidden])~&]:pt-1.5';
-const SECTION_LABEL_CLASSES = 'px-2 pt-2 pb-1 text-[11px] leading-4 font-semibold text-gray-text';
+const SECTION_CLASSES = 'w-0 min-w-full [[data-link-group]:not([hidden])~&]:pt-2';
+const SECTION_LABEL_CLASSES = 'px-1 pt-2 pb-1.5 text-xs leading-4 font-medium text-gray-text';
 const PAGE_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 text-base leading-none [&_img]:size-4 [&_img]:rounded-(--blok-radius-control-sm) [&_svg]:size-4 text-gray-text';
-// Recent links stand on a shelf. Its look lives in link-picker.css, keyed
-// off the data-link-recent-* attributes.
-const RECENT_SPINE_CLASSES = 'group motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
+// The sign's size and line weight live in link-picker.css.
+const RECENT_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 text-gray-text';
+// The list fades over its top and bottom edge (link-picker.css). The
+// highlighted row stops short of each fade, and the list ends this far
+// under its last whole row.
+const FADE_TOP_CLEARANCE = 24;
+const FADE_BOTTOM_CLEARANCE = 28;
+const LIST_TAIL = 22;
 
 /**
  * Link Tool
@@ -209,7 +218,7 @@ export class LinkInlineTool implements InlineTool {
   /**
    * The host's pages for the field's value, as last answered.
    */
-  private pageHits: PageSearchResult[] = [];
+  private pageHits: LinkPage[] = [];
 
   /**
    * Page rows by page id, reused so a row that stays never replays its entrance.
@@ -321,7 +330,7 @@ export class LinkInlineTool implements InlineTool {
     this.nodes.removeButton = this.createRemoveButton();
     this.nodes.inputWrapper = document.createElement('div');
     // One card width for every state, so the lists never make it jump.
-    this.nodes.inputWrapper.className = 'px-1 w-80 mobile:w-auto';
+    this.nodes.inputWrapper.className = 'pt-0.5 w-80 mobile:w-auto';
     this.nodes.inputWrapper.setAttribute('data-link-field', '');
     this.nodes.inputWrapper.append(
       this.nodes.urlLabel,
@@ -454,7 +463,7 @@ export class LinkInlineTool implements InlineTool {
   private createDivider(): HTMLElement {
     const divider = document.createElement('div');
 
-    divider.className = 'hidden mt-2.5 mb-1.5 -mx-1 h-px bg-link-input-border';
+    divider.className = 'hidden mt-2.5 mb-1.5 h-px bg-link-input-border';
     divider.setAttribute('data-blok-testid', 'inline-tool-link-divider');
 
     return divider;
@@ -680,8 +689,10 @@ export class LinkInlineTool implements InlineTool {
     options.setAttribute('data-link-options', '');
     options.hidden = true;
 
-    options.className = 'pt-1';
+    // Positioned, so a row's offsetTop is measured from the list itself.
+    options.className = 'relative pt-2 pb-0.5';
     options.setAttribute(DATA_ATTR.popoverScroller, '');
+    options.addEventListener('scroll', () => this.markScrollEdges(), { passive: true });
     options.append(...[this.nodes.recent, this.nodes.pages, this.nodes.headings, this.nodes.kinds].filter((node) => node !== null));
 
     return options;
@@ -796,7 +807,6 @@ export class LinkInlineTool implements InlineTool {
   private createRecent(): HTMLElement {
     const { section, list } = this.createSection(`${this.errorId}-recent`, 'data-link-recent', this.i18n.t('tools.link.recent'));
 
-    list.className = '';
     list.setAttribute('data-link-recent-list', '');
     this.nodes.recentList = list;
 
@@ -1034,15 +1044,14 @@ export class LinkInlineTool implements InlineTool {
    * added in another editor on the page shows up too.
    */
   private renderRecent(): void {
-    const spines = getRecentLinks().map((entry, index) => this.createRecentRow(entry, index));
+    const rows = getRecentLinks().map((entry, index) => this.createRecentRow(entry, index));
 
-    this.nodes.recentList?.replaceChildren(...spines);
-    this.openRecent(spines[0]);
+    this.nodes.recentList?.replaceChildren(...rows);
   }
 
   /**
-   * Draw the shelf again after a lookup answered, keeping the open spine
-   * and the highlighted row where the user left them.
+   * Draw the rows again after a lookup answered, keeping the highlighted
+   * row where the user left it.
    */
   private redrawRecent(): void {
     const list = this.nodes.recentList;
@@ -1051,37 +1060,20 @@ export class LinkInlineTool implements InlineTool {
       return;
     }
 
-    const open = Array.from(list.children).findIndex((child) => child.hasAttribute('data-link-recent-open'));
-
     this.renderRecent();
 
-    const spines = Array.from(list.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
-
-    // The shelf is already on screen: no second entrance.
-    spines.forEach((spine) => spine.style.setProperty('animation', 'none'));
-    this.openRecent(spines[open]);
+    // The rows are already on screen: no second entrance.
+    Array.from(list.children).forEach((row) => {
+      if (row instanceof HTMLElement) {
+        row.style.setProperty('animation', 'none');
+      }
+    });
     this.setActiveOption(this.activeOptionIndex);
   }
 
   /**
-   * Open one link on the shelf to full width; the rest stay spines. The
-   * last one aimed at stays open when the pointer or the arrows move on.
-   * @param spine - the link to open
-   */
-  private openRecent(spine: HTMLElement | undefined): void {
-    if (!spine) {
-      return;
-    }
-
-    Array.from(this.nodes.recentList?.children ?? []).forEach((child) => {
-      child.toggleAttribute('data-link-recent-open', child === spine);
-    });
-  }
-
-  /**
-   * One recent link as a spine on the shelf: the page's picture, or the
-   * site's first letter on a color of its own, under the page title and the
-   * site name. A title that only names the site ("YouTube") gives its
+   * One recent link as a row: the link sign, the page title and the site
+   * name under it. A title that only names the site ("YouTube") gives its
    * slot to the path, so two pages of one site stay apart. Without a title
    * the site name takes the title slot and the path goes under it.
    * @param entry - the stored link
@@ -1102,79 +1094,23 @@ export class LinkInlineTool implements InlineTool {
     const namesOnlySite = entry.title !== undefined && squash(entry.title) === squash(brand);
     const title = namesOnlySite && path !== '' ? path : entry.title ?? site;
     const meta = entry.title !== undefined ? site : path;
+    const icon = this.createIcon(IconLink, RECENT_ICON_CLASSES);
 
-    // Not a <button>: every button in a popover HTML item becomes a Flipper
-    // stop, and Flipper would steal the arrow keys from the field.
-    const card = document.createElement('div');
-    const colors = coverColors(site);
+    icon.setAttribute('data-link-recent-icon', '');
 
-    card.id = `${this.errorId}-recent-${index}`;
-    card.className = RECENT_SPINE_CLASSES;
-    card.title = entry.url;
-    card.style.animationDelay = `${index * 40}ms`;
-    card.style.setProperty('--_blok-link-cover-bg', colors.background);
-    card.style.setProperty('--_blok-link-cover-letter', colors.letter);
-    card.style.setProperty('--_blok-link-cover-ink', colors.ink);
-    card.setAttribute('role', 'option');
-    card.setAttribute('aria-selected', 'false');
-    card.setAttribute('data-link-recent-row', '');
+    const row = this.createOptionRow(
+      'recent',
+      `${this.errorId}-recent-${index}`,
+      icon,
+      title,
+      meta,
+      () => this.applyLink(entry.url)
+    );
 
-    const cover = document.createElement('span');
+    row.title = entry.url;
+    row.style.animationDelay = `${index * 40}ms`;
 
-    cover.setAttribute('aria-hidden', 'true');
-    cover.setAttribute('data-link-recent-cover', '');
-
-    const showLetter = (): void => {
-      const letter = document.createElement('span');
-
-      letter.setAttribute('data-link-recent-letter', '');
-      letter.textContent = (Array.from(site)[0] ?? '').toUpperCase();
-      cover.replaceChildren(letter);
-      card.setAttribute('data-link-recent-plain', '');
-    };
-
-    if (entry.image !== undefined && isHttpUrl(entry.image)) {
-      const img = document.createElement('img');
-
-      img.alt = '';
-      img.referrerPolicy = 'no-referrer';
-      img.setAttribute('data-link-recent-picture', '');
-      img.addEventListener('error', showLetter, { once: true });
-      img.src = entry.image;
-      cover.append(img);
-    } else {
-      showLetter();
-    }
-
-    const textEl = document.createElement('span');
-
-    textEl.setAttribute('data-link-recent-caption', '');
-
-    const titleEl = document.createElement('span');
-
-    titleEl.setAttribute('data-link-recent-title', '');
-    titleEl.textContent = title;
-
-    const metaEl = document.createElement('span');
-
-    metaEl.setAttribute('data-link-recent-meta', '');
-    metaEl.textContent = meta;
-
-    const enterHint = document.createElement('span');
-
-    enterHint.className = `hidden group-aria-selected:flex ${ENTER_HINT_CLASSES}`;
-    enterHint.setAttribute('aria-hidden', 'true');
-    enterHint.setAttribute('data-link-option-enter-hint', '');
-    enterHint.innerHTML = IconReturn;
-
-    textEl.append(titleEl, metaEl);
-    card.append(cover, textEl, enterHint);
-    // Keep the saved selection and the field's focus while the card takes the click.
-    card.addEventListener('mousedown', (event) => event.preventDefault());
-    card.addEventListener('mouseenter', () => this.openRecent(card));
-    card.addEventListener('click', () => this.applyLink(entry.url));
-
-    return card;
+    return row;
   }
 
   /**
@@ -1357,6 +1293,53 @@ export class LinkInlineTool implements InlineTool {
     const first = searching ? 0 : -1;
 
     this.setActiveOption(kept !== -1 ? kept : first);
+    this.fitOptions();
+    this.markScrollEdges();
+  }
+
+  /**
+   * End the list on a whole row with a sliver of the next one, so the bottom
+   * fade never cuts a row in half. Only while the list is at its top: a
+   * scrolled list must not jump.
+   */
+  private fitOptions(): void {
+    const options = this.nodes.options;
+
+    if (!options || options.scrollTop !== 0) {
+      return;
+    }
+
+    options.style.maxHeight = '';
+
+    const room = options.clientHeight;
+
+    if (options.scrollHeight <= room + 1) {
+      return;
+    }
+
+    const whole = this.getOptionRows()
+      .map((row) => row.offsetTop + row.offsetHeight)
+      .filter((bottom) => bottom <= room - LIST_TAIL);
+    const last = whole[whole.length - 1];
+
+    if (last !== undefined) {
+      options.style.maxHeight = `${last + LIST_TAIL}px`;
+    }
+  }
+
+  /**
+   * Tell the stylesheet which edges have more rows behind them, so it fades
+   * only those.
+   */
+  private markScrollEdges(): void {
+    const options = this.nodes.options;
+
+    if (!options) {
+      return;
+    }
+
+    options.toggleAttribute('data-link-more-up', options.scrollTop > 1);
+    options.toggleAttribute('data-link-more-down', options.scrollTop + options.clientHeight < options.scrollHeight - 1);
   }
 
   /**
@@ -1418,14 +1401,34 @@ export class LinkInlineTool implements InlineTool {
       active.setAttribute('aria-selected', 'true');
       this.nodes.input?.setAttribute('aria-activedescendant', active.id);
 
-      if (active.hasAttribute('data-link-recent-row')) {
-        this.openRecent(active);
-      }
-
-      active.scrollIntoView?.({ block: 'nearest' });
+      this.keepClearOfFades(active);
     } else {
       this.nodes.input?.removeAttribute('aria-activedescendant');
     }
+  }
+
+  /**
+   * Scroll the list just enough to show a row in full, clear of the faded
+   * top and bottom edges.
+   * @param row - the highlighted row
+   */
+  private keepClearOfFades(row: HTMLElement): void {
+    const options = this.nodes.options;
+
+    if (!options) {
+      return;
+    }
+
+    const top = row.offsetTop;
+    const bottom = top + row.offsetHeight;
+
+    if (top < options.scrollTop + FADE_TOP_CLEARANCE) {
+      options.scrollTop = top - FADE_TOP_CLEARANCE;
+    } else if (bottom > options.scrollTop + options.clientHeight - FADE_BOTTOM_CLEARANCE) {
+      options.scrollTop = bottom - options.clientHeight + FADE_BOTTOM_CLEARANCE;
+    }
+
+    this.markScrollEdges();
   }
 
   /**
@@ -1460,7 +1463,7 @@ export class LinkInlineTool implements InlineTool {
     new MetadataFetcher(unfurl)
       .fetch(url)
       .then((meta) => {
-        updateRecentLinkMeta(url, { title: meta.title, image: meta.image });
+        updateRecentLinkMeta(url, { title: meta.title });
         this.redrawRecent();
       })
       .catch(() => undefined)
@@ -1602,7 +1605,7 @@ export class LinkInlineTool implements InlineTool {
     this.updateSuggestion(this.nodes.input.value);
     this.renderRecent();
 
-    // A link stored before pictures were kept, or one whose lookup failed, gets its lookup now.
+    // A link that was never looked up, or one whose lookup failed, gets its lookup now.
     if (!this.editing) {
       getRecentLinks().filter((entry) => entry.checked !== true).forEach((entry) => this.lookUp(entry.url));
     }
@@ -1629,6 +1632,12 @@ export class LinkInlineTool implements InlineTool {
       this.focusInputWithRetry();
     }
     this.inputOpened = true;
+
+    // The popover has no size until it is laid out, a frame after it opens.
+    requestAnimationFrame(() => {
+      this.fitOptions();
+      this.markScrollEdges();
+    });
   }
 
   /**

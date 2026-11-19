@@ -128,6 +128,48 @@ test.describe('link field: pages', () => {
     expect(await page.evaluate(() => window.linkPagesHost.queries)).toEqual(['']);
   });
 
+  test('shows a page emoji half grey until its row is hovered or picked, and never greys the page glyph', async ({ page }) => {
+    const input = await openLinkField(page, 'the plan');
+    const rows = page.locator(PAGE_ROW_SELECTOR);
+    const emoji = rows.nth(0).locator('[data-link-page-icon]');
+    const glyph = rows.nth(1).locator('[data-link-page-icon]');
+
+    await expect(emoji).toHaveCSS('filter', 'grayscale(0.5)');
+    await expect(emoji).toHaveCSS('opacity', '0.8');
+    // A solid text color: an emoji takes the alpha of its color.
+    await expect(emoji).toHaveCSS('color', 'rgb(55, 53, 47)');
+    await expect(glyph).toHaveCSS('filter', 'none');
+    await expect(glyph).toHaveCSS('opacity', '1');
+    await expect(glyph).toHaveCSS('color', 'rgba(55, 53, 47, 0.7)');
+
+    await rows.nth(0).hover();
+    await expect(emoji).toHaveCSS('filter', 'none');
+    await expect(emoji).toHaveCSS('opacity', '1');
+
+    await input.hover();
+    await expect(emoji).toHaveCSS('filter', 'grayscale(0.5)');
+
+    await input.press('ArrowDown');
+    await expect(rows.nth(0)).toHaveAttribute('aria-selected', 'true');
+    await expect(emoji).toHaveCSS('filter', 'none');
+    await expect(emoji).toHaveCSS('opacity', '1');
+  });
+
+  test('puts a page\'s path on a second line under its title', async ({ page }) => {
+    await openLinkField(page, 'the plan');
+
+    const rows = page.locator(PAGE_ROW_SELECTOR);
+    const [title, meta] = await Promise.all([
+      rows.nth(0).locator('[data-link-page-title]').boundingBox(),
+      rows.nth(0).locator('[data-link-page-meta]').boundingBox(),
+    ]);
+
+    await expect.poll(async () => (await rows.nth(0).boundingBox())?.height).toBe(46);
+    expect(Math.abs((meta?.x ?? 0) - (title?.x ?? -1))).toBeLessThan(0.75);
+    expect(Math.abs((meta?.y ?? 0) - ((title?.y ?? 0) + (title?.height ?? 0)))).toBeLessThan(0.75);
+    await expect(rows.nth(0).locator('[data-link-page-meta]')).toHaveCSS('font-size', '12px');
+  });
+
   test('searches pages by typing and links the selected words to the picked page, as an ordinary link', async ({ page }) => {
     const input = await openLinkField(page, 'the plan');
     const rows = page.locator(PAGE_ROW_SELECTOR);

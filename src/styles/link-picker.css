@@ -1,132 +1,98 @@
-/* ─── Inline link field: shelf of recent links, heading outline ─────────────
-   Markup comes from inline-tool-link.ts. Each recent link sets its own
-   --_blok-link-cover-bg / -letter / -ink (see link-cover.ts). */
+/* ─── Inline link field: recent links, pages, heading outline ──────────────
+   Markup comes from inline-tool-link.ts. */
 
-[data-link-recent-list] {
-  /* Room above the caption for the scrim to fade in. */
-  --_blok-link-caption-rise: 22px;
-
-  display: flex;
-  gap: var(--blok-space-1);
-  height: 112px;
+/* Registered so the fades can grow and shrink instead of snapping. */
+@property --_blok-link-fade-top {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0;
 }
 
-/* A spine. The open one takes five shares of the shelf. */
-[data-link-recent-row] {
-  position: relative;
-  flex: 1 1 0;
-  min-width: 0;
-  height: 100%;
-  overflow: hidden;
-  border-radius: var(--blok-radius-control-lg);
-  cursor: pointer;
-  transition: flex-grow 340ms cubic-bezier(0.3, 1.25, 0.5, 1);
+@property --_blok-link-fade-bottom {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0;
 }
 
-[data-link-recent-row][data-link-recent-open] {
-  flex-grow: 5;
+/* The card's own ink: softer than the editor's text. */
+[data-link-field] {
+  --blok-text-primary: var(--blok-link-picker-ink);
+  --blok-gray-text: var(--blok-link-picker-ink-secondary);
+
+  color: var(--blok-text-primary);
 }
 
-[data-link-recent-cover] {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  border-radius: inherit;
-  background: var(--_blok-link-cover-bg);
+/* Opened from the toolbar's link button, the card is a nested popover with
+   4px gutters, and 4px more on the right while its scrollbar is there. Level
+   them to 8px all round, like the card Cmd+K opens. Physical sides, like the
+   scrollbar's own padding. */
+[data-blok-nested] [data-link-field] {
+  padding-top: var(--blok-space-1);
+  padding-left: var(--blok-space-1);
 }
 
-[data-link-recent-cover]::after {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blok-text-primary) 8%, transparent);
-  content: '';
-  pointer-events: none;
+[data-blok-nested] [data-link-options] {
+  padding-bottom: var(--blok-space-1);
 }
 
-[data-link-recent-picture] {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+@media (min-width: 651px) {
+  [data-blok-nested] [data-blok-popover-items]:not(:has(~ [data-blok-popover-scrollbar]:not([hidden]))) [data-link-field] {
+    width: 324px;
+    padding-right: var(--blok-space-1);
+  }
 }
 
-/* Far wider than a closed spine on purpose: the spine shows a slice of it.
-   Centred by the flex cover, so it overflows both sides evenly. */
-[data-link-recent-letter] {
+/* The rows under the field start and end where the field does. */
+[data-link-field] > input[data-blok-field] {
+  height: 32px;
+  border-radius: var(--blok-radius-control);
+
+  &::placeholder {
+    color: var(--blok-gray-text);
+  }
+
+  @media (max-width: 650px) {
+    height: 36px;
+  }
+}
+
+/* The sign is IconLink drawn 12px wide: 20px would outweigh the title. */
+[data-link-recent-icon] > svg {
   flex: none;
-  margin-inline-start: 0;
-  transform: translateY(-3px);
-  color: var(--_blok-link-cover-letter);
-  font-size: 156px;
-  font-weight: 900;
-  line-height: 1;
-  user-select: none;
-  transition: margin-inline-start 340ms cubic-bezier(0.3, 1.25, 0.5, 1);
+  width: 24.4px;
+  max-width: none;
+  height: 24.4px;
+  max-height: none;
 }
 
-/* Slides aside for the title: a 48% margin moves the centre by 24%. */
-[data-link-recent-open] [data-link-recent-letter] {
-  margin-inline-start: 48%;
-}
-
-[data-link-recent-caption] {
-  position: absolute;
-  inset-inline: 0;
-  bottom: 0;
-  display: block;
-  padding: var(--_blok-link-caption-rise) var(--blok-space-2-5) var(--blok-space-2);
-  background: linear-gradient(transparent, var(--blok-link-cover-scrim));
-  color: var(--blok-link-cover-text);
-  opacity: 0;
-  transition: opacity 140ms;
-}
-
-[data-link-recent-open] > [data-link-recent-caption] {
-  opacity: 1;
-  transition-delay: 120ms;
-}
-
-[data-link-recent-plain] > [data-link-recent-caption] {
-  background: none;
-  color: var(--_blok-link-cover-ink);
-}
-
-[data-link-recent-title],
-[data-link-recent-meta] {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-[data-link-recent-title] {
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 18px;
+[data-link-recent-icon] > svg path {
+  stroke-width: 1.05;
 }
 
 [data-link-recent-meta] {
   font-family: var(--blok-font-mono, ui-monospace, monospace);
   font-size: 10.5px;
-  line-height: 14px;
 }
 
-[data-link-recent-row]:not([data-link-recent-plain]) [data-link-recent-meta] {
-  opacity: 0.82;
+/* A page's emoji or picture is half grey until its row is aimed at. An
+   emoji takes the alpha of its text color, so that color must be solid. */
+[data-link-page-icon]:not(:has(svg)) {
+  color: var(--blok-text-primary);
+  filter: grayscale(0.5);
+  opacity: 0.8;
+  transition: filter 150ms, opacity 150ms;
 }
 
-[data-link-recent-row] > [data-link-option-enter-hint] {
-  position: absolute;
-  top: 6px;
-  inset-inline-end: 6px;
-  border-radius: var(--blok-radius-control-sm);
-  background: var(--blok-link-cover-chip);
-  color: var(--blok-link-cover-text);
+[data-link-page-row][aria-selected='true'] > [data-link-page-icon] {
+  filter: none;
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  [data-link-page-row]:hover > [data-link-page-icon] {
+    filter: none;
+    opacity: 1;
+  }
 }
 
 /* The field stays put: only the lists under it scroll. The popover's own
@@ -144,16 +110,38 @@
   min-height: 0;
 }
 
+/* Scrolls up and down only: a sideways swipe must not rubber-band the list.
+   An edge with more rows behind it fades out. */
+/* Only the list gives way when the card runs out of room. */
+[data-link-field] > :not([data-link-options]) {
+  flex-shrink: 0;
+}
+
 [data-link-options] {
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
+  overscroll-behavior-x: none;
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--_blok-link-fade-top), #000 calc(100% - var(--_blok-link-fade-bottom)), transparent);
+  transition: --_blok-link-fade-top 160ms, --_blok-link-fade-bottom 160ms;
+}
+
+[data-link-options][data-link-more-up] {
+  --_blok-link-fade-top: 20px;
+}
+
+[data-link-options][data-link-more-down] {
+  --_blok-link-fade-bottom: 28px;
 }
 
 /* Headings: an outline, stepped in on guide lines. */
 [data-link-heading-row] {
   position: relative;
-  padding-inline-start: calc(var(--blok-space-2) + var(--_blok-link-heading-depth, 0) * var(--blok-space-4));
+  align-items: center;
+  height: 32px;
+  padding-block: 0;
+  padding-inline-start: calc(var(--blok-space-1) + var(--_blok-link-heading-depth, 0) * var(--blok-space-4));
 }
 
 [data-link-heading-row]:not([data-link-heading-depth='0'])::before,
@@ -197,9 +185,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-link-recent-row],
-  [data-link-recent-letter],
-  [data-link-recent-caption] {
+  [data-link-options],
+  [data-link-page-icon] {
     transition: none;
   }
 }

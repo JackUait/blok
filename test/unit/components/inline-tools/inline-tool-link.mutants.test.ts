@@ -1175,10 +1175,10 @@ describe('LinkInlineTool — mutation coverage', () => {
       expect(harness.menu.isActive()).toBe(false);
     });
 
-    it('pads the wrapper so the field focus ring is not clipped', () => {
+    it('gives the wrapper no side padding, so the rows start and end where the field does', () => {
       const harness = createHarness();
 
-      expect(harness.wrapper.className).toBe('px-1 w-80 mobile:w-auto');
+      expect(harness.wrapper.className).toBe('pt-0.5 w-80 mobile:w-auto');
     });
 
     it('gives the error region a collision-free id', () => {

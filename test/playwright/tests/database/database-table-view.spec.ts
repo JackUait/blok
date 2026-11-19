@@ -491,8 +491,8 @@ test.describe('calculations', () => {
     await expect(page.locator('[data-blok-database-table-footer]')).toHaveCount(0);
     await header(page, 'p-amount').click();
     await page.getByRole('menuitem', { name: 'Calculate' }).click();
-    // Calculation rows mark the current choice, so they are menuitemcheckbox.
-    await page.getByRole('menuitemcheckbox', { name: 'More options' }).click();
+    // A calculation is a menuitemcheckbox; the group that holds it stays a plain menuitem (Round 64 §5).
+    await page.getByRole('menuitem', { name: 'More options' }).click();
     await page.getByRole('menuitemcheckbox', { name: 'Sum' }).click();
 
     await expect(footer.locator('[data-blok-database-table-calc-value]')).toHaveText('1235.5');

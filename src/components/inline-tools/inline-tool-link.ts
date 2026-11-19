@@ -971,7 +971,7 @@ export class LinkInlineTool implements InlineTool {
 
   /**
    * Link the selection to a page. The address is the host's own, so it skips
-   * the typed-link rules, and a page is not a web link for the Recent shelf.
+   * the typed-link rules, and a page is not a web link for the Recents list.
    * @param href - the page's address
    */
   private applyPageLink(href: string): void {
@@ -1449,7 +1449,7 @@ export class LinkInlineTool implements InlineTool {
   }
 
   /**
-   * Ask the unfurl endpoint for a link's title and picture, once.
+   * Ask the unfurl endpoint for a link's title, once.
    * @param url - a recorded href
    */
   private lookUp(url: string): void {

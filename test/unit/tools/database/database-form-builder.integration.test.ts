@@ -582,6 +582,41 @@ describe('local form question builder', () => {
     expect([...document.querySelectorAll<HTMLInputElement>(`${question('tags')} [data-blok-database-form-option-name]`)].map((input) => input.value).at(-1)).toBe('Green');
   });
 
+  // notion-motion.md Round 76 §3: "Delete option" edits the property's option list, as the property menu does.
+  it('deletes a multiple choice option from the builder out of the property options and the rows', async () => {
+    const tagged = blocksFor([tags]).map((block) => (block.type === 'database-row'
+      ? { ...block, data: { ...block.data, properties: { ...(block.data as { properties: Record<string, unknown> }).properties, tags: ['one', 'two'] } } }
+      : block));
+
+    await mount(tagged);
+    requireElement<HTMLButtonElement>(`${question('tags')} [data-blok-database-form-option="one"] [data-blok-database-form-option-delete]`).click();
+    const saved = await save();
+    const schemaOptions = (saved.blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined)?.schema
+      .find((property) => property.id === 'tags')?.config?.options;
+    const rowTags = saved.blocks.filter((block) => block.type === 'database-row')
+      .map((block) => (block.data as { properties: Record<string, unknown> }).properties.tags);
+
+    expect(schemaOptions?.map((option) => option.id)).toEqual(['two']);
+    expect(rowTags).toEqual([['two'], ['two']]);
+  });
+
+  // notion-motion.md Round 76 §3: the checkbox label belongs to the question and survives a reload.
+  it('saves a checkbox question\'s label with the question across a reload', async () => {
+    const agree: PropertyDefinition = { id: 'agree', name: 'Agree', type: 'checkbox', position: 'a1' };
+
+    await mount(blocksFor([agree]));
+    const label = requireElement<HTMLTextAreaElement>(`${question('agree')} [data-blok-database-form-checkbox-label]`);
+
+    label.value = 'I agree';
+    label.dispatchEvent(new Event('change', { bubbles: true }));
+    const saved = await save();
+
+    expect(formSetting(saved, 'agree')).toMatchObject({ checkboxLabel: 'I agree' });
+    expect((saved.blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined)?.schema.find((property) => property.id === 'agree')?.name).toBe('Agree');
+    await mount(saved.blocks);
+    expect(q<HTMLTextAreaElement>(`${question('agree')} [data-blok-database-form-checkbox-label]`)?.value).toBe('I agree');
+  });
+
   it('picks a preset or custom selection limit, shows it under the question title, and goes back to unlimited', async () => {
     await mount(blocksFor([tags]));
     expect(q(`${question('tags')} [data-blok-database-form-selection-limit]`)?.textContent)

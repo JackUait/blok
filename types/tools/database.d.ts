@@ -1187,6 +1187,8 @@ export interface ViewPropertySetting {
    * select and multi-select, `'dropdown'` for status.
    */
   showOptionsAs?: 'list' | 'dropdown';
+  /** Form: the text beside a checkbox question's box. Absent: no label. */
+  checkboxLabel?: string;
 }
 
 /** What a respondent may do with the page their answer becomes. */

@@ -233,7 +233,9 @@ export class OptionDrag {
     private readonly body: HTMLElement,
     private readonly shown: () => SelectOption[],
     private readonly onDrop: (id: string, others: SelectOption[], index: number) => void,
-    private readonly onEnd: () => void
+    private readonly onEnd: () => void,
+    /** The attribute that names a row's option id. */
+    private readonly rowAttr = 'data-blok-database-select-option'
   ) {}
 
   start(event: PointerEvent, id: string): void {
@@ -293,7 +295,7 @@ export class OptionDrag {
   }
 
   private row(id: string): HTMLElement | null {
-    return this.body.querySelector<HTMLElement>(`[data-blok-database-select-option="${CSS.escape(id)}"]`);
+    return this.body.querySelector<HTMLElement>(`[${this.rowAttr}="${CSS.escape(id)}"]`);
   }
 
   private readonly handleMove = (event: PointerEvent): void => {

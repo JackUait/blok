@@ -1277,5 +1277,104 @@ describe('DatabaseFormView builder answers', () => {
     expect(root.querySelector('[data-blok-database-form-add-option]')).toBeNull();
     expect(question(root, 'due')?.querySelector('input[type="date"]')).not.toBeNull();
     expect(question(root, 'pick')?.querySelectorAll('input[type="radio"]')).toHaveLength(2);
+    expect(root.querySelector('[data-blok-database-form-checkbox-label]')).toBeNull();
+  });
+
+  // notion-motion.md Round 76 §3 "Option row hover": a row shows "Drag to move" and "Delete option".
+  it('Delete option removes the option from the property options and its row', () => {
+    const { root, changeOptions } = build();
+    const remove = question(root, 'pick')?.querySelector<HTMLButtonElement>('[data-blok-database-form-option-delete]');
+
+    expect(remove?.getAttribute('aria-label')).toBe('tools.database.formDeleteOption');
+    remove?.click();
+
+    expect(changeOptions).toHaveBeenCalledWith('pick', [{ id: 'o2', label: 'Two', position: 'a1' }]);
+    expect(names(root, 'pick').map((input) => input.value)).toEqual(['Two']);
+  });
+
+  it('Delete option on an unnamed new row removes the row and sends nothing', () => {
+    const { root, changeOptions } = build();
+
+    addOption(root, 'tags')?.click();
+    const rows = question(root, 'tags')?.querySelectorAll<HTMLElement>('[data-blok-database-form-option]');
+
+    rows?.[rows.length - 1]?.querySelector<HTMLButtonElement>('[data-blok-database-form-option-delete]')?.click();
+
+    expect(names(root, 'tags')).toHaveLength(2);
+    expect(changeOptions).not.toHaveBeenCalled();
+  });
+
+  it('dragging an option by its handle moves it through the property options', () => {
+    const { root, changeOptions } = build();
+    const rows = [...(question(root, 'pick')?.querySelectorAll<HTMLElement>('[data-blok-database-form-option]') ?? [])];
+
+    rows.forEach((row, index) => vi.spyOn(row, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, index * 32, 592, 32)));
+    const handle = rows[1]?.querySelector('[data-blok-database-form-option-handle]');
+
+    expect(handle?.getAttribute('aria-label')).toBe('blockSettings.dragToMove');
+    handle?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientY: 48, button: 0 }));
+    document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientY: 5 }));
+    document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientY: 5 }));
+
+    expect(changeOptions).toHaveBeenCalledTimes(1);
+    const [propertyId, next] = changeOptions.mock.calls[0] as [string, Array<{ id: string; position: string }>];
+
+    expect(propertyId).toBe('pick');
+    expect((next.find((option) => option.id === 'o2')?.position ?? 'z') < 'a0').toBe(true);
+  });
+
+  // notion-motion.md Round 76 §3 "Checkbox label": a textarea after the box, saved with the question, not the property.
+  it('a checkbox question has a label field saved with the question', () => {
+    const setQuestionSetting = vi.fn();
+    const withLabel = properties.map((entry) => (entry.id === 'agree' ? { ...entry, checkboxLabel: 'I agree' } : entry));
+    const { root } = mount({ schema: [...schema, tags, due], view: view({ properties: withLabel }), setQuestionSetting, changeOptions: vi.fn() });
+    const label = question(root, 'agree')?.querySelector<HTMLTextAreaElement>('[data-blok-database-form-checkbox-row] textarea[data-blok-database-form-checkbox-label]');
+
+    expect(label?.placeholder).toBe('tools.database.formCheckboxLabelPlaceholder');
+    expect(label?.value).toBe('I agree');
+    if (label === null || label === undefined) throw new Error('no label');
+    label.value = ' Yes ';
+    label.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(setQuestionSetting).toHaveBeenLastCalledWith('agree', { checkboxLabel: 'Yes' });
+    label.value = '';
+    label.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(setQuestionSetting).toHaveBeenLastCalledWith('agree', { checkboxLabel: undefined });
+  });
+
+  it('keeps the builder from redrawing while the checkbox label is being typed', () => {
+    const view_ = new DatabaseFormView({
+      i18n: { t: (key: string) => key }, view: view({ properties }), schema: [...schema, tags, due], readOnly: false,
+      onSubmit: vi.fn(), setQuestionSetting: vi.fn(), changeOptions: vi.fn(),
+    });
+    const root = view_.createView();
+
+    document.body.appendChild(root);
+    root.querySelector<HTMLTextAreaElement>('[data-blok-database-form-checkbox-label]')?.focus();
+
+    expect(view_.interacting).toBe(true);
+  });
+
+  // notion-motion.md Round 76 §3 "Dropdown mode": a hint field, then editable rows with no mark, then Add option.
+  it('a select question shown as a dropdown keeps editable option rows under a hint field', () => {
+    const dropdown = properties.map((entry) => (entry.id === 'pick' ? { ...entry, showOptionsAs: 'dropdown' as const } : entry));
+    const { root } = mount({ schema: [...schema, tags, due], view: view({ properties: dropdown }), setQuestionSetting: vi.fn(), changeOptions: vi.fn() });
+    const set = question(root, 'pick')?.querySelector('[data-blok-database-form-options]');
+    const hint = set?.firstElementChild;
+
+    expect(question(root, 'pick')?.querySelector('select')).toBeNull();
+    expect(hint?.hasAttribute('data-blok-database-form-dropdown-hint')).toBe(true);
+    expect(hint?.firstChild?.textContent).toBe('tools.database.formDropdownHint');
+    expect(hint?.querySelector('[data-blok-database-form-dropdown-chevron] svg')).not.toBeNull();
+    expect(names(root, 'pick').map((input) => input.value)).toEqual(['One', 'Two']);
+    expect(set?.querySelector('input:is([type="radio"], [type="checkbox"])')).toBeNull();
+    expect(set?.querySelector('[data-blok-database-form-add-option]')).not.toBeNull();
+  });
+
+  // notion-motion.md Round 76 §3 "Date answer": the builder's empty date reads "Respondent's answer".
+  it('an empty date question reads the respondent\'s answer placeholder', () => {
+    const { root } = build();
+    const answer = question(root, 'due')?.querySelector('button[data-blok-database-form-date]');
+
+    expect(answer?.firstChild?.textContent).toBe('tools.database.formAnswerPlaceholder');
   });
 });

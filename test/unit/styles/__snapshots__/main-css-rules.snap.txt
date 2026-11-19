@@ -23105,7 +23105,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   font-size: 0.875em;
 }
 
-[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name], [data-blok-database-form-option-name]), textarea, select, [data-blok-database-form-provider-answer]) {
+[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name], [data-blok-database-form-option-name]), textarea, select, [data-blok-database-form-provider-answer]):not([data-blok-database-form-checkbox-label]) {
   box-sizing: border-box;
   min-block-size: 38px;
   padding-block: var(--blok-space-1);
@@ -23238,10 +23238,106 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 [data-blok-database-form-checkbox-row] {
   display: flex;
   align-items: center;
+  gap: var(--blok-space-3);
   min-block-size: 36px;
   margin-block-end: var(--blok-space-2-5);
   padding-inline: var(--blok-space-2-5);
   border-radius: var(--blok-radius-control);
+}
+
+[data-blok-database-form-checkbox-label] {
+  flex: 1;
+  min-inline-size: 0;
+  block-size: 26px;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--blok-database-ink);
+  font: inherit;
+  font-size: 16px;
+  resize: none;
+}
+
+[data-blok-database-form-checkbox-label]::placeholder {
+  color: var(--blok-database-title-placeholder);
+}
+
+[data-blok-database-form-option] input:is([type="radio"], [type="checkbox"]), [data-blok-database-form-checkbox-row] input[type="checkbox"]:not(:checked) {
+  appearance: none;
+  inline-size: 15px;
+  block-size: 15px;
+  margin: 1.5px;
+  border-radius: var(--blok-radius-mark);
+  background-color: var(--blok-database-card-bg);
+  box-shadow: 0 0 0 1.5px var(--blok-database-table-border);
+}
+
+[data-blok-database-form-option] input[type="radio"] {
+  border-radius: 50%;
+}
+
+[data-blok-database-form-option] {
+  position: relative;
+}
+
+:is([data-blok-database-form-option], [data-blok-database-form-checkbox-row]):hover {
+  background-color: var(--blok-database-add-hover-bg);
+}
+
+:is([data-blok-database-form-option-handle], [data-blok-database-form-option-delete]) {
+  position: absolute;
+  inset-block-start: var(--blok-space-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-ink-tertiary);
+  cursor: pointer;
+  visibility: hidden;
+}
+
+[data-blok-database-form-option]:hover :is([data-blok-database-form-option-handle], [data-blok-database-form-option-delete]), [data-blok-database-form-option]:has(:focus-visible) :is([data-blok-database-form-option-handle], [data-blok-database-form-option-delete]) {
+  visibility: visible;
+}
+
+[data-blok-database-form-option-handle] {
+  inset-inline-start: 2px;
+  inline-size: 16px;
+  block-size: 24px;
+  border-radius: var(--blok-radius-control-sm);
+  cursor: grab;
+}
+
+[data-blok-database-form-option-delete] {
+  inset-inline-end: var(--blok-space-1);
+  inline-size: 24px;
+  block-size: 24px;
+}
+
+:is([data-blok-database-form-option-handle], [data-blok-database-form-option-delete]) svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+[data-blok-database-form-dropdown-hint] {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  block-size: 38px;
+  margin-block-end: var(--blok-space-1);
+  padding-inline: calc(var(--blok-space-2-5) - var(--blok-border-width-hairline)) calc(var(--blok-space-1-5) - var(--blok-border-width-hairline));
+  border: 1px solid var(--blok-database-form-answer-border);
+  border-radius: var(--blok-radius-control);
+  color: var(--blok-database-title-placeholder);
+}
+
+[data-blok-database-form-dropdown-hint] [data-blok-database-form-dropdown-chevron] svg {
+  inline-size: 16px;
+  block-size: 16px;
 }
 
 [data-blok-database-form-submit], [data-blok-database-form-again] {

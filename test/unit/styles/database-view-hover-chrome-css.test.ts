@@ -310,7 +310,7 @@ describe('form builder question card (research/21 §1k)', () => {
 
   // notion-motion.md Round 31 §1, Round 32 §4: the answer box is 38 tall (Blok drew 28).
   it('draws the answer box 38 tall', () => {
-    const answer = ruleBody('[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name], [data-blok-database-form-option-name]), textarea, select, [data-blok-database-form-provider-answer])');
+    const answer = ruleBody('[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name], [data-blok-database-form-option-name]), textarea, select, [data-blok-database-form-provider-answer]):not([data-blok-database-form-checkbox-label])');
 
     expect(answer).toContain('box-sizing: border-box');
     expect(answer).toContain('min-block-size: 38px');
@@ -322,7 +322,7 @@ describe('form builder question card (research/21 §1k)', () => {
 
     expect(text).toContain('padding-block: calc(var(--blok-space-2-25) - var(--blok-border-width-hairline))');
     expect(text).toContain('padding-inline: calc(var(--blok-space-2-5) - var(--blok-border-width-hairline))');
-    expect(ruleBody('[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name], [data-blok-database-form-option-name]), textarea, select, [data-blok-database-form-provider-answer])'))
+    expect(ruleBody('[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name], [data-blok-database-form-option-name]), textarea, select, [data-blok-database-form-provider-answer]):not([data-blok-database-form-checkbox-label])'))
       .toContain('border-radius: var(--blok-radius-control)');
   });
 
@@ -348,6 +348,67 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(ruleBody('[data-blok-database-form-date-glyph] svg')).toContain('inline-size: 16px');
     expect(ruleBody('[data-blok-database-form-question] button[data-blok-database-form-date][data-blok-database-form-provider-answer][data-empty]'))
       .toContain('color: var(--blok-database-title-placeholder)');
+  });
+
+  // notion-motion.md Round 76 §3 (r76-n-form-builder.raw): option and checkbox marks are 15x15 white boxes
+  // with a 1.5px rgba(42,28,0,0.07) ring, r50% / r2, inset 1.5 in their 18px slot.
+  it('draws the builder\'s option marks as Notion\'s 15px ringed boxes', () => {
+    const mark = ruleBody('[data-blok-database-form-option] input:is([type="radio"], [type="checkbox"])');
+
+    expect(ruleBody('[data-blok-database-form-checkbox-row] input[type="checkbox"]:not(:checked)')).toBe(mark);
+
+    expect(mark).toContain('appearance: none');
+    expect(mark).toContain('inline-size: 15px');
+    expect(mark).toContain('block-size: 15px');
+    expect(mark).toContain('margin: 1.5px');
+    expect(mark).toContain('box-shadow: 0 0 0 1.5px var(--blok-database-table-border)');
+    expect(mark).toContain('background-color: var(--blok-database-card-bg)');
+    expect(mark).toContain('border-radius: var(--blok-radius-mark)');
+    expect(ruleBody('[data-blok-database-form-option] input[type="radio"]')).toContain('border-radius: 50%');
+  });
+
+  // Round 76 §3 "Option row hover": the row fills rgba(55,53,47,0.06); "Drag to move" 16x24 sits 2 in, "Delete option" 24x24 4 from its end.
+  it('fills a hovered option row and shows its drag handle and Delete option', () => {
+    const shown = ruleBody('[data-blok-database-form-option]:hover :is([data-blok-database-form-option-handle], [data-blok-database-form-option-delete])');
+
+    expect(ruleBody('[data-blok-database-form-option]:has(:focus-visible) :is([data-blok-database-form-option-handle], [data-blok-database-form-option-delete])')).toBe(shown);
+    const handle = ruleBody('[data-blok-database-form-option-handle]');
+    const remove = ruleBody('[data-blok-database-form-option-delete]');
+
+    expect(ruleBody(':is([data-blok-database-form-option], [data-blok-database-form-checkbox-row]):hover')).toContain('background-color: var(--blok-database-add-hover-bg)');
+    expect(ruleBody(':is([data-blok-database-form-option-handle], [data-blok-database-form-option-delete])')).toContain('visibility: hidden');
+    expect(shown).toContain('visibility: visible');
+    expect(handle).toContain('inline-size: 16px');
+    expect(handle).toContain('block-size: 24px');
+    expect(handle).toContain('inset-inline-start: 2px');
+    expect(remove).toContain('inline-size: 24px');
+    expect(remove).toContain('block-size: 24px');
+    expect(remove).toContain('inset-inline-end: var(--blok-space-1)');
+  });
+
+  // Round 76 §3 "Checkbox label": a 26-tall textarea 12 after the box, no padding, 16px; the row pads 5 10.
+  it('draws the checkbox label as a bare 26px field after the box', () => {
+    const label = ruleBody('[data-blok-database-form-checkbox-label]');
+
+    expect(label).toContain('block-size: 26px');
+    expect(label).toContain('padding: 0');
+    expect(label).toContain('border: none');
+    expect(label).toContain('resize: none');
+    expect(label).toContain('font-size: 16px');
+    expect(ruleBody('[data-blok-database-form-checkbox-row]')).toContain('gap: var(--blok-space-3)');
+    expect(database).toContain('[data-blok-database-form-provider-answer]):not([data-blok-database-form-checkbox-label]) {');
+  });
+
+  // Round 76 §3 "Dropdown mode": a 38-tall hint field, pad 0 10, chevron 6 from its end, rows 4 under it.
+  it('draws the dropdown hint field over the option rows', () => {
+    const hint = ruleBody('[data-blok-database-form-dropdown-hint]');
+
+    expect(hint).toContain('block-size: 38px');
+    expect(hint).toContain('margin-block-end: var(--blok-space-1)');
+    expect(hint).toContain('padding-inline: calc(var(--blok-space-2-5) - var(--blok-border-width-hairline)) calc(var(--blok-space-1-5) - var(--blok-border-width-hairline))');
+    expect(hint).toContain('border: 1px solid var(--blok-database-form-answer-border)');
+    expect(hint).toContain('color: var(--blok-database-title-placeholder)');
+    expect(ruleBody('[data-blok-database-form-dropdown-hint] [data-blok-database-form-dropdown-chevron] svg')).toContain('inline-size: 16px');
   });
 
   it('keeps an option name out of the 38px answer box', () => {

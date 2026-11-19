@@ -6019,6 +6019,7 @@ export class DatabaseTool implements BlockTool {
         if (setting !== undefined) {
           if ('questionName' in changes && changes.questionName === undefined) delete setting.questionName;
           if ('maxSelections' in changes && changes.maxSelections === undefined) delete setting.maxSelections;
+          if ('checkboxLabel' in changes && changes.checkboxLabel === undefined) delete setting.checkboxLabel;
         }
         this.updateActiveView({ properties });
       }, undefined);

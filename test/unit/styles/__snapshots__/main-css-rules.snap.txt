@@ -12866,7 +12866,7 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink-tertiary);
 }
 
-[data-blok-database-option-delete], [data-blok-database-option-set-default], [data-blok-database-option-group], [data-blok-database-option-group-pick], [data-blok-database-option-delete-confirm], [data-blok-database-option-delete-cancel], [data-blok-database-option-color], [data-blok-database-date-clear] {
+[data-blok-database-option-delete], [data-blok-database-option-set-default], [data-blok-database-option-group], [data-blok-database-option-group-pick], [data-blok-database-option-color], [data-blok-database-date-clear] {
   display: flex;
   align-items: center;
   gap: var(--blok-space-2);
@@ -12881,28 +12881,12 @@ textarea[data-blok-database-cell-input] {
   cursor: pointer;
 }
 
-[@media (hover: hover)] [data-blok-database-option-delete]:hover, [data-blok-database-option-set-default]:hover, [data-blok-database-option-group]:hover, [data-blok-database-option-group-pick]:hover, [data-blok-database-option-delete-confirm]:hover, [data-blok-database-option-delete-cancel]:hover, [data-blok-database-option-color]:hover, [data-blok-database-date-clear]:hover, [data-blok-database-date-prev]:hover, [data-blok-database-date-next]:hover, [data-blok-database-date-day]:hover {
+[@media (hover: hover)] [data-blok-database-option-delete]:hover, [data-blok-database-option-set-default]:hover, [data-blok-database-option-group]:hover, [data-blok-database-option-group-pick]:hover, [data-blok-database-option-color]:hover, [data-blok-database-date-clear]:hover, [data-blok-database-date-prev]:hover, [data-blok-database-date-next]:hover, [data-blok-database-date-day]:hover {
   background-color: var(--blok-database-hover-bg);
 }
 
 [@media (hover: hover)] [data-blok-database-date-today]:hover, [data-blok-database-date-help]:hover, [data-blok-database-csv-help]:hover {
   background-color: var(--blok-database-date-today-hover-bg);
-}
-
-[data-blok-database-option-delete-prompt] {
-  display: flex;
-  flex-direction: column;
-  gap: var(--blok-space-0-5);
-  padding: var(--blok-space-1);
-}
-
-[data-blok-database-option-delete-prompt] p {
-  margin: 0 0 var(--blok-space-1);
-  padding: 0 var(--blok-space-2);
-}
-
-[data-blok-database-option-delete-confirm] {
-  color: var(--blok-color-red-text);
 }
 
 [data-blok-database-option-delete] svg, [data-blok-database-option-set-default] svg, [data-blok-database-option-group] svg {

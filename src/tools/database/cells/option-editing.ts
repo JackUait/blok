@@ -1,7 +1,6 @@
 import { nanoid } from 'nanoid';
 
 import { IconCheck, IconChevronRight, IconEmojiFlag, IconGroup, IconTrash } from '../../../components/icons';
-import { getTabbables } from '../../../components/utils/modal-dialog';
 import { openDatabaseConfirm } from '../database-confirm-dialog';
 import type { DatabaseConfirmOptions } from '../database-confirm-dialog';
 import { DatabaseModel } from '../database-model';
@@ -157,45 +156,6 @@ export const confirmOptionDelete = (
   boldTitle: true,
   ...placement,
 });
-
-/** Notion asks before deleting an option (research/08); rows keep existing, the value is cleared. */
-export const buildDeletePrompt = (handlers: { t: Translate; onConfirm: () => void; onCancel: () => void }): { prompt: HTMLElement; confirm: HTMLButtonElement } => {
-  const { t } = handlers;
-  const prompt = document.createElement('div');
-  const text = document.createElement('p');
-  const confirm = document.createElement('button');
-  const cancel = document.createElement('button');
-
-  prompt.setAttribute('data-blok-database-option-delete-prompt', '');
-  prompt.setAttribute('role', 'alertdialog');
-  prompt.setAttribute('aria-modal', 'true');
-  text.textContent = t('tools.database.optionDeleteConfirm');
-  prompt.setAttribute('aria-label', text.textContent);
-  confirm.type = 'button';
-  confirm.setAttribute('data-blok-database-option-delete-confirm', '');
-  confirm.textContent = t('tools.database.optionDelete');
-  cancel.type = 'button';
-  cancel.setAttribute('data-blok-database-option-delete-cancel', '');
-  cancel.textContent = t('tools.database.optionDeleteCancel');
-  confirm.addEventListener('click', handlers.onConfirm);
-  cancel.addEventListener('click', handlers.onCancel);
-  prompt.addEventListener('keydown', (event) => {
-    if (event.key !== 'Tab') {
-      return;
-    }
-    const tabbables = getTabbables(prompt);
-    const first = tabbables[0];
-    const last = tabbables[tabbables.length - 1];
-
-    if (event.shiftKey ? document.activeElement === first : document.activeElement === last) {
-      event.preventDefault();
-      (event.shiftKey ? last : first)?.focus();
-    }
-  });
-  prompt.append(text, confirm, cancel);
-
-  return { prompt, confirm };
-};
 
 /**
  * Where a dragged option lands. `others` is the shown order without it.

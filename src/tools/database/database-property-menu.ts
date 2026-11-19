@@ -1424,7 +1424,17 @@ export class DatabasePropertyMenu {
       ...(property.type === 'status'
         ? { onSetDefault: (defaultOptionId: string) => update({ status: { groups: status?.groups ?? [], ...status, defaultOptionId } }) }
         : {}),
-      hold: () => this.popover?.holdOpen() ?? ((): void => undefined),
+      hold: () => {
+        const release = this.popover?.holdOpen();
+
+        // notion-motion.md Round 81 §1: after an option's Delete confirm focus is on the menu, its cursor on Edit property.
+        return (refocus) => {
+          release?.(refocus === true ? 'editProperty' : undefined);
+          if (refocus === true) {
+            this.popover?.getElement().querySelector('[data-blok-item-name="editProperty"]')?.closest<HTMLElement>('[data-blok-popover-items]')?.focus();
+          }
+        };
+      },
       onHostClose: (close) => this.overClosers.add(close),
     });
 

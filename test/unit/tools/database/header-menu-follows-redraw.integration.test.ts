@@ -185,6 +185,82 @@ describe('the column header menu follows its header through a redraw', () => {
     });
   });
 
+  // notion-motion.md Round 81 §1: the option menu closes as the confirm opens. After Cancel the header
+  // menu and Edit property stay, and the cursor is on the header menu's "Edit property" row.
+  describe('Edit property › option › Delete', () => {
+    beforeEach(() => {
+      propertyIds.current = 'st';
+    });
+
+    const editProperty = (): HTMLElement | null =>
+      document.querySelector<HTMLElement>('[data-blok-popover][data-blok-popover-opened="true"]:has([data-blok-database-options-editor])');
+    const optionMenu = (): HTMLElement | null =>
+      document.querySelector<HTMLElement>('[data-blok-popover][data-blok-popover-opened="true"][data-blok-popover-custom-class~="blok-database-option-menu"]');
+    const action = (name: 'confirm' | 'cancel'): HTMLElement =>
+      must(document.querySelector<HTMLElement>(`[data-blok-database-confirm-action="${name}"]`), `${name} button`);
+    const confirmDialog = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-database-confirm-dialog]');
+
+    const askDelete = async (): Promise<{ menu: HTMLElement; flyout: HTMLElement }> => {
+      await make(doc('v1'));
+      const menu = await openHeaderMenu('st');
+
+      await openEditProperty(menu);
+      const flyout = must(editProperty(), 'Edit property');
+      const row = must(document.querySelector('[data-blok-database-select-option="doing"]'), 'option row');
+
+      must(row.querySelector<HTMLElement>('[data-blok-database-select-option-menu]'), 'option menu button').click();
+      await quiet();
+      must(optionMenu()?.querySelector<HTMLElement>('[data-blok-database-option-delete]'), 'Delete').click();
+      await quiet();
+
+      return { menu, flyout };
+    };
+
+    it('the option menu closes as the confirm opens; the header menu and Edit property stay', { timeout: 30000 }, async () => {
+      const { menu, flyout } = await askDelete();
+
+      expect(optionMenu()).toBeNull();
+      expect(confirmDialog()).not.toBeNull();
+      expect(action('confirm')).toHaveFocus();
+      expect(openMenu()).toBe(menu);
+      expect(editProperty()).toBe(flyout);
+    });
+
+    it.each([
+      ['Cancel', (): void => action('cancel').click()],
+      ['Escape', (): void => {
+        action('confirm').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      }],
+    ])('%s keeps the option and puts the cursor on the header menu\'s Edit property row', { timeout: 30000 }, async (_name, dismiss) => {
+      const { menu, flyout } = await askDelete();
+
+      dismiss();
+      await quiet();
+
+      const editRow = must(menu.querySelector('[data-blok-item-name="editProperty"]'), 'Edit property row');
+
+      expect(editRow.closest('[data-blok-popover-items]')).toHaveFocus();
+      expect(editRow.getAttribute('data-blok-focused')).toBe('true');
+      expect(confirmDialog()).toBeNull();
+      expect(optionMenu()).toBeNull();
+      expect(openMenu()).toBe(menu);
+      expect(editProperty()).toBe(flyout);
+      expect(document.querySelector('[data-blok-database-select-option="doing"]')).not.toBeNull();
+    });
+
+    it('Delete removes the option; the header menu and Edit property stay', { timeout: 30000 }, async () => {
+      const { menu, flyout } = await askDelete();
+
+      action('confirm').click();
+      await quiet();
+
+      expect(document.querySelector('[data-blok-database-select-option="doing"]')).toBeNull();
+      expect(confirmDialog()).toBeNull();
+      expect(openMenu()).toBe(menu);
+      expect(editProperty()).toBe(flyout);
+    });
+  });
+
   // A linked view redraws a moment later, by remounting the view, which would destroy the menu.
   // It holds that redraw while the menu is open and draws the edit when the menu closes.
   describe('in a linked view', () => {

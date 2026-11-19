@@ -596,6 +596,11 @@ describe('Hours zoom 15-minute lines and day period (Round 35)', () => {
       expect(chevron).toContain('margin-inline: calc(-1 * var(--blok-space-2-25))');
     });
 
+    // r79-n-tl-nav.raw: Notion's Month ⌄ is ink 142,139,134, as ‹ › are. The label keeps its AA text ink.
+    it('inks the zoom chevron like ‹ and ›, not like its label', () => {
+      expect(ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom] svg')).toContain('color: var(--blok-database-calendar-nav-icon)');
+    });
+
     it('draws ‹ and › at 28 in their 24 buttons, like the calendar', () => {
       ['prev', 'next'].forEach((arrow) => {
         expect(ruleBody(`[data-blok-database-timeline-toolbar] [data-blok-database-timeline-${arrow}] svg`)).toMatch(/inline-size:\s*28px;\s*block-size:\s*28px;\s*max-block-size:\s*none/);

@@ -16549,8 +16549,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   max-block-size: none;
 }
 
+/* r79-n-tl-nav.raw: the chevron is an icon, inked like ‹ ›; the label keeps its AA text ink. */
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom] svg {
   margin-inline: calc(-1 * var(--blok-space-2-25));
+  color: var(--blok-database-calendar-nav-icon);
 }
 
 [data-blok-database-timeline-toolbar] :is([data-blok-database-timeline-prev], [data-blok-database-timeline-next]) {

@@ -263,15 +263,20 @@ test('Number format\'s search field is Notion\'s "Filter formats…" field', asy
 });
 
 // notion-motion.md Round 83 §4: Escape closes the list and leaves focus on the Number format row.
+// Blok's menus keep DOM focus on the list and mark the row with their keyboard cursor.
 test('Escape on Number format puts focus back on its row', async ({ page }) => {
   await openPanel(page);
-  await page.locator('[data-blok-item-name="numberFormat"]').click();
+  const row = page.locator('[data-blok-item-name="numberFormat"]');
+
+  await row.click();
   await listBox(page, 'format-number');
   await page.keyboard.press('Escape');
 
   await expect(page.locator('[data-blok-item-name^="format-"]')).toHaveCount(0);
-  await expect(page.locator('[data-blok-item-name="numberFormat"]')).toBeFocused();
-  await expect(page.locator('[data-blok-item-name="decimals"]')).toBeVisible();
+  await expect(page.locator('[data-blok-popover-items]:has([data-blok-item-name="numberFormat"])')).toBeFocused();
+  await expect(row).toHaveAttribute('data-blok-focused', 'true');
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('[data-blok-item-name="decimals"]')).toHaveAttribute('data-blok-focused', 'true');
 });
 
 // §17.8: Notion's box is 156 wide; other hints keep the 300 max-width.

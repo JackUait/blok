@@ -499,6 +499,7 @@
   "tools.link.emailAddress": "Имейл адрес",
   "tools.link.jumpToSection": "Към раздел",
   "tools.link.webLink": "Връзка",
+  "tools.link.webPage": "Връзка към уеб страница",
   "tools.link.copyUrl": "Копирай връзката",
   "tools.link.edit": "Редактирай",
   "tools.link.urlCopied": "Връзката е копирана в клипборда",

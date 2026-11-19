@@ -57,7 +57,7 @@ const HEADING_MAX_DEPTH = 2;
  * types its prefix into the field.
  */
 const LINK_KINDS = [
-  { icon: IconGlobe, titleKey: 'tools.link.webLink', prefix: 'https://' },
+  { icon: IconGlobe, titleKey: 'tools.link.webPage', prefix: 'https://' },
   { icon: IconMail, titleKey: 'tools.link.emailAddress', prefix: 'mailto:' },
 ] as const;
 
@@ -1524,7 +1524,10 @@ export class LinkInlineTool implements InlineTool {
       return { icon: IconHash, label: this.i18n.t('tools.link.jumpToSection') };
     }
 
-    return { icon: IconGlobe, label: this.i18n.t('tools.link.webLink') };
+    // tel:, sms:, ftp: and the like lead to no web page.
+    const isWeb = !/^\w+:/.test(url) || /^https?:/i.test(url);
+
+    return { icon: IconGlobe, label: this.i18n.t(isWeb ? 'tools.link.webPage' : 'tools.link.webLink') };
   }
 
   /**

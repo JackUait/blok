@@ -55,6 +55,7 @@ const TRANSLATIONS: Record<string, string> = {
   'tools.link.emailAddress': 'Email address',
   'tools.link.jumpToSection': 'Jump to section',
   'tools.link.webLink': 'Web link',
+  'tools.link.webPage': 'Web page link',
 };
 
 const EXISTING_HREF = 'https://old.example.com/page';
@@ -1076,7 +1077,7 @@ describe('LinkInlineTool — mutation coverage', () => {
       typeUrl(harness, '   https://example.com   ');
 
       expect(harness.suggestionUrl.textContent).toBe('https://example.com');
-      expect(harness.suggestionType.textContent).toBe('Web link');
+      expect(harness.suggestionType.textContent).toBe('Web page link');
     });
 
     it('labels a mail address and an in-page anchor', () => {

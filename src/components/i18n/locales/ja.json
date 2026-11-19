@@ -499,6 +499,7 @@
   "tools.link.emailAddress": "メールアドレス",
   "tools.link.jumpToSection": "セクションへ移動",
   "tools.link.webLink": "リンク",
+  "tools.link.webPage": "Web ページへのリンク",
   "tools.link.copyUrl": "リンクをコピー",
   "tools.link.edit": "編集",
   "tools.link.urlCopied": "リンクをクリップボードにコピーしました",

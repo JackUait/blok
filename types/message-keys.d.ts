@@ -2855,6 +2855,7 @@ export type BlokMessageKey =
   | 'tools.link.removeLink'
   | 'tools.link.urlCopied'
   | 'tools.link.webLink'
+  | 'tools.link.webPage'
   | 'tools.linkPaste.bookmark'
   | 'tools.linkPaste.embed'
   | 'tools.linkPaste.embedAudio'

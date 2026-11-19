@@ -497,6 +497,7 @@
   "tools.link.emailAddress": "Sähköpostiosoite",
   "tools.link.jumpToSection": "Siirry osioon",
   "tools.link.webLink": "Linkki",
+  "tools.link.webPage": "Linkki verkkosivulle",
   "tools.link.copyUrl": "Kopioi linkki",
   "tools.link.edit": "Muokkaa",
   "tools.link.urlCopied": "Linkki kopioitu leikepöydälle",

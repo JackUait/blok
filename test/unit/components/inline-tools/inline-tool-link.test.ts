@@ -115,6 +115,7 @@ const ENGLISH_LINK_TRANSLATIONS: Record<string, string> = {
   'tools.link.emailAddress': defaultDictionary['tools.link.emailAddress'],
   'tools.link.jumpToSection': defaultDictionary['tools.link.jumpToSection'],
   'tools.link.webLink': defaultDictionary['tools.link.webLink'],
+  'tools.link.webPage': defaultDictionary['tools.link.webPage'],
   'tools.link.recent': defaultDictionary['tools.link.recent'],
   'tools.link.onThisPage': defaultDictionary['tools.link.onThisPage'],
   'tools.database.moveToPages': defaultDictionary['tools.database.moveToPages'],
@@ -750,6 +751,11 @@ describe('LinkInlineTool', () => {
       },
       {
         value: 'https://example.com',
+        key: 'tools.link.webPage',
+        translation: 'Lien vers une page web',
+      },
+      {
+        value: 'tel:+15551234567',
         key: 'tools.link.webLink',
         translation: 'Lien',
       },
@@ -766,13 +772,26 @@ describe('LinkInlineTool', () => {
 
     it.each([
       'https://example.com',
-      'ftp://files.example.com',
-      'tel:+15551234567',
-      'sms:+15551234567',
+      'HTTP://example.com',
       '//cdn.example.com/file.js',
       '/docs/getting-started',
       'example.com',
-    ])('uses the generic English link label for %s', value => {
+    ])('says a web address leads to a web page: %s', value => {
+      const { tool } = createTool();
+      const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion(value);
+
+      const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
+
+      expect(typeEl?.textContent).toBe('Link to web page');
+    });
+
+    it.each([
+      'ftp://files.example.com',
+      'tel:+15551234567',
+      'sms:+15551234567',
+    ])('keeps the plain link label for %s, which is no web page', value => {
       const { tool } = createTool();
       const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
 
@@ -803,7 +822,7 @@ describe('LinkInlineTool', () => {
 
       expect(chip?.classList.contains('hidden')).toBe(false);
       expect(urlEl?.textContent).toBe('https://example.com');
-      expect(typeEl?.textContent).toBe('Link');
+      expect(typeEl?.textContent).toBe('Link to web page');
     });
 
     it('hides chip when input is cleared', () => {
@@ -839,7 +858,7 @@ describe('LinkInlineTool', () => {
       const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
       const row = itemWrapper.querySelector('[data-link-suggestion-row]');
 
-      expect(typeEl?.textContent).toBe('Keep typing to add a link');
+      expect(typeEl?.textContent).toBe('Keep typing to add link');
       expect(row?.className).toContain('pointer-events-none');
     });
 
@@ -852,7 +871,7 @@ describe('LinkInlineTool', () => {
       const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
       const row = itemWrapper.querySelector('[data-link-suggestion-row]');
 
-      expect(typeEl?.textContent).toBe('Link');
+      expect(typeEl?.textContent).toBe('Link to web page');
       expect(row?.className).toContain('cursor-pointer');
     });
 
@@ -2498,7 +2517,7 @@ describe('LinkInlineTool', () => {
 
       expect(kindSection(itemWrapper)?.hidden).toBe(false);
       expect(kindRows(itemWrapper).map((row) => row.querySelector('[data-link-kind-title]')?.textContent)).toEqual([
-        defaultDictionary['tools.link.webLink'],
+        defaultDictionary['tools.link.webPage'],
         defaultDictionary['tools.link.emailAddress'],
       ]);
       expect(kindRows(itemWrapper).map((row) => row.getAttribute('data-link-kind-prefix'))).toEqual(['https://', 'mailto:']);

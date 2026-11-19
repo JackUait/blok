@@ -414,6 +414,13 @@ describe('group page eye (Round 81)', () => {
     expect(ruleBody(database, '[data-blok-database-property-eye] svg')).toContain('width: 20px');
   });
 
+  // notion-motion.md Round 82 (r82-n-a2-sel-pick1.raw, -grouppage.raw): Select group names and "No Select" are 14/500,
+  // Status group names 14/400.
+  it('draws group names 500, except a Status\'s', () => {
+    expect(ruleBody(database, '[data-blok-database-group-visibility-row]:not([data-status]) > [data-blok-database-panel-label]'))
+      .toContain('font-weight: 500');
+  });
+
   // notion-motion.md Round 82 (r82-n-a2-hidden-eye.raw): a hidden group's eye is rgb(56, 56, 54) too.
   it('inks every group eye the strong glyph grey, hidden or shown', () => {
     expect(ruleBody(database, '[data-blok-database-group-visibility-row] > [data-blok-database-property-eye]')).toContain('color: var(--blok-database-peek-glyph-strong)');

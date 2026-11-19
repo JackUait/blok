@@ -2161,6 +2161,22 @@ describe('view settings panel', () => {
     expect(rows()).toEqual(['Idea', 'No Stage']);
   });
 
+  // notion-motion.md Round 82 (r82-n-a2-grouppage.raw, -sel-pick1.raw): Select group names and "No Select" are 14/500;
+  // Status group names stay 14/400.
+  it('marks the group rows of a Status so their names keep the regular weight', () => {
+    const select = harness({ type: 'board', groupBy: 'stage' });
+    const panel = select.open('group');
+
+    expect([...document.querySelectorAll('[data-blok-database-group-visibility-row]')].map((row) => row.hasAttribute('data-status')))
+      .toEqual([false, false]);
+    panel.close();
+
+    harness({ type: 'board', groupBy: 'prog' }).open('group');
+
+    expect([...document.querySelectorAll('[data-blok-database-group-visibility-row]')].every((row) => row.hasAttribute('data-status')))
+      .toBe(true);
+  });
+
   // notion-motion.md Round 24 §1 (r24-grp.raw, r24-pinpz.raw): a board group row has a 24px "Pin group" button before
   // its eye. A click pins it and the button reads "Unpin group".
   it('pins a board group from its row and unpins it again', () => {

@@ -3069,6 +3069,9 @@ export class ViewSettingsPages {
               })),
             } : undefined);
 
+            // Round 82: Status group names keep 14/400, the rest are 14/500 (database.css).
+            row.toggleAttribute('data-status', property.type === 'status');
+
             return row;
           }),
         );

@@ -6,6 +6,7 @@ import { isPageCover } from '../../shared/page-cover';
 import { readIcon } from '../page/page-values';
 import { IconCalendar, IconChevronUpDown, IconDotsHorizontal, IconLock, IconMenu, IconPlus, IconTrash } from '../../components/icons';
 import { formatBytes } from '../../components/utils/format-bytes';
+import { getUserOS } from '../../components/utils/browser';
 import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import { onHover } from '../../components/utils/tooltip';
 import type { I18n } from '../../../types';
@@ -985,8 +986,10 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     });
     label.addEventListener('focusout', (event) => this.endEdit(event));
     // notion-motion.md Round 77 §4: Enter in the label does nothing; the label stays one line.
+    // Round 78 §3: End leaves the page where it is; macOS End in a one-line textarea scrolls the page instead.
     label.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' && !event.isComposing) event.preventDefault();
+      if (event.isComposing) return;
+      if (event.key === 'Enter' || (event.key === 'End' && getUserOS().mac)) event.preventDefault();
     });
     row.append(field, label);
 

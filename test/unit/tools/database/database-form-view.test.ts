@@ -1419,6 +1419,39 @@ describe('DatabaseFormView builder answers', () => {
     expect(label).toHaveFocus();
   });
 
+  // notion-motion.md Round 78 §3 "End in the builder's checkbox label": value, caret and page scroll stay.
+  // macOS End in a one-line textarea scrolls the page to its end instead.
+  describe('End in the checkbox label', () => {
+    const pressEnd = (userAgent: string): { label: HTMLTextAreaElement; end: KeyboardEvent } => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(userAgent);
+      const { root } = build();
+      const label = question(root, 'agree')?.querySelector<HTMLTextAreaElement>('[data-blok-database-form-checkbox-label]');
+
+      if (label === null || label === undefined) throw new Error('no label');
+      label.value = 'r78 lbl';
+      label.focus();
+      const end = new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true });
+
+      label.dispatchEvent(end);
+
+      return { label, end };
+    };
+
+    it('on macOS does not scroll the page', () => {
+      const { label, end } = pressEnd('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)');
+
+      expect(end.defaultPrevented).toBe(true);
+      expect(label).toHaveFocus();
+      expect(label.value).toBe('r78 lbl');
+    });
+
+    it('off macOS is left to the browser, which moves the caret', () => {
+      const { end } = pressEnd('Mozilla/5.0 (X11; Linux x86_64)');
+
+      expect(end.defaultPrevented).toBe(false);
+    });
+  });
+
   // notion-motion.md Round 77 §4 "Respondents": the label shows as text beside the box.
   it('a respondent sees the checkbox label beside the box, naming it', () => {
     const withLabel = properties.map((entry) => (entry.id === 'agree' ? { ...entry, checkboxLabel: 'I agree' } : entry));

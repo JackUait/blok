@@ -53,7 +53,7 @@ export const withEntryIds = <T extends { id?: string }>(entries: readonly T[]): 
  * empty groups on, whatever the type, and so does a re-pick of the property
  * already grouped on (notion-motion.md Round 79 §2). A re-pick also drops the
  * group sort back to the type's default and shows the hidden groups again
- * (Round 81); it keeps the other settings. Sub-group states (`sub:`) stay: unread.
+ * (Round 81); it keeps the other settings and the sub-group states (`sub:`).
  * A switch to another property starts from that type's defaults.
  * A new board's own grouping is not a pick and keeps the switch off (Round 78).
  */
@@ -75,15 +75,21 @@ export const groupByChange = (
 /**
  * The write when people pick a board's sub-group. Notion hid the bands with no
  * cards right after the pick (research/30 B26); the switch itself was not read.
- * Re-picking the same property keeps the settings.
+ * A re-pick of the same property drops the sub-group sort to its default and
+ * shows the hidden sub-groups (`sub:`) again, as the group re-pick does (Round 82).
  */
 export const subGroupByChange = (
   view: DatabaseViewConfig | undefined,
   property: PropertyDefinition
-): Pick<DatabaseViewConfig, 'subGroupBy' | 'subGroupSettings'> => {
-  if (property.id === view?.subGroupBy) return { subGroupBy: property.id };
+): Pick<DatabaseViewConfig, 'subGroupBy' | 'subGroupSettings' | 'hiddenGroups'> => {
+  if (view === undefined || property.id !== view.subGroupBy) {
+    return { subGroupBy: property.id, subGroupSettings: { hideEmptyGroups: true } };
+  }
+  const { sort: _sort, ...subGroupSettings } = view.subGroupSettings ?? {};
 
-  return { subGroupBy: property.id, subGroupSettings: { hideEmptyGroups: true } };
+  if (view.hiddenGroups === undefined) return { subGroupBy: property.id, subGroupSettings };
+
+  return { subGroupBy: property.id, subGroupSettings, hiddenGroups: view.hiddenGroups.filter((group) => !group.id.startsWith('sub:')) };
 };
 
 /** The name Add view gives each layout; stored in English and shown translated (database-localization.ts). */

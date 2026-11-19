@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { applyViewChanges, groupByChange, layoutChange } from '../../../../src/shared/database/view-changes';
+import { applyViewChanges, groupByChange, layoutChange, subGroupByChange } from '../../../../src/shared/database/view-changes';
 
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/shared/database/types';
 
@@ -87,6 +87,24 @@ describe('groupByChange', () => {
 
   it('picking another property leaves the hidden groups alone', () => {
     expect(groupByChange({ ...table(), groupBy: 'n', hiddenGroups: [{ id: 'todo' }] }, schema[2])).not.toHaveProperty('hiddenGroups');
+  });
+});
+
+describe('subGroupByChange', () => {
+  // notion-motion.md Round 82 (r82-n-a2-sub-before-repick.raw, -sub-repick.raw): Sub-group by Select,
+  // Reverse alphabetical with "Red" hidden; re-picking Select gave Sort Manual and showed Red.
+  it('re-picking the same property resets the sub-group sort and shows hidden sub-groups again', () => {
+    const change = subGroupByChange({
+      ...table(), type: 'board', groupBy: 'n', subGroupBy: 's', subGroupSettings: { sort: 'descending', hideEmptyGroups: true },
+      hiddenGroups: [{ id: 'todo' }, { id: 'sub:red' }],
+    }, schema[2]);
+
+    expect(change.subGroupSettings).toEqual({ hideEmptyGroups: true });
+    expect(change.hiddenGroups).toEqual([{ id: 'todo' }]);
+  });
+
+  it('picking another property leaves the hidden groups alone', () => {
+    expect(subGroupByChange({ ...table(), subGroupBy: 'n', hiddenGroups: [{ id: 'sub:x' }] }, schema[2])).not.toHaveProperty('hiddenGroups');
   });
 });
 

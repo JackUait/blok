@@ -184,6 +184,24 @@ describe.each(sessions)('database view settings on a %s session', (_name, open) 
     }
   });
 
+  // notion-motion.md Round 82: re-picking the grouping and the sub-grouping together clears both kinds of hidden groups.
+  it('re-picking groupBy and subGroupBy together shows every hidden group and sub-group', async () => {
+    const session = open(seedOf(databaseBlock([{
+      ...baseView, type: 'board', groupBy: 'st', subGroupBy: 'n',
+      subGroupSettings: { sort: 'descending' }, hiddenGroups: [{ id: 'o1' }, { id: 'sub:x' }],
+    }])));
+
+    try {
+      await update(session, { groupBy: 'st', subGroupBy: 'n' });
+      const view = await viewOf(session);
+
+      expect(view.hiddenGroups ?? []).toEqual([]);
+      expect(view.subGroupSettings).toEqual({});
+    } finally {
+      await session.close();
+    }
+  });
+
   it.each([
     [{ form: { public: true } }, 'COMMAND_UNAVAILABLE'],
     [{ form: { anonymous: true } }, 'COMMAND_UNAVAILABLE'],

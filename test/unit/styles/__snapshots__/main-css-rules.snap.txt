@@ -7938,6 +7938,20 @@ button[data-blok-database-board-lane-count]:hover {
   margin: var(--blok-space-3) var(--blok-space-2) var(--blok-space-2);
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] > [data-blok-popover-container] > [data-blok-field='search'] {
+  padding-inline: var(--blok-space-1-25);
+  font-size: 14px;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] > [data-blok-popover-container] > [data-blok-field='search']::before {
+  display: none;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] > [data-blok-popover-container] > [data-blok-field='search'] > input {
+  height: 20px;
+  line-height: 20px;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator], [data-blok-popover][data-blok-popover-custom-class~='blok-database-page-actions-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator] {
   padding-block: var(--blok-space-0-75) var(--blok-space-1);
   padding-inline: var(--blok-space-2);

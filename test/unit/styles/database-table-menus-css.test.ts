@@ -864,3 +864,19 @@ describe('the Unlock menu (Round 69)', () => {
     expect(declared(`[data-blok-theme="dark"] ${LOCK}`, '--blok-item-focus-bg')).toEqual(['rgba(255, 255, 255, 0.055)']);
   });
 });
+
+// notion-motion.md Round 81 §2 "Card ⋯, board" (r81-n-bd-cardmenu.raw; r35-cardmenu.raw: field 241x28, pad 3 6, no glyph).
+describe('card menu search field (Round 81)', () => {
+  const FIELD = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] > [data-blok-popover-container] > [data-blok-field='search']";
+
+  it('puts the 14px text 18 in: no search glyph, 5px padding inside the 1px border', () => {
+    expect(declared(`${FIELD}::before`, 'display')).toEqual(['none']);
+    expect(declared(FIELD, 'padding-inline')).toEqual(['var(--blok-space-1-25)']);
+    expect(declared(FIELD, 'font-size')).toEqual(['14px']);
+  });
+
+  it('draws the input 20 tall, so its text sits 16 under the menu top', () => {
+    expect(declared(`${FIELD} > input`, 'height')).toEqual(['20px']);
+    expect(declared(`${FIELD} > input`, 'line-height')).toEqual(['20px']);
+  });
+});

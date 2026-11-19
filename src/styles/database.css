@@ -4034,6 +4034,22 @@ button[data-blok-database-board-lane-count]:hover {
   margin: var(--blok-space-3) var(--blok-space-2) var(--blok-space-2);
 }
 
+/* notion-motion.md Round 81 §2 (r81-n-bd-cardmenu.raw): the card menu's field has no glyph, and its 14px text
+   is 229x20 at +18,+16. 5px plus the 1px border puts it 6 into the field. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] > [data-blok-popover-container] > [data-blok-field='search'] {
+  padding-inline: var(--blok-space-1-25);
+  font-size: 14px;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] > [data-blok-popover-container] > [data-blok-field='search']::before {
+  display: none;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] > [data-blok-popover-container] > [data-blok-field='search'] > input {
+  height: 20px;
+  line-height: 20px;
+}
+
 /* Round 35: a line takes 8px, 3 above and 4 below, and stops 12 from the box's sides. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator],
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-page-actions-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator] {

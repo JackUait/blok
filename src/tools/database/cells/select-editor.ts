@@ -605,6 +605,8 @@ class SelectEditor {
         this.selected = this.selected.filter((id) => id !== optionId);
         this.commit();
       }
+      // notion-motion.md Round 82 §1: Notion highlights the first option after the Delete.
+      this.activeIndex = this.activeTargets().length > 0 ? 0 : -1;
       this.renderChips();
       this.renderList();
     });

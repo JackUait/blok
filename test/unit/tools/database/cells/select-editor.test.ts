@@ -507,6 +507,21 @@ describe('select cell editor', () => {
       expect(search()).toHaveFocus();
     });
 
+    // notion-motion.md Round 82 §1 (r82-n-a1-cell-after-confirm-delete.raw): after a confirmed Delete the first option is highlighted.
+    it('highlights the first option after a confirmed Delete', async () => {
+      const ctx = openSelect(null);
+
+      openMenu('o2');
+      m('[data-blok-database-option-delete]').click();
+      confirmAction('confirm').click();
+
+      await vi.waitFor(() => expect(lastOptions(ctx).map((o) => o.id)).toEqual(['o1', 'o3']));
+      expect(row('o1').hasAttribute('data-active')).toBe(true);
+      expect(row('o3').hasAttribute('data-active')).toBe(false);
+      expect(search().getAttribute('aria-activedescendant')).toBe(row('o1').id);
+      expect(search()).toHaveFocus();
+    });
+
     // notion-motion.md Round 79 §4: the cell editor asks in the same centred dialog as the form's Delete option (Round 77 §4, 78 §2).
     it('asks in the form\'s Delete option dialog: 600 title, bordered red Delete focused, bordered Cancel', () => {
       openSelect(['o1']);

@@ -130,6 +130,12 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-gallery-new]::before')).toContain('margin-inline-end: calc(-1 * var(--blok-space-1-5))');
   });
 
+  // notion-motion.md Round 81 §2 (r81-n-gallery-newpage.raw): Notion's centred group starts -6 and its glyph -1,
+  // so the glyph and words sit 3.5 left of the tile's centre.
+  it('shifts the "+ New page" glyph and words 3.5px left of centre', () => {
+    expect(ruleBody('[data-blok-database-gallery-new] > span[aria-hidden="true"]')).toContain('margin-inline-start: calc(-1 * var(--blok-space-1-75))');
+  });
+
   it('crops images unless Fit image is on', () => {
     expect(ruleBody('[data-blok-database-gallery-image]')).toMatch(/object-fit:\s*cover/);
     expect(ruleBody('[data-blok-database-gallery][data-fit-image] [data-blok-database-gallery-image]')).toMatch(/object-fit:\s*contain/);

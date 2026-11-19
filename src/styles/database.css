@@ -15878,6 +15878,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   block-size: 15px;
 }
 
+/* notion-motion.md Round 81 §2 (r81-n-gallery-newpage.raw): Notion's centred group starts -6 and its glyph -1,
+   so glyph and words sit 3.5 left of centre. -7 on the first item shifts the centred pair by half of it. */
+[data-blok-database-gallery-new] > span[aria-hidden="true"] {
+  margin-inline-start: calc(-1 * var(--blok-space-1-75));
+}
+
 [data-blok-database-gallery-load-more],
 [data-blok-database-column-load-more] {
   margin-block-start: var(--blok-space-2);

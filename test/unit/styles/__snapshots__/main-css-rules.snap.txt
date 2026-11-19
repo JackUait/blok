@@ -18561,6 +18561,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   block-size: 15px;
 }
 
+[data-blok-database-gallery-new] > span[aria-hidden="true"] {
+  margin-inline-start: calc(-1 * var(--blok-space-1-75));
+}
+
 [data-blok-database-gallery-load-more], [data-blok-database-column-load-more] {
   margin-block-start: var(--blok-space-2);
   padding: 0 var(--blok-space-2);

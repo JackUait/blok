@@ -571,12 +571,55 @@ describe('checkbox cell', () => {
       expect(event.defaultPrevented).toBe(false);
     });
 
-    it('on macOS leaves Shift+Home to the browser', () => {
+    // notion-motion.md Round 76 §2: Shift+Home / Shift+End extend to the visual line's edge (Beta 56→33).
+    it.each([
+      ['Home', 'backward'],
+      ['End', 'forward'],
+    ])('on macOS Shift+%s extends the selection to the %s line boundary', (key, direction) => {
       vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC);
       const modify = stubModify();
 
       openCellEditor(makeProperty('text'), 'hello', makeAnchor(), makeEditorContext());
-      const event = press(field(), 'Home', { shiftKey: true });
+      const event = press(field(), key, { shiftKey: true });
+
+      expect(modify).toHaveBeenCalledWith('extend', direction, 'lineboundary');
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    // notion-motion.md Round 76 §2: the Title cell moves to 0 / 5; a richText cell is Notion's Text.
+    it.each([
+      ['title', 'Home', 'backward'],
+      ['title', 'End', 'forward'],
+      ['richText', 'Home', 'backward'],
+      ['richText', 'End', 'forward'],
+    ] as const)('on macOS a %s editor moves the caret on %s', (propertyType, key, direction) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC);
+      const modify = stubModify();
+
+      openCellEditor(makeProperty(propertyType), 'hello', makeAnchor(), makeEditorContext());
+      const event = press(field(), key);
+
+      expect(modify).toHaveBeenCalledWith('move', direction, 'lineboundary');
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it.each(['metaKey', 'ctrlKey', 'altKey'] as const)('on macOS Home with %s is left to the browser', (modifier) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC);
+      const modify = stubModify();
+
+      openCellEditor(makeProperty('text'), 'hello', makeAnchor(), makeEditorContext());
+      const event = press(field(), 'Home', { [modifier]: true });
+
+      expect(modify).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('on macOS a url editor leaves Home to the browser', () => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC);
+      const modify = stubModify();
+
+      openCellEditor(makeProperty('url'), 'hello', makeAnchor(), makeEditorContext());
+      const event = press(field(), 'Home');
 
       expect(modify).not.toHaveBeenCalled();
       expect(event.defaultPrevented).toBe(false);

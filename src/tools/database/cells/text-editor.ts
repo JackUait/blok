@@ -17,6 +17,8 @@ const parseNumberEntry = (text: string, property: PropertyDefinition, locale: st
 /** research/16 §4: Notion's url, email and phone editors. */
 const INPUT_TYPES: Partial<Record<PropertyDefinition['type'], string>> = { url: 'url', email: 'email', phone: 'tel' };
 
+const LINE_KEY_TYPES: ReadonlySet<PropertyDefinition['type']> = new Set(['title', 'text', 'richText']);
+
 /** research/22 §3, research/23 §3c, research/30 B20: Escape saves every text-like value. */
 const escapeCommits = (type: PropertyDefinition['type']): boolean =>
   type === 'title' || type === 'text' || type === 'richText' || type === 'number' || type === 'url'
@@ -144,14 +146,15 @@ export const openTextEditor = (
 
       return;
     }
-    // notion-motion.md Round 75 §2: Notion moves to the visual line's edge; macOS Home/End only scroll a textarea.
-    // Other platforms already move the caret, and modifier chords were not measured.
+    // notion-motion.md Rounds 75–76 §2: Notion moves (Shift: extends) to the visual line's edge in Title and Text;
+    // macOS Home/End only scroll a field. Other platforms already move the caret; ⌘/Ctrl/⌥ chords and the
+    // url, email, phone and number fields were not measured.
     const edge = ({ Home: 'backward', End: 'forward' } as const)[event.key as 'Home' | 'End'];
-    const bare = !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey;
+    const plain = !event.metaKey && !event.ctrlKey && !event.altKey;
 
-    if (edge !== undefined && bare && property.type === 'text' && getUserOS().mac) {
+    if (edge !== undefined && plain && LINE_KEY_TYPES.has(property.type) && getUserOS().mac) {
       event.preventDefault();
-      window.getSelection()?.modify('move', edge, 'lineboundary');
+      window.getSelection()?.modify(event.shiftKey ? 'extend' : 'move', edge, 'lineboundary');
 
       return;
     }

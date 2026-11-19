@@ -2712,6 +2712,19 @@ describe('DatabaseTableView', () => {
       expect(items.find((item) => item.title === 'tools.database.calcCount')?.children?.width).toBe('250px');
     });
 
+    // notion-motion.md Round 64 §5 (r64-n-calc.raw): with Sum set, only Sum is marked; "More options" shows just its chevron.
+    it('marks the current calculation, not the group that holds it', () => {
+      const items = calculationItems({ type: 'number' }, 'sum', { t: (key: string) => key }, vi.fn()) as Array<{
+        title?: string;
+        isActive?: boolean;
+        children?: { items?: Array<{ title?: string; isActive?: boolean }> };
+      }>;
+      const more = items.find((item) => item.title === 'tools.database.calcMoreOptions');
+
+      expect(items.map((item) => item.isActive === true)).toEqual([false, false, false, false]);
+      expect(more?.children?.items?.find((item) => item.title === 'tools.database.calcSum')?.isActive).toBe(true);
+    });
+
     // notion-motion.md Round 11 "Read-only database": no "Calculate" node exists in a locked table's footer.
     it('read-only: an empty footer cell holds no Calculate, a set one keeps its value', () => {
       const { root } = mount({ readOnly: true, view: tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }] }) });

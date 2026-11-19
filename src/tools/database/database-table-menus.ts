@@ -146,7 +146,7 @@ export const calculationItems = (
   const group = (titleKey: string, fns: readonly CalculationFn[], lead: PopoverItemParams[] = []): PopoverItemParams => ({
     type: PopoverItemType.Default,
     title: i18n.t(titleKey),
-    isActive: current !== undefined && fns.includes(current),
+    // notion-motion.md Round 64 §5: the group stays unmarked; only the picked calculation inside it is.
     children: { items: [...lead, ...fns.map(leaf)], width: CALC_LIST_WIDTH },
   });
   const checkbox = property.type === 'checkbox';

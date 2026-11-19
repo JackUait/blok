@@ -9,7 +9,7 @@ import type { BlokConfig } from '../../../types/configs/blok-config';
 import type { Blocks, Notifier, Toolbar, I18n, InlineToolbar, Tools } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR, createSelector, INLINE_TOOLBAR_INTERFACE_VALUE } from '../constants';
-import { IconLink, IconGlobe, IconMail, IconHash, IconTrash, IconReturn, IconWarning, IconPage, IconTable } from '../icons';
+import { IconLink, IconGlobe, IconMail, IconHash, IconTrash, IconReturn, IconWarning, IconPage, IconTable, IconPhone } from '../icons';
 import { SelectionUtils } from '../selection/index';
 import { log } from '../utils';
 import { PopoverItemType } from '../utils/popover';
@@ -1522,6 +1522,10 @@ export class LinkInlineTool implements InlineTool {
     }
     if (url.startsWith('#')) {
       return { icon: IconHash, label: this.i18n.t('tools.link.jumpToSection') };
+    }
+
+    if (/^tel:/i.test(url)) {
+      return { icon: IconPhone, label: this.i18n.t('tools.link.webLink') };
     }
 
     // tel:, sms:, ftp: and the like lead to no web page.

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
-import { IconLink, IconPage, IconTable } from '../../../../src/components/icons';
+import { IconGlobe, IconLink, IconPage, IconPhone, IconTable } from '../../../../src/components/icons';
 
 import defaultDictionary from '../../../../src/components/i18n/locales/en.json';
 import { LinkInlineTool } from '../../../../src/components/inline-tools/inline-tool-link';
@@ -904,6 +904,22 @@ describe('LinkInlineTool', () => {
       update.updateSuggestion('https://example.com');
 
       expect(hint?.classList.contains('hidden')).toBe(false);
+    });
+
+    it.each([
+      ['tel:+15551234567', IconPhone],
+      ['TEL:911', IconPhone],
+      ['sms:+15551234567', IconGlobe],
+      ['telegram.org', IconGlobe],
+    ])('draws the sign for %s: a telephone for a phone number only', (value, svg) => {
+      const { tool } = createTool();
+      const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+      const expected = document.createElement('span');
+
+      expected.innerHTML = svg;
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion(value);
+
+      expect(itemWrapper.querySelector('[data-link-suggestion-icon]')?.innerHTML).toBe(expected.innerHTML);
     });
 
     it('shows the suggestion icon and the enter-key hint as bare glyphs, with no chip behind them', () => {

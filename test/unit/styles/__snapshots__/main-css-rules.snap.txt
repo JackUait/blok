@@ -39304,10 +39304,6 @@ textarea[data-blok-field] {
   overscroll-behavior: contain;
 }
 
-[data-link-pages]:has([data-link-page-icon]) [data-link-page-row]:not(:has([data-link-page-icon])) {
-  padding-inline-start: calc(var(--blok-space-2) + var(--blok-space-5) + var(--blok-space-2-5));
-}
-
 [data-link-heading-row] {
   position: relative;
   padding-inline-start: calc(var(--blok-space-2) + var(--_blok-link-heading-depth, 0) * var(--blok-space-4));

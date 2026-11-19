@@ -150,12 +150,6 @@
   overscroll-behavior: contain;
 }
 
-/* Pages: one with no icon still starts its title where the others do
-   (the icon's 20px box and the row's 10px gap). */
-[data-link-pages]:has([data-link-page-icon]) [data-link-page-row]:not(:has([data-link-page-icon])) {
-  padding-inline-start: calc(var(--blok-space-2) + var(--blok-space-5) + var(--blok-space-2-5));
-}
-
 /* Headings: an outline, stepped in on guide lines. */
 [data-link-heading-row] {
   position: relative;

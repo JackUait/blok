@@ -108,12 +108,19 @@ test.describe('link field: pages', () => {
     await expect(rows.locator('[data-link-page-title]')).toHaveText(['Roadmap', 'Meeting notes']);
     await expect(rows.nth(0).locator('[data-link-page-meta]')).toHaveText('Work / Team');
     await expect(rows.nth(0).locator('[data-link-page-icon]')).toHaveText('🗺️');
-    await expect(rows.nth(1).locator('[data-link-page-icon]')).toHaveCount(0);
+    // A page without an icon shows the page glyph, at the icon's size.
+    // The laid-out width: the menu scales in, so a measured box is smaller for a moment.
+    const glyphWidth = await rows.nth(1).locator('[data-link-page-icon]').evaluate((icon) => {
+      const glyph = icon.querySelector('svg');
 
-    // A page without an icon still starts its title where the others do.
-    const [withIcon, plain] = [await rows.nth(0).locator('[data-link-page-title]').boundingBox(), await rows.nth(1).locator('[data-link-page-title]').boundingBox()];
+      return glyph ? getComputedStyle(glyph).width : null;
+    });
+    const [withIcon, plain] = await rows.locator('[data-link-page-title]').evaluateAll((titles) =>
+      titles.map((title) => (title instanceof HTMLElement ? title.offsetLeft : null)));
 
-    expect(plain?.x).toBe(withIcon?.x);
+    expect(glyphWidth).toBe('16px');
+    expect(withIcon).not.toBeNull();
+    expect(plain).toBe(withIcon);
 
     const [pagesBox, headingsBox] = [await section.boundingBox(), await page.getByRole('group', { name: 'On this page' }).boundingBox()];
 

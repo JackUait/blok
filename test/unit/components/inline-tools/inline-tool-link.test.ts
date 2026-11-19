@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
-import { IconLink } from '../../../../src/components/icons';
+import { IconLink, IconPage, IconTable } from '../../../../src/components/icons';
 
 import defaultDictionary from '../../../../src/components/i18n/locales/en.json';
 import { LinkInlineTool } from '../../../../src/components/inline-tools/inline-tool-link';
@@ -122,7 +122,7 @@ const ENGLISH_LINK_TRANSLATIONS: Record<string, string> = {
   'tools.page.draft': defaultDictionary['tools.page.draft'],
 };
 
-type PageHit = { pageId: string; title?: string; icon?: { type: 'emoji'; value: string }; access?: 'none'; path?: string[]; status?: 'draft' | 'published' };
+type PageHit = { pageId: string; title?: string; icon?: { type: 'emoji'; value: string }; access?: 'none'; kind?: 'database'; path?: string[]; status?: 'draft' | 'published' };
 
 type PageHost = {
   search?: (query: string) => Promise<readonly PageHit[]>;
@@ -1715,7 +1715,7 @@ describe('LinkInlineTool', () => {
         .toEqual(['data-link-recent', 'data-link-pages', 'data-link-headings', 'data-link-kinds']);
     });
 
-    it('shows a page\'s own icon, and nothing in its place for a page without one', async () => {
+    it('shows a page\'s own icon, and the page glyph for a page without one', async () => {
       pageHost.config = hostWith(vi.fn().mockResolvedValue(PAGES));
 
       const { itemWrapper } = openCreating();
@@ -1723,9 +1723,26 @@ describe('LinkInlineTool', () => {
       await vi.waitFor(() => expect(pageRows(itemWrapper)).toHaveLength(2));
 
       const [plain, withIcon] = pageRows(itemWrapper);
+      const glyph = document.createElement('span');
 
-      expect(plain.querySelector('[data-link-page-icon]')).toBeNull();
+      glyph.innerHTML = IconPage;
+
+      expect(plain.querySelector('[data-link-page-icon]')?.innerHTML).toBe(glyph.innerHTML);
       expect(withIcon.querySelector('[data-link-page-icon]')?.textContent).toBe('📝');
+    });
+
+    it('shows the table glyph for a full-page database without an icon', async () => {
+      pageHost.config = hostWith(vi.fn().mockResolvedValue([{ pageId: 'd1', title: 'Tasks', kind: 'database' }]));
+
+      const { itemWrapper } = openCreating();
+
+      await vi.waitFor(() => expect(pageRows(itemWrapper)).toHaveLength(1));
+
+      const glyph = document.createElement('span');
+
+      glyph.innerHTML = IconTable;
+
+      expect(pageRows(itemWrapper)[0].querySelector('[data-link-page-icon]')?.innerHTML).toBe(glyph.innerHTML);
     });
 
     it('names an untitled page "Page" and marks a draft', async () => {

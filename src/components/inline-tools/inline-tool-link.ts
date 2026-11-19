@@ -9,7 +9,7 @@ import type { BlokConfig } from '../../../types/configs/blok-config';
 import type { Blocks, Notifier, Toolbar, I18n, InlineToolbar, Tools } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR, createSelector, INLINE_TOOLBAR_INTERFACE_VALUE } from '../constants';
-import { IconLink, IconGlobe, IconMail, IconHash, IconTrash, IconReturn, IconWarning } from '../icons';
+import { IconLink, IconGlobe, IconMail, IconHash, IconTrash, IconReturn, IconWarning, IconPage, IconTable } from '../icons';
 import { SelectionUtils } from '../selection/index';
 import { log } from '../utils';
 import { PopoverItemType } from '../utils/popover';
@@ -917,19 +917,17 @@ export class LinkInlineTool implements InlineTool {
         return cached;
       }
 
-      const icon = hit.icon === undefined ? null : document.createElement('span');
+      const icon = document.createElement('span');
       const href = this.pageHref(host, hit.pageId);
       const meta = [
         hit.status === 'draft' ? this.i18n.t('tools.page.draft') : '',
         (hit.path ?? []).join(PAGE_PATH_SEPARATOR),
       ].filter((part) => part !== '').join(' · ');
 
-      if (icon) {
-        icon.className = PAGE_ICON_CLASSES;
-        icon.setAttribute('aria-hidden', 'true');
-        icon.setAttribute('data-link-page-icon', '');
-        icon.append(pageIconNode(hit.icon));
-      }
+      icon.className = PAGE_ICON_CLASSES;
+      icon.setAttribute('aria-hidden', 'true');
+      icon.setAttribute('data-link-page-icon', '');
+      icon.append(pageIconNode(hit.icon, hit.kind === 'database' ? IconTable : IconPage));
 
       const row = this.createOptionRow(
         'page',

@@ -282,15 +282,15 @@ test.describe('link field: shelf of recent links', () => {
     await expect(rows.nth(1).locator('[data-link-heading-tag]')).toBeVisible();
   });
 
-  test('prints the section labels in small capitals with no rule under the field', async ({ page }) => {
+  test('prints the section labels in normal case with no rule under the field', async ({ page }) => {
     await openLinkField(page, 'target');
 
     const label = page.locator('[data-link-recent-label]');
 
-    await expect(label).toHaveCSS('text-transform', 'uppercase');
+    await expect(label).toHaveCSS('text-transform', 'none');
     await expect(label).toHaveCSS('font-size', '11px');
     await expect(label).toHaveCSS('font-weight', '600');
-    await expect(page.locator('[data-link-headings-label]')).toHaveCSS('text-transform', 'uppercase');
+    await expect(page.locator('[data-link-headings-label]')).toHaveCSS('text-transform', 'none');
     expect(await page.locator('[data-link-options]').evaluate((options) => Array.from(options.children).every((child) => child.hasAttribute('data-link-group')))).toBe(true);
   });
 

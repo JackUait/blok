@@ -1803,7 +1803,7 @@
 }
 
 /**
- * Column title text — uppercase status-label style, never truncate.
+ * Column title text — never truncate.
  */
 [data-blok-database-column-title],
 [data-blok-database-no-value-label],
@@ -9667,14 +9667,13 @@ textarea[data-blok-database-cell-input] {
 }
 
 /* research/30 §10f: "Not started DEFAULT". Size and ink unmeasured: the template menu's "Default" mark. */
-/* Round 10: "DEFAULT" right before the chevron, 12/16.8 weight 500. Notion's gray fails AA, so it keeps the secondary ink. */
+/* Round 10: "Default" right before the chevron, 12/16.8 weight 500. Notion's gray fails AA, so it keeps the secondary ink. */
 [data-blok-database-option-default] {
   margin-inline-start: auto;
   color: var(--blok-database-ink-secondary);
   font-size: 12px;
   line-height: 16.8px;
   font-weight: 500;
-  text-transform: uppercase;
   align-self: center;
 }
 
@@ -10803,8 +10802,6 @@ textarea[data-blok-database-cell-input] {
   font-size: 12px;
   line-height: 18px;
   font-weight: 500;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
   cursor: pointer;
   transition: background-color 20ms ease-in;
 }
@@ -11870,8 +11867,6 @@ button[data-blok-database-table-calc] > [data-blok-database-table-calc-box]:hove
   font-size: 10px;
   line-height: 15px;
   font-weight: 500;
-  letter-spacing: 1px;
-  text-transform: uppercase;
 }
 
 /* r9-calc-numhover.raw: "Calculate" is a 26px button, and its label fades in 200ms ease on its own cell only. */

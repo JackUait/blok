@@ -25,7 +25,7 @@ export const MigrationWalls: React.FC<{ className?: string }> = ({ className }) 
           >
             {/* The old world — label and title deliberately dimmed; description stays at full contrast */}
             <div>
-              <span className="text-[0.7rem] font-bold uppercase tracking-wider text-destructive opacity-70">
+              <span className="text-[0.7rem] font-bold text-destructive opacity-70">
                 {t("migration.wallOldLabel")}
               </span>
               <h3 className="mt-1 text-base font-semibold text-foreground opacity-70">
@@ -39,7 +39,7 @@ export const MigrationWalls: React.FC<{ className?: string }> = ({ className }) 
             <span aria-hidden className="hidden text-xl text-primary sm:block">→</span>
 
             <div>
-              <span className="text-[0.7rem] font-bold uppercase tracking-wider text-primary">
+              <span className="text-[0.7rem] font-bold text-primary">
                 {t("migration.wallNewLabel")}
               </span>
               <h3 className="mt-1 text-base font-semibold text-foreground">

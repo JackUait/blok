@@ -122,7 +122,7 @@ export const CalloutTool = createReactBlock<{ text: string }, { accent: string }
   // The toolbox icon may be a React element — reuse the component you render
   // in the block body; no parallel raw-SVG string to maintain.
   toolbox: { title: 'Callout', icon: <CalloutIcon /> },
-  // Declares the saved data shape and its defaults — this IS your save() schema.
+  // Declares the saved data shape and its defaults — this is your save() schema.
   propSchema: { text: { default: '' } },
   // \`config\` is the tool's config from your \`tools\` map — host props
   // (permissions, URLs…) flow in here, live, no context provider needed.
@@ -150,7 +150,7 @@ import { createVueBlock } from '@bloklabs/vue';
 export const CalloutTool = createVueBlock<{ text: string }>({
   type: 'callout',
   toolbox: { title: 'Callout', icon: '💡' },
-  // Declares the saved data shape and its defaults — this IS your save() schema.
+  // Declares the saved data shape and its defaults — this is your save() schema.
   propSchema: { text: { default: '' } },
   setup: ({ data, commit }) => () =>
     h('input', {
@@ -188,7 +188,7 @@ export class CalloutComponent {
 export const CalloutTool = createAngularBlock<{ text: string }>({
   type: 'callout',
   toolbox: { title: 'Callout', icon: '💡' },
-  // Declares the saved data shape and its defaults — this IS your save() schema.
+  // Declares the saved data shape and its defaults — this is your save() schema.
   propSchema: { text: { default: '' } },
   component: CalloutComponent,
 });`,
@@ -206,21 +206,21 @@ const CONTAINER_AUTHORING_CODE: Partial<Record<string, { code: string; language:
 export const StepsTool = createReactBlock<{ title: string }>({
   type: 'steps',
   propSchema: { title: { default: '' } },
-  // Everything core reads off the tool CLASS goes in one place, under the same
+  // Everything core reads off the tool class goes in one place, under the same
   // names a vanilla tool uses: ownsChildren, keepsChildrenOnEnter,
   // conversionConfig, pasteConfig, sanitize, shortcut, upgradeData…
-  // keepsChildrenOnEnter keeps Enter on the empty LAST step INSIDE the
+  // keepsChildrenOnEnter keeps Enter on the empty last step inside the
   // container; without it that line escapes to the container's parent.
   statics: { ownsChildren: true, keepsChildrenOnEnter: true },
   // A container's own chrome usually isn't editable. Without an anchor the
   // toolbar centers on the first [contenteditable] under the host — which is
-  // your FIRST CHILD BLOCK — parking +/drag halfway down the block. Point at the
+  // your first child block — parking +/drag halfway down the block. Point at the
   // element with \`toolbarAnchorRef\` (below); this host-scoped hook is the
   // fallback for an anchor you can't reach with a ref.
-  // The seeding hook. Fires ONCE, after the portal's first commit — the first
+  // The seeding hook. Fires once, after the portal's first commit — the first
   // tick at which this block's DOM (and its adopted child holders) exists;
-  // rendered() runs BEFORE that commit, which is why hosts used to set the
-  // caret twice around a rAF. It only fires for a genuine CREATION (the author
+  // rendered() runs before that commit, which is why hosts used to set the
+  // caret twice around a rAF. It only fires for a genuine creation (the author
   // used a keystroke, \`api.blocks.insert\`, or a turn-into), never on a
   // load/undo/paste replay — where the children arrive a tick later and an
   // empty read is transient. Do not hand-roll it in \`onMounted\` by
@@ -285,17 +285,17 @@ import { createVueBlock, useBlocks, useBlokInstance } from '@bloklabs/vue';
 export const StepsTool = createVueBlock<{ title: string }>({
   type: 'steps',
   propSchema: { title: { default: '' } },
-  // Everything core reads off the tool CLASS, under the vanilla names.
-  // keepsChildrenOnEnter keeps Enter on the empty LAST step INSIDE the
+  // Everything core reads off the tool class, under the vanilla names.
+  // keepsChildrenOnEnter keeps Enter on the empty last step inside the
   // container; without it that line escapes to the container's parent.
   statics: { ownsChildren: true, keepsChildrenOnEnter: true },
   // Without an anchor the toolbar centers on the first [contenteditable] under
-  // the host — which for a container is its FIRST CHILD BLOCK. Point at the
+  // the host — which for a container is its first child block. Point at the
   // element with \`ctx.toolbarAnchorRef\` (below); this host-scoped hook is the
   // fallback for an anchor you can't reach with a ref.
-  // The seeding hook. Fires ONCE, after the teleport's first commit — the first
+  // The seeding hook. Fires once, after the teleport's first commit — the first
   // tick at which this block's DOM (and its adopted child holders) exists — and
-  // only for a genuine CREATION (a keystroke, \`api.blocks.insert\`, a
+  // only for a genuine creation (a keystroke, \`api.blocks.insert\`, a
   // turn-into), never on a load/undo/paste replay. Do not hand-roll it in
   // \`onMounted\` by accepting only the keystroke origin: that gate drops the
   // api and turn-into paths.
@@ -321,7 +321,7 @@ export const StepsTool = createVueBlock<{ title: string }>({
           \`\${data.value.title} — \${steps.value.length}\`
         ),
         // Named per-child hooks instead of positional :nth-child() CSS. They are
-        // written on each child's HOLDER, which stays a direct child of the slot.
+        // written on each child's holder, which stays a direct child of the slot.
         // childContentAttributes writes one level in — on each child's
         // [data-blok-element-content] wrapper — so a rail aligns to the child's
         // text box without your CSS hard-coding Blok's wrapper chain.
@@ -378,7 +378,7 @@ export class StepsComponent implements AfterViewInit {
   ngAfterViewInit() {
     // Name the toolbar anchor from inside the component — no self-invented data
     // attribute to querySelector for. Without an anchor the toolbar centers on
-    // the first [contenteditable] under the host, i.e. your FIRST CHILD BLOCK.
+    // the first [contenteditable] under the host, i.e. your first child block.
     this.ctx.setToolbarAnchor(this.head().nativeElement);
     // Named per-child hooks instead of positional :nth-child() CSS. Both
     // decorators are remembered and re-applied on every remount. The second one
@@ -401,14 +401,14 @@ export const StepsTool = createAngularBlock<{ title: string }>({
   type: 'steps',
   propSchema: { title: { default: '' } },
   component: StepsComponent,
-  // Everything core reads off the tool CLASS, under the vanilla names.
-  // keepsChildrenOnEnter keeps Enter on the empty LAST step INSIDE the
+  // Everything core reads off the tool class, under the vanilla names.
+  // keepsChildrenOnEnter keeps Enter on the empty last step inside the
   // container; without it that line escapes to the container's parent.
   statics: { ownsChildren: true, keepsChildrenOnEnter: true },
-  // Without an anchor the toolbar centers on the FIRST CHILD BLOCK.
+  // Without an anchor the toolbar centers on the first child block.
   getToolbarAnchorElement: (host) => host.querySelector('[data-steps-header]'),
-  // The seeding hook. Fires ONCE, once the mounted component's DOM (and its
-  // adopted child holders) exists — and only for a genuine CREATION (a
+  // The seeding hook. Fires once, once the mounted component's DOM (and its
+  // adopted child holders) exists — and only for a genuine creation (a
   // keystroke, \`api.blocks.insert\`, a turn-into), never on a load/undo/paste
   // replay. Do not hand-roll it in \`onMounted\` by accepting only the
   // keystroke origin: that gate drops the api and turn-into paths.
@@ -445,7 +445,7 @@ export const Highlight = createReactInlineTool({
 });
 
 // Function-form values are excluded from the mark's identity, so a colour
-// picker is ONE mark updating in place — not N mutually-cancelling marks.
+// picker is one mark updating in place — not N mutually-cancelling marks.
 const colorMark = {
   tag: 'mark',
   style: { color: (state: { color: string }) => state.color },

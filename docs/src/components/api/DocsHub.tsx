@@ -55,7 +55,7 @@ export const DocsHub: React.FC = () => {
 
       {sidebarSections.map((group) => (
         <section key={group.title} className="flex flex-col gap-4">
-          <h2 className="font-display text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          <h2 className="font-display text-xs font-bold text-muted-foreground">
             <Typo>{group.title}</Typo>
           </h2>
           <ul className="grid gap-3 sm:grid-cols-2">

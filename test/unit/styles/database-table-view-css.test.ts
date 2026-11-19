@@ -236,11 +236,11 @@ describe('database table view styles', () => {
   });
 
   // notion-spec-2 §24.7 (open-light.txt): gap 6, 0.5px tracking, a 15.25 wide icon slot, so the box is 68.6 wide.
-  it('spaces the OPEN button as Notion: 6px gap, 0.5px letter-spacing, 15.25px icon slot', () => {
+  it('spaces the Open button: 6px gap, normal case with no extra letter-spacing, 15.25px icon slot', () => {
     const open = ruleBody('[data-blok-database-table-open]');
 
     expect(open).toContain('gap: var(--blok-space-1-5)');
-    expect(open).toMatch(/letter-spacing:\s*0\.5px/);
+    expect(open).not.toMatch(/letter-spacing|text-transform/);
     expect(ruleBody('[data-blok-database-table-open] > span[aria-hidden="true"]')).toMatch(/width:\s*15\.25px/);
   });
 

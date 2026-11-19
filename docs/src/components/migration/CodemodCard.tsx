@@ -60,7 +60,7 @@ export const CodemodCard: React.FC = () => {
         className="overflow-hidden rounded-2xl border border-border bg-card shadow-card"
         data-blok-testid="codemod-options"
       >
-        <h3 className="border-b border-border bg-secondary/50 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+        <h3 className="border-b border-border bg-secondary/50 px-5 py-3 text-[11px] font-bold text-muted-foreground">
           {t('migration.codemodOptionsTitle')}
         </h3>
         <dl className="flex flex-col divide-y divide-border">

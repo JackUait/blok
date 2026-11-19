@@ -411,7 +411,7 @@ test.describe('measured values the CSS snapshot used to pin alone (ledger OM6)',
     expect(Math.abs(gap)).toBeLessThanOrEqual(1);
   });
 
-  test('footer label: 10px/15px 500 uppercase, 1px tracking, tertiary ink, 4px before the value (research/08:215)', async ({ page }) => {
+  test('footer label: 10px/15px 500 in normal case, tertiary ink, 4px before the value (research/08:215)', async ({ page }) => {
     const label = page.locator('[data-blok-database-table-calc][data-property-id="p-amount"] [data-blok-database-table-calc-label]');
 
     await expect(label).toBeVisible();
@@ -419,12 +419,12 @@ test.describe('measured values the CSS snapshot used to pin alone (ledger OM6)',
       'font-size': '10px',
       'line-height': '15px',
       'font-weight': '500',
-      'text-transform': 'uppercase',
-      'letter-spacing': '1px',
+      'text-transform': 'none',
+      'letter-spacing': 'normal',
       'color': 'rgb(114, 111, 106)',
       'margin-right': '4px',
     });
-    expect(await label.evaluate((el) => (el instanceof HTMLElement ? el.innerText : ''))).toBe('SUM');
+    expect(await label.evaluate((el) => (el instanceof HTMLElement ? el.innerText : ''))).toBe('Sum');
   });
 
   test('a database menu grows from the anchor\'s corner: top-left under a header (research/08:125)', async ({ page }) => {

@@ -2128,7 +2128,7 @@ export class EmojiPicker {
 
     heading.setAttribute('data-emoji-section-title', '');
     heading.className = [
-      'text-[11px] font-semibold uppercase tracking-wider px-2 pt-3 pb-1.5',
+      'text-[11px] font-semibold px-2 pt-3 pb-1.5',
       'text-neutral-400/80 theme-dark:text-neutral-500/80',
       'sticky top-0 bg-white theme-dark:bg-neutral-900 z-10',
     ].join(' ');

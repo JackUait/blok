@@ -63,7 +63,7 @@ export const MigrationSteps: React.FC = () => {
         />
 
         <div className={SHELL_CLASS} data-blok-testid="migration-table">
-          <div className={`${MAPPING_GRID} border-b border-border bg-secondary/50 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground`}>
+          <div className={`${MAPPING_GRID} border-b border-border bg-secondary/50 px-5 py-3 text-[11px] font-bold text-muted-foreground`}>
             <span><Typo>{t('migration.heroFromEditorJS')}</Typo></span>
             <span aria-hidden />
             <span className="text-foreground">{t('migration.heroBlok')}</span>
@@ -126,7 +126,7 @@ export const MigrationSteps: React.FC = () => {
           </div>
           <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
             <div className="divide-y divide-border">
-              <div className="grid grid-cols-[7rem_1fr] items-center gap-3 bg-secondary/50 px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground sm:grid-cols-[10rem_1fr]">
+              <div className="grid grid-cols-[7rem_1fr] items-center gap-3 bg-secondary/50 px-4 py-2.5 text-[11px] font-bold text-muted-foreground sm:grid-cols-[10rem_1fr]">
                 <span><Typo>{t('migration.droppedFieldsColBlock')}</Typo></span>
                 <span><Typo>{t('migration.droppedFieldsColFields')}</Typo></span>
               </div>

@@ -752,11 +752,11 @@ describe('cell editor CSS', () => {
     });
 
     // Notion's "DEFAULT" sits right before the chevron, 12/16.8 weight 500. Its gray fails AA, so the ink stays secondary.
-    it('puts the DEFAULT tag before the chevron', () => {
+    it('puts the Default tag before the chevron', () => {
       expect(declared('[data-blok-database-option-default]', 'margin-inline-start')).toEqual(['auto']);
       expect(declared('[data-blok-database-option-default]', 'font-weight')).toEqual(['500']);
       expect(declared('[data-blok-database-option-default]', 'line-height')).toEqual(['16.8px']);
-      expect(declared('[data-blok-database-option-default]', 'text-transform')).toEqual(['uppercase']);
+      expect(declared('[data-blok-database-option-default]', 'text-transform')).toEqual([]);
       expect(declared('[data-blok-database-option-default]', 'align-self')).toEqual(['center']);
       expect(declared('[data-blok-database-option-default]', 'color')).toEqual(['var(--blok-database-ink-secondary)']);
     });

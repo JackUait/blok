@@ -461,7 +461,7 @@ const editor = new Blok({
                                        // PropertyDefinition plus deletedAt (epoch ms) and deletedBy (person id).
                                        // Absent until the first delete on databases made before it existed
 }
-// Rows are NOT stored here — they are child database-row blocks.`,
+// Rows are not stored here — they are child database-row blocks.`,
     saveDataExample: `{
   "id": "db001",
   "type": "database",

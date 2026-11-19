@@ -66,7 +66,7 @@ export const ApiPagination: React.FC<ApiPaginationProps> = ({ currentId, labels,
           className="group flex flex-1 flex-col gap-1.5 rounded-2xl border border-border bg-card px-5 py-4 text-left shadow-sm transition-all duration-200 hover:border-foreground/15 hover:bg-secondary/40"
           data-blok-testid="api-pagination-prev"
         >
-          <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground transition-colors duration-200 group-hover:text-foreground">
+          <span className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground transition-colors duration-200 group-hover:text-foreground">
             <ArrowLeftIcon className="size-3.5 shrink-0 transition-transform duration-200 ease-out group-hover:-translate-x-0.5" />
             {t('api.pagination.previous')}
           </span>
@@ -79,7 +79,7 @@ export const ApiPagination: React.FC<ApiPaginationProps> = ({ currentId, labels,
           className="group flex flex-1 flex-col gap-1.5 rounded-2xl border border-border bg-card px-5 py-4 text-right shadow-sm transition-all duration-200 hover:border-foreground/15 hover:bg-secondary/40"
           data-blok-testid="api-pagination-next"
         >
-          <span className="flex items-center justify-end gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground transition-colors duration-200 group-hover:text-foreground">
+          <span className="flex items-center justify-end gap-1.5 text-xs font-bold text-muted-foreground transition-colors duration-200 group-hover:text-foreground">
             {t('api.pagination.next')}
             <ArrowRightIcon className="size-3.5 shrink-0 transition-transform duration-200 ease-out group-hover:translate-x-0.5" />
           </span>

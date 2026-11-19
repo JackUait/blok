@@ -42,7 +42,7 @@ export const ServerContent: React.FC = () => {
         className="mb-12 rounded-2xl border border-border bg-secondary/40 p-5"
         data-blok-testid="server-coverage-note"
       >
-        <p className="text-sm font-bold uppercase tracking-wide text-foreground">
+        <p className="text-sm font-bold text-foreground">
           {t('server.coverageLabel')}
         </p>
         <div className="mt-2">

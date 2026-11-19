@@ -12955,7 +12955,6 @@ textarea[data-blok-database-cell-input] {
   font-size: 12px;
   line-height: 16.8px;
   font-weight: 500;
-  text-transform: uppercase;
   align-self: center;
 }
 
@@ -13964,8 +13963,6 @@ textarea[data-blok-database-cell-input] {
   font-size: 12px;
   line-height: 18px;
   font-weight: 500;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
   cursor: pointer;
   transition: background-color 20ms ease-in;
 }
@@ -14920,8 +14917,6 @@ button[data-blok-database-table-calc] > [data-blok-database-table-calc-box]:hove
   font-size: 10px;
   line-height: 15px;
   font-weight: 500;
-  letter-spacing: 1px;
-  text-transform: uppercase;
 }
 
 [data-blok-database-table-calc][data-empty] > [data-blok-database-table-calc-box] {
@@ -25176,8 +25171,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   background: var(--blok-bg-secondary);
   border: 1px solid var(--blok-border-subtle);
   border-radius: var(--blok-radius-control-sm);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .blok-media-empty__error {
@@ -25426,8 +25419,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   flex: none;
   margin-inline-end: var(--blok-space-1-5);
   font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 
 [data-blok-tool="image"] .blok-image-alt-pill__text {

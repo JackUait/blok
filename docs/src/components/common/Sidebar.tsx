@@ -173,7 +173,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 aria-expanded={isOpen}
                 aria-controls={regionId}
                 className={cn(
-                  'flex w-full items-center justify-between gap-2 rounded-md py-2.5 pl-4 pr-2.5 text-[13px] font-semibold uppercase tracking-[0.12em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+                  'flex w-full items-center justify-between gap-2 rounded-md py-2.5 pl-4 pr-2.5 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
                   // Only space the header off from its links when the group is
                   // actually open; collapsed, it sits tight against the next one.
                   isOpen ? 'mb-2' : 'mb-0',

@@ -16,7 +16,7 @@ export interface ApiMethodCardProps {
 }
 
 const thClass =
-  "border-b border-border px-3 py-2 text-left text-xs font-bold uppercase tracking-wide text-muted-foreground";
+  "border-b border-border px-3 py-2 text-left text-xs font-bold text-muted-foreground";
 const tdClass = "px-3 py-2 align-top text-sm text-muted-foreground";
 const codeClass =
   "rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[0.8125rem] text-foreground";
@@ -45,7 +45,7 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
         <h3 data-lang-exempt className="font-mono text-sm font-semibold tracking-tight text-foreground">{method.name}</h3>
         <span data-lang-exempt className="rounded-md bg-secondary px-2 py-0.5 font-mono text-xs text-muted-foreground">{method.returnType}</span>
         {(method.deprecated || method.deprecatedSince) && (
-          <Badge variant="muted" className="uppercase" data-blok-testid="api-method-deprecated-badge">
+          <Badge variant="muted" data-blok-testid="api-method-deprecated-badge">
             <Typo>{t("api.deprecated")}</Typo>
           </Badge>
         )}
@@ -77,7 +77,7 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
           className="mt-4 rounded-xl border border-border bg-secondary/40 px-4 py-3"
           data-blok-testid="api-method-note"
         >
-          <p className="font-display text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">
+          <p className="font-display text-[0.6875rem] font-bold text-muted-foreground">
             <Typo>{t("api.whenToUse")}</Typo>
           </p>
           <div className="mt-1">
@@ -87,7 +87,7 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
       )}
       {method.params && method.params.length > 0 && (
         <div className="mt-4" data-blok-testid="api-method-params">
-          <p className="font-display text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">
+          <p className="font-display text-[0.6875rem] font-bold text-muted-foreground">
             <Typo>{t("api.parameters")}</Typo>
           </p>
           <div className="mt-2 overflow-x-auto rounded-xl border border-border">
@@ -124,7 +124,7 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
       )}
       {method.errors && method.errors.length > 0 && (
         <div className="mt-4" data-blok-testid="api-method-errors">
-          <p className="font-display text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">
+          <p className="font-display text-[0.6875rem] font-bold text-muted-foreground">
             <Typo>{t("api.errors")}</Typo>
           </p>
           <ul className="mt-2 flex flex-col gap-3">

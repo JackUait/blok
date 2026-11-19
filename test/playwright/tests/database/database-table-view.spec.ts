@@ -496,7 +496,7 @@ test.describe('calculations', () => {
     await page.getByRole('menuitemcheckbox', { name: 'Sum' }).click();
 
     await expect(footer.locator('[data-blok-database-table-calc-value]')).toHaveText('1235.5');
-    await expect(footer.locator('[data-blok-database-table-calc-label]')).toHaveCSS('text-transform', 'uppercase');
+    await expect(footer.locator('[data-blok-database-table-calc-label]')).toHaveCSS('text-transform', 'none');
     expect((await savedView(page)).calculations).toEqual([{ id: 'p-amount', fn: 'sum' }]);
   });
 });

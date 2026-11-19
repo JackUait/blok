@@ -84,7 +84,7 @@ const OPTION_META_CLASSES = 'shrink-0 max-w-[45%] text-xs leading-4 text-gray-te
 const OPTION_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 text-gray-text [&_svg]:size-5';
 // A section that follows a visible one gets extra room above its label.
 const SECTION_CLASSES = 'w-0 min-w-full [[data-link-group]:not([hidden])~&]:pt-1.5';
-const SECTION_LABEL_CLASSES = 'px-2 pt-2 pb-1 text-[11px] leading-4 font-semibold tracking-[0.06em] uppercase text-gray-text';
+const SECTION_LABEL_CLASSES = 'px-2 pt-2 pb-1 text-[11px] leading-4 font-semibold text-gray-text';
 const PAGE_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 text-base leading-none [&_img]:size-4 [&_img]:rounded-(--blok-radius-control-sm) [&_svg]:size-4 text-gray-text';
 // Recent links stand on a shelf. Its look lives in link-picker.css, keyed
 // off the data-link-recent-* attributes.

@@ -2700,6 +2700,29 @@ describe('view settings panel', () => {
       expect(q(`database-color-rule-${rule.id}`)).not.toBeNull();
     });
 
+    // notion-motion.md Round 76 §4 (r76-n-ccfocus.raw): Status, Multi-select and Checkbox leave nothing focused too.
+    it.each(['prog', 'tags', 'cb'])('leaves nothing focused after a new %s rule', (id) => {
+      const h = open();
+
+      const rule = add(h, id);
+
+      expect(document.body).toHaveFocus();
+      expect(q('database-color-add')).not.toHaveFocus();
+      expect(q(`database-color-rule-${rule.id}`)).not.toBeNull();
+    });
+
+    // notion-motion.md Round 76 §4: a new Formula rule focuses its "=" value input.
+    it('focuses the value input after a new Number formula rule', () => {
+      const h = open();
+
+      h.ctx.schema = () => [...typed, { id: 'fn', name: 'Double', type: 'number', position: 'c0' }];
+      h.ctx.storedType = (id) => (id === 'fn' ? 'formula' : typed.find((p) => p.id === id)?.type);
+
+      const rule = add(h, 'fn');
+
+      expect(q(`database-color-value-${rule.id}`)).toHaveFocus();
+    });
+
     // notion-motion.md Round 22 §3: a Number formula starts on "=" with its input. The panel gets it as its result type.
     it('starts a Number formula on "=", and a plain Number on "is not empty"', () => {
       const h = open();

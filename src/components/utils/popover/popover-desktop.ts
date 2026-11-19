@@ -1099,8 +1099,18 @@ export class PopoverDesktop extends PopoverAbstract {
       return false;
     }
 
-    if (!this.nestedPopover.closeDeepestNested()) {
-      this.destroyNestedPopoverIfExists(true);
+    if (this.nestedPopover.closeDeepestNested()) {
+      return true;
+    }
+
+    // A list's search field holds DOM focus; removing it would drop focus to <body>.
+    const hadFocus = this.nestedPopover.getElement().contains(document.activeElement);
+
+    this.destroyNestedPopoverIfExists(true);
+    if (hadFocus && this.search !== undefined) {
+      this.search.focus();
+    } else if (hadFocus) {
+      this.nodes.items?.focus({ preventScroll: true });
     }
 
     return true;

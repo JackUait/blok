@@ -605,3 +605,14 @@ describe('list "+ New page" in line with the row titles (Round 32)', () => {
     expect(ruleBody(database, '[data-blok-database-list] > [data-blok-database-add-row] > span[aria-hidden="true"]')).toContain('margin-inline-start: var(--blok-space-0-25)');
   });
 });
+
+// notion-motion.md Round 81 §2 "Grouped list header" (r81-n-glist.raw).
+describe('grouped list header (Round 81)', () => {
+  it('inks the "…" and "+" glyphs rgb(142, 139, 134), the block control grey', () => {
+    expect(ruleBody(database, '[data-blok-database-list-group-actions] button')).toContain('color: var(--blok-block-control)');
+  });
+
+  it('sets the group label in weight 500', () => {
+    expect(ruleBody(database, '[data-blok-database-list-group-label]')).toContain('font-weight: 500');
+  });
+});

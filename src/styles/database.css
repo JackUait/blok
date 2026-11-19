@@ -4997,8 +4997,14 @@ button[data-blok-database-board-lane-count]:hover {
   color: var(--blok-database-ink);
 }
 
+/* notion-motion.md Round 81 §2 (r81-n-glist.raw): the "…" and "+" glyphs are rgb(142, 139, 134). */
 [data-blok-database-list-group-actions] button {
-  color: var(--blok-database-add-text);
+  color: var(--blok-block-control);
+}
+
+/* Round 81 §2: the group label reads 14/500. The pill inherits the weight. */
+[data-blok-database-list-group-label] {
+  font-weight: 500;
 }
 
 [data-blok-database-list-group-toggle]:hover,

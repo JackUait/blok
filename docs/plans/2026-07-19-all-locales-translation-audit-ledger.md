@@ -442,75 +442,75 @@ locale returns to `pending`.
 
 | Locale | First-pass reviewer | First-pass dictionary SHA-256 | Second-pass reviewer | Second-pass dictionary SHA-256 |
 |---|---|---|---|---|
-| `am` | `root-global554-callers` | `sha256:4b1e2e33c3e7f2772da001ad14c022c6c80b489b5780dac1f2f7c0211fc72e1e` | `root-global554-linguistic` | `sha256:4b1e2e33c3e7f2772da001ad14c022c6c80b489b5780dac1f2f7c0211fc72e1e` |
-| `ar` | `root-global554-callers` | `sha256:e96d8986bd0b126e8fadd6875bd1a68e941c5f011daae9b65ca21fa88f39fee6` | `root-global554-linguistic` | `sha256:e96d8986bd0b126e8fadd6875bd1a68e941c5f011daae9b65ca21fa88f39fee6` |
-| `az` | `root-global554-callers` | `sha256:4fb3f7c595c637872e3350123b9626d55435b93e118040783d494cd29c81bc75` | `root-global554-linguistic` | `sha256:4fb3f7c595c637872e3350123b9626d55435b93e118040783d494cd29c81bc75` |
-| `bg` | `root-global554-callers` | `sha256:44c71b388faa9d6ce1b50ee6652bdaacac9fdcfccd808bcb0256dd69a3022d2c` | `root-global554-linguistic` | `sha256:44c71b388faa9d6ce1b50ee6652bdaacac9fdcfccd808bcb0256dd69a3022d2c` |
-| `bn` | `root-global554-callers` | `sha256:b1029ce69ec53056b9e54f239c5e72286273efc986e86e4d893a5e1b714afbe5` | `root-global554-linguistic` | `sha256:b1029ce69ec53056b9e54f239c5e72286273efc986e86e4d893a5e1b714afbe5` |
-| `bs` | `root-global554-callers` | `sha256:e338cdc85a2f789cc1bb3b929986bf5a368543e205c518480ad0e2c4899d9c59` | `root-global554-linguistic` | `sha256:e338cdc85a2f789cc1bb3b929986bf5a368543e205c518480ad0e2c4899d9c59` |
-| `cs` | `root-global554-callers` | `sha256:5b92c4ca7b4adc3ee5d88b0885f61e6e836330bdfef02f31d5b9de79f0b4c7e3` | `root-global554-linguistic` | `sha256:5b92c4ca7b4adc3ee5d88b0885f61e6e836330bdfef02f31d5b9de79f0b4c7e3` |
-| `da` | `root-global554-callers` | `sha256:5ac4e651280a551268f8001b289f15550cd091524ed51fb247de82c57ac4d520` | `root-global554-linguistic` | `sha256:5ac4e651280a551268f8001b289f15550cd091524ed51fb247de82c57ac4d520` |
-| `de` | `root-global554-callers` | `sha256:9199d8dcbf44ede884349315729bfbe9a69bd17b1caca44255d4b4ed1646936f` | `root-global554-linguistic` | `sha256:9199d8dcbf44ede884349315729bfbe9a69bd17b1caca44255d4b4ed1646936f` |
-| `dv` | `root-global554-callers` | `sha256:bc9052b1345b52596371a826cdcf06d08cec0730d3a217c7d840fbb264626374` | `root-global554-linguistic` | `sha256:bc9052b1345b52596371a826cdcf06d08cec0730d3a217c7d840fbb264626374` |
-| `el` | `root-global554-callers` | `sha256:a5cdb02bc3524f8c35fb8552e3cfe257cc5bff986983c6fe2629fadf256900a2` | `root-global554-linguistic` | `sha256:a5cdb02bc3524f8c35fb8552e3cfe257cc5bff986983c6fe2629fadf256900a2` |
-| `en` | `root-global554-callers` | `sha256:57698a0f6091f9f669de2a9d3818fb06a23f36214bba72bc87a7d9e551c35e95` | `root-global554-linguistic` | `sha256:57698a0f6091f9f669de2a9d3818fb06a23f36214bba72bc87a7d9e551c35e95` |
-| `es` | `root-global554-callers` | `sha256:afb6c941073a10e5f7ef74b5bc1e2b32979eef8eeb8af206e3aaed00114cf111` | `root-global554-linguistic` | `sha256:afb6c941073a10e5f7ef74b5bc1e2b32979eef8eeb8af206e3aaed00114cf111` |
-| `et` | `root-global554-callers` | `sha256:24aeb0551e0de01c2e122604da6874a82eaebae35b9c99f27a3208f6c12d1f9d` | `root-global554-linguistic` | `sha256:24aeb0551e0de01c2e122604da6874a82eaebae35b9c99f27a3208f6c12d1f9d` |
-| `fa` | `root-global554-callers` | `sha256:05ecaa7ced46578a64dcb6990a6e9c9bdc406e123bfe741968574eb939791696` | `root-global554-linguistic` | `sha256:05ecaa7ced46578a64dcb6990a6e9c9bdc406e123bfe741968574eb939791696` |
-| `fi` | `root-global554-callers` | `sha256:20ea3870b3cf20d783b5b914a7d8f2668f80b51d218f0cd241300115b7ef54fe` | `root-global554-linguistic` | `sha256:20ea3870b3cf20d783b5b914a7d8f2668f80b51d218f0cd241300115b7ef54fe` |
-| `fil` | `root-global554-callers` | `sha256:1bdf758364ca2d0478c7646923f107675732b7c964f9e3bf631a69b964041ef4` | `root-global554-linguistic` | `sha256:1bdf758364ca2d0478c7646923f107675732b7c964f9e3bf631a69b964041ef4` |
-| `fr` | `root-global554-callers` | `sha256:432d1cdc659e0ddde6602e56e8ad6faf60cc243ad3610c7ea328e37a817dc4e8` | `root-global554-linguistic` | `sha256:432d1cdc659e0ddde6602e56e8ad6faf60cc243ad3610c7ea328e37a817dc4e8` |
-| `gu` | `root-global554-callers` | `sha256:c150833a8fd472e843415df9fee5d7cbfbd1fe528d08d4743d6062ca3b8bbe50` | `root-global554-linguistic` | `sha256:c150833a8fd472e843415df9fee5d7cbfbd1fe528d08d4743d6062ca3b8bbe50` |
-| `he` | `root-global554-callers` | `sha256:2b069e8805f18c72b6d202c48b47c2b7b7dcfb3b74014e8b9dfa6a71ef71f05d` | `root-global554-linguistic` | `sha256:2b069e8805f18c72b6d202c48b47c2b7b7dcfb3b74014e8b9dfa6a71ef71f05d` |
-| `hi` | `root-global554-callers` | `sha256:5bc411397abd20390752340de30ebbee429091dc45d561ba0b5c50ccb9cca4c5` | `root-global554-linguistic` | `sha256:5bc411397abd20390752340de30ebbee429091dc45d561ba0b5c50ccb9cca4c5` |
-| `hr` | `root-global554-callers` | `sha256:02d3b67f2427e3e5ef0367fb7f6301ca976c045893dc9b25b98919c2421ee55d` | `root-global554-linguistic` | `sha256:02d3b67f2427e3e5ef0367fb7f6301ca976c045893dc9b25b98919c2421ee55d` |
-| `hu` | `root-global554-callers` | `sha256:9e4eb86d5a5c4ea91ff2090b8cc46b54a8b145b58892abd5e9d711e106d7363a` | `root-global554-linguistic` | `sha256:9e4eb86d5a5c4ea91ff2090b8cc46b54a8b145b58892abd5e9d711e106d7363a` |
-| `hy` | `root-global554-callers` | `sha256:cdbbe59f5a64f8382692ef40a38f763e84e14acd209bcca2dd4774c9c695726c` | `root-global554-linguistic` | `sha256:cdbbe59f5a64f8382692ef40a38f763e84e14acd209bcca2dd4774c9c695726c` |
-| `id` | `root-global554-linguistic` | `sha256:2bbdd119cb0d8c251b0611f147b1c3fb96035da32e30f66ac4a7167cbbf87bcf` | `root-global554-crosscheck` | `sha256:2bbdd119cb0d8c251b0611f147b1c3fb96035da32e30f66ac4a7167cbbf87bcf` |
-| `it` | `root-global554-linguistic` | `sha256:c990bfbbbee5b99346d3b54e2587444c81a8528393ba02fbc9a6630fcfbe957b` | `root-global554-crosscheck` | `sha256:c990bfbbbee5b99346d3b54e2587444c81a8528393ba02fbc9a6630fcfbe957b` |
-| `ja` | `root-global554-linguistic` | `sha256:f0ce9555af2619854632af5590d5473d70276553bf560807ef4174c3866c715c` | `root-global554-crosscheck` | `sha256:f0ce9555af2619854632af5590d5473d70276553bf560807ef4174c3866c715c` |
-| `ka` | `root-global554-linguistic` | `sha256:35af1be66e5605e53a3463a539bc99c6e5d6c421ff0fe7b576ff3c982191e596` | `root-global554-crosscheck` | `sha256:35af1be66e5605e53a3463a539bc99c6e5d6c421ff0fe7b576ff3c982191e596` |
-| `km` | `root-global554-linguistic` | `sha256:43a1c607df754b2b9552203d9d37c1e6e40ff92ebacfba5d883bc3472702c7ec` | `root-global554-crosscheck` | `sha256:43a1c607df754b2b9552203d9d37c1e6e40ff92ebacfba5d883bc3472702c7ec` |
-| `kn` | `root-global554-linguistic` | `sha256:8d3ed7f5ff066218e6e183fcb2c03db3cd209e1edd22d87910aa84fc7b6d3ae8` | `root-global554-crosscheck` | `sha256:8d3ed7f5ff066218e6e183fcb2c03db3cd209e1edd22d87910aa84fc7b6d3ae8` |
-| `ko` | `root-global554-linguistic` | `sha256:e88d46dbddb9bd938a6531ac67d364966142ea84f1f02cb1be631873ad0c391f` | `root-global554-crosscheck` | `sha256:e88d46dbddb9bd938a6531ac67d364966142ea84f1f02cb1be631873ad0c391f` |
-| `ku` | `root-global554-linguistic` | `sha256:181de0dd40405545624a3f4bd0e800f9715f6b77d2043ea9ab4a18e96ab9a948` | `root-global554-crosscheck` | `sha256:181de0dd40405545624a3f4bd0e800f9715f6b77d2043ea9ab4a18e96ab9a948` |
-| `lo` | `root-global554-linguistic` | `sha256:a1c0e4d656d62a23ff336d5da796b648cf98ca186a68771830c797c38675e7f9` | `root-global554-crosscheck` | `sha256:a1c0e4d656d62a23ff336d5da796b648cf98ca186a68771830c797c38675e7f9` |
-| `lt` | `root-global554-linguistic` | `sha256:09680f18d38e5da4bf0a79f1779ba92d867a747136e8e72e46cad6b7ae29e762` | `root-global554-crosscheck` | `sha256:09680f18d38e5da4bf0a79f1779ba92d867a747136e8e72e46cad6b7ae29e762` |
-| `lv` | `root-global554-linguistic` | `sha256:94a64aebf535c8767480dfdd7c40898866258bc9d03c8cf7fe531dd0e8a18bea` | `root-global554-crosscheck` | `sha256:94a64aebf535c8767480dfdd7c40898866258bc9d03c8cf7fe531dd0e8a18bea` |
-| `mk` | `root-global554-linguistic` | `sha256:e808b5f708bb4152d37533b487a6263c370fe72bc432e702d675820426168815` | `root-global554-crosscheck` | `sha256:e808b5f708bb4152d37533b487a6263c370fe72bc432e702d675820426168815` |
-| `ml` | `root-global554-linguistic` | `sha256:86449a16000e0cfd9ac46d5c710ab8da2d3e08b6efdb442d3eb3a51e0f4cb167` | `root-global554-crosscheck` | `sha256:86449a16000e0cfd9ac46d5c710ab8da2d3e08b6efdb442d3eb3a51e0f4cb167` |
-| `mn` | `root-global554-linguistic` | `sha256:146aa285b0395b950c4df92806ad782813287f2eb15ae00507f16b5f331974c7` | `root-global554-crosscheck` | `sha256:146aa285b0395b950c4df92806ad782813287f2eb15ae00507f16b5f331974c7` |
-| `mr` | `root-global554-linguistic` | `sha256:51e5068fe0a9b9bca689acde611fb67b8d516fd8adf35149d70436bf65a6b6ee` | `root-global554-crosscheck` | `sha256:51e5068fe0a9b9bca689acde611fb67b8d516fd8adf35149d70436bf65a6b6ee` |
-| `ms` | `root-global554-linguistic` | `sha256:7906eeb2be420ddbe84bf92766716eee173270ebd9b48f3a8308158e33730f3d` | `root-global554-crosscheck` | `sha256:7906eeb2be420ddbe84bf92766716eee173270ebd9b48f3a8308158e33730f3d` |
-| `my` | `root-global554-linguistic` | `sha256:23e804dc88f103ad9ac30873c32360312d066b36d7e523de7512c1f82ee7dc36` | `root-global554-crosscheck` | `sha256:23e804dc88f103ad9ac30873c32360312d066b36d7e523de7512c1f82ee7dc36` |
-| `ne` | `root-global554-linguistic` | `sha256:4ec98fdb525a1f4bdb3db68271c39d8476b0c82f609661dd9f65e839d3112883` | `root-global554-crosscheck` | `sha256:4ec98fdb525a1f4bdb3db68271c39d8476b0c82f609661dd9f65e839d3112883` |
-| `nl` | `root-global554-linguistic` | `sha256:8e2a33d0e16e1d782a4eff128cbb79ffcdc1e1a7ecc283f848026eccf3b8b8f4` | `root-global554-crosscheck` | `sha256:8e2a33d0e16e1d782a4eff128cbb79ffcdc1e1a7ecc283f848026eccf3b8b8f4` |
-| `no` | `root-global554-linguistic` | `sha256:cc367f2b0f27dccce13223a420b1fc44e0e2cfb19ded56253442678e086b66d3` | `root-global554-crosscheck` | `sha256:cc367f2b0f27dccce13223a420b1fc44e0e2cfb19ded56253442678e086b66d3` |
-| `pa` | `root-global554-linguistic` | `sha256:a4097f972a88bfaf83271d493c34e5517fac7b17fbab39350cb6c0953692612f` | `root-global554-crosscheck` | `sha256:a4097f972a88bfaf83271d493c34e5517fac7b17fbab39350cb6c0953692612f` |
-| `pl` | `root-global554-linguistic` | `sha256:c379824091d77f06b874ef4da3dddd7c57329df2a6660b9cc1071bd11adc335d` | `root-global554-crosscheck` | `sha256:c379824091d77f06b874ef4da3dddd7c57329df2a6660b9cc1071bd11adc335d` |
-| `ps` | `root-global554-linguistic` | `sha256:11a972a87f2d4d8d5c9df19fa7f4727ad15fb82995bb9373068bf9c0b069a951` | `root-global554-crosscheck` | `sha256:11a972a87f2d4d8d5c9df19fa7f4727ad15fb82995bb9373068bf9c0b069a951` |
-| `pt` | `root-global554-callers` | `sha256:11ff9e8df2a17a41f64b9b1711be93af44837ceb094722dad49bbb01951a314e` | `root-global554-crosscheck` | `sha256:11ff9e8df2a17a41f64b9b1711be93af44837ceb094722dad49bbb01951a314e` |
-| `ro` | `root-global554-callers` | `sha256:8ccb6799749d0402a80ea52e1f5fc80a2439ad4f5c07186efd90fee0de8999cd` | `root-global554-crosscheck` | `sha256:8ccb6799749d0402a80ea52e1f5fc80a2439ad4f5c07186efd90fee0de8999cd` |
-| `ru` | `root-global554-callers` | `sha256:febda732472d9329fb530cce80702658bfaef2fd9196da580911f91c1547292c` | `root-global554-crosscheck` | `sha256:febda732472d9329fb530cce80702658bfaef2fd9196da580911f91c1547292c` |
-| `sd` | `root-global554-callers` | `sha256:0ac066e088d188ea73e1b0ec04e0181bfc91eabe2f6c67e15e4695aeb67c1b36` | `root-global554-crosscheck` | `sha256:0ac066e088d188ea73e1b0ec04e0181bfc91eabe2f6c67e15e4695aeb67c1b36` |
-| `si` | `root-global554-callers` | `sha256:db6d7b897e744a4f996529bf23c2abd646ef0ae9ff192d9e93e5821fb17ab3f1` | `root-global554-crosscheck` | `sha256:db6d7b897e744a4f996529bf23c2abd646ef0ae9ff192d9e93e5821fb17ab3f1` |
-| `sk` | `root-global554-callers` | `sha256:7bc150ce50a62bffb57d3b036507583991c7a6b4029b1d50a5535ad0bf941a2e` | `root-global554-crosscheck` | `sha256:7bc150ce50a62bffb57d3b036507583991c7a6b4029b1d50a5535ad0bf941a2e` |
-| `sl` | `root-global554-callers` | `sha256:573c0ea9edcaccabd830995f07192468ba754330248c512f858bb57a4278469f` | `root-global554-crosscheck` | `sha256:573c0ea9edcaccabd830995f07192468ba754330248c512f858bb57a4278469f` |
-| `sq` | `root-global554-callers` | `sha256:f22cf5bdf1c2a388342d1bb81594a496b73f762f6a38b881b336a5c826c168ef` | `root-global554-crosscheck` | `sha256:f22cf5bdf1c2a388342d1bb81594a496b73f762f6a38b881b336a5c826c168ef` |
-| `sr` | `root-global554-callers` | `sha256:a83272fedddad422b0c920409708f32c9a31e698e27bc32fd1ca7d72a736842f` | `root-global554-crosscheck` | `sha256:a83272fedddad422b0c920409708f32c9a31e698e27bc32fd1ca7d72a736842f` |
-| `sv` | `root-global554-callers` | `sha256:4add3fd96878d6b2231c67ad63b129512e7fa9644da04a687e49dd7824175726` | `root-global554-crosscheck` | `sha256:4add3fd96878d6b2231c67ad63b129512e7fa9644da04a687e49dd7824175726` |
-| `sw` | `root-global554-callers` | `sha256:e06ed8a244d8847dd99ccf2e9a4241bad38249a855d7875bcaf26e672196df09` | `root-global554-crosscheck` | `sha256:e06ed8a244d8847dd99ccf2e9a4241bad38249a855d7875bcaf26e672196df09` |
-| `ta` | `root-global554-callers` | `sha256:726d82eb791a4ded7f0174814cbdfff53f8de0f0093a31a29047c2fdfa68bfe3` | `root-global554-crosscheck` | `sha256:726d82eb791a4ded7f0174814cbdfff53f8de0f0093a31a29047c2fdfa68bfe3` |
-| `te` | `root-global554-callers` | `sha256:228e79e1ee5226889ec03d10a17a6a65457c682c9561f55595145d76f7c626b9` | `root-global554-crosscheck` | `sha256:228e79e1ee5226889ec03d10a17a6a65457c682c9561f55595145d76f7c626b9` |
-| `th` | `root-global554-callers` | `sha256:50d3da75e3ff182979b75fa16019038913aa6538ecb7a7e8235029c43fd0adb8` | `root-global554-crosscheck` | `sha256:50d3da75e3ff182979b75fa16019038913aa6538ecb7a7e8235029c43fd0adb8` |
-| `tr` | `root-global554-callers` | `sha256:74b5fe69f286402b7f2d3743b28fafeded6395dd74f0e81deb5be8312423889b` | `root-global554-crosscheck` | `sha256:74b5fe69f286402b7f2d3743b28fafeded6395dd74f0e81deb5be8312423889b` |
-| `ug` | `root-global554-callers` | `sha256:93a554c4ab2069d2372b4bdbe177aeb72e32279b4cdcb92f73a4a8b031f19ad8` | `root-global554-crosscheck` | `sha256:93a554c4ab2069d2372b4bdbe177aeb72e32279b4cdcb92f73a4a8b031f19ad8` |
-| `uk` | `root-global554-callers` | `sha256:afcc3c67ed3650957f79b66905a3490effb7707e783b4efaa6111afd04a5d24b` | `root-global554-crosscheck` | `sha256:afcc3c67ed3650957f79b66905a3490effb7707e783b4efaa6111afd04a5d24b` |
-| `ur` | `root-global554-callers` | `sha256:ce0b681ce529ed4663659efd537d8a9a638287bfdc5f2b213b06d1c092a315e8` | `root-global554-crosscheck` | `sha256:ce0b681ce529ed4663659efd537d8a9a638287bfdc5f2b213b06d1c092a315e8` |
-| `vi` | `root-global554-callers` | `sha256:4b3405841996c257d6e331c2f49a99143be1928b13b1e819c4a461ed14eea7a5` | `root-global554-crosscheck` | `sha256:4b3405841996c257d6e331c2f49a99143be1928b13b1e819c4a461ed14eea7a5` |
-| `yi` | `root-global554-callers` | `sha256:bce03c75a5c0ce4bd123de2c5b8e6ee9c5b62cb5d73fa6e18791ab05550957fb` | `root-global554-crosscheck` | `sha256:bce03c75a5c0ce4bd123de2c5b8e6ee9c5b62cb5d73fa6e18791ab05550957fb` |
-| `zh` | `root-global554-callers` | `sha256:b645e9ddec698cb49bbdc6b350162f37f78628f80f055e97acc5f25035d28966` | `root-global554-crosscheck` | `sha256:b645e9ddec698cb49bbdc6b350162f37f78628f80f055e97acc5f25035d28966` |
-| `zh-TW` | `root-global554-callers` | `sha256:1758b6f9851858f35d46175fe5014875008462ce74812dd6a1165e833dec7780` | `root-global554-crosscheck` | `sha256:1758b6f9851858f35d46175fe5014875008462ce74812dd6a1165e833dec7780` |
+| `am` | `root-global554-callers` | `sha256:9cd568d0e642a023dee5c41ffb663eeee28c74026e311acbcb46f95c3b70d693` | `root-global554-linguistic` | `sha256:9cd568d0e642a023dee5c41ffb663eeee28c74026e311acbcb46f95c3b70d693` |
+| `ar` | `root-global554-callers` | `sha256:c066ab54fdaaccd80c742b5e3658ae823d9a3177ab3815c3c13dc80fde320b32` | `root-global554-linguistic` | `sha256:c066ab54fdaaccd80c742b5e3658ae823d9a3177ab3815c3c13dc80fde320b32` |
+| `az` | `root-global554-callers` | `sha256:42a4c5ffd6b02fc1507df50573ceecec7ca697df15f64ca7c4c4c7e1d5617f88` | `root-global554-linguistic` | `sha256:42a4c5ffd6b02fc1507df50573ceecec7ca697df15f64ca7c4c4c7e1d5617f88` |
+| `bg` | `root-global554-callers` | `sha256:e5d9238f430aec9e5634f5a6fb93e84fd71a4008ac71fd2dac1f700e5313da35` | `root-global554-linguistic` | `sha256:e5d9238f430aec9e5634f5a6fb93e84fd71a4008ac71fd2dac1f700e5313da35` |
+| `bn` | `root-global554-callers` | `sha256:28babc7c94b2079867ccdfbd8772d38e191fa3ddd5f72a3016a51d90a6e535aa` | `root-global554-linguistic` | `sha256:28babc7c94b2079867ccdfbd8772d38e191fa3ddd5f72a3016a51d90a6e535aa` |
+| `bs` | `root-global554-callers` | `sha256:ef477ec2d4461a1535285703daaf5decbc0a8361ad88eb4b47b4ddcef2c10a64` | `root-global554-linguistic` | `sha256:ef477ec2d4461a1535285703daaf5decbc0a8361ad88eb4b47b4ddcef2c10a64` |
+| `cs` | `root-global554-callers` | `sha256:98dfce6346ee39692e0eaa4d499e01763f39fca81155cfd5434ec3aae149c268` | `root-global554-linguistic` | `sha256:98dfce6346ee39692e0eaa4d499e01763f39fca81155cfd5434ec3aae149c268` |
+| `da` | `root-global554-callers` | `sha256:826bd56856aec38440fd2a04da34517bd21d3f0ca45fe7b652a01b7073996720` | `root-global554-linguistic` | `sha256:826bd56856aec38440fd2a04da34517bd21d3f0ca45fe7b652a01b7073996720` |
+| `de` | `root-global554-callers` | `sha256:636c57b0bc51dddd61ef3e12bed2689800d1161a93aec7f7c075cf915a2de22f` | `root-global554-linguistic` | `sha256:636c57b0bc51dddd61ef3e12bed2689800d1161a93aec7f7c075cf915a2de22f` |
+| `dv` | `root-global554-callers` | `sha256:eba63d15354b79123620ef99536876d02d5d63c78a06c6bcd36f4418084e34d5` | `root-global554-linguistic` | `sha256:eba63d15354b79123620ef99536876d02d5d63c78a06c6bcd36f4418084e34d5` |
+| `el` | `root-global554-callers` | `sha256:a4bfb949bfc71cac61310e66a483d300cf273ca9e4ae6953858991be4fec43f8` | `root-global554-linguistic` | `sha256:a4bfb949bfc71cac61310e66a483d300cf273ca9e4ae6953858991be4fec43f8` |
+| `en` | `root-global554-callers` | `sha256:3c7364efe59f63cf96fe82715c9d0639c6d48b46c6d639e1d55d47683ae67718` | `root-global554-linguistic` | `sha256:3c7364efe59f63cf96fe82715c9d0639c6d48b46c6d639e1d55d47683ae67718` |
+| `es` | `root-global554-callers` | `sha256:77f6d55a7f9bcf706d6c053ad0c884a5e208594a8856b26584650a810033fc13` | `root-global554-linguistic` | `sha256:77f6d55a7f9bcf706d6c053ad0c884a5e208594a8856b26584650a810033fc13` |
+| `et` | `root-global554-callers` | `sha256:058e1076b32f5eaad768af6746bfd4e561c1289223ec60f3ca0e786a4362df64` | `root-global554-linguistic` | `sha256:058e1076b32f5eaad768af6746bfd4e561c1289223ec60f3ca0e786a4362df64` |
+| `fa` | `root-global554-callers` | `sha256:5d03d5e7c970bfb763d7c7257c723f12a09f2841e811d4167b88876bd7009bf2` | `root-global554-linguistic` | `sha256:5d03d5e7c970bfb763d7c7257c723f12a09f2841e811d4167b88876bd7009bf2` |
+| `fi` | `root-global554-callers` | `sha256:5a0d87d7926306fd2f509cf42424ed7d45c36297baac51a11bfbde34c3e22f60` | `root-global554-linguistic` | `sha256:5a0d87d7926306fd2f509cf42424ed7d45c36297baac51a11bfbde34c3e22f60` |
+| `fil` | `root-global554-callers` | `sha256:4ad5206fd4afca7c52834e275a902a183f15ddd98570ef9629aa708c207dabf5` | `root-global554-linguistic` | `sha256:4ad5206fd4afca7c52834e275a902a183f15ddd98570ef9629aa708c207dabf5` |
+| `fr` | `root-global554-callers` | `sha256:22f43ef7a99abfc4af81efcff22da8a5ce930cecc78fc98c1f305aab00b61781` | `root-global554-linguistic` | `sha256:22f43ef7a99abfc4af81efcff22da8a5ce930cecc78fc98c1f305aab00b61781` |
+| `gu` | `root-global554-callers` | `sha256:d33a228be8eebc04da666311e166481c3c984114562a0c7ee701ccbef676a235` | `root-global554-linguistic` | `sha256:d33a228be8eebc04da666311e166481c3c984114562a0c7ee701ccbef676a235` |
+| `he` | `root-global554-callers` | `sha256:b1a76fbf76f250cc22ec1203a8033344d36a768ce172e0cb19440e88b5d563e3` | `root-global554-linguistic` | `sha256:b1a76fbf76f250cc22ec1203a8033344d36a768ce172e0cb19440e88b5d563e3` |
+| `hi` | `root-global554-callers` | `sha256:c14b9e7b127510fe926f061a0790ba998bbb156b190dfbf1ca01f1ffaba5ca74` | `root-global554-linguistic` | `sha256:c14b9e7b127510fe926f061a0790ba998bbb156b190dfbf1ca01f1ffaba5ca74` |
+| `hr` | `root-global554-callers` | `sha256:7899addaaba4935aa24ff0eb63da7196beeb4492dc38ce1fff46ef0174b92c83` | `root-global554-linguistic` | `sha256:7899addaaba4935aa24ff0eb63da7196beeb4492dc38ce1fff46ef0174b92c83` |
+| `hu` | `root-global554-callers` | `sha256:1237c24bd7850b6f22b6529095698a1de40c5180432c1fb906cd70f9f43ab705` | `root-global554-linguistic` | `sha256:1237c24bd7850b6f22b6529095698a1de40c5180432c1fb906cd70f9f43ab705` |
+| `hy` | `root-global554-callers` | `sha256:b593acda2055489f200e19eed892294e6e790db3f04d2fd7dff1006bafabd2d1` | `root-global554-linguistic` | `sha256:b593acda2055489f200e19eed892294e6e790db3f04d2fd7dff1006bafabd2d1` |
+| `id` | `root-global554-linguistic` | `sha256:ddca4ff5675615403581ec62615fe510386a71c1f6b6a0bb8efec5d357236ea9` | `root-global554-crosscheck` | `sha256:ddca4ff5675615403581ec62615fe510386a71c1f6b6a0bb8efec5d357236ea9` |
+| `it` | `root-global554-linguistic` | `sha256:ab432232a5a73b967abf4aa0072595e62943c1ed687217126b2a4316a9e01a3f` | `root-global554-crosscheck` | `sha256:ab432232a5a73b967abf4aa0072595e62943c1ed687217126b2a4316a9e01a3f` |
+| `ja` | `root-global554-linguistic` | `sha256:fb578b057ed7058850e501978693987780a107bec5f142a848f0736790d34144` | `root-global554-crosscheck` | `sha256:fb578b057ed7058850e501978693987780a107bec5f142a848f0736790d34144` |
+| `ka` | `root-global554-linguistic` | `sha256:2bbc02ea6663b3e1a1866ab5e7c39a3bc8b13a847fd7977b8e7bb1152d5453c5` | `root-global554-crosscheck` | `sha256:2bbc02ea6663b3e1a1866ab5e7c39a3bc8b13a847fd7977b8e7bb1152d5453c5` |
+| `km` | `root-global554-linguistic` | `sha256:fa73a0ce4e14940fb8f41a7d9affb64d84daa7699dd64e9f119df5c58c7ecd38` | `root-global554-crosscheck` | `sha256:fa73a0ce4e14940fb8f41a7d9affb64d84daa7699dd64e9f119df5c58c7ecd38` |
+| `kn` | `root-global554-linguistic` | `sha256:aee507135bed6f8c05c1078789f65d7adcd4c11747a95ac441a222a3420c3b8e` | `root-global554-crosscheck` | `sha256:aee507135bed6f8c05c1078789f65d7adcd4c11747a95ac441a222a3420c3b8e` |
+| `ko` | `root-global554-linguistic` | `sha256:bc061ac4b9ffbddd29071ce70b87c99dd37035f6012652739a08f4e0ddd144f6` | `root-global554-crosscheck` | `sha256:bc061ac4b9ffbddd29071ce70b87c99dd37035f6012652739a08f4e0ddd144f6` |
+| `ku` | `root-global554-linguistic` | `sha256:e2efbef1311d619f7ee1781e93ea31b72b7683a0fa7b27eb4ba4d8c182b9ecdc` | `root-global554-crosscheck` | `sha256:e2efbef1311d619f7ee1781e93ea31b72b7683a0fa7b27eb4ba4d8c182b9ecdc` |
+| `lo` | `root-global554-linguistic` | `sha256:1c5a016b2caab358204611ea773f19769f929bfa68be96bc04467676a4599d38` | `root-global554-crosscheck` | `sha256:1c5a016b2caab358204611ea773f19769f929bfa68be96bc04467676a4599d38` |
+| `lt` | `root-global554-linguistic` | `sha256:19e038c3464cb4ac837b14f191de26668625f1046387b369e5481d00faf3e81d` | `root-global554-crosscheck` | `sha256:19e038c3464cb4ac837b14f191de26668625f1046387b369e5481d00faf3e81d` |
+| `lv` | `root-global554-linguistic` | `sha256:e298f9e53bd01484e6cbdefaa3b72f83f5cbf77cca446f55bb3f89c0ba083f7c` | `root-global554-crosscheck` | `sha256:e298f9e53bd01484e6cbdefaa3b72f83f5cbf77cca446f55bb3f89c0ba083f7c` |
+| `mk` | `root-global554-linguistic` | `sha256:13e117915af944ab7451d85ff6829bd36d320907587defd83280bd1fd94acb39` | `root-global554-crosscheck` | `sha256:13e117915af944ab7451d85ff6829bd36d320907587defd83280bd1fd94acb39` |
+| `ml` | `root-global554-linguistic` | `sha256:a6f65bf51d96194a0ef16d60fc901ac5f337e153d76c7109971594b6cb5b907f` | `root-global554-crosscheck` | `sha256:a6f65bf51d96194a0ef16d60fc901ac5f337e153d76c7109971594b6cb5b907f` |
+| `mn` | `root-global554-linguistic` | `sha256:b64620d7c7cfae82165b879df5ab66f86b9ccb86e53857a62198360c05c32d48` | `root-global554-crosscheck` | `sha256:b64620d7c7cfae82165b879df5ab66f86b9ccb86e53857a62198360c05c32d48` |
+| `mr` | `root-global554-linguistic` | `sha256:32b2857b5c9e5c4217631be430d589c7b0cc7a6e562a8c65020b8d283f69de25` | `root-global554-crosscheck` | `sha256:32b2857b5c9e5c4217631be430d589c7b0cc7a6e562a8c65020b8d283f69de25` |
+| `ms` | `root-global554-linguistic` | `sha256:2be8bd82abf4fa9c7239d0010836d60d2966cf47632d39ad354e4ec81294b896` | `root-global554-crosscheck` | `sha256:2be8bd82abf4fa9c7239d0010836d60d2966cf47632d39ad354e4ec81294b896` |
+| `my` | `root-global554-linguistic` | `sha256:905df6c361b033fc1b13a157edc26347ef57c9c4308d730efaa9c26743bd3abd` | `root-global554-crosscheck` | `sha256:905df6c361b033fc1b13a157edc26347ef57c9c4308d730efaa9c26743bd3abd` |
+| `ne` | `root-global554-linguistic` | `sha256:5e1a2f4cdee9b6d63994426a5e25e7ff8f2f0de8edf3e17d8523c1ed5af8b99c` | `root-global554-crosscheck` | `sha256:5e1a2f4cdee9b6d63994426a5e25e7ff8f2f0de8edf3e17d8523c1ed5af8b99c` |
+| `nl` | `root-global554-linguistic` | `sha256:943fa404bc8be1af1f556e35f2c48df13733e2e979490eb8e3de00acd0e02af8` | `root-global554-crosscheck` | `sha256:943fa404bc8be1af1f556e35f2c48df13733e2e979490eb8e3de00acd0e02af8` |
+| `no` | `root-global554-linguistic` | `sha256:c2266aba792ff6fa79e4fd3070bb9c16cdc505c873f45e375cb839b795e068bb` | `root-global554-crosscheck` | `sha256:c2266aba792ff6fa79e4fd3070bb9c16cdc505c873f45e375cb839b795e068bb` |
+| `pa` | `root-global554-linguistic` | `sha256:16a7a2b56451d8e8970bef02a14845170c121986ef04bc989ed12fe19739ed1b` | `root-global554-crosscheck` | `sha256:16a7a2b56451d8e8970bef02a14845170c121986ef04bc989ed12fe19739ed1b` |
+| `pl` | `root-global554-linguistic` | `sha256:976b148503b83698a06685f76f65a239eaccb03c228f5cabdecebb88fbdbe3b9` | `root-global554-crosscheck` | `sha256:976b148503b83698a06685f76f65a239eaccb03c228f5cabdecebb88fbdbe3b9` |
+| `ps` | `root-global554-linguistic` | `sha256:6a83125618dd8bb42fa5f77415be06457bcf90b5fe0e0ef648599a909d9b84f3` | `root-global554-crosscheck` | `sha256:6a83125618dd8bb42fa5f77415be06457bcf90b5fe0e0ef648599a909d9b84f3` |
+| `pt` | `root-global554-callers` | `sha256:613639c830f61ae393660d3f3d14a767dbd9f075a60e880209af3d969a6b25b3` | `root-global554-crosscheck` | `sha256:613639c830f61ae393660d3f3d14a767dbd9f075a60e880209af3d969a6b25b3` |
+| `ro` | `root-global554-callers` | `sha256:7a74aa28c84d512243be4fcc93b92e736de816be54c31c53f54c2aaac7748fde` | `root-global554-crosscheck` | `sha256:7a74aa28c84d512243be4fcc93b92e736de816be54c31c53f54c2aaac7748fde` |
+| `ru` | `root-global554-callers` | `sha256:aa3fa92e487e9cab86db05e8e95ef9683cc4a9567abfeecf444fdcc295f53ae3` | `root-global554-crosscheck` | `sha256:aa3fa92e487e9cab86db05e8e95ef9683cc4a9567abfeecf444fdcc295f53ae3` |
+| `sd` | `root-global554-callers` | `sha256:db6def81a466cfc13fbe41db0cb25425ba1a8c4f93f212d3936f4fd56d4af8c0` | `root-global554-crosscheck` | `sha256:db6def81a466cfc13fbe41db0cb25425ba1a8c4f93f212d3936f4fd56d4af8c0` |
+| `si` | `root-global554-callers` | `sha256:06e505c47c4efe2f099d4265a64d019709076c8e0936af39953dabed915e0b8e` | `root-global554-crosscheck` | `sha256:06e505c47c4efe2f099d4265a64d019709076c8e0936af39953dabed915e0b8e` |
+| `sk` | `root-global554-callers` | `sha256:bde4e9bfb9e964026b8e35c74da5d346943dfb680f7d7eae6da8b2589edc7064` | `root-global554-crosscheck` | `sha256:bde4e9bfb9e964026b8e35c74da5d346943dfb680f7d7eae6da8b2589edc7064` |
+| `sl` | `root-global554-callers` | `sha256:5cd1caf46840ec681a1a952dc2f01a554f2815bcd78de23240beff414f882caf` | `root-global554-crosscheck` | `sha256:5cd1caf46840ec681a1a952dc2f01a554f2815bcd78de23240beff414f882caf` |
+| `sq` | `root-global554-callers` | `sha256:44d3ddb8e2d50bfddebc41ea1ed27ce83745816de6b013281de85dd1073ba2f8` | `root-global554-crosscheck` | `sha256:44d3ddb8e2d50bfddebc41ea1ed27ce83745816de6b013281de85dd1073ba2f8` |
+| `sr` | `root-global554-callers` | `sha256:e7e1335bd98e5b7fbc222bad663329439774c400a53be6c5e107ca217edf1967` | `root-global554-crosscheck` | `sha256:e7e1335bd98e5b7fbc222bad663329439774c400a53be6c5e107ca217edf1967` |
+| `sv` | `root-global554-callers` | `sha256:e445e6ed4c5442c3d2cc549845dedc7e72d3171b68183e01e8f018e2d0724f45` | `root-global554-crosscheck` | `sha256:e445e6ed4c5442c3d2cc549845dedc7e72d3171b68183e01e8f018e2d0724f45` |
+| `sw` | `root-global554-callers` | `sha256:6b6342a3e8735759367fb83ce4c4203711afa8ae2141003b312dd5b9305cd291` | `root-global554-crosscheck` | `sha256:6b6342a3e8735759367fb83ce4c4203711afa8ae2141003b312dd5b9305cd291` |
+| `ta` | `root-global554-callers` | `sha256:ed828a41e6a9a289cc9ce3446d134f8c45fd677d3ffdaa026e1c029ca519839b` | `root-global554-crosscheck` | `sha256:ed828a41e6a9a289cc9ce3446d134f8c45fd677d3ffdaa026e1c029ca519839b` |
+| `te` | `root-global554-callers` | `sha256:4d0b97e6fd55096d21bdbfba996875c828480444438746e76100cdc9113d19eb` | `root-global554-crosscheck` | `sha256:4d0b97e6fd55096d21bdbfba996875c828480444438746e76100cdc9113d19eb` |
+| `th` | `root-global554-callers` | `sha256:c2f9a9979162e615d1d06beb4d35626e47af3132af4c497ef72e790597fae90d` | `root-global554-crosscheck` | `sha256:c2f9a9979162e615d1d06beb4d35626e47af3132af4c497ef72e790597fae90d` |
+| `tr` | `root-global554-callers` | `sha256:4692e1d57d0937267b3b46f1ed59b453a920209ad49f960940205211b9d64e4a` | `root-global554-crosscheck` | `sha256:4692e1d57d0937267b3b46f1ed59b453a920209ad49f960940205211b9d64e4a` |
+| `ug` | `root-global554-callers` | `sha256:83dfc3043aba58570969ef18d6a02c11b83bcdbdb293520ed0af30fb0d41132f` | `root-global554-crosscheck` | `sha256:83dfc3043aba58570969ef18d6a02c11b83bcdbdb293520ed0af30fb0d41132f` |
+| `uk` | `root-global554-callers` | `sha256:cd6ed45646b5f3906a8e4a96e2f4b2795aa66e46c139c956228355e0a5f9c1ee` | `root-global554-crosscheck` | `sha256:cd6ed45646b5f3906a8e4a96e2f4b2795aa66e46c139c956228355e0a5f9c1ee` |
+| `ur` | `root-global554-callers` | `sha256:86ac4d80b66c4a8774cd3d99a5efbdafd20a8f2daff5aa83d0d5c4e73c447f72` | `root-global554-crosscheck` | `sha256:86ac4d80b66c4a8774cd3d99a5efbdafd20a8f2daff5aa83d0d5c4e73c447f72` |
+| `vi` | `root-global554-callers` | `sha256:22e7fec7c89f395d8343eb417a55bc5a13aa3c2cb1c210cea96801bf59915bb5` | `root-global554-crosscheck` | `sha256:22e7fec7c89f395d8343eb417a55bc5a13aa3c2cb1c210cea96801bf59915bb5` |
+| `yi` | `root-global554-callers` | `sha256:2a3af5da34dbb1c804153e24af7107cd1cf7ebc9391475d330b920cd65374220` | `root-global554-crosscheck` | `sha256:2a3af5da34dbb1c804153e24af7107cd1cf7ebc9391475d330b920cd65374220` |
+| `zh` | `root-global554-callers` | `sha256:2a84242ee71fae60954eab034f08c67bc1a5862e479deedc195fc279b9f9418c` | `root-global554-crosscheck` | `sha256:2a84242ee71fae60954eab034f08c67bc1a5862e479deedc195fc279b9f9418c` |
+| `zh-TW` | `root-global554-callers` | `sha256:d779a112400437e3043716fd85a941678c1d47203c800baaaee7fcf126c213e5` | `root-global554-crosscheck` | `sha256:d779a112400437e3043716fd85a941678c1d47203c800baaaee7fcf126c213e5` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -683,6 +683,33 @@ or second pass.
 
 Filipino `tools.link.emailAddress` (`Email address`) no longer equals the
 English value, so its retention row `R-fil-012` was removed.
+
+## Link Refusal Reasons
+
+`tools.link.invalidSpaces`, `tools.link.invalidUnsafe` and
+`tools.link.invalidKind` are new keys in all 69 dictionaries.
+`invalidReasonKey` in `src/components/inline-tools/inline-tool-link.ts` picks
+one of them as the gray reason line under the `tools.link.invalidLink` title:
+a space inside the address, a `javascript:`, `data:` or `vbscript:` address,
+or any other kind the editor does not accept, such as `file:`, `ftp:` and app
+links.
+
+English reads `An address cannot have spaces`, `This link is not safe to open`
+and `Only web, email and phone links work`. The English and Russian values
+were written by the product owner's assistant. The other 67 translations were
+machine-written in this change, modelled on each dictionary's own
+`tools.link.invalidLink` wording for link. No native speaker has reviewed them.
+
+The same change reworded `tools.link.jumpToSection` in English from
+`Jump to section` to `Link to section` and in Russian from
+`Перейти к разделу` to `Ссылка на раздел`, as the product owner asked. The
+other 67 dictionaries keep their earlier "go to section" value.
+
+No reviewer named in this ledger has inspected the new bytes. The Reviewed
+Dictionary Digests rows of all 69 dictionaries were rehashed to the current
+files without a new first or second pass. No value of the three new keys
+exactly equals English, and no dictionary held the old English
+`Jump to section`, so no retention row was added or removed.
 
 ## 539-Key Clear-Formatting Schema Migration
 

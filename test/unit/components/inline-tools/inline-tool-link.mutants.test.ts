@@ -37,7 +37,6 @@ type Harness = {
   suggestionIcon: HTMLElement;
   suggestionUrl: HTMLElement;
   suggestionType: HTMLElement;
-  suggestionEnterHint: HTMLElement;
   error: HTMLElement;
   divider: HTMLElement;
   removeButton: HTMLButtonElement;
@@ -167,7 +166,6 @@ const createHarness = (options: { link?: LinkConfig; translations?: Record<strin
     suggestionIcon: must<HTMLElement>(suggestion, '[data-link-suggestion-icon]'),
     suggestionUrl: must<HTMLElement>(suggestion, '[data-link-suggestion-url]'),
     suggestionType: must<HTMLElement>(suggestion, '[data-link-suggestion-type]'),
-    suggestionEnterHint: must<HTMLElement>(suggestion, '[data-link-suggestion-enter-hint]'),
     error: must<HTMLElement>(wrapper, '[data-blok-link-tool-error]'),
     divider: must<HTMLElement>(wrapper, '[data-blok-testid="inline-tool-link-divider"]'),
     removeButton: must<HTMLButtonElement>(wrapper, '[data-blok-testid="inline-tool-remove-link"]'),
@@ -222,7 +220,7 @@ const onlyAnchorIn = (testid: string): HTMLAnchorElement => {
 };
 
 /** The error region is a row span holding an icon span and the message span. */
-const errorMessage = (harness: Harness): Element => harness.error.children[0].children[1];
+const errorMessage = (harness: Harness): Element => must<HTMLElement>(harness.error, '[data-link-error-title]');
 
 const fakeBackgroundSpans = (): NodeListOf<HTMLElement> =>
   document.querySelectorAll<HTMLElement>('[data-blok-fake-background="true"]');
@@ -1099,10 +1097,10 @@ describe('LinkInlineTool — mutation coverage', () => {
       expect(harness.suggestionIcon.className).toBe(`${restingIconClass} opacity-50`);
       expect(harness.suggestionUrl.className).toMatch(/text-gray-text$/);
       expect(harness.suggestionRow.tabIndex).toBe(-1);
-      expect(harness.suggestionEnterHint.className).toMatch(/^hidden /);
+      expect(harness.suggestionRow.className.split(' ')).not.toContain('bg-item-hover-bg');
     });
 
-    it('brightens the row and offers the Enter hint once complete', () => {
+    it('brightens and lights the row once complete', () => {
       const harness = openOnPlainText();
       const restingIconClass = harness.suggestionIcon.className;
 
@@ -1111,8 +1109,7 @@ describe('LinkInlineTool — mutation coverage', () => {
       expect(harness.suggestionIcon.className).toBe(restingIconClass);
       expect(harness.suggestionUrl.className).toMatch(/text-text-primary$/);
       expect(harness.suggestionRow.tabIndex).toBe(0);
-      expect(harness.suggestionEnterHint.className).toMatch(/^flex /);
-      expect(harness.suggestionEnterHint.className).toContain('size-5');
+      expect(harness.suggestionRow.className.split(' ')).toContain('bg-item-hover-bg');
     });
 
     it('hides the row when the field is emptied', () => {
@@ -1238,7 +1235,7 @@ describe('LinkInlineTool — mutation coverage', () => {
 
       const row = harness.error.children[0];
 
-      expect(row.className).toContain('text-[var(--blok-color-danger)]');
+      expect(row.children[0].className).toContain('text-[var(--blok-color-danger)]');
       expect(row.children[0].className).toContain('shrink-0');
       expect(row.children[0].getAttribute('aria-hidden')).toBe('true');
     });
@@ -1247,16 +1244,13 @@ describe('LinkInlineTool — mutation coverage', () => {
       const harness = createHarness();
 
       expect(harness.suggestion.getAttribute('data-link-suggestion')).toBe('');
-      expect(harness.suggestion.children[0].className).toContain('h-px');
+      expect(Array.from(harness.suggestion.children)).toEqual([harness.suggestionRow]);
       expect(harness.suggestionRow.type).toBe('button');
       expect(harness.suggestionRow.getAttribute('data-link-suggestion-row')).toBe('');
       expect(harness.suggestionIcon.getAttribute('data-link-suggestion-icon')).toBe('');
       expect(harness.suggestionUrl.getAttribute('data-link-suggestion-url')).toBe('');
       expect(harness.suggestionUrl.className).toContain('truncate');
       expect(harness.suggestionType.getAttribute('data-link-suggestion-type')).toBe('');
-      expect(harness.suggestionEnterHint.getAttribute('data-link-suggestion-enter-hint')).toBe('');
-      expect(harness.suggestionEnterHint.getAttribute('aria-hidden')).toBe('true');
-      expect(harness.suggestionEnterHint.className).toContain('hidden');
       expect(harness.suggestionUrl.parentElement?.className).toBe('flex-1 min-w-0');
     });
   });

@@ -9,7 +9,7 @@ import type { BlokConfig } from '../../../types/configs/blok-config';
 import type { Blocks, Notifier, Toolbar, I18n, InlineToolbar, Tools } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR, createSelector, INLINE_TOOLBAR_INTERFACE_VALUE } from '../constants';
-import { IconLink, IconGlobe, IconMail, IconHash, IconTrash, IconReturn, IconWarning, IconPage, IconTable, IconPhone } from '../icons';
+import { IconLink, IconGlobe, IconMail, IconTableOfContents, IconTrash, IconReturn, IconWarning, IconPage, IconTable, IconPhone } from '../icons';
 import { SelectionUtils } from '../selection/index';
 import { log } from '../utils';
 import { PopoverItemType } from '../utils/popover';
@@ -27,21 +27,28 @@ import { searchVisiblePages } from '../../tools/page/search-pages';
 import type { PageConfig, PageSearchResult } from '../../tools/page/types';
 
 // ps-0.5 and gap-2 put its 24px icon box and its text on the list rows' columns.
-const SUGGESTION_ROW_BASE = 'flex items-center gap-2 w-full mt-0.5 ps-0.5 pe-2 py-1.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) text-left appearance-none border-0 bg-transparent font-[inherit] outline-hidden';
-const SUGGESTION_ROW_VALID = `${SUGGESTION_ROW_BASE} cursor-pointer can-hover:hover:bg-item-hover-bg focus-visible:bg-item-hover-bg transition-colors`;
-const SUGGESTION_ROW_INVALID = `${SUGGESTION_ROW_BASE} pointer-events-none`;
+// The suggestion row and the error that takes its place share this box, so
+// the card keeps its height when an address is refused.
+const TYPED_ROW_BOX = 'flex items-start gap-2 min-h-[46px] ps-0.5 pe-2 py-[5px]';
+const SUGGESTION_ROW_BASE = `${TYPED_ROW_BOX} w-full mt-2 rounded-(--blok-radius-inner,var(--blok-radius-control)) text-left appearance-none border-0 font-[inherit] outline-hidden`;
+// Lit from the start: Enter adds this link.
+const SUGGESTION_ROW_VALID = `${SUGGESTION_ROW_BASE} cursor-pointer bg-item-hover-bg active:scale-[0.985]`;
+const SUGGESTION_ROW_INVALID = `${SUGGESTION_ROW_BASE} bg-transparent pointer-events-none`;
 
 /**
- * The suggestion's leading icon sits in the same fixed box the popover menus
- * use for their item icons, so the link card reads as part of one system.
+ * The leading sign sits in the 24px box the popover menus use for their item
+ * icons. -mt-0.5 centres that box on the 20px first line, not on the row.
  */
-const SUGGESTION_ICON_CLASSES = 'flex items-center justify-center size-6 shrink-0 text-gray-text transition-opacity duration-150 [&_svg]:size-4';
-const SUGGESTION_URL_TEXT = 'block text-[13px] leading-[18px] font-medium truncate';
-const SUGGESTION_TYPE_TEXT = 'block text-[11px] leading-[14px] text-gray-text mt-px';
+const TYPED_ROW_ICON = 'flex items-center justify-center size-6 shrink-0 -mt-0.5 [&_svg]:size-4';
+const SUGGESTION_ICON_CLASSES = `${TYPED_ROW_ICON} text-gray-text transition-opacity duration-150`;
+// The type of the Recents and Pages rows.
+const TYPED_ROW_TITLE = 'block text-sm leading-5 truncate';
+const TYPED_ROW_META = 'block text-xs leading-4 text-gray-text';
+const SUGGESTION_URL_TEXT = TYPED_ROW_TITLE;
+const SUGGESTION_TYPE_TEXT = TYPED_ROW_META;
 
 /**
- * ⏎ affordance on the confirmable suggestion row. Shown only when pressing
- * Enter would actually insert the link.
+ * ⏎ affordance on the option row picked with the arrow keys.
  */
 const ENTER_HINT_CLASSES = 'items-center justify-center self-center size-5 shrink-0 text-gray-text [&_svg]:size-3.5';
 
@@ -178,6 +185,7 @@ export class LinkInlineTool implements InlineTool {
     kinds: HTMLElement | null;
     error: HTMLElement | null;
     errorMessage: HTMLElement | null;
+    errorReason: HTMLElement | null;
     divider: HTMLElement | null;
     removeButton: HTMLButtonElement | null;
     button: HTMLButtonElement | null;
@@ -198,6 +206,7 @@ export class LinkInlineTool implements InlineTool {
       suggestion: null,
       error: null,
       errorMessage: null,
+      errorReason: null,
       divider: null,
       removeButton: null,
       button: null,
@@ -512,25 +521,41 @@ export class LinkInlineTool implements InlineTool {
     error.id = this.errorId;
     // w-0 + min-w-full for the same reason as the suggestion wrapper: a long
     // localized message must not widen the content-driven card.
-    error.className = 'w-0 min-w-full mt-1.5 px-1.5';
+    error.className = 'w-0 min-w-full mt-2';
     error.setAttribute('data-blok-link-tool-error', '');
     error.setAttribute('role', 'alert');
     error.hidden = true;
 
     const row = document.createElement('span');
 
-    row.className = 'flex items-center gap-1.5 text-xs font-medium text-[var(--blok-color-danger)]';
+    row.className = TYPED_ROW_BOX;
 
     const iconEl = document.createElement('span');
 
-    iconEl.className = 'shrink-0 flex [&_svg]:size-3.5';
+    iconEl.className = `${TYPED_ROW_ICON} text-[var(--blok-color-danger)]`;
     iconEl.setAttribute('aria-hidden', 'true');
+    iconEl.setAttribute('data-link-error-icon', '');
     iconEl.innerHTML = IconWarning;
+
+    const textEl = document.createElement('span');
+
+    textEl.className = 'flex-1 min-w-0';
 
     const message = document.createElement('span');
 
+    message.className = `${TYPED_ROW_TITLE} text-[var(--blok-color-danger)]`;
+    message.setAttribute('data-link-error-title', '');
+
+    // Not truncated: a cut reason says nothing.
+    const reason = document.createElement('span');
+
+    reason.className = TYPED_ROW_META;
+    reason.setAttribute('data-link-error-reason', '');
+
     this.nodes.errorMessage = message;
-    row.append(iconEl, message);
+    this.nodes.errorReason = reason;
+    textEl.append(message, reason);
+    row.append(iconEl, textEl);
     error.append(row);
 
     return error;
@@ -540,17 +565,34 @@ export class LinkInlineTool implements InlineTool {
    * Surface a URL validation failure: fill and reveal the inline error and
    * mark the input aria-invalid, describing it by the error region.
    */
-  private showValidationError(): void {
+  private showValidationError(value: string): void {
     if (!this.nodes.input || !this.nodes.error || !this.nodes.errorMessage) {
       return;
     }
 
     this.nodes.errorMessage.textContent = this.i18n.t('tools.link.invalidLink');
+    if (this.nodes.errorReason) {
+      this.nodes.errorReason.textContent = this.i18n.t(this.invalidReasonKey(value));
+    }
     this.nodes.error.hidden = false;
     // The error and the suggestion row contradict each other — while the URL
     // is rejected, the row must not keep offering that same URL as confirmable.
     this.nodes.suggestion?.classList.add('hidden');
     setFieldValidity(this.nodes.input, false, this.errorId);
+  }
+
+  /**
+   * Why validateURL refused the value, as a message key.
+   * @param value - the field's value
+   */
+  private invalidReasonKey(value: string): 'tools.link.invalidSpaces' | 'tools.link.invalidUnsafe' | 'tools.link.invalidKind' {
+    const link = this.prepareLink(value);
+
+    if (/\s/.test(link)) {
+      return 'tools.link.invalidSpaces';
+    }
+
+    return /^(?:javascript|data|vbscript):/i.test(link) ? 'tools.link.invalidUnsafe' : 'tools.link.invalidKind';
   }
 
   /**
@@ -563,6 +605,9 @@ export class LinkInlineTool implements InlineTool {
 
     if (this.nodes.errorMessage) {
       this.nodes.errorMessage.textContent = '';
+    }
+    if (this.nodes.errorReason) {
+      this.nodes.errorReason.textContent = '';
     }
     this.nodes.error.hidden = true;
     setFieldValidity(this.nodes.input, true, this.errorId);
@@ -580,10 +625,6 @@ export class LinkInlineTool implements InlineTool {
     // renders at the card's resolved width, which is what lets it truncate.
     wrapper.className = 'hidden w-0 min-w-full';
     wrapper.setAttribute('data-link-suggestion', '');
-
-    const divider = document.createElement('div');
-
-    divider.className = 'mt-1 mb-0.5 h-px bg-link-input-border';
 
     const row = document.createElement('button');
 
@@ -610,16 +651,9 @@ export class LinkInlineTool implements InlineTool {
     typeEl.className = SUGGESTION_TYPE_TEXT;
     typeEl.setAttribute('data-link-suggestion-type', '');
 
-    const enterHint = document.createElement('span');
-
-    enterHint.className = `hidden ${ENTER_HINT_CLASSES}`;
-    enterHint.setAttribute('data-link-suggestion-enter-hint', '');
-    enterHint.setAttribute('aria-hidden', 'true');
-    enterHint.innerHTML = IconReturn;
-
     textEl.append(urlEl, typeEl);
-    row.append(iconEl, textEl, enterHint);
-    wrapper.append(divider, row);
+    row.append(iconEl, textEl);
+    wrapper.append(row);
 
     row.addEventListener('mousedown', (e) => e.preventDefault());
     row.addEventListener('click', () => this.confirmLink());
@@ -651,7 +685,6 @@ export class LinkInlineTool implements InlineTool {
     const urlEl = this.nodes.suggestion.querySelector<HTMLElement>('[data-link-suggestion-url]');
     const typeEl = this.nodes.suggestion.querySelector<HTMLElement>('[data-link-suggestion-type]');
     const row = this.nodes.suggestion.querySelector<HTMLElement>('[data-link-suggestion-row]');
-    const enterHint = this.nodes.suggestion.querySelector<HTMLElement>('[data-link-suggestion-enter-hint]');
 
     if (iconEl) {
       iconEl.innerHTML = icon;
@@ -669,9 +702,6 @@ export class LinkInlineTool implements InlineTool {
       // pointer-events-none does not stop keyboard focus — keep the inert row
       // out of the tab order too.
       row.tabIndex = isComplete ? 0 : -1;
-    }
-    if (enterHint) {
-      enterHint.className = `${isComplete ? 'flex' : 'hidden'} ${ENTER_HINT_CLASSES}`;
     }
 
     this.nodes.suggestion.classList.remove('hidden');
@@ -1521,7 +1551,7 @@ export class LinkInlineTool implements InlineTool {
       return { icon: IconMail, label: this.i18n.t('tools.link.emailAddress') };
     }
     if (url.startsWith('#')) {
-      return { icon: IconHash, label: this.i18n.t('tools.link.jumpToSection') };
+      return { icon: IconTableOfContents, label: this.i18n.t('tools.link.jumpToSection') };
     }
 
     if (/^tel:/i.test(url)) {
@@ -1552,7 +1582,7 @@ export class LinkInlineTool implements InlineTool {
       // Surface the failure once, via the accessible inline field error
       // (aria-invalid + error region). A duplicate notifier toast would render
       // the same "Invalid link" text a second time.
-      this.showValidationError();
+      this.showValidationError(value);
 
       return;
     }
@@ -1655,6 +1685,8 @@ export class LinkInlineTool implements InlineTool {
    */
   private setEditAffordancesVisible(visible: boolean, titleValue = ''): void {
     this.editing = visible;
+    // link-picker.css gives the typed row room under it only while adding a link.
+    this.nodes.inputWrapper?.toggleAttribute('data-link-editing', visible);
 
     if (this.nodes.titleInput) {
       this.nodes.titleInput.value = visible ? titleValue : '';
@@ -1872,7 +1904,7 @@ export class LinkInlineTool implements InlineTool {
       // Surface the failure once, via the accessible inline field error
       // (aria-invalid + error region). A duplicate notifier toast would render
       // the same "Invalid link" text a second time.
-      this.showValidationError();
+      this.showValidationError(value);
 
       log('Incorrect Link pasted', 'warn', value);
 

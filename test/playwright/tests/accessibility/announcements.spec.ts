@@ -680,8 +680,10 @@ test.describe('screen reader announcements', () => {
       });
 
       const expected = await translate(page, 'tools.link.invalidLink');
+      const reason = await translate(page, 'tools.link.invalidUnsafe');
 
       expect(expected).not.toBe('');
+      expect(reason).not.toBe('');
 
       await selectAllText(page.locator(PARAGRAPH_CONTENT).first());
       await page.keyboard.press(`${MODIFIER_KEY}+KeyK`);
@@ -697,7 +699,9 @@ test.describe('screen reader announcements', () => {
 
       await expect(error).toBeVisible();
       await expect(error).toHaveAttribute('role', 'alert');
-      await expect(error).toHaveText(expected);
+      // The alert says that the link is refused, then why.
+      await expect(error.locator('[data-link-error-title]')).toHaveText(expected);
+      await expect(error.locator('[data-link-error-reason]')).toHaveText(reason);
       await expect(input).toHaveAttribute('aria-invalid', 'true');
     });
 

@@ -39279,6 +39279,10 @@ textarea[data-blok-field] {
   padding-bottom: var(--blok-space-1);
 }
 
+[data-blok-nested] [data-link-field]:not([data-link-editing]) > :is([data-link-suggestion], [data-blok-link-tool-error]) {
+  margin-bottom: var(--blok-space-1);
+}
+
 [@media (min-width: 651px)] [data-blok-nested] [data-blok-popover-items]:not(:has(~ [data-blok-popover-scrollbar]:not([hidden]))) [data-link-field] {
   width: 324px;
   padding-right: var(--blok-space-1);

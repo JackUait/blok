@@ -35,6 +35,12 @@
   padding-bottom: var(--blok-space-1);
 }
 
+/* The typed row, or the error in its place, is the card's last thing while a
+   link is being added. A margin, so the 46px row keeps its height. */
+[data-blok-nested] [data-link-field]:not([data-link-editing]) > :is([data-link-suggestion], [data-blok-link-tool-error]) {
+  margin-bottom: var(--blok-space-1);
+}
+
 @media (min-width: 651px) {
   [data-blok-nested] [data-blok-popover-items]:not(:has(~ [data-blok-popover-scrollbar]:not([hidden]))) [data-link-field] {
     width: 324px;

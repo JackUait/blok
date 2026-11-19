@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "סאָרטירן אַרויפֿגייענדיק",
   "tools.database.sortDescending": "סאָרטירן אַראָפּגייענדיק",
   "tools.database.groupBy": "גרופּירן לויט",
+  "tools.database.subGroupBy": "אונטערגרופּירן לויט",
   "tools.database.groupSort": "סאָרטירן",
   "tools.database.groupSortManual": "מאַנועל",
   "tools.database.groupSortAlphabetical": "אַלפֿאַבעטיש",

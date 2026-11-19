@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "Αύξουσα ταξινόμηση",
   "tools.database.sortDescending": "Φθίνουσα ταξινόμηση",
   "tools.database.groupBy": "Ομαδοποίηση κατά",
+  "tools.database.subGroupBy": "Υποομαδοποίηση κατά",
   "tools.database.groupSort": "Ταξινόμηση",
   "tools.database.groupSortManual": "Χειροκίνητα",
   "tools.database.groupSortAlphabetical": "Αλφαβητικά",

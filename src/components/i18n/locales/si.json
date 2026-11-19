@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "ආරෝහණ ලෙස වර්ග කරන්න",
   "tools.database.sortDescending": "අවරෝහණ ලෙස වර්ග කරන්න",
   "tools.database.groupBy": "සමූහගත කරන පදනම",
+  "tools.database.subGroupBy": "උප සමූහගත කරන පදනම",
   "tools.database.groupSort": "වර්ග කරන්න",
   "tools.database.groupSortManual": "අතින්",
   "tools.database.groupSortAlphabetical": "අකාරාදී",

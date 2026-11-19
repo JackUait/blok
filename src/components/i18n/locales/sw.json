@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "Panga kwa kupanda",
   "tools.database.sortDescending": "Panga kwa kushuka",
   "tools.database.groupBy": "Weka vikundi kwa",
+  "tools.database.subGroupBy": "Weka vikundi vidogo kwa",
   "tools.database.groupSort": "Panga",
   "tools.database.groupSortManual": "Kwa mkono",
   "tools.database.groupSortAlphabetical": "Kwa alfabeti",

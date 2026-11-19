@@ -1561,6 +1561,7 @@
   "tools.database.sortAscending": "מיין בסדר עולה",
   "tools.database.sortDescending": "מיין בסדר יורד",
   "tools.database.groupBy": "קבץ לפי",
+  "tools.database.subGroupBy": "קיבוץ משנה לפי",
   "tools.database.groupSort": "מיין",
   "tools.database.groupSortManual": "ידני",
   "tools.database.groupSortAlphabetical": "אלפביתי",

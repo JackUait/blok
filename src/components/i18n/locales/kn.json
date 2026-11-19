@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "ಏರಿಕೆ ಕ್ರಮದಲ್ಲಿ ವಿಂಗಡಿಸಿ",
   "tools.database.sortDescending": "ಇಳಿಕೆ ಕ್ರಮದಲ್ಲಿ ವಿಂಗಡಿಸಿ",
   "tools.database.groupBy": "ಇದರ ಪ್ರಕಾರ ಗುಂಪು ಮಾಡಿ",
+  "tools.database.subGroupBy": "ಇದರ ಪ್ರಕಾರ ಉಪ-ಗುಂಪು ಮಾಡಿ",
   "tools.database.groupSort": "ವಿಂಗಡಿಸಿ",
   "tools.database.groupSortManual": "ಹಸ್ತಚಾಲಿತ",
   "tools.database.groupSortAlphabetical": "ವರ್ಣಮಾಲೆಯ ಕ್ರಮ",

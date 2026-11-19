@@ -1561,6 +1561,7 @@
   "tools.database.sortAscending": "Kārtot augošā secībā",
   "tools.database.sortDescending": "Kārtot dilstošā secībā",
   "tools.database.groupBy": "Grupēt pēc",
+  "tools.database.subGroupBy": "Apakšgrupēt pēc",
   "tools.database.groupSort": "Kārtot",
   "tools.database.groupSortManual": "Manuāli",
   "tools.database.groupSortAlphabetical": "Alfabētiski",

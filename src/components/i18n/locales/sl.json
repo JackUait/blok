@@ -1577,6 +1577,7 @@
   "tools.database.sortAscending": "Razvrsti naraščajoče",
   "tools.database.sortDescending": "Razvrsti padajoče",
   "tools.database.groupBy": "Združi po",
+  "tools.database.subGroupBy": "Podskupine po",
   "tools.database.groupSort": "Razvrsti",
   "tools.database.groupSortManual": "Ročno",
   "tools.database.groupSortAlphabetical": "Abecedno",

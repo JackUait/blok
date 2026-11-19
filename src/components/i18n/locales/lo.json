@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "ຈັດຮຽງຈາກນ້ອຍຫາຫຼາຍ",
   "tools.database.sortDescending": "ຈັດຮຽງຈາກຫຼາຍຫານ້ອຍ",
   "tools.database.groupBy": "ຈັດກຸ່ມຕາມ",
+  "tools.database.subGroupBy": "ຈັດກຸ່ມຍ່ອຍຕາມ",
   "tools.database.groupSort": "ຈັດຮຽງ",
   "tools.database.groupSortManual": "ກຳນົດເອງ",
   "tools.database.groupSortAlphabetical": "ຕາມຕົວອັກສອນ",

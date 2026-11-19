@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "ئۆسۈش بويىچە رەتلەش",
   "tools.database.sortDescending": "كېمىيىش بويىچە رەتلەش",
   "tools.database.groupBy": "گۇرۇپپىلاش ئاساسى",
+  "tools.database.subGroupBy": "تارماق گۇرۇپپىلاش ئاساسى",
   "tools.database.groupSort": "رەتلەش",
   "tools.database.groupSortManual": "قولدا",
   "tools.database.groupSortAlphabetical": "ئېلىپبە بويىچە",

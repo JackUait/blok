@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "ચડતા ક્રમમાં સૉર્ટ કરો",
   "tools.database.sortDescending": "ઊતરતા ક્રમમાં સૉર્ટ કરો",
   "tools.database.groupBy": "આના આધારે જૂથ બનાવો",
+  "tools.database.subGroupBy": "આના આધારે પેટા-જૂથ બનાવો",
   "tools.database.groupSort": "સૉર્ટ કરો",
   "tools.database.groupSortManual": "મેન્યુઅલ",
   "tools.database.groupSortAlphabetical": "મૂળાક્ષરો મુજબ",

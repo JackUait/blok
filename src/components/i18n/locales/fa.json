@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "مرتب‌سازی صعودی",
   "tools.database.sortDescending": "مرتب‌سازی نزولی",
   "tools.database.groupBy": "گروه‌بندی بر اساس",
+  "tools.database.subGroupBy": "زیرگروه‌بندی بر اساس",
   "tools.database.groupSort": "مرتب‌سازی",
   "tools.database.groupSortManual": "دستی",
   "tools.database.groupSortAlphabetical": "الفبایی",

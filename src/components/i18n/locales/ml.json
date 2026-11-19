@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "ആരോഹണ ക്രമത്തിൽ അടുക്കുക",
   "tools.database.sortDescending": "അവരോഹണ ക്രമത്തിൽ അടുക്കുക",
   "tools.database.groupBy": "ഇതനുസരിച്ച് ഗ്രൂപ്പ് ചെയ്യുക",
+  "tools.database.subGroupBy": "ഇതനുസരിച്ച് ഉപ-ഗ്രൂപ്പ് ചെയ്യുക",
   "tools.database.groupSort": "അടുക്കുക",
   "tools.database.groupSortManual": "സ്വമേധയാ",
   "tools.database.groupSortAlphabetical": "അക്ഷരമാലാ ക്രമം",

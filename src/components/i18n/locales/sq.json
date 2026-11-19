@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "Rendit në rritje",
   "tools.database.sortDescending": "Rendit në zbritje",
   "tools.database.groupBy": "Grupo sipas",
+  "tools.database.subGroupBy": "Nëngrupo sipas",
   "tools.database.groupSort": "Rendit",
   "tools.database.groupSortManual": "Manuale",
   "tools.database.groupSortAlphabetical": "Alfabetike",

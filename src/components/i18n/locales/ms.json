@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "Isih menaik",
   "tools.database.sortDescending": "Isih menurun",
   "tools.database.groupBy": "Kumpulkan mengikut",
+  "tools.database.subGroupBy": "Subkumpulkan mengikut",
   "tools.database.groupSort": "Isih",
   "tools.database.groupSortManual": "Susunan manual",
   "tools.database.groupSortAlphabetical": "Mengikut abjad",

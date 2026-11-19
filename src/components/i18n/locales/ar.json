@@ -1609,6 +1609,7 @@
   "tools.database.sortAscending": "فرز تصاعدي",
   "tools.database.sortDescending": "فرز تنازلي",
   "tools.database.groupBy": "تجميع حسب",
+  "tools.database.subGroupBy": "تجميع فرعي حسب",
   "tools.database.groupSort": "فرز",
   "tools.database.groupSortManual": "يدوي",
   "tools.database.groupSortAlphabetical": "أبجدي",

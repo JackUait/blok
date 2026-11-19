@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "आरोही क्रम में लगाएं",
   "tools.database.sortDescending": "अवरोही क्रम में लगाएं",
   "tools.database.groupBy": "इसके अनुसार समूह बनाएं",
+  "tools.database.subGroupBy": "इसके अनुसार उप-समूह बनाएं",
   "tools.database.groupSort": "क्रमबद्ध करें",
   "tools.database.groupSortManual": "मैन्युअल",
   "tools.database.groupSortAlphabetical": "वर्णानुक्रम",

@@ -1577,6 +1577,7 @@
   "tools.database.sortAscending": "Zoradiť vzostupne",
   "tools.database.sortDescending": "Zoradiť zostupne",
   "tools.database.groupBy": "Zoskupiť podľa",
+  "tools.database.subGroupBy": "Podskupiny podľa",
   "tools.database.groupSort": "Zoradiť",
   "tools.database.groupSortManual": "Ručne",
   "tools.database.groupSortAlphabetical": "Abecedne",

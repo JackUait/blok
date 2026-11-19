@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "ከትንሽ ወደ ትልቅ ደርድር",
   "tools.database.sortDescending": "ከትልቅ ወደ ትንሽ ደርድር",
   "tools.database.groupBy": "በቡድን አደራጅ በ",
+  "tools.database.subGroupBy": "በንዑስ ቡድን አደራጅ በ",
   "tools.database.groupSort": "ደርድር",
   "tools.database.groupSortManual": "በእጅ",
   "tools.database.groupSortAlphabetical": "በፊደል ቅደም ተከተል",

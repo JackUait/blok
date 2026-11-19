@@ -1561,6 +1561,7 @@
   "tools.database.sortAscending": "Sortiraj uzlazno",
   "tools.database.sortDescending": "Sortiraj silazno",
   "tools.database.groupBy": "Grupiraj po",
+  "tools.database.subGroupBy": "Podgrupiraj po",
   "tools.database.groupSort": "Sortiraj",
   "tools.database.groupSortManual": "Ručno",
   "tools.database.groupSortAlphabetical": "Abecedno",

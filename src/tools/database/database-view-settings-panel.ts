@@ -2921,13 +2921,13 @@ export class ViewSettingsPages {
     const stateKey = (key: string): string => (sub ? `sub:${key}` : key);
     const pickState = queryState();
 
-    const ungrouped = (): boolean => !sub && this.property(this.ctx.view().groupBy) === undefined;
+    const ungrouped = (): boolean => this.property(sub ? this.ctx.view().subGroupBy : this.ctx.view().groupBy) === undefined;
     const t = (key: string): string => this.t(key);
 
     // notion-motion.md Round 10 "Group by list": ungrouped, the page is the property list titled "Group by".
     return {
       get title() {
-        if (sub) return t('settingsSubGroup');
+        if (sub) return t(ungrouped() ? 'subGroupBy' : 'settingsSubGroup');
 
         return t(ungrouped() ? 'groupBy' : 'settingsGroup');
       },
@@ -2942,13 +2942,14 @@ export class ViewSettingsPages {
         const disabled = !this.shared;
 
         // findings V15 (26-notion-group.png): ungrouped, the page is None, then the property picker.
-        if (!sub && property === undefined) {
+        // Round 82 §3 (r82-n-a2-subgroup.raw): with no sub-group, Sub-group opens the same way.
+        if (property === undefined) {
           return this.propertyPicker(pickState, GROUPABLE_TYPES, (picked) => {
-            this.ctx.updateView(groupByChange(this.ctx.view(), picked));
+            this.ctx.updateView(sub ? subGroupByChange(this.ctx.view(), picked) : groupByChange(this.ctx.view(), picked));
             panel.refresh();
           }, {
             disabled,
-            leading: () => [panelRow({ label: this.t('settingsNone'), testId: 'database-group-none', checked: true, onClick: () => undefined })],
+            leading: () => [panelRow({ label: this.t('settingsNone'), testId: sub ? 'database-subgroup-none' : 'database-group-none', checked: true, onClick: () => undefined })],
           });
         }
         const refreshAfter = (write: () => void): (() => void) => () => {
@@ -2957,19 +2958,17 @@ export class ViewSettingsPages {
         };
         const rows: HTMLElement[] = [
           panelRow({
-            label: this.t('groupBy'),
+            label: this.t(sub ? 'subGroupBy' : 'groupBy'),
             testId: sub ? 'database-subgroup-by' : 'database-group-by',
-            value: property?.name ?? this.t('settingsNone'),
+            value: property.name,
             opensPage: true,
             disabled,
-            onClick: () => panel.push(this.pickProperty(this.t('groupBy'), GROUPABLE_TYPES, (picked) => {
+            onClick: () => panel.push(this.pickProperty(this.t(sub ? 'subGroupBy' : 'groupBy'), GROUPABLE_TYPES, (picked) => {
               this.ctx.updateView(sub ? subGroupByChange(this.ctx.view(), picked) : groupByChange(this.ctx.view(), picked));
               panel.back();
             }, { measured: true })),
           }),
         ];
-
-        if (property === undefined) return rows;
 
         if (property.type === 'status' && !sub) {
           const statusBy = view.groupByStatus ?? 'option';

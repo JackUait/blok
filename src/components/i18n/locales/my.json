@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "ငယ်စဉ်ကြီးလိုက် စီရန်",
   "tools.database.sortDescending": "ကြီးစဉ်ငယ်လိုက် စီရန်",
   "tools.database.groupBy": "အုပ်စုဖွဲ့ရန် အခြေခံ",
+  "tools.database.subGroupBy": "အုပ်စုခွဲရန် အခြေခံ",
   "tools.database.groupSort": "စီရန်",
   "tools.database.groupSortManual": "ကိုယ်တိုင်",
   "tools.database.groupSortAlphabetical": "အက္ခရာစဉ်",

@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "Sắp xếp tăng dần",
   "tools.database.sortDescending": "Sắp xếp giảm dần",
   "tools.database.groupBy": "Nhóm theo",
+  "tools.database.subGroupBy": "Nhóm con theo",
   "tools.database.groupSort": "Sắp xếp",
   "tools.database.groupSortManual": "Thủ công",
   "tools.database.groupSortAlphabetical": "Theo bảng chữ cái",

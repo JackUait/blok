@@ -1577,6 +1577,7 @@
   "tools.database.sortAscending": "Сортувати за зростанням",
   "tools.database.sortDescending": "Сортувати за спаданням",
   "tools.database.groupBy": "Групувати за",
+  "tools.database.subGroupBy": "Підгрупувати за",
   "tools.database.groupSort": "Сортувати",
   "tools.database.groupSortManual": "Вручну",
   "tools.database.groupSortAlphabetical": "За алфавітом",

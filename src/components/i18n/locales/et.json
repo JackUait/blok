@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "Sordi kasvavalt",
   "tools.database.sortDescending": "Sordi kahanevalt",
   "tools.database.groupBy": "Rühmitamise alus",
+  "tools.database.subGroupBy": "Alamrühmitamise alus",
   "tools.database.groupSort": "Sordi",
   "tools.database.groupSortManual": "Käsitsi",
   "tools.database.groupSortAlphabetical": "Tähestikuline",

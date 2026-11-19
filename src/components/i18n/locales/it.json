@@ -1561,6 +1561,7 @@
   "tools.database.sortAscending": "Ordine crescente",
   "tools.database.sortDescending": "Ordine decrescente",
   "tools.database.groupBy": "Raggruppa per",
+  "tools.database.subGroupBy": "Sottoraggruppa per",
   "tools.database.groupSort": "Ordina",
   "tools.database.groupSortManual": "Manuale",
   "tools.database.groupSortAlphabetical": "Alfabetico",

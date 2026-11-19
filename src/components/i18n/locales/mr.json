@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "चढत्या क्रमाने लावा",
   "tools.database.sortDescending": "उतरत्या क्रमाने लावा",
   "tools.database.groupBy": "यानुसार गट करा",
+  "tools.database.subGroupBy": "यानुसार उप-गट करा",
   "tools.database.groupSort": "क्रमवारी लावा",
   "tools.database.groupSortManual": "मॅन्युअल",
   "tools.database.groupSortAlphabetical": "वर्णक्रमानुसार",

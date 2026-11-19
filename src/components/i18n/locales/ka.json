@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "ზრდადობით დალაგება",
   "tools.database.sortDescending": "კლებადობით დალაგება",
   "tools.database.groupBy": "დაჯგუფების საფუძველი",
+  "tools.database.subGroupBy": "ქვედაჯგუფების საფუძველი",
   "tools.database.groupSort": "დალაგება",
   "tools.database.groupSortManual": "ხელით",
   "tools.database.groupSortAlphabetical": "ანბანურად",

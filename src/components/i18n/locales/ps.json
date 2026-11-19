@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "صعودي ترتیب",
   "tools.database.sortDescending": "نزولي ترتیب",
   "tools.database.groupBy": "ګروپ پر بنسټ",
+  "tools.database.subGroupBy": "فرعي ګروپ پر بنسټ",
   "tools.database.groupSort": "ترتیب کړئ",
   "tools.database.groupSortManual": "لاسي",
   "tools.database.groupSortAlphabetical": "الفبايي",

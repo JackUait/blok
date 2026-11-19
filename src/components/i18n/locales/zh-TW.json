@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "遞增排序",
   "tools.database.sortDescending": "遞減排序",
   "tools.database.groupBy": "分組依據",
+  "tools.database.subGroupBy": "子群組依據",
   "tools.database.groupSort": "排序",
   "tools.database.groupSortManual": "手動",
   "tools.database.groupSortAlphabetical": "依字母順序",

@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "เรียงจากน้อยไปมาก",
   "tools.database.sortDescending": "เรียงจากมากไปน้อย",
   "tools.database.groupBy": "จัดกลุ่มตาม",
+  "tools.database.subGroupBy": "จัดกลุ่มย่อยตาม",
   "tools.database.groupSort": "เรียงลำดับ",
   "tools.database.groupSortManual": "กำหนดเอง",
   "tools.database.groupSortAlphabetical": "ตามตัวอักษร",

@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "昇順で並べ替え",
   "tools.database.sortDescending": "降順で並べ替え",
   "tools.database.groupBy": "グループ化の基準",
+  "tools.database.subGroupBy": "サブグループ化の基準",
   "tools.database.groupSort": "並べ替え",
   "tools.database.groupSortManual": "手動",
   "tools.database.groupSortAlphabetical": "アルファベット順",

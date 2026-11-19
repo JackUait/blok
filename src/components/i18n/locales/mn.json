@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "Өсөхөөр эрэмбэлэх",
   "tools.database.sortDescending": "Буурахаар эрэмбэлэх",
   "tools.database.groupBy": "Бүлэглэх шинж",
+  "tools.database.subGroupBy": "Дэд бүлэглэх шинж",
   "tools.database.groupSort": "Эрэмбэлэх",
   "tools.database.groupSortManual": "Гараар",
   "tools.database.groupSortAlphabetical": "Цагаан толгойн дарааллаар",

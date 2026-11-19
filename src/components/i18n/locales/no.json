@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "Sorter stigende",
   "tools.database.sortDescending": "Sorter synkende",
   "tools.database.groupBy": "Grupper etter",
+  "tools.database.subGroupBy": "Undergrupper etter",
   "tools.database.groupSort": "Sorter",
   "tools.database.groupSortManual": "Manuell",
   "tools.database.groupSortAlphabetical": "Alfabetisk",

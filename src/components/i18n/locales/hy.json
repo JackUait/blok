@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "Տեսակավորել աճման կարգով",
   "tools.database.sortDescending": "Տեսակավորել նվազման կարգով",
   "tools.database.groupBy": "Խմբավորել ըստ",
+  "tools.database.subGroupBy": "Ենթախմբավորել ըստ",
   "tools.database.groupSort": "Տեսակավորել",
   "tools.database.groupSortManual": "Ձեռքով",
   "tools.database.groupSortAlphabetical": "Այբբենական",

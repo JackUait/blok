@@ -2373,21 +2373,42 @@ describe('view settings panel', () => {
 
       h.open('root');
       click('database-settings-subgroup');
-      click('database-subgroup-by');
       click('database-pick-property-prog');
 
       expect(h.ctx.updateView).toHaveBeenLastCalledWith({ subGroupBy: 'prog', subGroupSettings: { hideEmptyGroups: true } });
     });
 
-    it('keeps the sub-group settings when the same sub-group is picked again', () => {
-      const h = harness({ type: 'board', groupBy: 'stage', subGroupBy: 'prog', subGroupSettings: { hideEmptyGroups: false } });
+    // notion-motion.md Round 82 (r82-n-a2-sub-repick.raw): a re-pick resets the sort to Manual and shows hidden sub-groups.
+    it('resets the sub-group sort and shows hidden sub-groups when the same sub-group is picked again', () => {
+      const h = harness({
+        type: 'board', groupBy: 'stage', subGroupBy: 'prog',
+        subGroupSettings: { hideEmptyGroups: false, sort: 'descending' }, hiddenGroups: [{ id: 'o1' }, { id: 'sub:s1' }],
+      });
 
       h.open('root');
       click('database-settings-subgroup');
       click('database-subgroup-by');
       click('database-pick-property-prog');
 
-      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ subGroupBy: 'prog' });
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ subGroupBy: 'prog', subGroupSettings: { hideEmptyGroups: false }, hiddenGroups: [{ id: 'o1' }] });
+    });
+
+    // notion-motion.md Round 82 §3 (r82-n-a2-subgroup.raw, -sub-pick1.raw): unset, Sub-group opens straight into the
+    // property list titled "Sub-group by", None first. Set, its first row reads "Sub-group by / <property>".
+    it('opens straight into the "Sub-group by" picker when no sub-group is set, and names the row "Sub-group by" once set', () => {
+      const h = harness({ type: 'board', groupBy: 'stage' });
+
+      h.open('root');
+      click('database-settings-subgroup');
+
+      expect(document.querySelector('[data-blok-testid="database-subgroup-by"]')).toBeNull();
+      expect(document.querySelector('[data-blok-testid="database-subgroup-none"]')?.getAttribute('aria-checked')).toBe('true');
+      expect(document.body.textContent).toContain('tools.database.subGroupBy');
+
+      click('database-pick-property-prog');
+
+      expect(h.state.view.subGroupBy).toBe('prog');
+      expect(document.querySelector('[data-blok-testid="database-subgroup-by"]')?.textContent).toContain('tools.database.subGroupBy');
     });
   });
 

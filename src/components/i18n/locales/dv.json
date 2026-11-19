@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "ކުޑައިން ބޮޑަށް ތަރުތީބުކުރޭ",
   "tools.database.sortDescending": "ބޮޑުން ކުޑައަށް ތަރުތީބުކުރޭ",
   "tools.database.groupBy": "ގްރޫޕްކުރާނީ",
+  "tools.database.subGroupBy": "ސަބް ގްރޫޕްކުރާނީ",
   "tools.database.groupSort": "ތަރުތީބުކުރޭ",
   "tools.database.groupSortManual": "އަތުން",
   "tools.database.groupSortAlphabetical": "އަކުރުތަކުގެ ތަރުތީބުން",

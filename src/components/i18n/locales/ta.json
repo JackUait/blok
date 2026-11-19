@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "ஏறுவரிசையில் வரிசைப்படுத்து",
   "tools.database.sortDescending": "இறங்குவரிசையில் வரிசைப்படுத்து",
   "tools.database.groupBy": "இதன்படி குழுவாக்கு",
+  "tools.database.subGroupBy": "இதன்படி துணைக் குழுவாக்கு",
   "tools.database.groupSort": "வரிசைப்படுத்து",
   "tools.database.groupSortManual": "கைமுறை",
   "tools.database.groupSortAlphabetical": "அகர வரிசை",

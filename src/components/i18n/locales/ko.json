@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "오름차순 정렬",
   "tools.database.sortDescending": "내림차순 정렬",
   "tools.database.groupBy": "그룹화 기준",
+  "tools.database.subGroupBy": "하위 그룹화 기준",
   "tools.database.groupSort": "정렬",
   "tools.database.groupSortManual": "수동",
   "tools.database.groupSortAlphabetical": "알파벳순",

@@ -1561,6 +1561,7 @@
   "tools.database.sortAscending": "Sortiraj rastuće",
   "tools.database.sortDescending": "Sortiraj opadajuće",
   "tools.database.groupBy": "Grupiši po",
+  "tools.database.subGroupBy": "Podgrupiši po",
   "tools.database.groupSort": "Sortiraj",
   "tools.database.groupSortManual": "Ručno",
   "tools.database.groupSortAlphabetical": "Abecedno",

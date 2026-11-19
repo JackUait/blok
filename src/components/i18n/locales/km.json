@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "តម្រៀបពីតូចទៅធំ",
   "tools.database.sortDescending": "តម្រៀបពីធំទៅតូច",
   "tools.database.groupBy": "ដាក់ជាក្រុមតាម",
+  "tools.database.subGroupBy": "ដាក់ជាក្រុមរងតាម",
   "tools.database.groupSort": "តម្រៀប",
   "tools.database.groupSortManual": "ដោយដៃ",
   "tools.database.groupSortAlphabetical": "តាមលំដាប់អក្សរ",

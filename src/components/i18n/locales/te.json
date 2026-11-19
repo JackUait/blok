@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "ఆరోహణ క్రమంలో క్రమబద్ధీకరించు",
   "tools.database.sortDescending": "అవరోహణ క్రమంలో క్రమబద్ధీకరించు",
   "tools.database.groupBy": "దీని ప్రకారం సమూహపరచు",
+  "tools.database.subGroupBy": "దీని ప్రకారం ఉప సమూహపరచు",
   "tools.database.groupSort": "క్రమబద్ధీకరించు",
   "tools.database.groupSortManual": "మాన్యువల్",
   "tools.database.groupSortAlphabetical": "అక్షర క్రమం",

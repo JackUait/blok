@@ -2370,6 +2370,7 @@ export type BlokMessageKey =
   | 'tools.database.statusGroupComplete'
   | 'tools.database.statusGroupInProgress'
   | 'tools.database.statusGroupTodo'
+  | 'tools.database.subGroupBy'
   | 'tools.database.subItemsChildrenName'
   | 'tools.database.subItemsCollapse'
   | 'tools.database.subItemsExpand'

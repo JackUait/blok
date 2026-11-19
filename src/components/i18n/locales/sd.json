@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "چڙهندڙ ترتيب ڏيو",
   "tools.database.sortDescending": "لهندڙ ترتيب ڏيو",
   "tools.database.groupBy": "گروپ موجب",
+  "tools.database.subGroupBy": "ذيلي گروپ موجب",
   "tools.database.groupSort": "ترتيب ڏيو",
   "tools.database.groupSortManual": "دستي",
   "tools.database.groupSortAlphabetical": "الفابيٽ موجب",

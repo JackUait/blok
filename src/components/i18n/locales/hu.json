@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "Rendezés növekvő sorrendben",
   "tools.database.sortDescending": "Rendezés csökkenő sorrendben",
   "tools.database.groupBy": "Csoportosítás eszerint",
+  "tools.database.subGroupBy": "Alcsoportosítás eszerint",
   "tools.database.groupSort": "Rendezés",
   "tools.database.groupSortManual": "Kézi",
   "tools.database.groupSortAlphabetical": "Betűrendben",

@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "Urutkan naik",
   "tools.database.sortDescending": "Urutkan turun",
   "tools.database.groupBy": "Kelompokkan menurut",
+  "tools.database.subGroupBy": "Subkelompokkan menurut",
   "tools.database.groupSort": "Urutkan",
   "tools.database.groupSortManual": "Urutan manual",
   "tools.database.groupSortAlphabetical": "Alfabetis",

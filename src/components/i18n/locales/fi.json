@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "Lajittele nousevasti",
   "tools.database.sortDescending": "Lajittele laskevasti",
   "tools.database.groupBy": "Ryhmittelyperuste",
+  "tools.database.subGroupBy": "Aliryhmittelyperuste",
   "tools.database.groupSort": "Lajittele",
   "tools.database.groupSortManual": "Manuaalinen",
   "tools.database.groupSortAlphabetical": "Aakkosjärjestys",

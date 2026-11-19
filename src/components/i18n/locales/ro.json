@@ -1561,6 +1561,7 @@
   "tools.database.sortAscending": "Sortează crescător",
   "tools.database.sortDescending": "Sortează descrescător",
   "tools.database.groupBy": "Grupează după",
+  "tools.database.subGroupBy": "Subgrupează după",
   "tools.database.groupSort": "Sortează",
   "tools.database.groupSortManual": "Ordine manuală",
   "tools.database.groupSortAlphabetical": "Alfabetic",

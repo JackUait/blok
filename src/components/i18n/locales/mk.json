@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "Сортирај растечки",
   "tools.database.sortDescending": "Сортирај опаѓачки",
   "tools.database.groupBy": "Групирај по",
+  "tools.database.subGroupBy": "Подгрупирај по",
   "tools.database.groupSort": "Сортирај",
   "tools.database.groupSortManual": "Рачно",
   "tools.database.groupSortAlphabetical": "Азбучно",

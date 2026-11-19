@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "ڕیزکردنی هەڵکشاو",
   "tools.database.sortDescending": "ڕیزکردنی داکشاو",
   "tools.database.groupBy": "گرووپکردن بەپێی",
+  "tools.database.subGroupBy": "ژێرگرووپکردن بەپێی",
   "tools.database.groupSort": "ڕیزکردن",
   "tools.database.groupSortManual": "دەستی",
   "tools.database.groupSortAlphabetical": "ئەلفوبێیی",

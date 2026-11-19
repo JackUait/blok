@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "Artan sırala",
   "tools.database.sortDescending": "Azalan sırala",
   "tools.database.groupBy": "Qruplaşdırma meyarı",
+  "tools.database.subGroupBy": "Alt qruplaşdırma meyarı",
   "tools.database.groupSort": "Sırala",
   "tools.database.groupSortManual": "Əl ilə",
   "tools.database.groupSortAlphabetical": "Əlifba sırası",

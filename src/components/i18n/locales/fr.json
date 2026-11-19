@@ -1561,6 +1561,7 @@
   "tools.database.sortAscending": "Trier par ordre croissant",
   "tools.database.sortDescending": "Trier par ordre décroissant",
   "tools.database.groupBy": "Regrouper par",
+  "tools.database.subGroupBy": "Sous-regrouper par",
   "tools.database.groupSort": "Trier",
   "tools.database.groupSortManual": "Manuel",
   "tools.database.groupSortAlphabetical": "Alphabétique",

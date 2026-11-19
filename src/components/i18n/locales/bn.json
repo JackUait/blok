@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "ঊর্ধ্বক্রমে সাজান",
   "tools.database.sortDescending": "অধঃক্রমে সাজান",
   "tools.database.groupBy": "গোষ্ঠীবদ্ধ করার ভিত্তি",
+  "tools.database.subGroupBy": "উপ-গোষ্ঠীবদ্ধ করার ভিত্তি",
   "tools.database.groupSort": "সাজান",
   "tools.database.groupSortManual": "ম্যানুয়াল",
   "tools.database.groupSortAlphabetical": "বর্ণানুক্রমিক",

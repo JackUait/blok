@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "I-sort pataas",
   "tools.database.sortDescending": "I-sort pababa",
   "tools.database.groupBy": "Pangkatin ayon sa",
+  "tools.database.subGroupBy": "I-sub-grupo ayon sa",
   "tools.database.groupSort": "I-sort",
   "tools.database.groupSortManual": "Mano-mano",
   "tools.database.groupSortAlphabetical": "Alpabetiko",

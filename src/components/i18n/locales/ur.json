@@ -1545,6 +1545,7 @@
   "tools.database.sortAscending": "صعودی ترتیب دیں",
   "tools.database.sortDescending": "نزولی ترتیب دیں",
   "tools.database.groupBy": "گروپ بلحاظ",
+  "tools.database.subGroupBy": "ذیلی گروپ بلحاظ",
   "tools.database.groupSort": "ترتیب دیں",
   "tools.database.groupSortManual": "دستی",
   "tools.database.groupSortAlphabetical": "حروفِ تہجی کے لحاظ سے",

@@ -17551,6 +17551,15 @@ input[data-blok-database-picker-search]:focus {
   height: 20px;
 }
 
+[data-blok-database-group-visibility-row]:not([data-hidden]) > [data-blok-database-property-eye] {
+  color: var(--blok-database-peek-glyph-strong);
+}
+
+[data-blok-database-group-visibility-row] > [data-blok-database-property-eye] svg {
+  width: 16px;
+  height: 16px;
+}
+
 [data-blok-database-group-pin] {
   color: var(--blok-database-table-header-icon);
   transition: background-color 0.1s ease-in-out;

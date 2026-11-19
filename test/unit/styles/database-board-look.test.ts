@@ -412,6 +412,23 @@ describe('Settings › Group pin button', () => {
   });
 });
 
+// notion-motion.md Round 81 §2 "Group page" (r81-n-bd-grouppage.raw): a shown group's eye is 16px in rgb(56, 56, 54).
+// A hidden group's eye keeps its own grey (Notion's is 142, notion-motion.md Round 8c).
+describe('group page eye (Round 81)', () => {
+  it('draws the group eye 16px, while the property list keeps 20', () => {
+    const svg = ruleBody(database, '[data-blok-database-group-visibility-row] > [data-blok-database-property-eye] svg');
+
+    expect(svg).toContain('width: 16px');
+    expect(svg).toContain('height: 16px');
+    expect(ruleBody(database, '[data-blok-database-property-eye] svg')).toContain('width: 20px');
+  });
+
+  it('inks a shown group\'s eye the strong glyph grey', () => {
+    expect(ruleBody(database, '[data-blok-database-group-visibility-row]:not([data-hidden]) > [data-blok-database-property-eye]')).toContain('color: var(--blok-database-peek-glyph-strong)');
+    expect(ruleBody(database, '[data-blok-database-group-visibility-row][data-hidden] > [data-blok-database-property-eye]')).toContain('color: var(--blok-database-table-gutter-icon)');
+  });
+});
+
 // notion-motion.md Round 25 §1 (r25-pinmodal.raw, motion-r25-pinrow-open.json): an 800×496 dialog, radius 12, over a
 // rgba(15,15,15,0.6) overlay; the overlay fades in and the dialog scales 0.97 → 1, both 200ms ease. Closing is instant.
 describe('pinned group modal', () => {

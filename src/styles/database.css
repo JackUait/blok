@@ -14858,6 +14858,17 @@ input[data-blok-database-picker-search]:focus {
   height: 20px;
 }
 
+/* notion-motion.md Round 81 §2 (r81-n-bd-grouppage.raw): a shown group's eye is 16px in rgb(56, 56, 54).
+   A hidden group's eye keeps the grey above. */
+[data-blok-database-group-visibility-row]:not([data-hidden]) > [data-blok-database-property-eye] {
+  color: var(--blok-database-peek-glyph-strong);
+}
+
+[data-blok-database-group-visibility-row] > [data-blok-database-property-eye] svg {
+  width: 16px;
+  height: 16px;
+}
+
 /* notion-motion.md Round 25 §2 (r25-grp-pinbtn-rest.raw, -hover.raw): a 16px pin in rgb(142,139,134); on hover the fill
    comes in over 0.1s and the glyph turns into the filled pin. */
 [data-blok-database-group-pin] {

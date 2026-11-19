@@ -339,6 +339,8 @@
   --blok-database-timeline-grid-line: rgba(42, 28, 0, 0.07);
   --blok-database-timeline-header-line: rgb(230, 229, 227);
   --blok-database-timeline-weekend-bg: rgb(247, 247, 247);
+  /* notion-motion.md Round 76 §5: the header fades end on this clear colour. */
+  --blok-database-timeline-fade-end: rgba(255, 255, 255, 0);
   /* findings C20 (r26 §4d, r33 §4.6): the canvas fill. */
   --blok-database-timeline-canvas-bg: rgb(253, 253, 253);
   /* Hours zoom now label: Notion's rgb(229, 100, 88) fails AA as text; this red is 5.55:1 on the canvas. */
@@ -734,6 +736,7 @@
     --blok-database-timeline-grid-line: rgba(255, 255, 243, 0.082);
     --blok-database-timeline-header-line: rgb(56, 56, 54);
     --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
+    --blok-database-timeline-fade-end: rgba(241, 241, 239, 0);
     --blok-database-timeline-canvas-bg: rgb(25, 25, 25);
     --blok-database-timeline-now-text: #ea8480;
     /* r9-timeline-dark.raw: the panel shadow and the "Name" header ink. */
@@ -1100,6 +1103,7 @@
   --blok-database-timeline-grid-line: rgba(255, 255, 243, 0.082);
   --blok-database-timeline-header-line: rgb(56, 56, 54);
   --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
+  --blok-database-timeline-fade-end: rgba(241, 241, 239, 0);
   --blok-database-timeline-canvas-bg: rgb(25, 25, 25);
   --blok-database-timeline-now-text: #ea8480;
   /* r9-timeline-dark.raw: the panel shadow and the "Name" header ink. */
@@ -16456,6 +16460,38 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   inset-inline-end: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2)));
 }
 
+/* notion-motion.md Round 76 §5: two fades soften what scrolls behind the toolbar, always drawn. One leaves the month's
+   box, one leads into the controls' box. Offsets are from Notion's label (321) and controls (320) tops. */
+[data-blok-database-timeline-month]::after,
+[data-blok-database-timeline-toolbar-spacer] + *::after {
+  content: '';
+  position: absolute;
+  inline-size: 30px;
+  pointer-events: none;
+}
+
+[data-blok-database-timeline-month]::after {
+  inset-inline-start: 100%;
+  inset-block-start: -4.8px;
+  block-size: 30px;
+  background-image: linear-gradient(90deg, var(--blok-bg-primary) 20%, var(--blok-database-timeline-fade-end) 100%);
+}
+
+[data-blok-database-timeline-toolbar-spacer] + *::after {
+  inset-inline-end: 100%;
+  inset-block-start: -2.8px;
+  block-size: 29px;
+  background-image: linear-gradient(-90deg, var(--blok-bg-primary) 20%, var(--blok-database-timeline-fade-end) 100%);
+}
+
+[dir="rtl"] [data-blok-database-timeline-month]::after {
+  background-image: linear-gradient(-90deg, var(--blok-bg-primary) 20%, var(--blok-database-timeline-fade-end) 100%);
+}
+
+[dir="rtl"] [data-blok-database-timeline-toolbar-spacer] + *::after {
+  background-image: linear-gradient(90deg, var(--blok-bg-primary) 20%, var(--blok-database-timeline-fade-end) 100%);
+}
+
 /* findings C05: the shown month, right after the table toggle. */
 [data-blok-database-timeline-month] {
   font-size: 14px;
@@ -16863,6 +16899,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
    107: the scroller's 1px under the canvas makes up the rest. */
 [data-blok-database-timeline-canvas][data-no-lanes] {
   padding-block-end: 107px;
+}
+
+/* notion-motion.md Round 76 §6: table shown, no dated row, no Calculate row: Notion's view ends 32 under "+ New". */
+[data-blok-database-timeline-table][data-no-dated] {
+  padding-block-end: calc(2 * var(--blok-space-4));
 }
 
 [data-blok-database-timeline-header] {

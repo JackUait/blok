@@ -1893,8 +1893,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R187_BYTES = 2433;
     // Lane r191: Round 76 §6 a grouped timeline's 32px group header and the view 12 under the last group's "+ New". Net database.css growth against origin/main.
     const DATABASE_R191_BYTES = 498;
-    // Lane r189: Round 76 §7 the dark calendar day "+" fill. Net database.css growth against origin/main.
-    const DATABASE_R189_BYTES = 148;
+    // Lane r189: Round 76 §7 the dark calendar day "+" fill, §6 the timeline panel's 32px room with no dated row, §5 the timeline header fades. Net database.css growth against origin/main.
+    const DATABASE_R189_BYTES = 1922;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

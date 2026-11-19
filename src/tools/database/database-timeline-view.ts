@@ -536,8 +536,11 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     const rows = this.sections.flatMap((group) => group.rows);
     const calculations = (this.options.view.calculations ?? []).length;
 
-    // notion-motion.md Round 76 §6: no dated row, no calculation: Notion draws no Calculate row. Measured ungrouped.
-    if (this.options.grouped || calculations > 0 || rows.some((row) => this.spanOf(row) !== null)) {
+    // notion-motion.md Round 76 §6: no dated row, no calculation: Notion draws no Calculate row. Measured ungrouped and editable.
+    const footerless = this.canEdit && !this.options.grouped && calculations === 0 && !rows.some((row) => this.spanOf(row) !== null);
+
+    panel.toggleAttribute('data-no-dated', footerless);
+    if (!footerless) {
       panel.appendChild(this.createTableFooter(properties));
     }
 

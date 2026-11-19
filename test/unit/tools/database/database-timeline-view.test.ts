@@ -1073,14 +1073,27 @@ describe('DatabaseTimelineView', () => {
       expect(canvas(mount({ groups: single([]), view: timelineView({ showTimelineTable: true }) }).root).hasAttribute('data-no-lanes')).toBe(false);
     });
 
-    // notion-motion.md Round 76 §6 (r76-n-tl-empty.raw): with the table shown and no dated row, Notion draws no Calculate row.
-    it('drops the panel footer when no row is dated and no calculation is set', () => {
+    // notion-motion.md Round 76 §6 (r76-n-tl-empty.raw): with the table shown and no dated row, Notion draws no Calculate row
+    // and ends 32 under "+ New". The panel is marked for that room.
+    it('drops the panel footer and marks the panel when no row is dated and no calculation is set', () => {
       const footer = (root: HTMLElement): Element | null => root.querySelector('[data-blok-database-timeline-table-footer]');
+      const marked = (root: HTMLElement): boolean | undefined => root.querySelector('[data-blok-database-timeline-table]')?.hasAttribute('data-no-dated');
       const shown = timelineView({ showTimelineTable: true });
+      const undated = mount({ groups: single([row('r3', 'Someday', null)]), view: shown }).root;
 
-      expect(footer(mount({ groups: single([row('r3', 'Someday', null)]), view: shown }).root)).toBeNull();
+      expect(footer(undated)).toBeNull();
+      expect(marked(undated)).toBe(true);
       document.body.innerHTML = '';
-      expect(footer(mount({ view: shown }).root)).not.toBeNull();
+      const dated = mount({ view: shown }).root;
+
+      expect(footer(dated)).not.toBeNull();
+      expect(marked(dated)).toBe(false);
+      document.body.innerHTML = '';
+      // Read-only has no "+ New"; its bottom is unmeasured, so it keeps the footer.
+      const readOnly = mount({ readOnly: true, groups: single([row('r3', 'Someday', null)]), view: shown }).root;
+
+      expect(footer(readOnly)).not.toBeNull();
+      expect(marked(readOnly)).toBe(false);
     });
 
     // notion-motion.md Round 24 §4 Timeline: hovering the "+ New" lane shows a 197x34 ghost bar at the hovered day.

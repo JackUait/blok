@@ -37,6 +37,7 @@ const TOKENS = [
   '--blok-database-timeline-panel-bg',
   '--blok-database-timeline-panel-shadow',
   '--blok-database-timeline-header-text',
+  '--blok-database-timeline-fade-end',
 ];
 
 describe('database timeline styles', () => {
@@ -762,6 +763,47 @@ describe('timeline Week and Bi-week weekday letters (Round 48 A4)', () => {
   it('hides the row handle and the dependency dot while a bar\'s name is typed', () => {
     expect(ruleBody('[data-blok-database-timeline-row]:has([data-blok-database-timeline-title-input]) > [data-blok-database-timeline-row-edge]')).toContain('visibility: hidden');
     expect(ruleBody('[data-blok-database-timeline-bar]:has([data-blok-database-timeline-title-input]) [data-blok-database-timeline-link-handle]')).toContain('visibility: hidden');
+  });
+
+  // notion-motion.md Round 76 §6 (r76-n-tl-empty.raw): table shown, no dated row: the view ends 32 under "+ New" (521.2 → 553.2).
+  it('ends the panel 32px under "+ New" when no row is dated', () => {
+    expect(ruleBody('[data-blok-database-timeline-table][data-no-dated]')).toContain('padding-block-end: calc(2 * var(--blok-space-4))');
+  });
+
+  // notion-motion.md Round 76 §5 (r76-n-tl-fades.raw): two edge fades, always drawn, page colour 20% to clear.
+  describe('header edge fades (Round 76 §5)', () => {
+    const month = '[data-blok-database-timeline-month]::after';
+    const controls = '[data-blok-database-timeline-toolbar-spacer] + *::after';
+
+    it('fades 30x30 off the month box\'s end, 5px above the label (316.2 vs 321)', () => {
+      const body = ruleBody(month);
+
+      expect(body).toContain('inset-inline-start: 100%');
+      expect(body).toContain('inset-block-start: -4.8px');
+      expect(body).toContain('inline-size: 30px');
+      expect(body).toContain('block-size: 30px');
+      expect(body).toContain('background-image: linear-gradient(90deg, var(--blok-bg-primary) 20%, var(--blok-database-timeline-fade-end) 100%)');
+    });
+
+    it('fades 30x29 off the controls box\'s start, 3px above them (317.2 vs 320)', () => {
+      const body = ruleBody(controls);
+
+      expect(body).toContain('inset-inline-end: 100%');
+      expect(body).toContain('inset-block-start: -2.8px');
+      expect(body).toContain('inline-size: 30px');
+      expect(body).toContain('block-size: 29px');
+      expect(body).toContain('background-image: linear-gradient(-90deg, var(--blok-bg-primary) 20%, var(--blok-database-timeline-fade-end) 100%)');
+    });
+
+    it('ends on the measured clear colour in light and dark', () => {
+      expect(css).toContain('--blok-database-timeline-fade-end: rgba(255, 255, 255, 0);');
+      expect(darkValues('--blok-database-timeline-fade-end')).toEqual(['rgba(241, 241, 239, 0)', 'rgba(241, 241, 239, 0)']);
+    });
+
+    it('mirrors both fades in RTL', () => {
+      expect(ruleBody(`[dir="rtl"] ${month}`)).toContain('linear-gradient(-90deg');
+      expect(ruleBody(`[dir="rtl"] ${controls}`)).toContain('linear-gradient(90deg');
+    });
   });
 
   // notion-motion.md Round 72 §2 B "Height with no lanes": Notion's 212 canvas ends 108 under "+ New" (413.2 → 521.2).

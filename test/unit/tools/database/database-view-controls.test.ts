@@ -397,6 +397,25 @@ describe('DatabaseViewControls', () => {
     expect(q('database-filter-bar-add')?.hasAttribute('data-popover-open')).toBe(false);
   });
 
+  // notion-motion.md Round 83 §5 (r83-n-af-group.raw): a pick in "+ Add filter rule ⌄" keeps the panel open.
+  it.each([
+    ['database-filter-add-rule', 2],
+    ['database-filter-add-group', 2],
+  ])('keeps the advanced filter open after %s from the toolbar route', (pick, rules) => {
+    const { controls, saved } = setup();
+
+    click('database-toolbar-filter');
+    click('database-filter-picker-advanced');
+    const rootId = String(controls.effective(saved.view).filterTree?.id);
+
+    click(`database-filter-add-rule-${rootId}`);
+    click(pick);
+
+    expect(q('database-advanced-filter')).not.toBeNull();
+    expect(controls.effective(saved.view).filterTree?.filterRules).toHaveLength(rules);
+    expect(q(`database-filter-add-rule-${rootId}`)).toHaveFocus();
+  });
+
   // notion-motion.md Round 18 §2 (r18-adv-open.raw, -prop.raw, -op.raw): each rule is edited inline, its pickers are flyouts.
   describe('advanced filter rules edited inline', () => {
     const openAdvanced = (): { controls: DatabaseViewControls; saved: { view: DatabaseViewConfig }; ruleId: () => string; rule: () => Record<string, unknown> | undefined } => {

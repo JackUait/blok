@@ -1525,7 +1525,7 @@ export class LinkInlineTool implements InlineTool {
     }
 
     // tel:, sms:, ftp: and the like lead to no web page.
-    const isWeb = !/^\w+:/.test(url) || /^https?:/i.test(url);
+    const isWeb = !/^\w+:/.test(url) || /^https?:/i.test(url) || this.isHostWithPort(url);
 
     return { icon: IconGlobe, label: this.i18n.t(isWeb ? 'tools.link.webPage' : 'tools.link.webLink') };
   }
@@ -1901,10 +1901,13 @@ export class LinkInlineTool implements InlineTool {
    * @returns {boolean}
    */
   private validateURL(str: string): boolean {
+    // Checked as it will be saved: trimmed, and with the protocol a bare site gets.
+    const link = this.prepareLink(str);
+
     /**
      * Don't allow spaces
      */
-    if (/\s/.test(str)) {
+    if (/\s/.test(link)) {
       return false;
     }
 
@@ -1915,7 +1918,7 @@ export class LinkInlineTool implements InlineTool {
      * clickable XSS. An allowlist of safe schemes is used because denylists
      * keep losing to scheme smuggling (e.g. `data:image/svg+xml`).
      */
-    if (hasUnsafeScheme(str)) {
+    if (hasUnsafeScheme(link)) {
       return false;
     }
 
@@ -1933,10 +1936,23 @@ export class LinkInlineTool implements InlineTool {
   }
 
   /**
+   * True for "localhost:3000" or "example.com:8080/docs": a site and its port,
+   * not a kind of link. "tel:911" is a kind of link.
+   * @param link - a trimmed value
+   */
+  private isHostWithPort(link: string): boolean {
+    return /^[a-z0-9.-]+:\d{1,5}(?:[/?#]|$)/i.test(link) && !/^(?:https?|mailto|tel|sms):/i.test(link);
+  }
+
+  /**
    * Add 'http' protocol to the links like 'vc.ru', 'google.com'
    * @param {string} link - string to process
    */
   private addProtocol(link: string): string {
+    if (this.isHostWithPort(link)) {
+      return 'http://' + link;
+    }
+
     /**
      * If protocol already exists, do nothing
      */

@@ -1041,14 +1041,14 @@ describe('LinkInlineTool — mutation coverage', () => {
       expect(harness.input.getAttribute('aria-invalid')).toBeNull();
     });
 
-    it('rejects a padded value on confirm instead of silently doing nothing', () => {
+    it('links a padded value on confirm, without its padding', () => {
       const harness = openOnPlainText();
 
       harness.input.value = ' #section';
       click(harness.suggestionRow);
 
-      expect(anchorsIn('para-one')).toHaveLength(0);
-      expect(harness.error.hidden).toBe(false);
+      expect(anchorsIn('para-one').map((anchor) => anchor.getAttribute('href'))).toEqual(['#section']);
+      expect(harness.error.hidden).toBe(true);
     });
 
     it('refreshes the error and the suggestion after a paste', () => {

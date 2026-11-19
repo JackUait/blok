@@ -776,6 +776,7 @@ describe('LinkInlineTool', () => {
       '//cdn.example.com/file.js',
       '/docs/getting-started',
       'example.com',
+      'localhost:3000/docs',
     ])('says a web address leads to a web page: %s', value => {
       const { tool } = createTool();
       const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
@@ -984,6 +985,65 @@ describe('LinkInlineTool', () => {
       expect(input.getAttribute('aria-invalid')).toBe('true');
       expect(notifier.show).not.toHaveBeenCalled();
       expect(insertLinkSpy).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['Enter', (tool: unknown): void => (tool as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent)],
+      ['a click on the row', (tool: unknown): void => (tool as { confirmLink(): void }).confirmLink()],
+    ])('drops the spaces around a pasted address instead of refusing it, on %s', (_name, confirm) => {
+      const { tool } = createTool();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+      const input = getInputFromWrapper(renderResult.children.items[0].element);
+      const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
+
+      input.value = ' \thttps://google.com/page \n';
+
+      confirm(tool);
+
+      expect(insertLinkSpy).toHaveBeenCalledWith('https://google.com/page');
+      expect(input.hasAttribute('aria-invalid')).toBe(false);
+    });
+
+    it.each([
+      ['localhost:3000/docs', 'http://localhost:3000/docs'],
+      ['example.com:8080', 'http://example.com:8080'],
+      ['192.168.0.1:8080?x=1', 'http://192.168.0.1:8080?x=1'],
+    ])('reads %s as a site with a port and adds the protocol, instead of refusing it', (typed, href) => {
+      const { tool } = createTool();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+      const input = getInputFromWrapper(renderResult.children.items[0].element);
+      const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
+
+      input.value = typed;
+      (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+
+      expect(insertLinkSpy).toHaveBeenCalledWith(href);
+      expect(input.hasAttribute('aria-invalid')).toBe(false);
+    });
+
+    it.each(['tel:911', 'sms:12345', 'mailto:1'])('leaves %s alone: a short number after a known kind is no port', (typed) => {
+      const { tool } = createTool();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+      const input = getInputFromWrapper(renderResult.children.items[0].element);
+      const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
+
+      input.value = typed;
+      (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+
+      expect(insertLinkSpy).toHaveBeenCalledWith(typed);
+    });
+
+    it('still refuses an address that can run code, port-like or not', () => {
+      const { tool } = createTool();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+      const input = getInputFromWrapper(renderResult.children.items[0].element);
+      const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
+
+      input.value = 'javascript:alert(1)';
+      (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+
+      expect(insertLinkSpy).not.toHaveBeenCalled();
+      expect(input.getAttribute('aria-invalid')).toBe('true');
     });
 
     it('confirmLink does nothing silently for incomplete URLs', () => {

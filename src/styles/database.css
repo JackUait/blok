@@ -17015,6 +17015,17 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   block-size: 36px;
 }
 
+/* notion-motion.md Round 76 §6: grouped with the table hidden, lanes start 32 under the header's top.
+   Not with the table shown: its panel group rows are 36 and must line up. */
+[data-blok-database-timeline-canvas][data-grouped-lanes] > [data-blok-database-timeline-group] {
+  block-size: 32px;
+}
+
+/* Round 76 §6: the view ends 12 under the last group's "+ New"; the scroller's 1px makes up the rest. */
+[data-blok-database-timeline-canvas][data-grouped-lanes] {
+  padding-block-end: 11px;
+}
+
 [data-blok-database-timeline-group-label] {
   position: sticky;
   inset-inline-start: 0;

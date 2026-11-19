@@ -792,4 +792,10 @@ describe('timeline Week and Bi-week weekday letters (Round 48 A4)', () => {
   it('draws an untitled bar\'s "New page" in primary ink', () => {
     expect(ruleBody('[data-blok-database-timeline-bar-title]:empty::before')).toContain('color: var(--blok-database-timeline-text)');
   });
+  // notion-motion.md Round 76 §6 "grouped by Status, table hidden": the group header row is 32 (lanes start 32 under it),
+  // and the view ends 12 under the last group's "+ New".
+  it('draws grouped lanes under a 32px group header and ends the view 12 under the last "+ New"', () => {
+    expect(ruleBody('[data-blok-database-timeline-canvas][data-grouped-lanes] > [data-blok-database-timeline-group]')).toContain('block-size: 32px');
+    expect(ruleBody('[data-blok-database-timeline-canvas][data-grouped-lanes]')).toContain('padding-block-end: 11px');
+  });
 });

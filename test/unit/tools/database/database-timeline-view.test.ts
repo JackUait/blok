@@ -2240,3 +2240,62 @@ describe('DatabaseTimelineView', () => {
     expect(handlers.writeDates).not.toHaveBeenCalled();
   });
 });
+
+// notion-motion.md Round 76 §6 "grouped by Status, table hidden": each group is a header, one empty lane per
+// undated row, then its own "+ New"; the next group follows.
+describe('DatabaseTimelineView grouped with undated rows', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  const twoGroups = (): TimelineGroup[] => [
+    { key: 'k1', label: 'Not started', rows: [row('a', 'Alpha', null), row('b', 'Beta', null)], total: 2 },
+    { key: 'k2', label: 'In progress', rows: [row('g', 'Gamma', null)], total: 1 },
+  ];
+
+  const order = (root: HTMLElement): string[] => [...canvas(root).children]
+    .map((el) => {
+      if (el.hasAttribute('data-blok-database-timeline-group')) return `group:${el.getAttribute('data-group-key') ?? ''}`;
+      if (el.hasAttribute('data-blok-database-timeline-row')) return `row:${el.getAttribute('data-row-id') ?? ''}`;
+      if (el.hasAttribute('data-blok-database-timeline-new-lane')) return `new:${el.getAttribute('data-group-key') ?? ''}`;
+
+      return '';
+    })
+    .filter((part) => part !== '');
+
+  it('gives each undated row a lane and each group its own "+ New"', () => {
+    const { root } = mount({ grouped: true, groups: twoGroups() });
+
+    expect(order(root)).toEqual(['group:k1', 'row:a', 'row:b', 'new:k1', 'group:k2', 'row:g', 'new:k2']);
+    expect(bars(root)).toHaveLength(0);
+  });
+
+  it('adds the row to the group whose "+ New" was clicked', () => {
+    const { root, handlers } = mount({ grouped: true, groups: twoGroups() });
+    const button = root.querySelector<HTMLElement>('[data-blok-database-timeline-new-lane][data-group-key="k2"] [data-blok-database-timeline-new]');
+
+    button?.click();
+    expect(handlers.addRow).toHaveBeenCalledWith('k2', { start: '2026-10-09/2026-10-13' });
+  });
+
+  it('marks the canvas so the view ends 12 under the last "+ New"', () => {
+    expect(canvas(mount({ grouped: true, groups: twoGroups() }).root).hasAttribute('data-grouped-lanes')).toBe(true);
+    document.body.innerHTML = '';
+    expect(canvas(mount().root).hasAttribute('data-grouped-lanes')).toBe(false);
+  });
+
+  // Grouped with the table shown is unmeasured: the panel keeps its one "+ New" and the canvas its one trailing lane.
+  it('keeps one trailing lane when the table shows', () => {
+    const { root } = mount({ grouped: true, groups: twoGroups(), view: timelineView({ showTimelineTable: true }) });
+
+    expect(order(root)).toEqual(['group:k1', 'row:a', 'row:b', 'group:k2', 'row:g', 'new:']);
+    expect(canvas(root).hasAttribute('data-grouped-lanes')).toBe(false);
+  });
+
+  // findings C03, Round 72: ungrouped with the table hidden, an undated row still has no lane.
+  it('still gives an ungrouped undated row no lane', () => {
+    const { root } = mount();
+
+    expect(order(root)).toEqual(['row:r1', 'row:r2', 'new:']);
+  });
+});

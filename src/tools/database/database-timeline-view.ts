@@ -650,13 +650,16 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     const tableShown = resolveShowTimelineTable(this.options.view);
 
     const lanes = { count: 0 };
+    // notion-motion.md Round 76 §6: grouped with the table hidden, each group ends in its own "+ New".
+    const groupLanes = this.options.grouped && !tableShown;
 
     for (const group of this.sections) {
       if (this.options.grouped) {
         canvas.appendChild(this.createGroupHeader(group, 'canvas'));
       }
-      // findings C03: with the table hidden, an undated item has no lane; the toolbar's "No date" lists it.
-      for (const row of group.rows.filter((r) => tableShown || this.spanOf(r) !== null)) {
+      // findings C03: ungrouped with the table hidden, an undated item has no lane; the toolbar's "No date" lists it.
+      // Round 76 §6: grouped, it keeps an empty lane.
+      for (const row of group.rows.filter((r) => tableShown || this.options.grouped || this.spanOf(r) !== null)) {
         canvas.appendChild(this.createRow(row, group.key, row.id === firstDated));
         lanes.count += 1;
       }
@@ -669,11 +672,15 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         more.textContent = this.t('tools.database.timelineLoadMore');
         canvas.appendChild(more);
       }
+      if (groupLanes && this.canEdit) {
+        canvas.appendChild(this.createNewLane(group.key));
+      }
     }
+    canvas.toggleAttribute('data-grouped-lanes', groupLanes);
     if ((this.options.arrows ?? []).length > 0) {
       canvas.appendChild(this.createArrows());
     }
-    if (this.canEdit) {
+    if (this.canEdit && !groupLanes) {
       canvas.appendChild(this.createNewLane());
       // notion-motion.md Round 72 §2 B: measured ungrouped, with the table hidden.
       canvas.toggleAttribute('data-no-lanes', lanes.count === 0 && !this.options.grouped && !tableShown);
@@ -683,12 +690,15 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     return scroller;
   }
 
-  /** findings C07: "+ New" is the canvas's last 36px lane. */
-  private createNewLane(): HTMLElement {
+  /** findings C07: "+ New" is the canvas's last 36px lane, or each group's when grouped with the table hidden. */
+  private createNewLane(groupKey?: string): HTMLElement {
     const lane = document.createElement('div');
     const add = document.createElement('button');
 
     lane.setAttribute('data-blok-database-timeline-new-lane', '');
+    if (groupKey !== undefined) {
+      lane.setAttribute('data-group-key', groupKey);
+    }
     // With the table shown, "+ New" is the panel's last row; this lane only keeps the rows lined up.
     if (resolveShowTimelineTable(this.options.view)) {
       return lane;
@@ -1405,7 +1415,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         const undated = el.hasAttribute('data-blok-database-timeline-table-new');
 
         if (this.canEdit) {
-          handlers.addRow(this.options.grouped ? this.options.groups[0]?.key ?? null : null, undated ? {} : this.newBar(el.getAttribute('data-day') ?? undefined, el.getAttribute('data-time') ?? undefined));
+          const lane = el.closest('[data-blok-database-timeline-new-lane][data-group-key]')?.getAttribute('data-group-key');
+          const groupKey = lane ?? (this.options.grouped ? this.options.groups[0]?.key ?? null : null);
+
+          handlers.addRow(groupKey, undated ? {} : this.newBar(el.getAttribute('data-day') ?? undefined, el.getAttribute('data-time') ?? undefined));
         }
       }],
       ['[data-blok-database-timeline-load-more]', (el) => handlers.loadMore(el.getAttribute('data-group-key') ?? '')],

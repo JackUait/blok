@@ -2144,6 +2144,23 @@ describe('view settings panel', () => {
     expect(eye('none')?.getAttribute('aria-label')).toBe('tools.database.groupHide');
   });
 
+  // notion-motion.md Round 82 (r82-n-a2-hidden-eye.raw, -ms-before-repick.raw): a hidden group is listed after the
+  // shown ones. Only the list moves: the saved order and hiddenGroups stay as they were.
+  it('lists a hidden group after the shown ones', () => {
+    const h = harness({ type: 'board', groupBy: 'stage', hiddenGroups: [{ id: 'o1' }] });
+
+    h.open('group');
+    const rows = (): Array<string | undefined> => [...document.querySelectorAll('[data-blok-database-group-visibility-row]')]
+      .map((row) => row.textContent?.trim());
+
+    expect(rows()).toEqual(['No Stage', 'Idea']);
+    expect(h.state.view.hiddenGroups).toEqual([{ id: 'o1' }]);
+
+    click('database-group-visible-o1');
+
+    expect(rows()).toEqual(['Idea', 'No Stage']);
+  });
+
   // notion-motion.md Round 24 §1 (r24-grp.raw, r24-pinpz.raw): a board group row has a 24px "Pin group" button before
   // its eye. A click pins it and the button reads "Unpin group".
   it('pins a board group from its row and unpins it again', () => {

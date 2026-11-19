@@ -3058,14 +3058,19 @@ export class ViewSettingsPages {
         rows.push(
           panelSeparator(),
           header,
-          ...groups.map((group) => this.groupVisibilityRow(group, hidden(group.key), disabled, refreshAfter(() => this.ctx.updateView({
-            ...withGroupFlags(this.ctx.view(), [stateKey(group.key)], { hidden: !hidden(group.key) }),
-          })), view.type === 'board' && !sub ? {
-            pinned: isGroupPinned(this.ctx.view(), group.key),
-            onToggle: refreshAfter(() => this.ctx.updateView({
-              ...withGroupFlags(this.ctx.view(), [group.key], { pinned: !isGroupPinned(this.ctx.view(), group.key) }),
-            })),
-          } : undefined)),
+          // notion-motion.md Round 82 (r82-n-a2-hidden-eye.raw): hidden groups are listed last. The saved order stays.
+          ...[...groups.filter((g) => !hidden(g.key)), ...groups.filter((g) => hidden(g.key))].map((group) => {
+            const row = this.groupVisibilityRow(group, hidden(group.key), disabled, refreshAfter(() => this.ctx.updateView({
+              ...withGroupFlags(this.ctx.view(), [stateKey(group.key)], { hidden: !hidden(group.key) }),
+            })), view.type === 'board' && !sub ? {
+              pinned: isGroupPinned(this.ctx.view(), group.key),
+              onToggle: refreshAfter(() => this.ctx.updateView({
+                ...withGroupFlags(this.ctx.view(), [group.key], { pinned: !isGroupPinned(this.ctx.view(), group.key) }),
+              })),
+            } : undefined);
+
+            return row;
+          }),
         );
         if (view.type !== 'board' || sub) {
           rows.push(panelSeparator(), panelRow({

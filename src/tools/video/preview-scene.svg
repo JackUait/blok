@@ -164,14 +164,14 @@
           <path data-part="trunk-rim" d="M.9 0C.2-6 .8-11 2-16"/>
           <g transform="translate(1.5 -16)">
             <g data-part="crown">
-              <path data-part="frond" transform="rotate(-14)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="rotate(18)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="rotate(44) scale(.8)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="scale(-1 1) rotate(-18)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="scale(-1 1) rotate(14)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="scale(-1 1) rotate(42) scale(.8)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="rotate(-58) scale(.62)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="scale(-1 1) rotate(-60) scale(.6)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="rotate(-14)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="rotate(18)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="rotate(44) scale(.8)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="scale(-1 1) rotate(-18)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="scale(-1 1) rotate(14)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="scale(-1 1) rotate(42) scale(.8)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="rotate(-58) scale(.62)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="scale(-1 1) rotate(-60) scale(.6)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
               <circle data-part="coconut" cx="-.5" cy=".7" r=".55"/>
               <circle data-part="coconut" cx=".5" cy=".9" r=".55"/>
               <circle data-part="coconut" cx="0" cy="1.5" r=".5"/>
@@ -182,14 +182,14 @@
           <path data-part="trunk-rim" d="M.9 0C.2-6 .8-11 2-16"/>
           <g transform="translate(1.5 -16)">
             <g data-part="crown">
-              <path data-part="frond" transform="rotate(-14)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="rotate(18)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="rotate(44) scale(.8)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="scale(-1 1) rotate(-18)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="scale(-1 1) rotate(14)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="scale(-1 1) rotate(42) scale(.8)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="rotate(-58) scale(.62)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="scale(-1 1) rotate(-60) scale(.6)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="rotate(-14)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="rotate(18)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="rotate(44) scale(.8)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="scale(-1 1) rotate(-18)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="scale(-1 1) rotate(14)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="scale(-1 1) rotate(42) scale(.8)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="rotate(-58) scale(.62)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="scale(-1 1) rotate(-60) scale(.6)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
               <circle data-part="coconut" cx="-.5" cy=".7" r=".55"/>
               <circle data-part="coconut" cx=".5" cy=".9" r=".55"/>
               <circle data-part="coconut" cx="0" cy="1.5" r=".5"/>
@@ -200,14 +200,14 @@
           <path data-part="trunk-rim" d="M.9 0C.2-6 .8-11 2-16"/>
           <g transform="translate(1.5 -16)">
             <g data-part="crown">
-              <path data-part="frond" transform="rotate(-14)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="rotate(18)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="rotate(44) scale(.8)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="scale(-1 1) rotate(-18)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="scale(-1 1) rotate(14)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="scale(-1 1) rotate(42) scale(.8)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="rotate(-58) scale(.62)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
-              <path data-part="frond" transform="scale(-1 1) rotate(-60) scale(.6)" d="M0 0C2.5-2 6-2 8.5 1.2 7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="rotate(-14)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="rotate(18)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="rotate(44) scale(.8)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="scale(-1 1) rotate(-18)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="scale(-1 1) rotate(14)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="scale(-1 1) rotate(42) scale(.8)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="rotate(-58) scale(.62)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
+              <path data-part="frond" transform="scale(-1 1) rotate(-60) scale(.6)" d="M0 0C2.5-2 6-2 8.5 1.2L7.6.4 7.4 1.2 6.6.4 6.4 1.2 5.5.4 5.3 1.1 4.4.4 4.2 1 3.3.4 3 .9 2.2.5 1.9.8 1.2.5Q.6.5 0 0Z"/>
               <circle data-part="coconut" cx="-.5" cy=".7" r=".55"/>
               <circle data-part="coconut" cx=".5" cy=".9" r=".55"/>
               <circle data-part="coconut" cx="0" cy="1.5" r=".5"/>

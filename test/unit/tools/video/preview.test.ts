@@ -19,7 +19,61 @@ const motionRule = (part: string, pseudo = ''): string => motion.match(ruleFor(p
 const partsOf = (root: HTMLElement): string[] =>
   [...new Set([...root.querySelectorAll('svg [data-part]:not(g)')].map((el) => el.getAttribute('data-part') ?? ''))];
 
+const ARITY: Record<string, number> = { m: 2, l: 2, t: 2, h: 1, v: 1, s: 4, q: 4, c: 6, a: 7 };
+const NUMBER = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/;
+
+/** Counts the numbers after a path command letter, or returns -1 on a token that is not one. */
+const countArgs = (letter: string, args: string): number => {
+  let rest = args.replace(/^[\s,]+/, '');
+  let count = 0;
+
+  while (rest !== '') {
+    // Arc flags are single 0/1 characters and may touch the next number.
+    const isFlag = letter === 'a' && (count % 7 === 3 || count % 7 === 4);
+    const token = (isFlag ? /^[01]/ : NUMBER).exec(rest);
+
+    if (token === null) {
+      return -1;
+    }
+    rest = rest.slice(token[0].length).replace(/^[\s,]+/, '');
+    count += 1;
+  }
+
+  return count;
+};
+
+/** Returns why a path `d` would fail to parse, or null. The browser drops everything after the first error. */
+const pathError = (d: string): string | null => {
+  const commands = d.match(/[a-z][^a-z]*/gi) ?? [];
+
+  if (commands.join('') !== d.trim() || !/^m/i.test(d.trim())) {
+    return 'does not start with a move';
+  }
+
+  for (const command of commands) {
+    const letter = command[0].toLowerCase();
+    const arity = ARITY[letter] ?? 0;
+    const count = countArgs(letter, command.slice(1));
+    const valid = letter === 'z' ? count === 0 : count > 0 && count % arity === 0;
+
+    if (!valid) {
+      return `"${command[0]}" takes ${arity} numbers per segment, got ${count}`;
+    }
+  }
+
+  return null;
+};
+
 describe('video toolbox preview', () => {
+  // Invalid path data logs a console error and the shape loses its tail.
+  it('draws every path with valid path data', () => {
+    const broken = [...renderVideoPreview().querySelectorAll('path')]
+      .map((path) => ({ part: path.getAttribute('data-part'), error: pathError(path.getAttribute('d') ?? '') }))
+      .filter(({ error }) => error !== null);
+
+    expect(broken).toEqual([]);
+  });
+
   // An SVG shape with no rule paints solid black in both themes.
   it('gives every drawn part a fill or stroke rule', () => {
     partsOf(renderVideoPreview()).forEach((part) => {

@@ -987,13 +987,21 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     });
     label.addEventListener('focusout', (event) => this.endEdit(event));
     // notion-motion.md Round 77 §4: Enter in the label does nothing; the label stays one line.
-    // Round 78 §3: End leaves the page where it is; macOS End in a one-line textarea scrolls the page instead.
-    // Only plain End was measured, so chords stay the browser's.
+    // Rounds 78–79 §3: Home and End move the caret to the label's ends and the page stays;
+    // macOS Home/End in a one-line textarea scroll the page instead. Chords were matched natively, so they stay the browser's.
     label.addEventListener('keydown', (event) => {
       if (event.isComposing) return;
-      const plainEnd = event.key === 'End' && !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey;
+      if (event.key === 'Enter') {
+        event.preventDefault();
 
-      if (event.key === 'Enter' || (plainEnd && getUserOS().mac)) event.preventDefault();
+        return;
+      }
+      const plain = !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey;
+      const caret = ({ Home: 0, End: label.value.length } as Record<string, number>)[event.key];
+
+      if (caret === undefined || !plain || !getUserOS().mac) return;
+      event.preventDefault();
+      label.setSelectionRange(caret, caret);
     });
     row.append(field, label);
 
@@ -1004,17 +1012,21 @@ export class DatabaseFormView implements DatabaseViewRenderer {
   private answerBox(property: PropertyDefinition, field: Field, setting: ViewPropertySetting): HTMLElement {
     if (property.type !== 'checkbox') return field;
     if (this.isBuilder()) return this.checkboxRow(property, field, setting);
-    if (setting.checkboxLabel === undefined) return field;
 
     // notion-motion.md Round 77 §4 "Respondents": the label shows as text 12 after the box.
     // It wraps the box, not `for`: a Preview's ids repeat the builder's behind it.
+    // Round 79 §3: with no label the row still holds the box, so it keeps its 18 slot and mark.
     const row = document.createElement('label');
-    const text = document.createElement('span');
 
     row.setAttribute('data-blok-database-form-checkbox-answer', '');
-    text.setAttribute('data-blok-database-form-checkbox-text', '');
-    text.textContent = setting.checkboxLabel;
-    row.append(field, text);
+    row.append(field);
+    if (setting.checkboxLabel !== undefined) {
+      const text = document.createElement('span');
+
+      text.setAttribute('data-blok-database-form-checkbox-text', '');
+      text.textContent = setting.checkboxLabel;
+      row.append(text);
+    }
 
     return row;
   }

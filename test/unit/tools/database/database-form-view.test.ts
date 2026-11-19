@@ -1424,7 +1424,7 @@ describe('DatabaseFormView builder answers', () => {
 
   // notion-motion.md Round 78 §3 "End in the builder's checkbox label": value, caret and page scroll stay.
   // macOS End in a one-line textarea scrolls the page to its end instead.
-  describe('End in the checkbox label', () => {
+  describe('Home and End in the checkbox label', () => {
     const pressEnd = (userAgent: string, modifiers: KeyboardEventInit = {}): { label: HTMLTextAreaElement; end: KeyboardEvent } => {
       vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(userAgent);
       const { root } = build();
@@ -1446,6 +1446,36 @@ describe('DatabaseFormView builder answers', () => {
       expect(end.defaultPrevented).toBe(true);
       expect(label).toHaveFocus();
       expect(label.value).toBe('r78 lbl');
+    });
+
+    // notion-motion.md Round 79 §3: from caret 3 of "r79 lbl", End puts it at 7 and Home at 0; the page stays.
+    it.each([['End', 7], ['Home', 0]] as const)('on macOS %s moves the caret to that end of the label', (key, caret) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)');
+      const { root } = build();
+      const label = question(root, 'agree')?.querySelector<HTMLTextAreaElement>('[data-blok-database-form-checkbox-label]');
+
+      if (label === null || label === undefined) throw new Error('no label');
+      label.value = 'r79 lbl';
+      label.focus();
+      label.setSelectionRange(3, 3);
+      const press = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+
+      label.dispatchEvent(press);
+
+      expect([label.selectionStart, label.selectionEnd]).toEqual([caret, caret]);
+      expect(press.defaultPrevented).toBe(true);
+      expect(label.value).toBe('r79 lbl');
+    });
+
+    it.each(['shiftKey', 'metaKey', 'ctrlKey', 'altKey'] as const)('on macOS Home with %s is left to the browser', (modifier) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)');
+      const { root } = build();
+      const label = question(root, 'agree')?.querySelector<HTMLTextAreaElement>('[data-blok-database-form-checkbox-label]');
+      const home = new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true, [modifier]: true });
+
+      label?.dispatchEvent(home);
+
+      expect(home.defaultPrevented).toBe(false);
     });
 
     it.each(['shiftKey', 'metaKey', 'ctrlKey', 'altKey'] as const)('on macOS End with %s is left to the browser', (modifier) => {
@@ -1478,9 +1508,12 @@ describe('DatabaseFormView builder answers', () => {
     expect(box?.checked).toBe(true);
   });
 
-  it('a respondent sees no checkbox label text when the question has none', () => {
+  // notion-motion.md Round 79 §3 "Respondent checkbox, no label": the same 18 box and 15 mark, no text.
+  it('a respondent sees no checkbox label text when the question has none, and the box keeps its mark', () => {
     const root = mount({ schema: [...schema, tags, due], view: view({ properties }) }).root;
+    const box = question(root, 'agree')?.querySelector<HTMLInputElement>('input[type="checkbox"]');
 
+    expect(box?.parentElement?.hasAttribute('data-blok-database-form-checkbox-answer')).toBe(true);
     expect(question(root, 'agree')?.querySelector('[data-blok-database-form-checkbox-text]')).toBeNull();
   });
 

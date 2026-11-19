@@ -17574,7 +17574,7 @@ button[data-blok-database-table-group-count]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
-[data-blok-database-property-eye][aria-checked="false"], [data-blok-database-group-visibility-row][data-hidden] > [data-blok-database-property-eye], [data-blok-database-property-eye]:disabled {
+[data-blok-database-property-eye][aria-checked="false"], [data-blok-database-property-eye]:disabled {
   color: var(--blok-database-table-gutter-icon);
 }
 
@@ -17587,7 +17587,7 @@ button[data-blok-database-table-group-count]:hover {
   height: 20px;
 }
 
-[data-blok-database-group-visibility-row]:not([data-hidden]) > [data-blok-database-property-eye] {
+[data-blok-database-group-visibility-row] > [data-blok-database-property-eye] {
   color: var(--blok-database-peek-glyph-strong);
 }
 

@@ -215,6 +215,12 @@ describe('sort and rule control chevrons', () => {
     expect(declared('[data-blok-database-filter-rule] > [data-blok-database-panel-note]', 'text-align')).toEqual([]);
   });
 
+  // notion-motion.md Round 83 §5 (r83-n-af-one.raw): "Where" is 14/400 in the dark ink 44,44,43.
+  it('writes "Where" in 14px dark ink', () => {
+    expect(declared('[data-blok-database-filter-where]', 'font-size')).toEqual(['14px']);
+    expect(declared('[data-blok-database-filter-where]', 'color')).toEqual(['var(--blok-database-ink)']);
+  });
+
   // Text 125,122,117 fails AA (4.27:1), so it takes Blok's AA step of that ink.
   it('draws Add filter rule with a 14px chevron box 6 after its text', () => {
     const chevron = '[data-blok-database-filter-add-rule] > [data-blok-database-chip-chevron]';

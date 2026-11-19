@@ -9805,10 +9805,11 @@ textarea[data-blok-database-cell-input] {
   gap: 0;
 }
 
+/* notion-motion.md Round 83 §1: stacked fields 36 apart. */
 [data-blok-database-date-fields] {
   display: flex;
   flex-direction: column;
-  gap: var(--blok-space-1);
+  gap: var(--blok-space-2);
 }
 
 /* The box is field.css's look; Notion's text is 14px/16.8px. */
@@ -10212,8 +10213,11 @@ textarea[data-blok-database-cell-input] {
   gap: var(--blok-space-1);
 }
 
+/* notion-motion.md Round 83 §1: 12 in from the menu's top and sides, the list rows stay 4 in. */
 [data-blok-database-date-zone-search][data-blok-field] {
   flex-shrink: 0;
+  margin: var(--blok-space-2) var(--blok-space-2) 0;
+  width: calc(100% - 2 * var(--blok-space-2));
   font-size: 14px;
   line-height: 20px;
 }
@@ -15287,6 +15291,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 /* notion-motion.md Round 25 §3: "Where", And and Or all end 8 before the property button. */
 [data-blok-database-filter-where] {
   text-align: end;
+  /* Round 83 §5: Notion's "Where" is 14/400 in the dark ink. */
+  color: var(--blok-database-ink);
+  font-size: 14px;
 }
 
 /* The And/Or choice holds the same column, so every rule's property button lines up at +76. */

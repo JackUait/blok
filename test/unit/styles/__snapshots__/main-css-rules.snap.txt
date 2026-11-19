@@ -13106,7 +13106,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-fields] {
   display: flex;
   flex-direction: column;
-  gap: var(--blok-space-1);
+  gap: var(--blok-space-2);
 }
 
 [data-blok-database-date-field][data-blok-field], [data-blok-database-chip-date-field][data-blok-field] {
@@ -13456,6 +13456,8 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-date-zone-search][data-blok-field] {
   flex-shrink: 0;
+  margin: var(--blok-space-2) var(--blok-space-2) 0;
+  width: calc(100% - 2 * var(--blok-space-2));
   font-size: 14px;
   line-height: 20px;
 }
@@ -17963,6 +17965,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-filter-where] {
   text-align: end;
+  color: var(--blok-database-ink);
+  font-size: 14px;
 }
 
 [data-blok-database-filter-rule] > [data-blok-database-panel-row]:not([data-blok-database-filter-rule-button]), [data-blok-database-filter-group-line] > [data-blok-database-panel-row] {

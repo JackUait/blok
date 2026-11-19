@@ -49,6 +49,18 @@ describe('database date reminder css', () => {
     expect(rulesFor('[data-blok-database-date-setting-option][data-active]')).toContain('background-color: var(--blok-database-hover-bg)');
   });
 
+  // notion-motion.md Round 83 §1 (r83-n-date-tz-search.raw): the 318 wide search sits 12 in from the menu's top and sides.
+  it('the time zone search sits 12px in from the menu edge', () => {
+    expect(rulesFor('[data-blok-database-date-zone-search][data-blok-field]')).toContain('margin: var(--blok-space-2) var(--blok-space-2) 0');
+    // field.css makes the field 100% wide; it must give the 8px inline margins back (342 - 2 * 4 - 2 * 8 = 318).
+    expect(rulesFor('[data-blok-database-date-zone-search][data-blok-field]')).toContain('width: calc(100% - 2 * var(--blok-space-2))');
+  });
+
+  // notion-motion.md Round 83 §1 (r83-n-date-time-fields.raw): stacked date fields are 36 apart, 28 tall.
+  it('stacks the date fields 36px apart', () => {
+    expect(rulesFor('[data-blok-database-date-fields]')).toContain('gap: var(--blok-space-2)');
+  });
+
   // research/30 B25: rows are 45 tall and 46 apart.
   it('the time zone rows sit 1px apart', () => {
     expect(rulesFor('[data-blok-database-date-zone-list]')).toContain('gap: var(--blok-space-0-25)');

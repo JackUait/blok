@@ -17677,6 +17677,16 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 /* The "No date" popover's rows: page glyph, title, "Open". */
+/* r46-n-nodate.raw and r24-cal-nodate.raw: the search at +12, the note's 12/500 text at +58. Its ink stays the AA step. */
+[data-blok-database-panel]:has(> [data-blok-database-no-date-list]) > [data-blok-database-panel-input] {
+  margin-block-start: var(--blok-space-2);
+}
+
+[data-blok-database-panel]:has(> [data-blok-database-no-date-list]) > [data-blok-database-panel-note] {
+  padding-block-start: var(--blok-space-3-5);
+  font-weight: 500;
+}
+
 [data-blok-database-no-date-row] {
   display: flex;
   align-items: center;

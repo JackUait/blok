@@ -554,6 +554,15 @@ describe('Hours zoom 15-minute lines and day period (Round 35)', () => {
       expect(ruleBody('[data-blok-database-no-date-row] > [data-blok-database-page-icon-placeholder] svg')).toMatch(/inline-size:\s*18px;\s*block-size:\s*18px/);
     });
 
+    // r46-n-nodate.raw: the note's text is 12/500 at +58.3. r24-cal-nodate.raw: the search text is centred at +26,
+    // so Blok's 28 field sits at +12 (panel 4 + 8). The note's 14 top puts its 16 line's text at +58.5.
+    it('places the No date search at +12 and its 12/500 note at +58', () => {
+      const panel = '[data-blok-database-panel]:has(> [data-blok-database-no-date-list])';
+
+      expect(ruleBody(`${panel} > [data-blok-database-panel-input]`)).toContain('margin-block-start: var(--blok-space-2)');
+      expect(ruleBody(`${panel} > [data-blok-database-panel-note]`)).toMatch(/padding-block-start:\s*var\(--blok-space-3-5\);\s*font-weight:\s*500/);
+    });
+
     // Round 47 A2: the day row is 32 in every zoom.
     it('makes the day row 32 tall in every zoom, the day line staying 28', () => {
       expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-header-under: 4px');

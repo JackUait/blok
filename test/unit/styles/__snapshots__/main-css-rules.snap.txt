@@ -20115,6 +20115,15 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-ink-secondary);
 }
 
+[data-blok-database-panel]:has(> [data-blok-database-no-date-list]) > [data-blok-database-panel-input] {
+  margin-block-start: var(--blok-space-2);
+}
+
+[data-blok-database-panel]:has(> [data-blok-database-no-date-list]) > [data-blok-database-panel-note] {
+  padding-block-start: var(--blok-space-3-5);
+  font-weight: 500;
+}
+
 [data-blok-database-no-date-row] {
   display: flex;
   align-items: center;

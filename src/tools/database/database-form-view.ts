@@ -971,7 +971,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
 
     row.setAttribute('data-blok-database-form-checkbox-row', '');
     // notion-motion.md Round 77 §4 "Builder checkbox": the builder's box is disabled.
-    if (field instanceof HTMLInputElement) field.disabled = true;
+    if (field instanceof HTMLInputElement) field.setAttribute('disabled', '');
     label.rows = 1;
     label.value = setting.checkboxLabel ?? '';
     label.placeholder = this.options.i18n.t('tools.database.formCheckboxLabelPlaceholder');

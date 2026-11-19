@@ -51,17 +51,25 @@ export const withEntryIds = <T extends { id?: string }>(entries: readonly T[]): 
 /**
  * The write when people pick what a view groups by. Every pick turns Hide
  * empty groups on, whatever the type, and so does a re-pick of the property
- * already grouped on (notion-motion.md Round 79 §2). A re-pick keeps the other
- * settings; a switch to another property starts from that type's defaults.
+ * already grouped on (notion-motion.md Round 79 §2). A re-pick also drops the
+ * group sort back to the type's default and shows the hidden groups again
+ * (Round 81); it keeps the other settings. Sub-group states (`sub:`) stay: unread.
+ * A switch to another property starts from that type's defaults.
  * A new board's own grouping is not a pick and keeps the switch off (Round 78).
  */
 export const groupByChange = (
   view: DatabaseViewConfig | undefined,
   property: PropertyDefinition
-): Pick<DatabaseViewConfig, 'groupBy' | 'groupSettings'> => {
-  const kept = property.id === view?.groupBy ? view.groupSettings : undefined;
+): Pick<DatabaseViewConfig, 'groupBy' | 'groupSettings' | 'hiddenGroups'> => {
+  if (view === undefined || property.id !== view.groupBy) {
+    return { groupBy: property.id, groupSettings: { hideEmptyGroups: true } };
+  }
+  const { sort: _sort, ...kept } = view.groupSettings ?? {};
+  const groupSettings = { ...kept, hideEmptyGroups: true };
 
-  return { groupBy: property.id, groupSettings: { ...kept, hideEmptyGroups: true } };
+  if (view.hiddenGroups === undefined) return { groupBy: property.id, groupSettings };
+
+  return { groupBy: property.id, groupSettings, hiddenGroups: view.hiddenGroups.filter((group) => group.id.startsWith('sub:')) };
 };
 
 /**

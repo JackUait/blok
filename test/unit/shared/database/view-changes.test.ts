@@ -69,8 +69,24 @@ describe('groupByChange', () => {
 
   // Round 79 §2: Status → Status on a board and Select → Select on a timeline both turned the switch back on.
   it('re-picking the same property turns Hide empty groups on and keeps its other settings', () => {
-    expect(groupByChange({ ...table(), groupBy: 's', groupSettings: { hideEmptyGroups: false, sort: 'manual' } }, schema[2]))
-      .toEqual({ groupBy: 's', groupSettings: { hideEmptyGroups: true, sort: 'manual' } });
+    expect(groupByChange({ ...table(), groupBy: 's', groupSettings: { hideEmptyGroups: false, colorColumns: false } }, schema[2]))
+      .toEqual({ groupBy: 's', groupSettings: { hideEmptyGroups: true, colorColumns: false } });
+  });
+
+  // notion-motion.md Round 81 (r81-n-bd-repick.raw): Status re-picked on a board, Sort Descending became Ascending
+  // and the hidden "Not started" came back. Sub-group states were not read, so they stay.
+  it('re-picking the same property resets the group sort and shows hidden groups again', () => {
+    const change = groupByChange({
+      ...table(), type: 'board', groupBy: 's', groupSettings: { sort: 'descending' },
+      hiddenGroups: [{ id: 'todo' }, { id: 'sub:x' }],
+    }, schema[2]);
+
+    expect(change.groupSettings?.sort).toBeUndefined();
+    expect(change.hiddenGroups).toEqual([{ id: 'sub:x' }]);
+  });
+
+  it('picking another property leaves the hidden groups alone', () => {
+    expect(groupByChange({ ...table(), groupBy: 'n', hiddenGroups: [{ id: 'todo' }] }, schema[2])).not.toHaveProperty('hiddenGroups');
   });
 });
 

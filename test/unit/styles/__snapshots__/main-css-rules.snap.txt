@@ -7447,6 +7447,10 @@ button[data-blok-database-board-lane-count]:hover {
   --blok-icon-active-text: var(--blok-database-ink);
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor'], [data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover] {
+  --blok-icon-active-text: var(--blok-database-ink);
+}
+
 [data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-container] {
   --max-height: calc(100dvh - 24px);
 }

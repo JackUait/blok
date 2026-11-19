@@ -637,6 +637,29 @@ test.describe('database view settings', () => {
     await expect(name).toHaveValue('');
   });
 
+  // notion-motion.md Round 80: the Sort picker's checkmark drew the global black, not the row's database ink.
+  for (const theme of ['light', 'dark'] as const) {
+    test(`a chosen row's checkmark takes its row's ink (${theme})`, async ({ page }) => {
+      await mount(page, blocks({ groupBy: 'p-stage' }));
+      if (theme === 'dark') {
+        await page.evaluate(() => window.blokInstance?.theme.set('dark'));
+      }
+      await byTestId(page, 'database-toolbar-settings').click();
+      await byTestId(page, 'database-settings-group').click();
+      await byTestId(page, 'database-group-sort').click();
+
+      const check = page.locator('[data-blok-database-panel-check]').filter({ visible: true }).first();
+
+      await expect(check).toBeVisible();
+      const inks = await check.evaluate((element) => ({
+        check: getComputedStyle(element).color,
+        row: getComputedStyle(element.closest('[data-blok-database-panel-row]') ?? element.parentElement ?? element).color,
+      }));
+
+      expect(inks.check).toBe(inks.row);
+    });
+  }
+
   test('Cmd/Ctrl+Alt+T folds every group', async ({ page }) => {
     await mount(page, blocks({ groupBy: 'p-stage' }));
     await page.keyboard.press('ControlOrMeta+Alt+KeyT');

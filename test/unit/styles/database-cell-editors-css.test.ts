@@ -1038,8 +1038,9 @@ describe('cell editor CSS', () => {
   describe('docked panel glyphs', () => {
     const OWN = '[data-blok-database-panel][data-docked]:not([data-blok-database-creation-panel]) [data-blok-database-panel-icon]';
 
-    it('paint View settings glyphs 20px in primary ink, and leave the creation panel alone', () => {
-      expect(declared(OWN, 'color')).toEqual(['var(--blok-database-ink)']);
+    // notion-motion.md Round 81 §2 (r81-n-tb-view_settings.raw): the glyphs paint rgb(56, 56, 54); dark 230 (r81-n-ca-view_settings-dark.raw).
+    it('paint View settings glyphs 20px in the strong glyph grey, and leave the creation panel alone', () => {
+      expect(declared(OWN, 'color')).toEqual(['var(--blok-database-peek-glyph-strong)']);
       expect(declared(`${OWN} svg`, 'width')).toEqual(['20px']);
       expect(declared('[data-blok-database-panel][data-docked] [data-blok-database-panel-icon]', 'color')).toEqual([]);
     });

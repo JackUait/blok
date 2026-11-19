@@ -3801,6 +3801,12 @@ button[data-blok-database-board-lane-count]:hover {
   color: var(--blok-database-peek-glyph-strong);
 }
 
+/* notion-motion.md Round 81 §2 (r81-n-bd-cardmenu.raw): the card menu's row glyphs paint rgb(56, 56, 54).
+   The ">" steps keep its submenus out; chevrons keep their own ink. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item]:not([data-blok-popover-item-destructive]) > [data-blok-popover-item-icon]:not([data-blok-popover-item-icon-chevron-right]) {
+  color: var(--blok-database-peek-glyph-strong);
+}
+
 /* notion-motion.md, Round 8c "Card ⋯ menu": 14px/16.8 text. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-item-title] {
   font-size: 14px;
@@ -14213,9 +14219,10 @@ button[data-blok-database-table-group-count]:hover {
   height: 16px;
 }
 
-/* findings V11: view settings rows carry a 20px glyph in near-primary ink (Notion rgb(56, 56, 54)). */
+/* findings V11: view settings rows carry a 20px glyph. notion-motion.md Round 81 §2 (r81-n-tb-view_settings.raw):
+   it paints rgb(56, 56, 54), and rgb(230, 229, 227) in dark (r81-n-ca-view_settings-dark.raw). */
 [data-blok-database-panel][data-docked]:not([data-blok-database-creation-panel]) [data-blok-database-panel-icon] {
-  color: var(--blok-database-ink);
+  color: var(--blok-database-peek-glyph-strong);
 }
 
 [data-blok-database-panel][data-docked]:not([data-blok-database-creation-panel]) [data-blok-database-panel-icon] svg {

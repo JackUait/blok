@@ -905,3 +905,13 @@ describe('Calculate menu chevrons (Round 81)', () => {
     expect(declared(`${CALC} [data-blok-popover-item-icon-chevron-right] svg`, 'height')).toEqual(['16px']);
   });
 });
+
+// notion-motion.md Round 81 §2 "Card ⋯, board" (r81-n-bd-cardmenu.raw): the row glyphs paint rgb(56, 56, 54).
+// Only the menu's own rows: chevrons and submenus keep their inks.
+describe('card menu glyph ink (Round 81)', () => {
+  it('paints the card menu\'s own row glyphs in the strong glyph grey', () => {
+    const OWN = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item]:not([data-blok-popover-item-destructive]) > [data-blok-popover-item-icon]:not([data-blok-popover-item-icon-chevron-right])";
+
+    expect(declared(OWN, 'color')).toEqual(['var(--blok-database-peek-glyph-strong)']);
+  });
+});

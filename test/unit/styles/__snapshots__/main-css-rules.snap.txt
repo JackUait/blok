@@ -14510,8 +14510,13 @@ a[data-blok-database-comment-mention-chip] {
 }
 
 [data-blok-database-comments-section] [data-blok-database-comment-input] {
+  min-block-size: 27px;
   padding-block: 3.5px var(--blok-space-0-75);
-  padding-inline: var(--blok-space-1);
+  padding-inline: var(--_blok-comment-inset);
+}
+
+[data-blok-database-comments-section] [data-blok-database-comment-composer] > [data-blok-database-comment-attach], [data-blok-database-comments-section] [data-blok-database-comment-composer] > [data-blok-database-comment-mention], [data-blok-database-comments-section] [data-blok-database-comment-composer] > [data-blok-database-comment-send] {
+  align-self: flex-start;
 }
 
 [data-blok-database-comments-section]:not([hidden]) + hr {
@@ -21942,17 +21947,21 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   margin-block-start: var(--blok-space-1-5);
 }
 
-[data-blok-database-feed-comments] [data-blok-database-comment-composer] {
+[data-blok-database-feed-comments] [data-blok-database-comment-composer], [data-blok-database-comments-section] [data-blok-database-comment-composer] {
   --_blok-feed-tool-nudge: 0.5px;
+  --_blok-comment-inset: 2.5px;
   gap: 5.5px;
+}
+
+[data-blok-database-feed-comments] [data-blok-database-comment-composer] {
   margin-inline-end: calc(var(--blok-space-6) + var(--blok-space-1-5));
 }
 
-[data-blok-database-feed-comments] [data-blok-database-comment-composer] > [data-blok-database-comment-input] {
-  margin-inline-end: 2.5px;
+[data-blok-database-feed-comments] [data-blok-database-comment-composer] > [data-blok-database-comment-input], [data-blok-database-comments-section] [data-blok-database-comment-composer] > [data-blok-database-comment-input] {
+  margin-inline-end: var(--_blok-comment-inset);
 }
 
-[data-blok-database-feed-comments] [data-blok-database-comment-composer] > [data-blok-database-comment-attach], [data-blok-database-feed-comments] [data-blok-database-comment-composer] > [data-blok-database-comment-mention], [data-blok-database-feed-comments] [data-blok-database-comment-composer] > [data-blok-database-comment-send] {
+[data-blok-database-feed-comments] [data-blok-database-comment-composer] > [data-blok-database-comment-attach], [data-blok-database-feed-comments] [data-blok-database-comment-composer] > [data-blok-database-comment-mention], [data-blok-database-feed-comments] [data-blok-database-comment-composer] > [data-blok-database-comment-send], [data-blok-database-comments-section] [data-blok-database-comment-composer] > [data-blok-database-comment-attach], [data-blok-database-comments-section] [data-blok-database-comment-composer] > [data-blok-database-comment-mention], [data-blok-database-comments-section] [data-blok-database-comment-composer] > [data-blok-database-comment-send] {
   margin-inline-start: var(--_blok-feed-tool-nudge);
 }
 
@@ -21964,7 +21973,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   min-height: 27px;
 }
 
-[data-blok-database-feed-comments] [data-blok-database-comment-composer]:not(:has(:focus-visible)) > [data-blok-database-comment-attach], [data-blok-database-feed-comments] [data-blok-database-comment-composer]:not(:has(:focus-visible)) > [data-blok-database-comment-mention], [data-blok-database-feed-comments] [data-blok-database-comment-composer]:not(:has(:focus-visible)) > [data-blok-database-comment-send] {
+[data-blok-database-feed-comments] [data-blok-database-comment-composer]:not(:has(:focus-visible)) > [data-blok-database-comment-attach], [data-blok-database-feed-comments] [data-blok-database-comment-composer]:not(:has(:focus-visible)) > [data-blok-database-comment-mention], [data-blok-database-feed-comments] [data-blok-database-comment-composer]:not(:has(:focus-visible)) > [data-blok-database-comment-send], [data-blok-database-comments-section] [data-blok-database-comment-composer]:not(:has(:focus-visible)) > [data-blok-database-comment-attach], [data-blok-database-comments-section] [data-blok-database-comment-composer]:not(:has(:focus-visible)) > [data-blok-database-comment-mention], [data-blok-database-comments-section] [data-blok-database-comment-composer]:not(:has(:focus-visible)) > [data-blok-database-comment-send] {
   display: none;
 }
 

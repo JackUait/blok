@@ -1915,6 +1915,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R205_BYTES = 1620;
     // Lane r204: Round 82 Group page, every group eye in the strong grey and group names at 500 (Status at 400). Net database.css growth against origin/main.
     const DATABASE_R204_BYTES = 135;
+    // Lane r208: the row page comment composer (Round 83 §7): input 560, tools shown with focus. Net database.css growth against origin/main.
+    const DATABASE_R208_BYTES = 1824;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2566,6 +2568,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R202_BYTES
       + DATABASE_R205_BYTES
       + DATABASE_R204_BYTES
+      + DATABASE_R208_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

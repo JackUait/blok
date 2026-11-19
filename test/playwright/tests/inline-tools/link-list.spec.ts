@@ -406,4 +406,27 @@ test.describe('link field: recent links as a list', () => {
     expect(await thumb.evaluate((element) => element.style.transform)).not.toBe(thumbAtTop);
     expect(await page.getByTestId('popover-items').last().evaluate((items) => items.scrollTop)).toBe(0);
   });
+
+  test('shows no scrollbar once a typed link replaces the long list', async ({ page }) => {
+    await page.setViewportSize({ width: 900, height: 380 });
+    await createBlok(page, [
+      ...['One', 'Two', 'Three', 'Four', 'Five', 'Six'].map((text) => ({ type: 'header', data: { text, level: 2 } })),
+      { type: 'paragraph', data: { text: 'target words' } },
+    ]);
+
+    const input = await openLinkField(page, 'target');
+    const thumb = page.locator('[data-blok-popover-scrollbar]').last();
+
+    await expect(thumb).toBeVisible();
+
+    await input.fill('https://www.example.com/page');
+
+    await expect(page.locator('[data-link-suggestion-row]')).toBeVisible();
+    await expect(page.locator(OPTIONS_SELECTOR)).toBeHidden();
+    await expect(thumb).toBeHidden();
+
+    // Back to the long list: the bar comes back with it.
+    await input.fill('');
+    await expect(thumb).toBeVisible();
+  });
 });

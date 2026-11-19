@@ -142,6 +142,13 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       }, true);
     }
 
+    // An item can show or hide its own list (the link field does), which no
+    // scroll or filter reports. The list's box changes size, so measure then.
+    if (this.nodes.items && typeof ResizeObserver !== 'undefined') {
+      this.itemsResizeObserver = new ResizeObserver(() => this.updateScrollbar());
+      this.itemsResizeObserver.observe(this.nodes.items);
+    }
+
     // Drag-to-scroll on the custom scrollbar thumb (parity with a native bar).
     if (this.nodes.scrollbarThumb) {
       this.listeners.on(this.nodes.scrollbarThumb, 'pointerdown', (event: Event) => {
@@ -507,6 +514,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.items.forEach(item => item.destroy());
     this.listeners.removeAll();
     this.search?.destroy();
+    this.itemsResizeObserver?.disconnect();
+    this.itemsResizeObserver = null;
 
     if (this.scrollActivityTimeout !== null) {
       clearTimeout(this.scrollActivityTimeout);
@@ -1086,6 +1095,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * Active scrollbar-thumb drag session, or null when not dragging.
    */
   private scrollbarDrag: { pointerId: number; startY: number; startScrollTop: number } | null = null;
+
+  private itemsResizeObserver: ResizeObserver | null = null;
 
   /**
    * Sizes and positions the custom scrollbar thumb from the items' scroll

@@ -765,9 +765,9 @@ describe('timeline Week and Bi-week weekday letters (Round 48 A4)', () => {
     expect(ruleBody('[data-blok-database-timeline-bar]:has([data-blok-database-timeline-title-input]) [data-blok-database-timeline-link-handle]')).toContain('visibility: hidden');
   });
 
-  // notion-motion.md Round 76 §6 (r76-n-tl-empty.raw): table shown, no dated row: the view ends 32 under "+ New" (521.2 → 553.2).
-  it('ends the panel 32px under "+ New" when no row is dated', () => {
-    expect(ruleBody('[data-blok-database-timeline-table][data-no-dated]')).toContain('padding-block-end: calc(2 * var(--blok-space-4))');
+  // notion-motion.md Round 78 §1: with no dated row the panel still ends on its 36 Calculate row, so it gets no padding of its own.
+  it('gives the panel no extra room when no row is dated', () => {
+    expect(css).not.toContain('[data-no-dated]');
   });
 
   // notion-motion.md Round 76 §5 (r76-n-tl-fades.raw): two edge fades, always drawn, page colour 20% to clear.

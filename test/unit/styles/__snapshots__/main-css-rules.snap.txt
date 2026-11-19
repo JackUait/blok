@@ -19429,10 +19429,6 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   padding-block-end: 107px;
 }
 
-[data-blok-database-timeline-table][data-no-dated] {
-  padding-block-end: calc(2 * var(--blok-space-4));
-}
-
 [data-blok-database-timeline-header] {
   position: relative;
   block-size: calc(var(--blok-database-timeline-header-band) + var(--blok-database-timeline-header-block));

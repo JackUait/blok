@@ -1525,7 +1525,7 @@ export class LinkInlineTool implements InlineTool {
     }
 
     if (/^tel:/i.test(url)) {
-      return { icon: IconPhone, label: this.i18n.t('tools.link.webLink') };
+      return { icon: IconPhone, label: this.i18n.t('tools.link.phoneNumber') };
     }
 
     // tel:, sms:, ftp: and the like lead to no web page.

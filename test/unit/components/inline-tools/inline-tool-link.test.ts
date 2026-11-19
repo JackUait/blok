@@ -116,6 +116,7 @@ const ENGLISH_LINK_TRANSLATIONS: Record<string, string> = {
   'tools.link.jumpToSection': defaultDictionary['tools.link.jumpToSection'],
   'tools.link.webLink': defaultDictionary['tools.link.webLink'],
   'tools.link.webPage': defaultDictionary['tools.link.webPage'],
+  'tools.link.phoneNumber': defaultDictionary['tools.link.phoneNumber'],
   'tools.link.recent': defaultDictionary['tools.link.recent'],
   'tools.link.onThisPage': defaultDictionary['tools.link.onThisPage'],
   'tools.database.moveToPages': defaultDictionary['tools.database.moveToPages'],
@@ -755,7 +756,7 @@ describe('LinkInlineTool', () => {
         translation: 'Lien vers une page web',
       },
       {
-        value: 'tel:+15551234567',
+        value: 'sms:+15551234567',
         key: 'tools.link.webLink',
         translation: 'Lien',
       },
@@ -788,9 +789,17 @@ describe('LinkInlineTool', () => {
       expect(typeEl?.textContent).toBe('Link to web page');
     });
 
+    it.each(['tel:+15551234567', 'TEL:911'])('says %s is a link to a phone number', value => {
+      const { tool } = createTool();
+      const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion(value);
+
+      expect(itemWrapper.querySelector('[data-link-suggestion-type]')?.textContent).toBe('Link to phone number');
+    });
+
     it.each([
       'ftp://files.example.com',
-      'tel:+15551234567',
       'sms:+15551234567',
     ])('keeps the plain link label for %s, which is no web page', value => {
       const { tool } = createTool();
@@ -838,7 +847,7 @@ describe('LinkInlineTool', () => {
       expect(chip?.classList.contains('hidden')).toBe(true);
     });
 
-    it('labels mailto: links as Email address', () => {
+    it('labels mailto: links as a link to an email address', () => {
       const { tool } = createTool();
       const wrapper = tool.render() as unknown as LinkToolRenderResult;
       const itemWrapper = wrapper.children.items[0].element;
@@ -847,7 +856,7 @@ describe('LinkInlineTool', () => {
 
       const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
 
-      expect(typeEl?.textContent).toBe('Email address');
+      expect(typeEl?.textContent).toBe('Link to email address');
     });
 
     it('shows invalid label and disables row for incomplete URLs', () => {

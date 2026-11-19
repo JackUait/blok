@@ -209,7 +209,6 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.filesLimitOne',
     // "Spotlight" is the Filipino/Taglish loanword for the dim-around effect.
     'tools.image.markupSpotlight',
-    'tools.link.emailAddress',
     'tools.code.autoDetected',
     // "Superscript"/"Subscript" are the established Filipino office terms
     // (Word's Filipino UI keeps the English labels).

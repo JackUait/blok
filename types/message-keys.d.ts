@@ -2852,6 +2852,7 @@ export type BlokMessageKey =
   | 'tools.link.linkTitle'
   | 'tools.link.onThisPage'
   | 'tools.link.pageOrUrl'
+  | 'tools.link.phoneNumber'
   | 'tools.link.recent'
   | 'tools.link.removeLink'
   | 'tools.link.urlCopied'

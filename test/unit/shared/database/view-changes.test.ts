@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { applyViewChanges, layoutChange } from '../../../../src/shared/database/view-changes';
+import { applyViewChanges, groupByChange, layoutChange } from '../../../../src/shared/database/view-changes';
 
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/shared/database/types';
 
@@ -37,6 +37,18 @@ describe('applyViewChanges', () => {
     applyViewChanges(view, { properties: [{ id: 's', visible: true }, { id: 'n', visible: false }] }, schema);
 
     expect(view.visibleProperties).toEqual(['s']);
+  });
+});
+
+describe('groupByChange', () => {
+  // notion-motion.md Round 42 §1 (a board regrouped to Status) and Round 77 §2 (a timeline grouped by Status).
+  it('a new Status grouping starts with Hide empty groups on', () => {
+    expect(groupByChange({ ...table(), type: 'timeline' }, schema[2])).toEqual({ groupBy: 's', groupSettings: { hideEmptyGroups: true } });
+    expect(groupByChange({ ...table(), type: 'board', groupBy: 'n' }, schema[2])).toEqual({ groupBy: 's', groupSettings: { hideEmptyGroups: true } });
+  });
+
+  it('re-picking the same Status keeps its settings', () => {
+    expect(groupByChange({ ...table(), groupBy: 's', groupSettings: {} }, schema[2])).toEqual({ groupBy: 's' });
   });
 });
 

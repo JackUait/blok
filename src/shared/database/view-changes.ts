@@ -48,10 +48,15 @@ export const applyViewChanges = (view: DatabaseViewConfig, changes: Readonly<Rec
 export const withEntryIds = <T extends { id?: string }>(entries: readonly T[]): Array<T & { id: string }> =>
   entries.map((entry, index) => (typeof entry.id === 'string' && entry.id !== '' ? entry as T & { id: string } : { ...entry, id: `legacy-${index}` }));
 
+/** Group-by types whose new grouping starts with Hide empty groups on. */
+const HIDES_EMPTY_GROUPS: readonly PropertyType[] = ['number', 'status'];
+
 /**
  * The write when people pick what a view groups by. A switch to another
  * property starts from that type's defaults (research/23 §2e): a number hides
- * empty groups, a select does not. Re-picking the same property keeps them.
+ * empty groups, a select does not. A status hides them too (notion-motion.md
+ * Round 42 §1 board, Round 77 §2 timeline); other types are unread.
+ * Re-picking the same property keeps them.
  */
 export const groupByChange = (
   view: DatabaseViewConfig | undefined,
@@ -59,7 +64,7 @@ export const groupByChange = (
 ): Pick<DatabaseViewConfig, 'groupBy' | 'groupSettings'> => {
   if (property.id === view?.groupBy) return { groupBy: property.id };
 
-  return { groupBy: property.id, groupSettings: property.type === 'number' ? { hideEmptyGroups: true } : {} };
+  return { groupBy: property.id, groupSettings: HIDES_EMPTY_GROUPS.includes(property.type) ? { hideEmptyGroups: true } : {} };
 };
 
 /**

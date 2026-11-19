@@ -915,3 +915,21 @@ describe('card menu glyph ink (Round 81)', () => {
     expect(declared(OWN, 'color')).toEqual(['var(--blok-database-peek-glyph-strong)']);
   });
 });
+
+// notion-motion.md Round 82 §1 "Card ⋯ › chevron ink" (r82-n-a4-bd-cardmenu-chev.raw, r82-n-b-ga-cardmenu.raw):
+// Edit property / Open in chevrons are 16x16 at +233 of a 257 row, ink rgb(142, 139, 134), on board and gallery.
+describe('card menu chevrons (Round 82)', () => {
+  const CARD = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu']";
+
+  it('ends a group row 8px after its chevron', () => {
+    expect(declared(`${CARD} [data-blok-popover-item][data-blok-has-children]`, 'padding-inline-end')).toEqual(['var(--blok-space-2)']);
+  });
+
+  it('draws the chevron 16px in a 16px slot, in the header icon grey', () => {
+    expect(declared(`${CARD} [data-blok-popover-item-icon-chevron-right]`, 'width')).toEqual(['16px']);
+    expect(declared(`${CARD} [data-blok-popover-item-icon-chevron-right]`, 'margin-inline-end')).toEqual(['0']);
+    expect(declared(`${CARD} [data-blok-popover-item-icon-chevron-right]`, 'color')).toEqual(['var(--blok-database-table-header-icon)']);
+    expect(declared(`${CARD} [data-blok-popover-item-icon-chevron-right] svg`, 'width')).toEqual(['16px']);
+    expect(declared(`${CARD} [data-blok-popover-item-icon-chevron-right] svg`, 'height')).toEqual(['16px']);
+  });
+});

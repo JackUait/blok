@@ -7763,6 +7763,21 @@ button[data-blok-database-board-lane-count]:hover {
   font-weight: 400;
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-item][data-blok-has-children] {
+  padding-inline-end: var(--blok-space-2);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-item-icon-chevron-right] {
+  width: 16px;
+  margin-inline-end: 0;
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-item-icon-chevron-right] svg {
+  width: 16px;
+  height: 16px;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item-separator] {
   padding-block: var(--blok-space-2) 0;
   padding-inline: var(--blok-space-2);

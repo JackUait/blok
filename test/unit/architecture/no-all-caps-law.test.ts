@@ -157,6 +157,9 @@ const ACRONYMS = new Set([
   'RTL', 'S3', 'SAE', 'SELECT', 'SEO', 'SI', 'Sİ', 'SHA256', 'SSE', 'SSR', 'SSRF', 'SSS', 'SVG', 'T2', 'T3', 'TI',
   'TLS', 'TS', 'UA', 'UAE', 'UFO', 'UI', 'UK', 'UKK', 'US', 'USA', 'URL', 'UTC', 'UTF', 'VAE', 'VIP', 'VPS', 'WWW',
   'XL', 'XML', 'XS', 'XSS', 'ZEA',
+  // ISO 4217 currency codes in the Number format labels.
+  'AED', 'ARS', 'AUD', 'BRL', 'BTC', 'CAD', 'CHF', 'CLP', 'CNY', 'COP', 'CZK', 'DKK', 'EUR', 'GBP', 'HKD', 'HUF', 'IDR', 'ILS', 'INR', 'JPY', 'KRW',
+  'MXN', 'MYR', 'NGN', 'NOK', 'NZD', 'PEN', 'PHP', 'PKR', 'PLN', 'RON', 'RUB', 'SAR', 'SEK', 'SGD', 'THB', 'TRY', 'TWD', 'USD', 'UYU', 'VND', 'ZAR',
   // Greek, Cyrillic and Armenian script.
   'ΑΤΙΑ', 'ΗΠΑ', 'ΤΝ', 'ВИ', 'ИИ', 'КБ', 'ЛПР', 'НЛО', 'ОАЕ', 'ОАЭ', 'ОК', 'ОС', 'США', 'УАЕ', 'ЧЗВ', 'ШІ',
   'ԱԲ', 'ԱՄՆ',

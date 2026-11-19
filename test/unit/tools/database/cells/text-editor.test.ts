@@ -603,6 +603,25 @@ describe('checkbox cell', () => {
       expect(event.defaultPrevented).toBe(true);
     });
 
+    // notion-motion.md Round 78 §5: Number "1234.5" and Phone "12345" move to 0 / end, Shift+Home extends to 0.
+    it.each([
+      ['number', 'Home', false, 'move', 'backward'],
+      ['number', 'End', false, 'move', 'forward'],
+      ['number', 'Home', true, 'extend', 'backward'],
+      ['phone', 'Home', false, 'move', 'backward'],
+      ['phone', 'End', false, 'move', 'forward'],
+      ['phone', 'Home', true, 'extend', 'backward'],
+    ] as const)('on macOS a %s editor handles %s (Shift %s)', (propertyType, key, shiftKey, alter, direction) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC);
+      const modify = stubModify();
+
+      openCellEditor(makeProperty(propertyType), propertyType === 'number' ? 1234.5 : '12345', makeAnchor(), makeEditorContext());
+      const event = press(field(), key, { shiftKey });
+
+      expect(modify).toHaveBeenCalledWith(alter, direction, 'lineboundary');
+      expect(event.defaultPrevented).toBe(true);
+    });
+
     it.each(['metaKey', 'ctrlKey', 'altKey'] as const)('on macOS Home with %s is left to the browser', (modifier) => {
       vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC);
       const modify = stubModify();
@@ -614,11 +633,11 @@ describe('checkbox cell', () => {
       expect(event.defaultPrevented).toBe(false);
     });
 
-    it('on macOS a url editor leaves Home to the browser', () => {
+    it.each(['url', 'email'] as const)('on macOS a %s editor leaves Home to the browser', (propertyType) => {
       vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC);
       const modify = stubModify();
 
-      openCellEditor(makeProperty('url'), 'hello', makeAnchor(), makeEditorContext());
+      openCellEditor(makeProperty(propertyType), 'hello', makeAnchor(), makeEditorContext());
       const event = press(field(), 'Home');
 
       expect(modify).not.toHaveBeenCalled();

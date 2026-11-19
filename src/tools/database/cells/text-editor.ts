@@ -17,7 +17,7 @@ const parseNumberEntry = (text: string, property: PropertyDefinition, locale: st
 /** research/16 §4: Notion's url, email and phone editors. */
 const INPUT_TYPES: Partial<Record<PropertyDefinition['type'], string>> = { url: 'url', email: 'email', phone: 'tel' };
 
-const LINE_KEY_TYPES: ReadonlySet<PropertyDefinition['type']> = new Set(['title', 'text', 'richText']);
+const LINE_KEY_TYPES: ReadonlySet<PropertyDefinition['type']> = new Set(['title', 'text', 'richText', 'number', 'phone']);
 
 /** research/22 §3, research/23 §3c, research/30 B20: Escape saves every text-like value. */
 const escapeCommits = (type: PropertyDefinition['type']): boolean =>
@@ -146,9 +146,9 @@ export const openTextEditor = (
 
       return;
     }
-    // notion-motion.md Rounds 75–76 §2: Notion moves (Shift: extends) to the visual line's edge in Title and Text;
-    // macOS Home/End only scroll a field. Other platforms already move the caret; ⌘/Ctrl/⌥ chords and the
-    // url, email, phone and number fields were not measured.
+    // notion-motion.md Rounds 75–76 §2, Round 78 §5: Notion moves (Shift: extends) to the visual line's edge in
+    // Title, Text, Number and Phone; macOS Home/End only scroll a field. Other platforms already move the caret;
+    // ⌘/Ctrl/⌥ chords and the url and email fields were not measured.
     const edge = ({ Home: 'backward', End: 'forward' } as const)[event.key as 'Home' | 'End'];
     const plain = !event.metaKey && !event.ctrlKey && !event.altKey;
 

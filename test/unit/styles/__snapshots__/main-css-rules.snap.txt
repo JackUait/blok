@@ -20120,7 +20120,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-panel]:has(> [data-blok-database-no-date-list]) > [data-blok-database-panel-note] {
-  padding-block-start: var(--blok-space-3-5);
+  padding-block: var(--blok-space-3-5) var(--blok-space-2);
   font-weight: 500;
 }
 

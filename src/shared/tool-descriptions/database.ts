@@ -704,6 +704,7 @@ export const DATABASE_DATA = {
                 longAnswer: { type: 'boolean', description: 'Form: a multi-line text answer; absent means a one-line answer.' },
                 maxSelections: { type: 'integer', minimum: 1, description: 'Form: maximum multi-select, people or relation selections.' },
                 showOptionsAs: { type: 'string', enum: ['list', 'dropdown'], description: 'Form: how a choice question lists its options; absent is list for select and multi-select, dropdown for status.' },
+                checkboxLabel: { type: 'string', description: 'Form: the text beside a checkbox question\'s box; absent means none.' },
               },
             },
           },

@@ -48,15 +48,19 @@ export const applyViewChanges = (view: DatabaseViewConfig, changes: Readonly<Rec
 export const withEntryIds = <T extends { id?: string }>(entries: readonly T[]): Array<T & { id: string }> =>
   entries.map((entry, index) => (typeof entry.id === 'string' && entry.id !== '' ? entry as T & { id: string } : { ...entry, id: `legacy-${index}` }));
 
-/** Group-by types whose new grouping starts with Hide empty groups on. */
-const HIDES_EMPTY_GROUPS: readonly PropertyType[] = ['number', 'status'];
+/**
+ * Group-by types whose new grouping starts with Hide empty groups on.
+ * Multi-select, checkbox, date and text are unmeasured: Notion's switch was
+ * already on when they were picked (notion-motion.md Round 78 §4).
+ */
+const HIDES_EMPTY_GROUPS: readonly PropertyType[] = ['number', 'status', 'select'];
 
 /**
  * The write when people pick what a view groups by. A switch to another
- * property starts from that type's defaults (research/23 §2e): a number hides
- * empty groups, a select does not. A status hides them too (notion-motion.md
- * Round 42 §1 board, Round 77 §2 timeline); other types are unread.
- * Re-picking the same property keeps them.
+ * property starts from that type's defaults: a number hides empty groups
+ * (research/23 §2e), so do a status (notion-motion.md Round 42 §1, Round 77 §2)
+ * and a select (Round 78 §4). A new board's own grouping is not a pick and
+ * keeps them. Re-picking the same property keeps the settings.
  */
 export const groupByChange = (
   view: DatabaseViewConfig | undefined,

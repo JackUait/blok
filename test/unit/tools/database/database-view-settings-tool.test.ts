@@ -301,7 +301,8 @@ describe('DatabaseTool — view settings', () => {
     click('database-pick-property-p-stage');
 
     expect(tool.save(root).views[0].groupBy).toBe('p-stage');
-    expect(tool.save(root).views[0].groupSettings).toEqual({});
+    // notion-motion.md Round 78 §4: a picked Select hides empty groups; the number's range goes.
+    expect(tool.save(root).views[0].groupSettings).toEqual({ hideEmptyGroups: true });
   });
 
   it('does the same from a column header\'s Group', () => {

@@ -47,6 +47,14 @@ describe('groupByChange', () => {
     expect(groupByChange({ ...table(), type: 'board', groupBy: 'n' }, schema[2])).toEqual({ groupBy: 's', groupSettings: { hideEmptyGroups: true } });
   });
 
+  // notion-motion.md Round 78 §4 (r78-n-hideempty.raw): picking Select turned the switch from off to on, on a board and a timeline.
+  it('a new Select grouping starts with Hide empty groups on', () => {
+    const kind: PropertyDefinition = { id: 'k', name: 'Kind', type: 'select', position: 'a3' };
+
+    expect(groupByChange({ ...table(), type: 'timeline' }, kind)).toEqual({ groupBy: 'k', groupSettings: { hideEmptyGroups: true } });
+    expect(groupByChange({ ...table(), type: 'board', groupBy: 's', groupSettings: {} }, kind)).toEqual({ groupBy: 'k', groupSettings: { hideEmptyGroups: true } });
+  });
+
   it('re-picking the same Status keeps its settings', () => {
     expect(groupByChange({ ...table(), groupBy: 's', groupSettings: {} }, schema[2])).toEqual({ groupBy: 's' });
   });

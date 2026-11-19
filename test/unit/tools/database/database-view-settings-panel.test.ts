@@ -2335,15 +2335,16 @@ describe('view settings panel', () => {
       expect(exists('database-group-color-columns')).toBe(false);
     });
 
+    // notion-motion.md Round 78 §4: a picked Select starts with Hide empty groups on; the number's range settings go.
     it('resets the settings when a number grouping switches to a select', () => {
-      const h = harness({ type: 'board', groupBy: 'num', groupSettings: { hideEmptyGroups: true } });
+      const h = harness({ type: 'board', groupBy: 'num', groupSettings: { numberBy: 'range', hideEmptyGroups: false } });
 
       h.open('group');
       click('database-group-by');
       click('database-pick-property-stage');
 
-      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ groupBy: 'stage', groupSettings: {} });
-      expect(hideEmpty()).toBe('false');
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ groupBy: 'stage', groupSettings: { hideEmptyGroups: true } });
+      expect(hideEmpty()).toBe('true');
     });
 
     it('keeps the settings when the same number property is picked again', () => {

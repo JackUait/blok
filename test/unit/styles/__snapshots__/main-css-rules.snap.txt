@@ -20148,6 +20148,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   user-select: none;
 }
 
+[data-blok-database-no-date-row] + [data-blok-database-no-date-row] {
+  margin-block-start: var(--blok-space-0-25);
+}
+
 [data-blok-database-no-date-row]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }

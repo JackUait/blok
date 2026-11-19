@@ -564,6 +564,11 @@ describe('Hours zoom 15-minute lines and day period (Round 35)', () => {
       expect(ruleBody(`${panel} > [data-blok-database-panel-note]`)).toMatch(/padding-block:\s*var\(--blok-space-3-5\) var\(--blok-space-2\);\s*font-weight:\s*500/);
     });
 
+    // notion-motion.md Round 81 §1 (r81-n-tl-nodate.raw; r24-cal-nodate.raw): 28 rows step 29, 1px apart.
+    it('steps the No date rows 29, a 1px gap between 28 rows', () => {
+      expect(ruleBody('[data-blok-database-no-date-row] + [data-blok-database-no-date-row]')).toContain('margin-block-start: var(--blok-space-0-25)');
+    });
+
     // Round 47 A2: the day row is 32 in every zoom.
     it('makes the day row 32 tall in every zoom, the day line staying 28', () => {
       expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-header-under: 4px');

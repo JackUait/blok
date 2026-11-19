@@ -3539,7 +3539,10 @@ export class ViewSettingsPages {
 
             const stored = this.ctx.storedType?.(property.id) ?? property.type;
 
-            // notion-motion.md Round 74 §4, Round 76 §4: a new Rollup or Formula rule focuses its value input.
+            // notion-motion.md Round 77 §5: a checkbox formula has no input and leaves nothing focused.
+            if (stored === 'formula' && property.type === 'checkbox') return false;
+
+            // notion-motion.md Round 74 §4, Round 76 §4, Round 77 §5: a new Rollup or Formula rule focuses its value input.
             if (stored === 'rollup' || stored === 'formula') return panel.root.querySelector<HTMLInputElement>(`input[data-blok-testid="${CSS.escape(`database-color-value-${id}`)}"]`);
 
             // notion-motion.md Round 75 §2, Round 76 §4: these types leave nothing focused. Other types are unmeasured and keep Add another.
@@ -3636,6 +3639,9 @@ const newColorRule = (property: PropertyDefinition, storedType: PropertyType | u
   const numberFormula = type === 'number' && storedType === 'formula';
 
   if (isNumberListRollup(property)) return { operator: 'any:equals', value: null, color: plain };
+
+  // notion-motion.md Round 77 §5 (r77-n-ccformula-text.raw): a text formula starts on "contains".
+  if (type === 'text' && storedType === 'formula') return { operator: 'contains', value: null, color: plain };
 
   return {
     operator: type === 'checkbox' || numberFormula ? 'equals' : 'is_not_empty',

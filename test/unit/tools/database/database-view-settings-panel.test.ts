@@ -2723,6 +2723,34 @@ describe('view settings panel', () => {
       expect(q(`database-color-value-${rule.id}`)).toHaveFocus();
     });
 
+    // notion-motion.md Round 77 §5 (r77-n-ccformula-text.raw): a text formula starts on "contains" with its value input focused.
+    it('starts a text formula on "contains" and focuses its value input', () => {
+      const h = open();
+
+      h.ctx.schema = () => [...typed, { id: 'ft', name: 'Label', type: 'text', position: 'c0' }];
+      h.ctx.storedType = (id) => (id === 'ft' ? 'formula' : typed.find((p) => p.id === id)?.type);
+
+      const rule = add(h, 'ft');
+
+      expect(q(`database-color-value-${rule.id}`)).toHaveFocus();
+      expect(rule).toMatchObject({ operator: 'contains', color: 'green' });
+      expect(add(h, 'txt')).toMatchObject({ operator: 'is_not_empty' });
+    });
+
+    // notion-motion.md Round 77 §5 (r77-n-ccformula-checkbox.raw): a checkbox formula starts on "is" and leaves nothing focused.
+    it('leaves nothing focused after a new checkbox formula rule', () => {
+      const h = open();
+
+      h.ctx.schema = () => [...typed, { id: 'fc', name: 'Flag', type: 'checkbox', position: 'c0' }];
+      h.ctx.storedType = (id) => (id === 'fc' ? 'formula' : typed.find((p) => p.id === id)?.type);
+
+      const rule = add(h, 'fc');
+
+      expect(document.body).toHaveFocus();
+      expect(q('database-color-add')).not.toHaveFocus();
+      expect(rule).toMatchObject({ operator: 'equals', value: null });
+    });
+
     // notion-motion.md Round 22 §3: a Number formula starts on "=" with its input. The panel gets it as its result type.
     it('starts a Number formula on "=", and a plain Number on "is not empty"', () => {
       const h = open();

@@ -1911,6 +1911,35 @@ describe('DatabaseTimelineView', () => {
       pointer('pointerup', document, qx('2026-10-12') + 6, 50);
     });
 
+    // notion-motion.md Round 89 §1 #1: a multi-day bar's pill names its range, "Nov 16 – 20", plain spaces round the en dash.
+    it('names a multi-day bar\'s range in the Quarter pill, live as the bar is dragged', () => {
+      const { root } = mount({ view: timelineView({ timelineZoom: 'quarter' }) });
+      const qx = (day: string): number => daysBetween(timelineWindow(CENTER, 'quarter').start, day) * TIMELINE_DAY_WIDTH.quarter;
+
+      rect(canvas(root), 0, 0, timelineWindow(CENTER, 'quarter').days * TIMELINE_DAY_WIDTH.quarter, 400);
+      over(bar(root, 'r2'));
+
+      expect(range(root)?.textContent).toBe('Oct 12 \u2013 14');
+
+      pointer('pointerdown', bar(root, 'r2'), qx('2026-10-12') + 6, 50);
+      pointer('pointermove', document, qx('2026-10-15') + 6, 50);
+      expect(range(root)?.textContent).toBe('Oct 15 \u2013 17');
+      pointer('pointerup', document, qx('2026-10-15') + 6, 50);
+    });
+
+    // notion-motion.md Round 89 §1 #2: Year and 5 Years draw the same text pill as Quarter. Their mid-drag pill is unread.
+    it.each(['year', '5_years'] as const)('names the bar\'s days in the pill at %s zoom', (zoom) => {
+      const { root } = mount({ view: timelineView({ timelineZoom: zoom }) });
+
+      over(bar(root, 'r1'));
+      expect(range(root)?.textContent).toBe('Oct 9');
+      expect(range(root)?.hasAttribute('data-label')).toBe(true);
+      expect(range(root)?.style.width).toBe('');
+
+      over(bar(root, 'r2'));
+      expect(range(root)?.textContent).toBe('Oct 12 \u2013 14');
+    });
+
     it('keeps the Month pill a bare span, with no day named', () => {
       const { root } = mount();
 

@@ -129,6 +129,15 @@ export interface DatabaseTimelineViewOptions {
 }
 
 const DRAG_THRESHOLD = 4;
+
+/**
+ * notion-motion.md Round 89 §1 #1: "Nov 16 – 20", plain spaces round the en dash (some Intl builds give thin ones).
+ * Ranges across a month or a year are unread, so they keep Intl's own text.
+ */
+const pillText = (span: EventSpan, locale: string): string =>
+  new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' })
+    .formatRange(toLocalDate(span.start), toLocalDate(span.end))
+    .replace(/\u2009/g, ' ');
 const DAY_MINUTES = 24 * 60;
 /** notion-motion.md Round 71 §3: a day-zoom bar starts 2px into its first day and stops 1px short of its last (851.4 in a day from 849.4, 37 wide). */
 const BAR_START = 2;
@@ -141,6 +150,8 @@ const FAR_BAR_TRIM = 3;
 const FAR_BAR_MIN = 11;
 /** findings C07: Notion's "+ New" made a 5-day bar. */
 const NEW_BAR_DAYS = 5;
+/** notion-motion.md Round 88 §1 #5, Round 89 §1 #2: zooms whose bar pill names its days. */
+const LABELLED_PILL: ReadonlySet<TimelineZoom> = new Set(['quarter', 'year', '5_years']);
 /** notion-motion.md Round 48 A9: at Day zoom Notion's "+ New" made a 3-hour bar (6:30 PM → 9:30 PM). */
 const NEW_BAR_DAY_ZOOM_MINUTES = 3 * 60;
 /** Within this share of either canvas end, a scroll redraws around a new centre. */
@@ -1742,7 +1753,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
   /**
    * findings C15: a pill over the dragged range's day numbers; its first and last day in ink.
-   * notion-motion.md Round 88 §1 #5: at Quarter a bar's pill names its day instead. A multi-day bar there is unread.
+   * notion-motion.md Round 88 §1 #5, Round 89 §1 #1-#2: at Quarter, Year and 5 Years a bar's pill names its days instead.
    */
   private showRange(span: EventSpan, { offset, width }: { offset: number; width: number }, hover = false, ofBar = false): void {
     const header = this.root?.querySelector('[data-blok-database-timeline-header]');
@@ -1751,13 +1762,13 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       return;
     }
     const pill = header.querySelector<HTMLElement>('[data-blok-database-timeline-range]') ?? document.createElement('div');
-    const label = ofBar && this.zoom === 'quarter';
+    const label = ofBar && LABELLED_PILL.has(this.zoom);
 
     pill.setAttribute('data-blok-database-timeline-range', '');
     pill.setAttribute('aria-hidden', 'true');
     pill.toggleAttribute('data-hover', hover);
     pill.toggleAttribute('data-label', label);
-    pill.textContent = label ? formatShortDatePart(span.start, resolveLocale(this.options.locale)) : '';
+    pill.textContent = label ? pillText(span, resolveLocale(this.options.locale)) : '';
     pill.style.insetInlineStart = `${offset}px`;
     pill.style.width = label ? '' : `${width}px`;
     if (!pill.isConnected) {

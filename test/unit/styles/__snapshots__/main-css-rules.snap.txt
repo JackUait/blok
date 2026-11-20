@@ -6189,8 +6189,32 @@ span[data-blok-slash-search] {
   transform: none;
 }
 
-[data-blok-database-drawer][data-expanding] > * {
-  visibility: hidden;
+[data-blok-database-drawer-shell] {
+  position: fixed;
+  top: 0;
+  inset-inline-end: 0;
+  height: 100%;
+  z-index: var(--blok-z-drawer);
+  background-color: var(--blok-database-peek-bg);
+  box-shadow: var(--blok-database-peek-shadow);
+  transform: translateX(100%);
+  transition: transform 200ms ease;
+}
+
+[dir="rtl"] [data-blok-database-drawer-shell] {
+  transform: translateX(-100%);
+}
+
+[data-blok-database-drawer-shell][data-open] {
+  transform: none;
+}
+
+[data-blok-database-drawer-shell][data-blok-top-layer][popover] {
+  top: 0;
+  bottom: auto;
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+  height: 100%;
 }
 
 [data-blok-database-peek-resize] {
@@ -6290,7 +6314,7 @@ span[data-blok-slash-search] {
   transition: none;
 }
 
-[data-blok-database-full-page] > :not([data-blok-database-drawer]) {
+[data-blok-database-full-page] > :not([data-blok-database-drawer], [data-blok-database-drawer-shell]) {
   display: none;
 }
 
@@ -11403,7 +11427,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   animation: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-drawer], [data-blok-database-drop-line], [data-blok-database-column-actions], [data-blok-database-list-group-toggle] svg, [data-blok-database-list-row], [data-blok-database-list-row-gutter], [data-blok-database-column-reordering] [data-blok-database-column-header], [data-blok-database-tab], [data-blok-database-tab-bar][data-dragging] [data-blok-database-tab], [data-blok-database-tab-bar][data-dragging] [data-blok-database-tab][data-blok-database-tab-drag-source], [data-blok-database-card-actions], [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-container], [data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container], [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-drawer], [data-blok-database-drawer-shell], [data-blok-database-drop-line], [data-blok-database-column-actions], [data-blok-database-list-group-toggle] svg, [data-blok-database-list-row], [data-blok-database-list-row-gutter], [data-blok-database-column-reordering] [data-blok-database-column-header], [data-blok-database-tab], [data-blok-database-tab-bar][data-dragging] [data-blok-database-tab], [data-blok-database-tab-bar][data-dragging] [data-blok-database-tab][data-blok-database-tab-drag-source], [data-blok-database-card-actions], [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-container], [data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container], [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item] {
   transition: none;
 }
 

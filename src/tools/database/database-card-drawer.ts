@@ -548,8 +548,8 @@ export class DatabaseCardDrawer {
   private readonly viewRows: CardDrawerOptions['viewRows'];
   /** The builder's "New page" preview when the database has no rows (research/09 §1). No drawer is open then. */
   private placeholder: DatabaseRow | null = null;
-  /** The side peek sliding out before it turns into a full page. Close drops it with the drawer; a new row cancels it. */
-  private expanding: HTMLElement | null = null;
+  /** The empty panel sliding out over a full page opened from a side peek. */
+  private shell: HTMLElement | null = null;
   private readonly onEditViewDefault: CardDrawerOptions['onEditViewDefault'];
   private readonly rowLink: CardDrawerOptions['rowLink'];
   private readonly onExpand: CardDrawerOptions['onExpand'];
@@ -748,12 +748,6 @@ export class DatabaseCardDrawer {
   }
 
   private show(row: DatabaseRow, mode: OpenPagesIn): void {
-    if (this.drawer !== null && this.expanding === this.drawer) {
-      this.expanding = null;
-      this.drawer.removeAttribute('data-expanding');
-      this.drawer.setAttribute('data-open', '');
-      if (this.mode === 'side') this.narrowPeekHost();
-    }
     if (this.drawer) {
       if (mode !== this.mode) {
         this.applyMode(mode);
@@ -1062,7 +1056,7 @@ export class DatabaseCardDrawer {
   }
 
   close(): void {
-    this.expanding = null;
+    this.dropShell();
     const wasOpen = this.drawer !== null;
     // The side peek slides out with its body still in it; the body goes back
     // to the pool once the slide ends.
@@ -1131,6 +1125,7 @@ export class DatabaseCardDrawer {
   }
 
   destroy(): void {
+    this.dropShell();
     this.events?.off('i18n:changed', this.followOuterDirection);
     this.pageScroll.unlock();
     this.stopWatchingPins();
@@ -2082,35 +2077,42 @@ export class DatabaseCardDrawer {
       return;
     }
     const drawer = this.drawer;
+    const wasFull = this.mode === 'full';
 
-    const fromSide = this.mode === 'side';
-
-    // Notion empties the peek, runs its close slide while the page widens, then shows the full page.
-    if (drawer === null || !fromSide || !drawer.hasAttribute('data-open') || prefersReducedMotion()) {
-      const wasFull = this.mode === 'full';
-
-      this.switchMode('full');
-      // notion-motion.md Round 72 §4: the centre peek lands with the caret at the end of the title too.
-      if (!wasFull) this.focusTitleEnd();
-
-      return;
+    // notion-motion.md Round 72 §4: Notion paints the full page at once, under its empty panel sliding out.
+    if (drawer !== null && this.mode === 'side' && drawer.hasAttribute('data-open') && !prefersReducedMotion()) {
+      this.slideOutShell(drawer);
     }
-    this.expanding = drawer;
-    drawer.setAttribute('data-expanding', '');
-    drawer.removeAttribute('data-open');
-    this.peekHost?.style.setProperty('--_blok-peek-inset', '0px');
-    this.peekHost?.style.setProperty('--_blok-peek-gap', '0px');
-    afterSlide(drawer, () => {
-      if (this.expanding !== drawer || this.drawer !== drawer) {
-        return;
-      }
-      this.expanding = null;
-      // Before the focus: a hidden title cannot take it.
-      drawer.removeAttribute('data-expanding');
-      this.switchMode('full');
-      drawer.setAttribute('data-open', '');
-      this.focusTitleEnd();
+    this.switchMode('full');
+    // notion-motion.md Round 72 §4: the centre peek lands with the caret at the end of the title too.
+    if (!wasFull) this.focusTitleEnd();
+  }
+
+  /** An empty copy of the side peek's panel, sliding out over the full page. */
+  private slideOutShell(drawer: HTMLElement): void {
+    this.dropShell();
+    const shell = document.createElement('div');
+
+    shell.setAttribute('data-blok-database-drawer-shell', '');
+    shell.setAttribute('aria-hidden', 'true');
+    shell.setAttribute('data-open', '');
+    shell.style.width = `${drawer.getBoundingClientRect().width}px`;
+    drawer.after(shell);
+    promoteToTopLayer(shell);
+    // Read layout so the slide starts from the open place.
+    void shell.offsetWidth;
+    shell.removeAttribute('data-open');
+    this.shell = shell;
+    afterSlide(shell, () => {
+      if (this.shell === shell) this.dropShell();
     });
+  }
+
+  private dropShell(): void {
+    if (this.shell === null) return;
+    removeFromTopLayer(this.shell);
+    this.shell.remove();
+    this.shell = null;
   }
 
   /** notion-motion.md Round 71 §5, Round 72 §4: the full page opens with the caret at the end of the title. */
@@ -2405,11 +2407,8 @@ export class DatabaseCardDrawer {
     if (mode === 'side' && drawer.hasAttribute('data-open')) {
       this.narrowPeekHost();
     }
-    if (mode === 'center') {
-      this.widenPeekHost();
-    } else if (mode !== 'side') {
-      this.releasePeekHost();
-    }
+    // A full page widens like a centre peek; with no host marked, this releases at once.
+    if (mode !== 'side') this.widenPeekHost();
 
     const close = drawer.querySelector<HTMLElement>('[data-blok-database-drawer-close]');
 

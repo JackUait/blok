@@ -1872,9 +1872,34 @@
   transform: none;
 }
 
-/* notion-motion.md Round 71 §5: on the way to a full page the empty panel slides out. */
-[data-blok-database-drawer][data-expanding] > * {
-  visibility: hidden;
+/* notion-motion.md Round 72 §4: on the way to a full page an empty panel slides out over it. */
+[data-blok-database-drawer-shell] {
+  position: fixed;
+  top: 0;
+  inset-inline-end: 0;
+  height: 100%;
+  z-index: var(--blok-z-drawer);
+  background-color: var(--blok-database-peek-bg);
+  box-shadow: var(--blok-database-peek-shadow);
+  transform: translateX(100%);
+  transition: transform 200ms ease;
+}
+
+[dir="rtl"] [data-blok-database-drawer-shell] {
+  transform: translateX(-100%);
+}
+
+[data-blok-database-drawer-shell][data-open] {
+  transform: none;
+}
+
+/* The top-layer reset clears the box; the width is inline. */
+[data-blok-database-drawer-shell][data-blok-top-layer][popover] {
+  top: 0;
+  bottom: auto;
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+  height: 100%;
 }
 
 /* research/22 §10: a 12px col-resize handle on the inner edge. Hover changes nothing (r30 B24). */
@@ -1991,7 +2016,7 @@
   transition: none;
 }
 
-[data-blok-database-full-page] > :not([data-blok-database-drawer]) {
+[data-blok-database-full-page] > :not([data-blok-database-drawer], [data-blok-database-drawer-shell]) {
   display: none;
 }
 
@@ -7929,6 +7954,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   }
 
   [data-blok-database-drawer],
+  [data-blok-database-drawer-shell],
   [data-blok-database-drop-line],
   [data-blok-database-column-actions],
   [data-blok-database-list-group-toggle] svg,

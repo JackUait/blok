@@ -184,6 +184,7 @@ export const sortEditor = (options: SortEditorOptions): DatabasePanel => {
     state.addPicker = propertyPicker({
       anchor: row,
       testId: 'database-sort-add-picker',
+      kind: 'sort',
       types: SORTABLE_TYPES,
       schema: options.schema,
       i18n: options.i18n,

@@ -2546,6 +2546,16 @@ describe('DatabaseViewControls', () => {
       expect(q('database-sort-panel')?.querySelectorAll('[data-blok-database-sort-row]')).toHaveLength(2);
     });
 
+    // notion-motion.md Round 91 §1 #8 (r91-n-dark-addsort.raw: 230 in dark) and r11-picker-vs-addsort.raw
+    // (56,56,54 in light): the Add sort picker's glyphs take the sort picker's strong ink.
+    it('marks the Add sort list as a sort picker for its glyph ink', () => {
+      withSort();
+      click('database-sort-pill');
+      click('database-sort-add');
+
+      expect(q('database-sort-add-picker')?.querySelector('[data-blok-database-picker-list]')?.getAttribute('data-blok-database-picker-list')).toBe('sort');
+    });
+
     // notion-motion.md Round 91 §1 #4 (r91-n-sort-2rules.raw): the panel grows at once to fit the new rule.
     // data-fit-content lets the popover box follow the panel (database.css), so the rule's × is not cut off.
     it('lets the popover box grow with the panel when a rule is added', () => {

@@ -177,6 +177,36 @@ test.describe('list view', () => {
 });
 
 // notion-motion.md Round 25 §6: "Directly edit page name".
+test.describe('list arrow past the last row', () => {
+  // r87-measure notes: Notion block-selects the next page block, focus on BODY, and the row pick goes.
+  test('↓ on the last picked row selects the next page block, not a row block', async ({ page }) => {
+    await mount(page, [...blocks({ type: 'list', name: 'List' }), { id: 'p-after', type: 'paragraph', data: { text: 'After' } }]);
+    await row(page, 'r1').focus();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await expect(row(page, 'r3')).toHaveAttribute('data-blok-database-row-selected', '');
+
+    await page.keyboard.press('ArrowDown');
+
+    await expect(page.locator('[data-blok-id="p-after"]')).toHaveAttribute('data-blok-selected', 'true');
+    await expect(page.locator('[data-blok-selected="true"]')).toHaveCount(1);
+    await expect(page.locator('[data-blok-database-row-selected]')).toHaveCount(0);
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+  });
+
+  test('with no block after the database, the last row keeps its pick', async ({ page }) => {
+    await mount(page, blocks({ type: 'list', name: 'List' }));
+    await row(page, 'r1').focus();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+
+    await expect(row(page, 'r3')).toHaveAttribute('data-blok-database-row-selected', '');
+    await expect(row(page, 'r3')).toBeFocused();
+    await expect(page.locator('[data-blok-selected="true"]')).toHaveCount(0);
+  });
+});
+
 test.describe('list "Directly edit page name"', () => {
   test('off, a title click opens the row', async ({ page }) => {
     await mount(page, blocks({ type: 'list', name: 'List' }));

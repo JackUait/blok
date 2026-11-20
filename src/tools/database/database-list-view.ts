@@ -13,6 +13,7 @@ import type { CellContext } from './cells';
 import { IconDotsHorizontal, IconExpandDiagonal, IconPeekCenter, IconPeekSide, IconPencilLine, IconPlayerPlay, IconPlus, IconRowGrip } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { onHover } from '../../components/utils/tooltip';
+import { KEYBOARD_OWNER_EDGE_EVENT } from '../../components/constants/data-attributes';
 import { propertyHint } from './property-hint';
 import { PROPERTY_TYPE_META } from './database-property-types';
 import { syncCommentBadge } from './database-comment-badge';
@@ -421,6 +422,8 @@ export class DatabaseListView implements DatabaseViewRenderer {
       if (next !== undefined) {
         this.focusRow(next);
         this.selectByKey(rows, next, event.shiftKey ? this.selectionAnchor ?? rowEl : next);
+      } else if (event.key === 'ArrowDown' && !event.shiftKey) {
+        this.handDownToBlok(rowEl);
       }
 
       return true;
@@ -434,6 +437,17 @@ export class DatabaseListView implements DatabaseViewRenderer {
     }
 
     return false;
+  }
+
+  /** r87-measure notes: past the last row Blok block-selects the next page block, and the row pick goes. */
+  private handDownToBlok(rowEl: HTMLElement): void {
+    const edge = new CustomEvent(KEYBOARD_OWNER_EDGE_EVENT, { bubbles: true, cancelable: true, detail: { direction: 'next' } });
+
+    // Not cancelled: no block follows, so the row keeps its pick.
+    if (!rowEl.dispatchEvent(edge)) {
+      this.selectionAnchor = null;
+      this.settings.lassoRows?.([]);
+    }
   }
 
   /** Arrows select the row they reach; Shift+Arrow selects from the anchor to it. The tint is the gray selection. */

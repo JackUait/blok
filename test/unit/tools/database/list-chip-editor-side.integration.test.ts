@@ -72,7 +72,7 @@ const openChip = async (view: Record<string, unknown>, selector: string): Promis
     dataModel: 'hierarchical',
     tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
     data: { blocks: doc(view) },
-  } as never) as unknown as TestEditor;
+  } as never);
   await editor.isReady;
   await quiet();
   const chip = holder?.querySelector<HTMLElement>(selector);

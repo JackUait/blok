@@ -820,6 +820,16 @@ describe('DatabaseFormView add question between cards', () => {
 
     expect(document.querySelector('[data-blok-testid="database-form-new-text"]')?.hasAttribute('data-blok-database-form-type-row')).toBe(true);
   });
+
+  // notion-motion.md Round 52 and Round 65 §4: Select type opens with no scale.
+  it('opens Select type on a popover marked to open without a scale', () => {
+    const { root } = mount({ setQuestionSetting: vi.fn(), addQuestion: vi.fn() });
+
+    root.querySelector<HTMLElement>('[data-blok-testid="database-form-add-question"]')?.click();
+    const popover = document.querySelector('[data-blok-testid="database-form-select-type"]')?.closest('[data-blok-popover]');
+
+    expect(popover?.getAttribute('data-blok-popover-custom-class')?.split(' ')).toContain('blok-database-form-type-menu');
+  });
 });
 
 // notion-motion.md Round 31 §1: the form header, a 40px "Form title" and "Description (optional)".

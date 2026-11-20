@@ -503,6 +503,20 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(tokenValues('--blok-database-form-type-frame')[0]).toBe('rgba(84, 72, 49, 0.15)');
   });
 
+  // notion-motion.md Round 52 and Round 65 §4: rows 266 wide at the panel's + 12, and no scale on open.
+  it('insets Select type rows 8 inside the panel padding, and opens the panel with no scale', () => {
+    const row = ruleBody('[data-blok-database-form-type-row]');
+
+    expect(row).toContain('width: auto');
+    expect(row).toContain('margin-inline: var(--blok-space-2)');
+    expect(ruleBody("[data-blok-popover][data-blok-popover-custom-class~='blok-database-form-type-menu']:not([data-blok-popover-opened='true']) [data-blok-popover-container]")).toContain('transform: none');
+    const scale = database.indexOf("[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-opened='true']) [data-blok-popover-container] {");
+    const none = database.indexOf("[data-blok-popover][data-blok-popover-custom-class~='blok-database-form-type-menu']:not([data-blok-popover-opened='true']) [data-blok-popover-container]");
+
+    // Same specificity as the scale rule, so it must come after it.
+    expect(none).toBeGreaterThan(scale);
+  });
+
   // The view box clips; the "+" sits left of the column, so the form bleeds into the gutter as the table does.
   it('the view box bleeds into the gutter for a form, so the "+" is not clipped', () => {
     expect(ruleBody('[data-blok-database-board-container]:has(> [data-blok-database-table], > [data-blok-database-list], > [data-blok-database-form])'))

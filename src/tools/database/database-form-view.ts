@@ -1274,6 +1274,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       besideFlip: true,
       testId: 'database-form-select-type',
       width: 290,
+      surfaceClass: 'blok-database-form-type-menu',
       backLabel: i18n.t('tools.database.peekBack'),
       onClose: () => {
         if (anchor.hasAttribute('data-blok-database-form-slot')) anchor.remove();

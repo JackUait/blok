@@ -1941,8 +1941,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R212_BYTES = 712;
     // Lane r220: Round 86 §1 the row menu's submenu fades out with no scale, Date format fades and scales in. Net database.css growth against origin/main.
     const DATABASE_R220_BYTES = 833;
-    // Lane r224: Round 47 A3 the timeline's mid-drag pill runs 4px past each end. Net database.css growth against origin/main.
-    const DATABASE_R224_BYTES = 266;
+    // Lane r224: Round 47 A3 the mid-drag timeline pill runs 4px past each end; Round 52 / 65 §4 Select type rows at + 12, no scale. Net database.css growth against origin/main.
+    const DATABASE_R224_BYTES = 746;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

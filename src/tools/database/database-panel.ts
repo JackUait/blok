@@ -55,6 +55,8 @@ export interface DatabasePanelOptions {
   halfWindow?: boolean;
   /** Under the anchor, its end edge on the anchor's end edge. */
   alignEnd?: boolean;
+  /** An extra class on the popover surface, for motion only this panel has. */
+  surfaceClass?: string;
   /**
    * The undo and redo keys walk no history while it is open (notion-motion.md Round 64 §2,
    * Round 65 §2: Notion's filter popovers). A text field keeps its native undo. Its flyouts inherit it.
@@ -149,6 +151,7 @@ export class DatabasePanel {
       ...(options.verticalMargin !== undefined ? { verticalMargin: options.verticalMargin } : {}),
       ...(options.alignEnd === true ? { alignEnd: true } : {}),
       ...(options.focusHost !== undefined ? { focusHost: options.focusHost } : {}),
+      ...(options.surfaceClass !== undefined ? { surfaceClass: options.surfaceClass } : {}),
       onEscape: () => this.back(true),
       onDismiss: () => this.finish(),
     });

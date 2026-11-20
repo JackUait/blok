@@ -3714,6 +3714,11 @@ button[data-blok-database-board-lane-count]:hover {
   transform: scale(0.96);
 }
 
+/* notion-motion.md Round 52, Round 65 §4: Select type opens with no scale. Same specificity as the scale rule, so it must stay after it. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-form-type-menu']:not([data-blok-popover-opened='true']) [data-blok-popover-container] {
+  transform: none;
+}
+
 /* notion-motion.md Round 36 §4: the card ⋯ menu only fades. Same specificity as the rule above, so it must stay after it. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-fade-menu']:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
   transform: none;
@@ -21207,8 +21212,11 @@ button[data-blok-database-feed-reaction]:hover,
   visibility: hidden;
 }
 
+/* notion-motion.md Round 52, Round 65 §4: rows 266 wide at the panel's + 12, 8 inside its 4px padding. */
 [data-blok-database-form-type-row] {
+  width: auto;
   min-height: 44px;
+  margin-inline: var(--blok-space-2);
 }
 
 [data-blok-database-form-type-row] > [data-blok-database-panel-icon] {

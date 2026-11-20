@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { groupLabel } from '../../../../src/tools/database/database-group-labels';
+import { groupKeysFor } from '../../../../src/tools/database/group-keys';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
 
 const i18n = { t: (key: string, vars?: Record<string, string | number>) => (vars === undefined ? key : `${key}:${JSON.stringify(vars)}`) };
@@ -22,6 +23,14 @@ describe('groupLabel', () => {
     expect(groupLabel(date, 'month:2026-10', { ...i18n, getLocale: () => 'en-US' }, { dateBy: 'month' })).toBe('Oct 2026');
     expect(groupLabel(date, 'month:2026-10', { ...i18n, getLocale: () => 'de' }, { dateBy: 'month' }))
       .toBe(new Intl.DateTimeFormat('de', { month: 'short', year: 'numeric' }).format(new Date(2026, 9, 1)));
+  });
+
+  // r84-n-grp-Date.raw: Date by Relative named a date past the last 30 days "Oct 2026" too.
+  it('names a relative date past the last 30 days by its short month', () => {
+    const date: PropertyDefinition = { id: 'p-due', name: 'Due', type: 'date', position: 'a0' };
+    const [key] = groupKeysFor(date, '2026-10-15', {}, new Date(2026, 10, 20, 12));
+
+    expect(groupLabel(date, key, { ...i18n, getLocale: () => 'en-US' })).toBe('Oct 2026');
   });
 
   // research/22 §7: Notion names number buckets "0 to 100", "900 to 1000".

@@ -102,6 +102,21 @@ test.describe('filter popover geometry', () => {
     expect(popover.y - (chip.y + chip.height)).toBeCloseTo(4, 1);
   });
 
+  // notion-motion.md Round 88 §1 #3, Round 89 §1 #7 (r89-n-chipid.raw): Number and ID rule popups are 220×75.
+  for (const [type, operator] of [['number', 'equals'], ['uniqueId', 'equals']] as const) {
+    test(`a ${type} rule from a chip is 220×75`, async ({ page }) => {
+      const [database, ...rest] = blocks({ filters: [{ id: 'f1', propertyId: 'p-v', operator, value: null }] });
+      const data = database.data as { schema: unknown[] };
+
+      await mount(page, [{ ...database, data: { ...data, schema: [...data.schema, { id: 'p-v', name: 'V', type, position: 'a2' }] } }, ...rest]);
+      await page.getByTestId('database-filter-pill-f1').click();
+      const popover = await settledBox(page.getByTestId('database-filter-popover'));
+
+      expect(popover.width).toBeCloseTo(220, 1);
+      expect(popover.height).toBeCloseTo(75, 1);
+    });
+  }
+
   test('advanced rules put every property button at +76 and the value 16 before the ⋯', async ({ page }) => {
     await mount(page, blocks({ filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'f1', ...RULE }, { id: 'f2', ...RULE }] } }));
     await page.getByTestId('database-advanced-pill').click();

@@ -439,6 +439,26 @@ describe('view filter undo', () => {
     expect(document.querySelector<HTMLInputElement>('[data-blok-database-filter-rule-value]')?.value).toBe('Al');
   });
 
+  // Round 83 §5 leaves focus on the toolbar Filter button; Round 65 §2: the undo key still changes nothing.
+  it('ignores the undo key pressed on the toolbar Filter button while the advanced filter is open', async () => {
+    await make();
+
+    await openAdvanced();
+    await typeRule(['A', 'Al']);
+    await new Promise(resolve => {
+      setTimeout(resolve, 700);
+    });
+    const filter = q('database-toolbar-filter');
+
+    if (filter === null) throw new Error('no toolbar filter button');
+    filter.focus();
+    filter.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', code: 'KeyZ', metaKey: true, ctrlKey: true, bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(order()).toEqual(['r1']);
+    expect(document.querySelector<HTMLInputElement>('[data-blok-database-filter-rule-value]')?.value).toBe('Al');
+  });
+
   it('ignores the undo key while a filter value popover is open', async () => {
     await make();
 

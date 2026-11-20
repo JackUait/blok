@@ -46,6 +46,8 @@ export interface CellPopoverOptions {
   alignEnd?: boolean;
   /** Below the anchor: what the popover follows on scroll, when the anchor may be redrawn away while open. */
   positionContext?: HTMLElement;
+  /** Focus may sit here, outside the popover, without closing it. */
+  focusHost?: HTMLElement;
   /** Escape pressed while open. The owner decides: close, or step back a panel. */
   onEscape: () => void;
   /** The popover closed itself: an outside press, or focus moved away. */
@@ -224,6 +226,8 @@ export class CellPopover {
 
     this.popover = popover;
     popover.alignEnd = this.options.alignEnd === true;
+    // Not flippable, so this only tells the registry's focus-out check; no aria-activedescendant is written.
+    if (this.options.focusHost !== undefined) popover.setActiveDescendantHost(this.options.focusHost);
     popover.on(PopoverEvent.Closed, () => {
       if (this.popover === popover) {
         this.teardown();

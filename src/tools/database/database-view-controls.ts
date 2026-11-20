@@ -1088,7 +1088,10 @@ export class DatabaseViewControls {
       },
     };
 
-    this.panel = openAdvancedFilter(anchor, ctx, (escape) => this.panelClosed(anchor, escape));
+    // notion-motion.md Round 83 §5 (r83-n-af-one.raw): from the toolbar, focus stays on its Filter button.
+    const focusHost = fallback === this.filterButton ? this.filterButton : undefined;
+
+    this.panel = openAdvancedFilter(anchor, ctx, (escape) => this.panelClosed(anchor, escape), undefined, focusHost);
     anchor.setAttribute('data-popover-open', '');
   }
 

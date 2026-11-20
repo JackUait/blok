@@ -509,6 +509,14 @@ describe('DatabaseViewControls', () => {
       ]);
     });
 
+    // notion-motion.md Round 83 §5 (r83-n-af-one.raw): after "Add advanced filter" focus stays on the toolbar Filter button.
+    it('leaves focus on the toolbar Filter button when the advanced filter opens from it', () => {
+      openAdvanced();
+
+      expect(q('database-advanced-filter')).not.toBeNull();
+      expect(q('database-toolbar-filter')).toHaveFocus();
+    });
+
     // notion-motion.md Round 65 §2 (r65-n-advfilter.raw): "Al", then Add filter rule, gives rules ["Al", "Al"].
     it('"Add filter rule" copies the value of the rule above', () => {
       const { controls, saved, ruleId } = openAdvanced();

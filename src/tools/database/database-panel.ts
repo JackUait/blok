@@ -60,6 +60,8 @@ export interface DatabasePanelOptions {
    * Round 65 §2: Notion's filter popovers). A text field keeps its native undo. Its flyouts inherit it.
    */
   ignoresHistoryKeys?: boolean;
+  /** Opening leaves focus on this control outside the panel, which does not close it (notion-motion.md Round 83 §5). */
+  focusHost?: HTMLElement;
   /** `escape` is true when Escape closed the first page. */
   onClose?: (escape: boolean) => void;
 }
@@ -82,17 +84,22 @@ const keepsNativeUndo = (target: EventTarget | null): boolean =>
 
 /** Each panel by its element, for {@link historyKeyStaysInPanel}. */
 const panels = new WeakMap<Element, DatabasePanel>();
+/** Panels now open: one that ignores history keys holds them from anywhere, focus may stay outside it. */
+const openPanels = new Set<DatabasePanel>();
 
 /**
  * True when a history key pressed at `target` walks no editor history: the panel
  * it is in ignores the key, or the key goes to a text field there, which keeps
- * its native undo (core walks no history from a text field).
+ * its native undo (core walks no history from a text field). Outside every panel,
+ * an open panel that ignores the keys holds them.
  */
 export const historyKeyStaysInPanel = (target: EventTarget | null): boolean => {
   const element = target instanceof Element ? target.closest('[data-blok-database-panel]') : null;
   const panel = element === null ? undefined : panels.get(element);
 
-  return panel !== undefined && (panel.ignoringHistoryKeys || keepsNativeUndo(target));
+  if (panel === undefined) return [...openPanels].some((open) => open.ignoringHistoryKeys);
+
+  return panel.ignoringHistoryKeys || keepsNativeUndo(target);
 };
 
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex="0"]';
@@ -141,6 +148,7 @@ export class DatabasePanel {
       ...(options.flip === true ? { flip: true } : {}),
       ...(options.verticalMargin !== undefined ? { verticalMargin: options.verticalMargin } : {}),
       ...(options.alignEnd === true ? { alignEnd: true } : {}),
+      ...(options.focusHost !== undefined ? { focusHost: options.focusHost } : {}),
       onEscape: () => this.back(true),
       onDismiss: () => this.finish(),
     });
@@ -166,7 +174,11 @@ export class DatabasePanel {
   open(): void {
     this.render();
     this.popover.show();
-    this.focusFirst();
+    openPanels.add(this);
+    // Window capture: before core's keyboard-owner check, which runs after the key bubbles.
+    window.addEventListener('keydown', this.holdHistoryKeyOutside, true);
+    if (this.options.focusHost === undefined) this.focusFirst();
+    else this.options.focusHost.focus();
   }
 
   /** Keeps this panel open under a panel it opens; outside presses, focus and Escape go there until the release. */
@@ -233,6 +245,8 @@ export class DatabasePanel {
   private finish(escape = false): void {
     if (this.closed) return;
     this.closed = true;
+    openPanels.delete(this);
+    window.removeEventListener('keydown', this.holdHistoryKeyOutside, true);
     this.owned.forEach((child) => child.close());
     this.options.onClose?.(escape);
   }
@@ -306,6 +320,14 @@ export class DatabasePanel {
     // The header × never takes first focus: opening lands on the first row.
     this.element.querySelector<HTMLElement>(`[data-blok-database-panel-row]:not([disabled]), :is(${FOCUSABLE}):not([data-blok-database-panel-close])`)?.focus();
   }
+
+  /** A history key pressed outside every panel, while this one ignores them: {@link handleKeydown} covers its own. */
+  private readonly holdHistoryKeyOutside = (event: KeyboardEvent): void => {
+    const inPanel = event.target instanceof Element && event.target.closest('[data-blok-database-panel]') !== null;
+
+    if (inPanel || !this.ignoringHistoryKeys || !isHistoryKey(event) || keepsNativeUndo(event.target)) return;
+    event.preventDefault();
+  };
 
   private readonly handleKeydown = (event: KeyboardEvent): void => {
     // The panel is a keyboard owner: core walks history after the key bubbles unless it is prevented.

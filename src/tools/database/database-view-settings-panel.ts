@@ -3877,13 +3877,14 @@ const NEW_GROUP_CONJUNCTION = 'or';
 const ADD_MENU_WIDTH = 206.9;
 
 /** The advanced filter on its own: "+ Filter"'s "Add advanced filter" footer opens it. */
-export const openAdvancedFilter = (anchor: HTMLElement, ctx: ViewSettingsContext, onClose?: (escape: boolean) => void, host?: DatabasePanel): DatabasePanel => {
+export const openAdvancedFilter = (anchor: HTMLElement, ctx: ViewSettingsContext, onClose?: (escape: boolean) => void, host?: DatabasePanel, focusHost?: HTMLElement): DatabasePanel => {
   const release = host?.hold();
   const panel = new DatabasePanel({
     anchor,
     root: new ViewSettingsPages(ctx).advanced(false),
     testId: 'database-advanced-filter',
     ignoresHistoryKeys: true,
+    ...(focusHost !== undefined ? { focusHost } : {}),
     // The floor under the rules' width (advanced() fits its content). Blok's old fixed width, unmeasured in Notion.
     width: 290,
     // notion-motion.md Round 18 §2 (r18-adv-open.raw): 4px under the "1 rule" chip.

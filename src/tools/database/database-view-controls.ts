@@ -311,7 +311,6 @@ export class DatabaseViewControls {
     this.searchInput.setAttribute('data-blok-testid', 'database-search-input');
 
     this.filterButton.addEventListener('click', () => this.toggleFilterBar());
-    onHover(this.minimizeButton, this.t('filterBarMinimize'));
     this.minimizeButton.addEventListener('pointerdown', (event) => {
       if (this.searchShown()) event.preventDefault();
     });
@@ -325,7 +324,6 @@ export class DatabaseViewControls {
     this.expandButton = iconButton('database-toolbar-expand', this.host.i18n.t('tools.toggle.ariaLabelExpand'), IconChevronDoubleRight);
     this.expandButton.setAttribute('data-blok-database-toolbar-expand', '');
     this.expandButton.hidden = true;
-    onHover(this.expandButton, this.host.i18n.t('tools.toggle.ariaLabelExpand'));
     this.expandButton.addEventListener('click', () => {
       // The controls fade in once; a later show of one of them stays instant.
       // Marked first: the host's redraw lays out, and the fade only starts if the mark is on then.
@@ -399,7 +397,7 @@ export class DatabaseViewControls {
     link.setAttribute('data-blok-database-toolbar-full-page', '');
     link.setAttribute('aria-label', label);
     link.innerHTML = IconExpandDiagonal;
-    onHover(link, label);
+    onHover(link, label, TOOLBAR_HINT);
     link.addEventListener('click', (event) => {
       event.preventDefault();
       open();

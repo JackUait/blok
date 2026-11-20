@@ -81,4 +81,20 @@ describe('database toolbar hints', () => {
       expect(options?.delay).toBeUndefined();
     }
   });
+
+  // notion-motion.md Round 87 §1 #1 (r87-n-tip-minimize/-expand/-fullpage.raw): these hints sit above, 6 clear, like Sort.
+  it.each([
+    'database-toolbar-minimize',
+    'database-toolbar-expand',
+    'database-toolbar-full-page',
+  ])('%s hints above its button, 6 clear', (testId) => {
+    setup();
+    const button = document.querySelector(`[data-blok-testid="${testId}"]`);
+    const calls = onHover.mock.calls.filter(([element]) => element === button);
+
+    expect(calls.length).toBeGreaterThan(0);
+    for (const [, , options] of calls) {
+      expect(options).toMatchObject({ placement: 'top', gap: 6 });
+    }
+  });
 });

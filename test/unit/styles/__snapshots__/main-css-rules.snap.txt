@@ -20007,7 +20007,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   background-color: var(--blok-database-timeline-weekend-bg);
 }
 
-[data-blok-database-timeline-range][data-hover] {
+[data-blok-database-timeline-range][data-hover], [data-blok-database-timeline]:not([data-zoom="hours"]):is([data-dragging="move"], [data-dragging="start"], [data-dragging="end"]) [data-blok-database-timeline-range] {
   box-sizing: content-box;
   margin-inline-start: calc(-1 * var(--blok-space-1));
   padding-inline: var(--blok-space-1);

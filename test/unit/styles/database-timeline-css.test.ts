@@ -284,6 +284,17 @@ describe('database timeline styles', () => {
     expect(pill).toMatch(/box-sizing:\s*content-box/);
   });
 
+  // notion-motion.md Round 47 A3 (Month): mid-drag the pill is span + 8 too, 48 for a day. Hours moves are unread.
+  it('runs the mid-drag pill 4px past each end, outside Hours', () => {
+    // The :is() list has commas, so ruleBody's selector split cannot find it.
+    const selector = '[data-blok-database-timeline]:not([data-zoom="hours"]):is([data-dragging="move"], [data-dragging="start"], [data-dragging="end"]) [data-blok-database-timeline-range]';
+    const pill = Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g)).find((match) => (match[1] ?? '').includes(selector))?.[2] ?? '';
+
+    expect(pill).toMatch(/margin-inline-start:\s*calc\(-1 \* var\(--blok-space-1\)\)/);
+    expect(pill).toMatch(/padding-inline:\s*var\(--blok-space-1\)/);
+    expect(pill).toMatch(/box-sizing:\s*content-box/);
+  });
+
   it('hides an off-screen arrow that the view marks hidden', () => {
     expect(ruleBody('[data-blok-database-timeline-offscreen][hidden]')).toMatch(/display:\s*none/);
   });

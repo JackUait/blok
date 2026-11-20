@@ -17589,8 +17589,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   background-color: var(--blok-database-timeline-weekend-bg);
 }
 
-/* notion-motion.md Timeline (tlhover.png): the hover pill is 128px over a 3-day, 120px span. */
-[data-blok-database-timeline-range][data-hover] {
+/* notion-motion.md Timeline (tlhover.png): the hover pill is 128px over a 3-day, 120px span.
+   Round 47 A3 (Month): mid-drag too, 48 for a day. An Hours move is unread, so it keeps the span. */
+[data-blok-database-timeline-range][data-hover],
+[data-blok-database-timeline]:not([data-zoom="hours"]):is([data-dragging="move"], [data-dragging="start"], [data-dragging="end"]) [data-blok-database-timeline-range] {
   box-sizing: content-box;
   margin-inline-start: calc(-1 * var(--blok-space-1));
   padding-inline: var(--blok-space-1);

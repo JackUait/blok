@@ -828,6 +828,7 @@ export class PagePicker {
     const title = document.createElement('span');
 
     line.className = 'flex items-center gap-1.5 min-w-0 leading-5';
+    line.setAttribute('data-blok-page-picker-line', '');
     title.className = 'truncate';
     title.textContent = result.title || this.fallback;
     line.append(title);
@@ -981,6 +982,7 @@ export class PagePicker {
     const line = document.createElement('span');
 
     line.className = 'truncate leading-5';
+    line.setAttribute('data-blok-page-picker-line', '');
     label.split(QUERY_MARK).forEach((part, index) => {
       if (index > 0) {
         const strong = document.createElement('strong');

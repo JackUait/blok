@@ -843,7 +843,7 @@ describe('cell editor CSS', () => {
       expect(declared(`${MOVE} [role='option']`, 'min-height')).toEqual(['28px']);
       expect(declared(`${MOVE} [role='option']`, 'padding')).toEqual(['var(--blok-space-1-25) var(--blok-space-2) var(--blok-space-1-25) var(--blok-space-2-25)']);
       expect(declared(`${MOVE} [role='option']`, 'gap')).toEqual(['var(--blok-space-2-25)']);
-      expect(declared(`${MOVE} [role='option'] > div > *`, 'line-height')).toEqual(['16.8px']);
+      expect(declared(`${MOVE} [role='option'] > div > :is([data-blok-page-picker-line], [data-blok-testid='page-picker-option-path'])`, 'line-height')).toEqual(['16.8px']);
       expect(declared(`${MOVE} [data-blok-testid='page-picker-option-icon']`, 'width')).toEqual(['18px']);
       expect(declared(`${MOVE} [data-blok-testid='page-picker-option-icon']`, 'height')).toEqual(['18px']);
     });
@@ -871,7 +871,7 @@ describe('cell editor CSS', () => {
         expect(declared(TREE_ROW, 'padding-block')).toEqual(['0']);
         expect(declared(TREE_ROW, 'gap')).toEqual(['0']);
         expect(declared(TREE_ROW, 'align-items')).toEqual(['center']);
-        expect(declared(`${TREE_ROW} > div > *`, 'line-height')).toEqual(['21px']);
+        expect(declared(`${TREE_ROW} > div > :is([data-blok-page-picker-line], [data-blok-testid='page-picker-option-path'])`, 'line-height')).toEqual(['21px']);
       });
 
       it('puts the 20 chevron, then the 16 icon 3px after it, then the title 7px after that', () => {

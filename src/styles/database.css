@@ -3622,8 +3622,9 @@ button[data-blok-database-board-lane-count]:hover {
   gap: var(--blok-space-2-25);
 }
 
-/* The title and path lines; the picker's own rows use 20px lines. */
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [role='option'] > div > * {
+/* The title and path lines; the picker's own rows use 20px lines. The subject names its attributes:
+   a bare `*` or `div` here makes Chrome restyle every element of a big table on full screen. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [role='option'] > div > :is([data-blok-page-picker-line], [data-blok-testid='page-picker-option-path']) {
   line-height: 16.8px;
 }
 
@@ -3669,7 +3670,7 @@ button[data-blok-database-board-lane-count]:hover {
   padding-inline: calc(var(--blok-space-3-5) * (1 + var(--blok-page-picker-depth, 0))) var(--blok-space-3);
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']:not([data-blok-database-move-searched]) [role='option'][data-blok-page-picker-tree-row] > div > * {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']:not([data-blok-database-move-searched]) [role='option'][data-blok-page-picker-tree-row] > div > :is([data-blok-page-picker-line], [data-blok-testid='page-picker-option-path']) {
   line-height: 21px;
 }
 

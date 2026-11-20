@@ -228,7 +228,8 @@ export const orderGroupKeys = (
   const compare = (a: string, b: string): number => {
     if (property.type === 'number' || property.type === 'uniqueId') return numberRank(a) - numberRank(b);
     if (DATE_LIKE.includes(property.type)) return dateRank(a, now).localeCompare(dateRank(b, now));
-    if (property.type === 'checkbox') return Number(a === 'true') - Number(b === 'true');
+    // Round 84b §3: Notion lists Checked first.
+    if (property.type === 'checkbox') return Number(b === 'true') - Number(a === 'true');
 
     return label(a).localeCompare(label(b));
   };

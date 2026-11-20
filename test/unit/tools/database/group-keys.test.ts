@@ -119,6 +119,11 @@ describe('group-keys', () => {
       expect(orderGroupKeys(select, keys, { sort: 'descending' })).toEqual(['o-c', 'o-b', 'o-a', NO_VALUE_GROUP_KEY]);
     });
 
+    // notion-motion.md Round 84b §3 (r84-n-grp-checkbox.raw): the checked group comes first.
+    it('puts the checked group before the unchecked one', () => {
+      expect(orderGroupKeys(prop('checkbox'), ['false', 'true'], {}, NOW)).toEqual(['true', 'false']);
+    });
+
     // research/30 B12: only the ranges flip; "Out of range" stays after them in both directions.
     it('keeps Out of range after the number ranges under a descending sort', () => {
       const keys = ['range:2', OUT_OF_RANGE_KEY, 'range:1'];

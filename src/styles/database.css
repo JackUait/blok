@@ -5064,7 +5064,7 @@ button[data-blok-database-board-lane-count]:hover {
 
 /* notion-motion.md Round 64 §6: "+ New page" to the next label is 31.5. The list is flex, so no margin collapse. */
 [data-blok-database-list-group] + [data-blok-database-list-group] {
-  margin-top: 1px;
+  margin-top: var(--blok-space-0-25);
 }
 
 /* Round 45 §1: rows in a group step 31, not the ungrouped list's 32. */

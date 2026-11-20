@@ -494,9 +494,10 @@ describe('"+ New" lane (Round 24)', () => {
     expect(ruleBody('[data-blok-database-timeline-new-lane]:hover [data-blok-database-timeline-new]')).toMatch(/opacity:\s*0/);
   });
 
-  // notion-motion.md Round 89 §1 #3: Notion's Quarter ghost shows a crosshair. Other zooms are unread.
-  it('shows a crosshair over the ghost bar at Quarter zoom', () => {
-    expect(ruleBody('[data-blok-database-timeline][data-zoom="quarter"] [data-blok-database-timeline-new-ghost]')).toMatch(/cursor:\s*crosshair/);
+  // notion-motion.md Round 90 §1 #3: Notion's ghost shows a crosshair at all 8 zooms.
+  it('shows a crosshair over the ghost bar at every zoom', () => {
+    expect(ruleBody('[data-blok-database-timeline-new-ghost]')).toMatch(/cursor:\s*crosshair/);
+    expect(css).not.toMatch(/\[data-zoom="quarter"\] \[data-blok-database-timeline-new-ghost\]/);
   });
 
   it('draws the ghost bar 34 tall, radius 6, in the 0.06 fill, fading in over 200ms ease-out', () => {

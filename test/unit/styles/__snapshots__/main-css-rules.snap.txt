@@ -19491,13 +19491,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   block-size: 34px;
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-add-hover-bg);
-  cursor: pointer;
+  cursor: crosshair;
   opacity: 0;
   transition: opacity 0.2s ease-out;
-}
-
-[data-blok-database-timeline][data-zoom="quarter"] [data-blok-database-timeline-new-ghost] {
-  cursor: crosshair;
 }
 
 [data-blok-database-timeline-new-lane]:hover [data-blok-database-timeline-new-ghost][data-day] {

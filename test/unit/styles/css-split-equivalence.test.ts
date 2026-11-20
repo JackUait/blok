@@ -1947,8 +1947,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R223_BYTES = 705;
     // Lane r226: Round 87 §1 #3, #4 Time format and Timezone open motion, #5 Edit property value rows, #10 today circle. Net database.css growth against origin/main.
     const DATABASE_R226_BYTES = 2477;
-    // Lane r229: R59 §8 toolbar Search and Settings glyphs at 18px. Net database.css growth against origin/main.
-    const DATABASE_R229_BYTES = 310;
+    // Lane r229: R59 §8 toolbar Search and Settings glyphs at 18px, R83 §5 filter ⋯ note. Net database.css growth against origin/main.
+    const DATABASE_R229_BYTES = 408;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

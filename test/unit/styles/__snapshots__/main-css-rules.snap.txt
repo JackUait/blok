@@ -18341,8 +18341,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-filter-rule-more] svg, [data-blok-database-filter-group-more] svg {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-panel-page="sort"] {

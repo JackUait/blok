@@ -15724,10 +15724,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
+/* notion-motion.md R83 §5: Notion's rule and group ⋯ are 20 svgs, 6 in from the 32 button. */
 [data-blok-database-filter-rule-more] svg,
 [data-blok-database-filter-group-more] svg {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
 }
 
 /* r35:497-509, r10-sort-popover.png: rules 40px apart, the first 8px down, Add sort 6px under the last, 4px under Delete sort. */

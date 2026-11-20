@@ -107,6 +107,14 @@ describe('advanced filter popover', () => {
     expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-more]', 'order')).toEqual(['1']);
   });
 
+  // notion-motion.md R83 §5 (r83-n-af-one.raw, r83-n-af-group.raw): the rule and group ⋯ draw a 20 svg, 6 in from the 32 button.
+  it('draws the rule and group ⋯ glyphs at 20px', () => {
+    for (const more of ['[data-blok-database-filter-rule-more] svg', '[data-blok-database-filter-group-more] svg']) {
+      expect(declared(more, 'width')).toEqual(['20px']);
+      expect(declared(more, 'height')).toEqual(['20px']);
+    }
+  });
+
   // notion-motion.md Round 23 §2 (r23-adv-btns.raw): "Select a date" is a fixed 165, its text left and its chevron right.
   it('makes the Select a date button 165 wide', () => {
     expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-day]', 'width')).toEqual(['165px']);

@@ -402,10 +402,11 @@ describe('side peek properties: the label cell', () => {
   });
 });
 
-// notion-motion.md Round 86 §1 #6 (r86-n-datefmt-open-mo.raw): the date editor's Date format menu fades in and scales from .96, 200ms ease.
-// Time format, Remind and Time zone open motion is unmeasured.
-describe('date editor Date format menu', () => {
-  const MENU_AT = '[data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover]';
+// notion-motion.md Round 86 §1 #6 (r86-n-datefmt-open-mo.raw), Round 87 §1 #4 (r87-n-cell-timefmt-mo.raw, r87-n-cell-tz-mo.raw):
+// the date editor's Date format, Time format and Timezone menus fade in and scale from .96 about their centre, 200ms ease.
+// Remind open motion is unmeasured.
+describe.each(['dateFormat', 'timeFormat', 'timeZone'])('date editor %s menu', (kind) => {
+  const MENU_AT = `[data-blok-database-date-setting-menu="${kind}"][data-blok-top-layer][popover]`;
   const startStyle = [ ...database.matchAll(/@starting-style \{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g) ].map((match) => match[1]).join(' ');
 
   it('opens over 200ms ease from no ink and scale .96', () => {
@@ -416,5 +417,19 @@ describe('date editor Date format menu', () => {
 
   it('does not move under reduced motion', () => {
     expect(body(reducedMotion, MENU_AT)).toContain('transition: none');
+  });
+});
+
+// notion-motion.md Round 87 §1 #3 (r87-n-timefmt-open-mo.raw): Edit property › Time format scales from .96 about its top right.
+// The other lists under Edit property are unmeasured, so they keep the core .98.
+describe('Edit property Time format list', () => {
+  const LIST = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list']";
+
+  it('opens from scale .96', () => {
+    expect(body(database, `${LIST}:not([data-blok-popover-opened='true']) > [data-blok-popover-container]`)).toContain('transform: scale(0.96)');
+  });
+
+  it('grows from its top right corner', () => {
+    expect(body(database, `${LIST} > [data-blok-popover-container]`)).toContain('transform-origin: top right');
   });
 });

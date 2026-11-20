@@ -1945,6 +1945,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R224_BYTES = 746;
     // Lane r223: Round 83 §7 pointer over a row page property's name cell, Round 72 §4 empty panel sliding out over a full page. Net database.css growth against origin/main.
     const DATABASE_R223_BYTES = 705;
+    // Lane r226: Round 87 §1 #3, #4 Time format and Timezone open motion. Net database.css growth against origin/main.
+    const DATABASE_R226_BYTES = 1045;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2611,6 +2613,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R220_BYTES
       + DATABASE_R224_BYTES
       + DATABASE_R223_BYTES
+      + DATABASE_R226_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

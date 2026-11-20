@@ -9828,6 +9828,16 @@ textarea[data-blok-database-cell-input] {
   padding-block: 0;
 }
 
+/* notion-motion.md Round 87 §1 #3: Edit property › Time format scales from .96 about its top right.
+   The core default is .98; the other lists here are unmeasured. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list']:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
+  transform: scale(0.96);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list'] > [data-blok-popover-container] {
+  transform-origin: top right;
+}
+
 /* Round 56 §5: Edit property's option menu grows from its top-right corner. Group › reads its group at the end. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-option-menu'] [data-blok-popover-container] {
   transform-origin: top right;
@@ -10272,20 +10282,27 @@ textarea[data-blok-database-cell-input] {
   row-gap: var(--blok-space-0-25);
 }
 
-/* notion-motion.md Round 86 §1 #6: Date format fades in and scales from .96 about its centre. The other side menus are unmeasured. */
+/* notion-motion.md Round 86 §1 #6, Round 87 §1 #4: Date format, Time format and Timezone fade in and scale from .96 about their centre.
+   Remind is unmeasured. */
 @starting-style {
-  [data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover] {
+  [data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover],
+  [data-blok-database-date-setting-menu="timeFormat"][data-blok-top-layer][popover],
+  [data-blok-database-date-setting-menu="timeZone"][data-blok-top-layer][popover] {
     opacity: 0;
     transform: scale(0.96);
   }
 }
 
-[data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover] {
+[data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover],
+[data-blok-database-date-setting-menu="timeFormat"][data-blok-top-layer][popover],
+[data-blok-database-date-setting-menu="timeZone"][data-blok-top-layer][popover] {
   transition: opacity 200ms ease, transform 200ms ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover] {
+  [data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover],
+  [data-blok-database-date-setting-menu="timeFormat"][data-blok-top-layer][popover],
+  [data-blok-database-date-setting-menu="timeZone"][data-blok-top-layer][popover] {
     transition: none;
   }
 }

@@ -13115,6 +13115,14 @@ textarea[data-blok-database-cell-input] {
   padding-block: 0;
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list']:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
+  transform: scale(0.96);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list'] > [data-blok-popover-container] {
+  transform-origin: top right;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-option-menu'] [data-blok-popover-container] {
   transform-origin: top right;
 }
@@ -13503,16 +13511,16 @@ textarea[data-blok-database-cell-input] {
   row-gap: var(--blok-space-0-25);
 }
 
-[@starting-style] [data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover] {
+[@starting-style] [data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover], [data-blok-database-date-setting-menu="timeFormat"][data-blok-top-layer][popover], [data-blok-database-date-setting-menu="timeZone"][data-blok-top-layer][popover] {
   opacity: 0;
   transform: scale(0.96);
 }
 
-[data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover] {
+[data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover], [data-blok-database-date-setting-menu="timeFormat"][data-blok-top-layer][popover], [data-blok-database-date-setting-menu="timeZone"][data-blok-top-layer][popover] {
   transition: opacity 200ms ease, transform 200ms ease;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover], [data-blok-database-date-setting-menu="timeFormat"][data-blok-top-layer][popover], [data-blok-database-date-setting-menu="timeZone"][data-blok-top-layer][popover] {
   transition: none;
 }
 

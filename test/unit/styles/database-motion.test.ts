@@ -433,3 +433,16 @@ describe('Edit property Time format list', () => {
     expect(body(database, `${LIST} > [data-blok-popover-container]`)).toContain('transform-origin: top right');
   });
 });
+
+// notion-motion.md Round 88 §1 #1 (r88-n-datefmt2-mo.raw): Edit property › Date format scales like Time format.
+describe('Edit property Date format list', () => {
+  const LIST = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-date-format-list']";
+
+  it('opens from scale .96', () => {
+    expect(body(database, `${LIST}:not([data-blok-popover-opened='true']) > [data-blok-popover-container]`)).toContain('transform: scale(0.96)');
+  });
+
+  it('grows from its top right corner', () => {
+    expect(body(database, `${LIST} > [data-blok-popover-container]`)).toContain('transform-origin: top right');
+  });
+});

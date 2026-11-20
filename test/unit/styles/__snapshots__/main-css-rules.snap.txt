@@ -13137,11 +13137,11 @@ textarea[data-blok-database-cell-input] {
   padding-block: 0;
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list']:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list']:not([data-blok-popover-opened='true']) > [data-blok-popover-container], [data-blok-popover][data-blok-popover-custom-class~='blok-database-date-format-list']:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
   transform: scale(0.96);
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list'] > [data-blok-popover-container] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list'] > [data-blok-popover-container], [data-blok-popover][data-blok-popover-custom-class~='blok-database-date-format-list'] > [data-blok-popover-container] {
   transform-origin: top right;
 }
 

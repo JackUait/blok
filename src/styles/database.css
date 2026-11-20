@@ -9854,13 +9854,15 @@ textarea[data-blok-database-cell-input] {
   padding-block: 0;
 }
 
-/* notion-motion.md Round 87 §1 #3: Edit property › Time format scales from .96 about its top right.
-   The core default is .98; the other lists here are unmeasured. */
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list']:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
+/* notion-motion.md Round 87 §1 #3, Round 88 §1 #1: Edit property › Time format and Date format scale from .96
+   about their top right. The core default is .98; the other lists here are unmeasured. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list']:not([data-blok-popover-opened='true']) > [data-blok-popover-container],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-date-format-list']:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
   transform: scale(0.96);
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list'] > [data-blok-popover-container] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list'] > [data-blok-popover-container],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-date-format-list'] > [data-blok-popover-container] {
   transform-origin: top right;
 }
 

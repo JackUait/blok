@@ -1521,6 +1521,14 @@ describe('DatabasePropertyMenu', () => {
       expect(byName(items, 'timeFormat').children?.class?.split(' ')).toEqual(['blok-database-panel-list', 'blok-database-time-format-list']);
     });
 
+    // database.css scales this list from .96 about its top right (notion-motion.md Round 88 §1 #1).
+    it('opens Date format as a panel list with the Date format class', () => {
+      open(prop('date'));
+      const items = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+      expect(byName(items, 'dateFormat').children?.class?.split(' ')).toEqual(['blok-database-panel-list', 'blok-database-date-format-list']);
+    });
+
     // research/37 §2: an untouched Date property shows "Full date" and "12 hour".
     it('shows the current date format and time format as the rows\' values', () => {
       open(prop('date'));

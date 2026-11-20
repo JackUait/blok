@@ -216,6 +216,8 @@ interface RowPageExtras { onComment?: () => void; edit?: boolean }
 const VALUE_LIST = { clickOnly: true, placement: 'under', width: '250px', class: PANEL_LIST_CLASS } as const;
 /** database.css: Time format scales in from its top right (notion-motion.md Round 87 §1 #3). */
 const TIME_FORMAT_LIST_CLASS = `${PANEL_LIST_CLASS} blok-database-time-format-list`;
+/** database.css: Date format scales in from its top right (notion-motion.md Round 88 §1 #1). */
+const DATE_FORMAT_LIST_CLASS = `${PANEL_LIST_CLASS} blok-database-date-format-list`;
 /** notion-spec-2 §17: a ✓ on the current choice. isActive keeps aria-checked; the panel list class drops its fill. */
 const checkedIf = (current: boolean): { isActive: boolean; trailingIcon?: string } => ({ isActive: current, ...(current ? { trailingIcon: IconCheck } : {}) });
 /** The column menu's Change type list; database.css gives its glyphs Notion's ink. */
@@ -1509,6 +1511,7 @@ export class DatabasePropertyMenu {
         icon: IconCalendar,
         children: {
           ...VALUE_LIST,
+          class: DATE_FORMAT_LIST_CLASS,
           items: DATE_FORMATS.map((format) => ({
             name: `dateFormat-${format}`,
             title: this.t(`tools.database.dateFormat.${format}`),

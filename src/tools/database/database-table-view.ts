@@ -2347,8 +2347,10 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         commentAnchor,
         spot ?? (handle === null ? menuFrom(menu, commentAnchor) : { under: handle }),
         pointer === undefined ? undefined : () => {
-          this.selectCell({ rowId, propertyId: this.options.titlePropertyId });
-          this.grid?.focus({ holdEscape: true });
+          const name = { rowId, propertyId: this.options.titlePropertyId };
+
+          this.selectCell(name);
+          this.grid?.focusCell(name, { holdEscape: true });
         },
       ) } : {}),
       ...rowMenuFooter({

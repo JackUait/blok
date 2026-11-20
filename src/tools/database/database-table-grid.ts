@@ -251,11 +251,15 @@ export class DatabaseTableGrid {
     }
   }
 
-  /** Focuses a cell and keeps the selection; a redraw that already replaced this grid focuses it in the new one. */
-  focusCell(ref: CellRef): void {
+  /**
+   * Focuses a cell and keeps the selection; a redraw that already replaced this grid focuses it in the new one.
+   * `holdEscape`: the next Escape leaves the selection as it is (notion-motion.md Round 67 §4, after the Move to picker).
+   */
+  focusCell(ref: CellRef, options: { holdEscape?: boolean } = {}): void {
     this.state.focused = true;
     this.state.focusedCell = ref;
     this.cellEl(ref)?.focus({ preventScroll: true });
+    this.escapeHold = options.holdEscape === true ? this.state.selection : null;
   }
 
   get isEditing(): boolean {
@@ -590,16 +594,6 @@ export class DatabaseTableGrid {
     const span = rows.slice(Math.min(a, b), Math.max(a, b) + 1);
 
     this.selectRows(rows.filter((id) => current.includes(id) || span.includes(id)));
-  }
-
-  /**
-   * Gives the grid focus, so keys act on its selected cell. `holdEscape`: the next Escape
-   * leaves that selection as it is (notion-motion.md Round 67 §4, after the Move to picker).
-   */
-  focus(options: { holdEscape?: boolean } = {}): void {
-    this.root.focus({ preventScroll: true });
-    this.state.focused = true;
-    this.escapeHold = options.holdEscape === true ? this.state.selection : null;
   }
 
   selectRows(rowIds: string[]): void {

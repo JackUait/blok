@@ -2567,6 +2567,43 @@ describe('DatabaseViewControls', () => {
       expect(q('database-sort-add')).toHaveFocus();
     });
 
+    // notion-motion.md Round 52 §4 (r52-n-sort-add.raw, origin 0px 287px with 3 rows) and Rounds 10/17: the box is
+    // 280×287 whatever it lists. Under the row when 287 fits, else above it, its bottom on the row's top.
+    describe('Add sort picker side', () => {
+      const openAt = (rowTop: number): HTMLElement | null => {
+        vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+        // The popover measures a clone; it is as tall as the picker's own fixed height.
+        vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+          const picker = this.querySelector<HTMLElement>('[data-blok-testid="database-sort-add-picker"]');
+
+          return picker === null ? 0 : parseFloat(picker.style.height) || 0;
+        });
+        withSort();
+        click('database-sort-pill');
+        const row = q('database-sort-add');
+
+        if (row === null) throw new Error('no Add sort row');
+        row.getBoundingClientRect = () => new DOMRect(543, rowTop, 317.6, 28);
+        click('database-sort-add');
+
+        return q('database-sort-add-picker')?.closest<HTMLElement>('[data-blok-popover]') ?? null;
+      };
+
+      it('is 287 tall even with few properties', () => {
+        openAt(351);
+
+        expect(q('database-sort-add-picker')?.style.height).toBe('287px');
+      });
+
+      it('opens under the row when it fits', () => {
+        expect(openAt(351)?.style.top).toBe('379px');
+      });
+
+      it('opens above the row, its bottom on the row top, when it does not fit under', () => {
+        expect(parseFloat(openAt(396.2)?.style.top ?? '')).toBeCloseTo(396.2 - 287, 1);
+      });
+    });
+
     it('closes the picker when the sort panel closes another way', () => {
       const { controls } = withSort();
 

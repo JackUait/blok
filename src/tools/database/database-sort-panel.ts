@@ -30,8 +30,8 @@ export interface PropertyPickerOptions {
   placeholder: string;
   footer?: (close: () => void) => HTMLElement;
   used?: string[];
-  /** Opens over an open panel, which stays: this width and height cap, flush under the anchor. */
-  over?: { width: number; maxHeight: number };
+  /** Opens over an open panel, which stays: this fixed box, flush under the anchor, or flush above it when it does not fit under. */
+  over?: { width: number; height: number };
   /** Space under the anchor when not `over`; the panel's usual gap when unset. */
   gap?: number;
   /** How close to the window's top and bottom it may slide; the panel's usual 12 when unset. */
@@ -130,12 +130,12 @@ export const propertyPicker = (options: PropertyPickerOptions): DatabasePanel =>
     width: options.over?.width ?? 290,
     backLabel: options.i18n.t('tools.database.settingsBack'),
     ...(options.gap !== undefined ? { gap: options.gap } : {}),
-    ...(options.over !== undefined ? { gap: 0 } : {}),
+    ...(options.over !== undefined ? { gap: 0, flip: true } : {}),
     ...(options.verticalMargin !== undefined ? { verticalMargin: options.verticalMargin } : {}),
     onClose: options.onClose,
   });
 
-  if (options.over !== undefined) panel.root.style.maxHeight = `${options.over.maxHeight}px`;
+  if (options.over !== undefined) panel.root.style.height = `${options.over.height}px`;
 
   return panel;
 };
@@ -169,6 +169,7 @@ export const sortEditor = (options: SortEditorOptions): DatabasePanel => {
   /**
    * notion-motion.md Rounds 10-11: "Add sort" opens a 280x287 picker of its
    * own, flush under the row and left-aligned to it, with its search focused.
+   * Round 52 §4: with no room under the row it opens above, its bottom on the row.
    * The sort panel stays open under it; a property already sorted is left out.
    */
   const openAddPicker = (sortPanel: DatabasePanel): void => {
@@ -192,7 +193,7 @@ export const sortEditor = (options: SortEditorOptions): DatabasePanel => {
       },
       placeholder: t('settingsSearchProperty'),
       used: sorts().map((sort) => sort.propertyId),
-      over: { width: ADD_SORT_PICKER_WIDTH, maxHeight: ADD_SORT_PICKER_HEIGHT },
+      over: { width: ADD_SORT_PICKER_WIDTH, height: ADD_SORT_PICKER_HEIGHT },
       // An outside press keeps the focus it made.
       onClose: (escape) => {
         state.addPicker = null;

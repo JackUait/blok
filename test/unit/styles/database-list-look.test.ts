@@ -325,6 +325,11 @@ describe('grouped list (findings-listgallery L08, L10)', () => {
     expect(ruleBody(database, '[data-blok-database-list-rows]')).not.toContain('padding-inline-start');
   });
 
+  // notion-motion.md Round 52 §1 Drag: the cursor is `default` over the list while a row drags.
+  it('shows the default cursor over the list while a row drags', () => {
+    expect(ruleBody(database, '[data-blok-database-list][data-blok-database-list-row-dragging] *')).toContain('cursor: default');
+  });
+
   // notion-motion.md Round 64 §6 Row 3: "+ New page" bottom to the next group's label is 31.5 (Blok 30.5).
   it('puts one more pixel between groups, and none after the last', () => {
     expect(ruleBody(database, '[data-blok-database-list-group] + [data-blok-database-list-group]')).toContain('margin-top: 1px');

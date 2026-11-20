@@ -227,6 +227,38 @@ describe('DatabaseListRowDrag', () => {
     expect(row2.style.marginTop).toBe('');
   });
 
+  // notion-motion.md Round 52 §1: the line's top is the target row's top − 2, even with a gap above the row.
+  it('centres the drop line on the target row\'s top, not on the gap above it', () => {
+    const row1 = wrapper.querySelector('[data-row-id="row-1"]') as HTMLElement;
+
+    Object.defineProperty(row1, 'getBoundingClientRect', {
+      value: () => ({ left: 0, right: 400, top: 40, bottom: 76, width: 400, height: 36, x: 0, y: 40, toJSON: () => ({}) }),
+      configurable: true,
+    });
+    drag.beginTracking('row-0', 0, 0);
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 0, clientY: 85 }));
+
+    expect(document.querySelector<HTMLElement>('[data-blok-database-drop-line]')?.style.top).toBe('78px');
+  });
+
+  // notion-motion.md Round 52 §1: Notion's copy is the row's 30px; the row's own margins stay out of it.
+  it('drops the row\'s margins from the ghost copy', () => {
+    drag.beginTracking('row-0', 0, 0);
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 0, clientY: 20 }));
+
+    expect(document.querySelector<HTMLElement>('[data-blok-database-ghost] > [data-blok-database-list-row]')?.style.margin).toBe('0px');
+  });
+
+  // notion-motion.md Round 52 §1: the cursor is `default` while a row drags.
+  it('marks the list while a row drags, and clears it after', () => {
+    drag.beginTracking('row-0', 0, 0);
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 0, clientY: 20 }));
+
+    expect(wrapper.hasAttribute('data-blok-database-list-row-dragging')).toBe(true);
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 0, clientY: 20 }));
+    expect(wrapper.hasAttribute('data-blok-database-list-row-dragging')).toBe(false);
+  });
+
   it('fades the drop line out after pointerup', () => {
     drag.beginTracking('row-1', 0, 40);
 

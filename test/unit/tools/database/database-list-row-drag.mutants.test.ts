@@ -540,7 +540,8 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       const clone = ghost.querySelector<HTMLElement>('[data-row-id="row-2"]');
 
       expect(clone).not.toBeNull();
-      expect(readStyle(clone ?? ghost)).toEqual({});
+      // The row's margins stay out of the copy, so it is the row's height (notion-motion.md Round 52 §1).
+      expect(clone?.style.cssText).toBe('margin: 0px;');
     });
 
     it('keeps the radius the row has in the list', () => {

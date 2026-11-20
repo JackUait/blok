@@ -5057,6 +5057,11 @@ button[data-blok-database-board-lane-count]:hover {
   margin-top: var(--blok-space-2);
 }
 
+/* notion-motion.md Round 52 §1: Notion's cursor stays default while a list row drags. */
+[data-blok-database-list][data-blok-database-list-row-dragging] * {
+  cursor: default;
+}
+
 /* notion-motion.md Round 64 §6: "+ New page" to the next label is 31.5. The list is flex, so no margin collapse. */
 [data-blok-database-list-group] + [data-blok-database-list-group] {
   margin-top: 1px;

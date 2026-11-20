@@ -10225,6 +10225,8 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover],
 [data-blok-database-date-setting-menu="timeFormat"][data-blok-top-layer][popover] {
   width: 180px;
+  /* notion-motion.md Round 84b §1: rows 29 apart, so 180x181 and 180x94. */
+  row-gap: var(--blok-space-0-25);
 }
 
 @media (hover: hover) {

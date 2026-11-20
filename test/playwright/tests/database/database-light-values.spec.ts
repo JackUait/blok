@@ -172,18 +172,20 @@ for (const theme of THEMES) {
       await expect(button).toHaveCSS('font-weight', '500');
     });
 
-    test('date picker: Date format and Time format are 180 wide, Remind 250 (§1f)', async ({ page }) => {
+    test('date picker: Date format and Time format are 180 wide with rows 29 apart, Remind 250 (§1f)', async ({ page }) => {
       await mount(page, blocks({ type: 'table' }));
       await theme.apply(page);
       const picker = await openPicker(page, 'r1');
 
       // Time format shows only with Include time on.
       await picker.locator('[data-blok-database-date-time-toggle]').click();
-      for (const kind of [ 'dateFormat', 'timeFormat' ]) {
+      // notion-motion.md Round 84b §1: 180x181 and 180x94, rows 29 apart.
+      for (const [kind, height] of [ ['dateFormat', 181], ['timeFormat', 94] ] as const) {
         await picker.locator(`[data-blok-database-date-setting="${kind}"]`).click();
         const menu = page.locator(`[data-blok-database-date-setting-menu="${kind}"]`);
 
         await expect(menu).toBeVisible();
+        expect((await menu.boundingBox())?.height).toBe(height);
         expect((await menu.boundingBox())?.width).toBe(180);
         await picker.locator(`[data-blok-database-date-setting="${kind}"]`).click();
         await expect(menu).toHaveCount(0);

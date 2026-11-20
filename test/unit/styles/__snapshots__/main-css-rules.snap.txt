@@ -13463,6 +13463,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover], [data-blok-database-date-setting-menu="timeFormat"][data-blok-top-layer][popover] {
   width: 180px;
+  row-gap: var(--blok-space-0-25);
 }
 
 [@media (hover: hover)] [data-blok-database-date-remind]:hover, [data-blok-database-date-setting]:hover, [data-blok-database-date-remind-option]:hover, [data-blok-database-date-setting-option]:hover {

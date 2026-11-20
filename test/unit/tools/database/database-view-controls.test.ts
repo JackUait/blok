@@ -1234,11 +1234,11 @@ describe('DatabaseViewControls', () => {
     expect((q('database-filter-value') as HTMLInputElement | null)?.value).toBe('5');
   });
 
-  // notion-motion.md Round 88 §1 #3 (r88-n-setnum-kids.raw): a Number rule's value row has 8px more below than a Text
-  // one, so database.css marks only Number's field. ID and Text are 71 tall, or unmeasured.
+  // notion-motion.md Round 88 §1 #3 (r88-n-setnum-kids.raw), Round 89 §1 #7 (r89-n-chipid.raw): Number and ID rule
+  // popups are 75 tall, so database.css marks their value field. Text's is 71.
   it.each([
     ['num', 'number', true],
-    ['uid', 'uniqueId', false],
+    ['uid', 'uniqueId', true],
     ['txt', 'text', false],
   ] as const)('marks the %s rule value field as a Number one: %s', (id, type, marked) => {
     const env = setup({ schema: () => [...schema, { id: 'uid', name: 'ID', type: 'uniqueId', position: 'a3' }, { id: 'txt', name: 'Text', type: 'text', position: 'a4' }] });

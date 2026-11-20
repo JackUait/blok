@@ -528,8 +528,8 @@ class FilterChipPages {
           this.update({ value: text.trim() === '' || !Number.isFinite(n) ? null : n }, true, true);
         });
 
-        // database.css: Notion's Number value row has 4px more below it (Round 88 §1 #3). ID's is unmeasured.
-        input.toggleAttribute('data-blok-database-filter-number-value', property.type === 'number');
+        // database.css: Notion's Number and ID value rows have 4px more below them (Round 88 §1 #3, Round 89 §1 #7).
+        input.setAttribute('data-blok-database-filter-number-value', '');
 
         return [input];
       }

@@ -1267,6 +1267,20 @@ describe('DatabaseTimelineView', () => {
         expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-09T14:00/2026-10-09T15:00' });
       });
 
+      // notion-motion.md Round 90 §1 #4 (r90-n-tl-hours-newlane.raw, r90-n-tl-day-newlane.raw): no header pill at Hours or Day.
+      it.each(['hours', 'day'] as const)('pills nothing in the header for the ghost at %s zoom', (zoom) => {
+        const width = TIMELINE_DAY_WIDTH[zoom];
+        const zx = daysBetween(timelineWindow(CENTER, zoom).start, CENTER) * width;
+        const { root } = mount({ view: timelineView({ timelineZoom: zoom }) });
+
+        rect(canvas(root), 0, 0, timelineWindow(CENTER, zoom).days * width, 400);
+        pointer('pointermove', lane(root), zx + width / 2, 390);
+
+        expect(range(root)).toBeNull();
+        expect(root.querySelector('[data-range-edge]')).toBeNull();
+        expect(ghost(root)?.hasAttribute('data-day')).toBe(true);
+      });
+
       it('has no ghost when read-only', () => {
         expect(ghost(mount({ readOnly: true }).root)).toBeNull();
       });

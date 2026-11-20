@@ -774,7 +774,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
     ghost.style.setProperty('inset-inline-start', `${geometry.offset}px`);
     ghost.style.setProperty('width', `${geometry.width}px`);
-    // notion-motion.md Round 90 §1 #4: the ghost's pill names its days as a bar's does.
+    // notion-motion.md Round 90 §1 #4: the ghost's pill names its days as a bar's does. Hours and Day show no pill.
+    if (BY_TIME.has(this.zoom)) {
+      return;
+    }
     this.showRange(span, barGeometry(span, this.window.start, this.zoom), true, true);
   }
 

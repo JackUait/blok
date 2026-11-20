@@ -266,7 +266,7 @@ describe('row selection after undo', () => {
 
     await dragToTop('r3', false);
     expect(selectedRows()).toEqual(['r3']);
-    expect(document.activeElement).toBe(document.body);
+    expect(document.body).toHaveFocus();
 
     await escapeOnBody();
 
@@ -284,11 +284,11 @@ describe('row selection after undo', () => {
     blok.history.undo();
     await quiet();
     expect(selectedRows()).toEqual(['r3']);
-    expect(document.activeElement).toBe(document.body);
+    expect(document.body).toHaveFocus();
 
     blok.history.redo();
     await quiet();
-    expect(document.activeElement).toBe(document.body);
+    expect(document.body).toHaveFocus();
 
     blok.history.undo();
     await quiet();

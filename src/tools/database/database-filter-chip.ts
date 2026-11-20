@@ -521,12 +521,18 @@ class FilterChipPages {
       case 'lastEditedTime':
         return this.dateControls(operator, value);
       case 'number':
-      case 'uniqueId':
-        return [this.valueInput(typeof value === 'number' ? String(value) : '', (text) => {
+      case 'uniqueId': {
+        const input = this.valueInput(typeof value === 'number' ? String(value) : '', (text) => {
           const n = Number(text);
 
           this.update({ value: text.trim() === '' || !Number.isFinite(n) ? null : n }, true, true);
-        })];
+        });
+
+        // database.css: Notion's Number value row has 8px more below it (Round 88 §1 #3). ID's is unmeasured.
+        input.toggleAttribute('data-blok-database-filter-number-value', property.type === 'number');
+
+        return [input];
+      }
       case 'files':
       case 'formula':
       case 'rollup':

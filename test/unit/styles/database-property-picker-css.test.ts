@@ -27,6 +27,11 @@ describe('database property picker css', () => {
     expect(rulesFor('[data-blok-database-view-name-row]')).toContain('gap: var(--blok-space-2)');
   });
 
+  // notion-motion.md Round 88 §1 #3 (r88-n-setnum-kids.raw): Number's value row is pad 4 8 8, so the rule popup is 75, not 71.
+  it('a Number filter rule\'s value field keeps 12px under it', () => {
+    expect(rulesFor('[data-blok-database-panel-input][data-blok-database-filter-number-value]')).toContain('margin-block-end: var(--blok-space-3)');
+  });
+
   it('only the property list scrolls, so the search and the footer stay in view', () => {
     const list = rulesFor('[data-blok-database-picker-list]');
 

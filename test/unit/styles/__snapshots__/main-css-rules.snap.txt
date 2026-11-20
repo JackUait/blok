@@ -17184,6 +17184,10 @@ button[data-blok-database-table-group-count]:hover {
   flex-shrink: 0;
 }
 
+[data-blok-database-panel-input][data-blok-database-filter-number-value] {
+  margin-block-end: var(--blok-space-3);
+}
+
 [data-blok-database-picker-list] {
   flex: 1 1 auto;
   min-height: 0;

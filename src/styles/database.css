@@ -17738,6 +17738,13 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   white-space: nowrap;
 }
 
+/* notion-motion.md Round 90 §1 #4, #6: the first day at the left, the last at the right. The view's width includes the pads. */
+[data-blok-database-timeline] [data-blok-database-timeline-header] [data-blok-database-timeline-range][data-split] {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+}
+
 [data-blok-database-timeline-units] > [data-range-edge] {
   color: var(--blok-database-timeline-text);
 }

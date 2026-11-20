@@ -130,17 +130,21 @@ export interface DatabaseTimelineViewOptions {
 
 const DRAG_THRESHOLD = 4;
 
+const pillFormat = (locale: string): Intl.DateTimeFormat => new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' });
+
 /**
  * notion-motion.md Round 89 §1 #1: "Nov 16 – 20", plain spaces round the en dash (some Intl builds give thin ones).
  * Round 90 §1 #5: across a year "Dec 25 – Jan 7", no years; Intl would add them.
  */
 const pillText = (span: EventSpan, locale: string): string => {
-  const format = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' });
+  const format = pillFormat(locale);
 
   return span.start.slice(0, 4) === span.end.slice(0, 4)
     ? format.formatRange(toLocalDate(span.start), toLocalDate(span.end)).replace(/\u2009/g, ' ')
     : `${format.format(toLocalDate(span.start))} \u2013 ${format.format(toLocalDate(span.end))}`;
 };
+/** notion-motion.md Round 90 §1 #4, #6: a split pill is 4 wider than the span at each end (176 over a 14-day, 168 Quarter span). */
+const SPLIT_PILL_OVERHANG = 4;
 const DAY_MINUTES = 24 * 60;
 /** notion-motion.md Round 71 §3: a day-zoom bar starts 2px into its first day and stops 1px short of its last (851.4 in a day from 849.4, 37 wide). */
 const BAR_START = 2;
@@ -770,7 +774,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
     ghost.style.setProperty('inset-inline-start', `${geometry.offset}px`);
     ghost.style.setProperty('width', `${geometry.width}px`);
-    this.showRange(span, barGeometry(span, this.window.start, this.zoom), true);
+    // notion-motion.md Round 90 §1 #4: the ghost's pill names its days as a bar's does.
+    this.showRange(span, barGeometry(span, this.window.start, this.zoom), true, true);
   }
 
   /**
@@ -1764,25 +1769,44 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   /**
    * findings C15: a pill over the dragged range's day numbers; its first and last day in ink.
    * notion-motion.md Round 88 §1 #5, Round 89 §1 #1-#2: at Quarter, Year and 5 Years a bar's pill names its days instead.
+   * Round 90 §1 #4, #6: when that text fits in the span + 8, the pill spans it with the first day at the left and the last at the right.
    */
-  private showRange(span: EventSpan, { offset, width }: { offset: number; width: number }, hover = false, ofBar = false): void {
+  private showRange(span: EventSpan, { offset, width }: { offset: number; width: number }, hover = false, named = false): void {
     const header = this.root?.querySelector('[data-blok-database-timeline-header]');
 
     if (header === null || header === undefined) {
       return;
     }
     const pill = header.querySelector<HTMLElement>('[data-blok-database-timeline-range]') ?? document.createElement('div');
-    const label = ofBar && LABELLED_PILL.has(this.zoom);
+    const label = named && LABELLED_PILL.has(this.zoom);
 
     pill.setAttribute('data-blok-database-timeline-range', '');
     pill.setAttribute('aria-hidden', 'true');
     pill.toggleAttribute('data-hover', hover);
     pill.toggleAttribute('data-label', label);
+    pill.removeAttribute('data-split');
     pill.textContent = label ? pillText(span, resolveLocale(this.options.locale)) : '';
     pill.style.insetInlineStart = `${offset}px`;
     pill.style.width = label ? '' : `${width}px`;
     if (!pill.isConnected) {
       header.prepend(pill);
+    }
+    const splitWidth = width + 2 * SPLIT_PILL_OVERHANG;
+
+    // The width Notion switches at is unread: Round 90 saw 78.8 of text stay compact over a 78 span + 8, and split over 176.
+    if (label && span.end !== span.start && pill.getBoundingClientRect().width <= splitWidth) {
+      const format = pillFormat(resolveLocale(this.options.locale));
+      const ends = [span.start, span.end].map((day) => {
+        const end = document.createElement('span');
+
+        end.textContent = format.format(toLocalDate(day));
+
+        return end;
+      });
+
+      pill.setAttribute('data-split', '');
+      pill.replaceChildren(...ends);
+      pill.style.width = `${splitWidth}px`;
     }
     header.querySelectorAll('[data-blok-database-timeline-units] > [data-day]').forEach((label) => {
       const day = label.getAttribute('data-day');

@@ -109,10 +109,11 @@ const scroller = (root: HTMLElement): HTMLElement => {
   return el;
 };
 
+// An own property, not vi.spyOn: spyOn would reuse measurePillText's prototype spy and change every element's box.
 const rect = (el: HTMLElement, left: number, top: number, width: number, height: number): void => {
-  vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
-    left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON: () => ({}),
-  });
+  const box = { left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON: () => ({}) };
+
+  Object.defineProperty(el, 'getBoundingClientRect', { configurable: true, value: () => box });
 };
 
 const pointer = (type: string, target: EventTarget, x: number, y: number): void => {
@@ -135,9 +136,24 @@ const windowStart = timelineWindow(CENTER, 'month').start;
 /** Pixels from the canvas start to the start of `day` at month zoom. */
 const px = (day: string): number => daysBetween(windowStart, day) * TIMELINE_DAY_WIDTH.month;
 
+const realRect = HTMLElement.prototype.getBoundingClientRect;
+
+/** jsdom lays nothing out: a labelled pill reads as 12px text (6.5 a character, near Notion's) plus its 6px pads. */
+const measurePillText = (): void => {
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    if (!this.hasAttribute('data-blok-database-timeline-range')) {
+      return realRect.call(this);
+    }
+    const width = this.hasAttribute('data-split') ? parseFloat(this.style.width) : 12 + 6.5 * (this.textContent ?? '').length;
+
+    return { left: 0, top: 0, width, height: 22, right: width, bottom: 22, x: 0, y: 0, toJSON: () => ({}) };
+  });
+};
+
 describe('DatabaseTimelineView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    measurePillText();
   });
 
   afterEach(() => {
@@ -1106,6 +1122,8 @@ describe('DatabaseTimelineView', () => {
       };
       const ghost = (root: HTMLElement): HTMLElement | null => root.querySelector<HTMLElement>('[data-blok-database-timeline-new-ghost]');
       const range = (root: HTMLElement): HTMLElement | null => root.querySelector<HTMLElement>('[data-blok-database-timeline-range]');
+      const splitLabels = (root: HTMLElement): string[] | null =>
+        range(root)?.hasAttribute('data-split') === true ? [...(range(root)?.children ?? [])].map((el) => el.textContent ?? '') : null;
 
       it('puts a 5-day ghost bar at the hovered day and pills those days in the header', () => {
         const { root } = mount();
@@ -1118,6 +1136,24 @@ describe('DatabaseTimelineView', () => {
         expect(ghost(root)?.getAttribute('data-day')).toBe('2026-10-20');
         expect(range(root)?.style.insetInlineStart).toBe(`${px('2026-10-20')}px`);
         expect(range(root)?.style.width).toBe(`${5 * TIMELINE_DAY_WIDTH.month}px`);
+        expect(range(root)?.textContent).toBe('');
+      });
+
+      // notion-motion.md Round 90 §1 #4: at Year and 5 Years the ghost pill is span + 8, its start date at the left, its end at the right, no year.
+      it.each([
+        ['year', '2026-10-12', ['Oct 12', 'Nov 8']],
+        ['5_years', '2026-10-12', ['Oct 12', 'Feb 28']],
+      ] as const)('names the ghost\'s first and last day at the ends of its pill at %s zoom', (zoom, day, labels) => {
+        const width = TIMELINE_DAY_WIDTH[zoom];
+        const zx = daysBetween(timelineWindow(CENTER, zoom).start, day) * width;
+        const { root } = mount({ view: timelineView({ timelineZoom: zoom }) });
+
+        rect(canvas(root), 0, 0, timelineWindow(CENTER, zoom).days * width, 400);
+        pointer('pointermove', lane(root), zx + width / 2, 390);
+
+        expect(splitLabels(root)).toEqual(labels);
+        expect(range(root)?.style.width).toBe('148px');
+        expect(range(root)?.style.insetInlineStart).toBe(`${zx}px`);
       });
 
       it('drops the header pill when the pointer leaves the lane', () => {
@@ -1185,8 +1221,8 @@ describe('DatabaseTimelineView', () => {
 
         expect(ghost(root)?.style.insetInlineStart).toBe(`${qx('2026-10-20') + 2}px`);
         expect(ghost(root)?.style.width).toBe('165px');
-        expect(range(root)?.style.width).toBe(`${14 * TIMELINE_DAY_WIDTH.quarter}px`);
-        expect(range(root)?.textContent).toBe('');
+        expect(range(root)?.style.width).toBe(`${14 * TIMELINE_DAY_WIDTH.quarter + 8}px`);
+        expect(splitLabels(root)).toEqual(['Oct 20', 'Nov 2']);
 
         ghost(root)?.click();
         expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-20/2026-11-02' });
@@ -2008,6 +2044,27 @@ describe('DatabaseTimelineView', () => {
       expect(range(root)?.textContent).toBe('Dec 25 \u2013 Jan 7');
       over(bar(root, 'r2'), bar(root, 'r1'));
       expect(range(root)?.textContent).toBe('Jan 12');
+    });
+
+    // notion-motion.md Round 90 §1 #6: a 14-day bar at Quarter has a 176 pill (span + 8), "Nov 14" at the left, "Nov 27" at the right.
+    // The width where Notion goes from compact to split is unread: Blok splits once the compact pill fits in span + 8.
+    it('splits a wide bar\'s Quarter pill into its first and last day, span + 8 wide', () => {
+      const { root } = mount({
+        view: timelineView({ timelineZoom: 'quarter' }),
+        groups: single([row('r1', 'Wide', '2026-11-14/2026-11-27'), row('r2', 'Narrow', '2026-10-12/2026-10-14')]),
+      });
+      const qx = (day: string): number => daysBetween(timelineWindow(CENTER, 'quarter').start, day) * TIMELINE_DAY_WIDTH.quarter;
+
+      over(bar(root, 'r1'));
+      expect(range(root)?.hasAttribute('data-split')).toBe(true);
+      expect([...(range(root)?.children ?? [])].map((el) => el.textContent)).toEqual(['Nov 14', 'Nov 27']);
+      expect(range(root)?.style.width).toBe('176px');
+      expect(range(root)?.style.insetInlineStart).toBe(`${qx('2026-11-14')}px`);
+
+      over(bar(root, 'r2'), bar(root, 'r1'));
+      expect(range(root)?.hasAttribute('data-split')).toBe(false);
+      expect(range(root)?.textContent).toBe('Oct 12 \u2013 14');
+      expect(range(root)?.style.width).toBe('');
     });
 
     it('keeps the Month pill a bare span, with no day named', () => {

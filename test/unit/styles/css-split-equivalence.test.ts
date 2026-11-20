@@ -1961,6 +1961,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R236_BYTES = 767;
     // Lane r239: Round 90 §1 #8 Layout tile ring, #9 #13 Select type row insets, #10 dark tiles, §3 Layout tile hover. Net database.css growth against origin/main.
     const DATABASE_R239_BYTES = 886;
+    // Lane r238: Round 90 §1 #3 ghost crosshair at every zoom (a shrink), #4/#6 split date pill. Net database.css growth against origin/main.
+    const DATABASE_R238_BYTES = 191;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2635,6 +2637,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R235_BYTES
       + DATABASE_R236_BYTES
       + DATABASE_R239_BYTES
+      + DATABASE_R238_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

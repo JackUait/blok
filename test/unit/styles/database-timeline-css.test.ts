@@ -312,6 +312,15 @@ describe('database timeline styles', () => {
     expect(css.indexOf(`${selector} {`)).toBeGreaterThan(drag);
   });
 
+  // notion-motion.md Round 90 §1 #4, #6: a split pill is span + 8 wide (the view sets it), first day at + 6, last day 6 from its end.
+  it('spreads a split date pill\'s two days to its ends, its width counting the pads', () => {
+    const pill = ruleBody('[data-blok-database-timeline] [data-blok-database-timeline-header] [data-blok-database-timeline-range][data-split]');
+
+    expect(pill).toMatch(/box-sizing:\s*border-box/);
+    expect(pill).toMatch(/display:\s*flex/);
+    expect(pill).toMatch(/justify-content:\s*space-between/);
+  });
+
   it('hides an off-screen arrow that the view marks hidden', () => {
     expect(ruleBody('[data-blok-database-timeline-offscreen][hidden]')).toMatch(/display:\s*none/);
   });

@@ -311,7 +311,8 @@ test.describe('dependencies', () => {
     await expect(page.locator('[data-blok-database-timeline-arrow][data-from="b"][data-to="c"]')).toHaveCount(1);
   });
 
-  // tlhover.png (Gamma): a 2px line from the bar's end into an 8px ring with a 2px stroke, ring 5px past the bar.
+  // tlhover.png (Gamma): a 2px line from the bar's end into an 8px ring with a 2px stroke.
+  // notion-motion.md Round 84b §5: the ring starts 6 past the bar, its centre 10 past.
   test('a hovered bar shows Notion\'s "–o" connector at its end', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-10-09T12:00:00'));
     await mount(page, blocks());
@@ -335,8 +336,8 @@ test.describe('dependencies', () => {
     });
 
     expect(drawn.ring).toEqual(['8px', '8px', '2px', 'rgb(173, 169, 163)', 'none']);
-    expect(drawn.ringStart).toBeCloseTo(5, 0);
-    expect(drawn.line).toEqual(['6px', '2px', 'rgb(173, 169, 163)', 'none']);
+    expect(drawn.ringStart).toBeCloseTo(6, 0);
+    expect(drawn.line).toEqual(['7px', '2px', 'rgb(173, 169, 163)', 'none']);
     expect(drawn.lineStart).toBeCloseTo(-1, 0);
     expect(drawn.own).toEqual(['0px', 'rgba(0, 0, 0, 0)']);
   });

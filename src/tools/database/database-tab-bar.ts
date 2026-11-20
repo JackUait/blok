@@ -1051,14 +1051,11 @@ export class DatabaseTabBar {
     ).filter((t) => t.getAttribute('data-view-id') !== this.dragViewId);
 
     // Folded tabs can sit between shown ones (the current view stays shown):
-    // a drop between shown tabs lands right after the one on its left; past
-    // the row it goes after every view.
+    // a drop lands right after the shown tab on its left, even past the row,
+    // so it stays shown (notion-motion.md Round 85c §2).
     const shown = this.dragSlots.map((slot) => slot.tab);
-    const slot = this.dropSlot(this.leadingEdge(e));
-    const dropIndex = slot === shown.length ? -1 : slot;
-    const afterTab = dropIndex === -1 ? tabs.at(-1) : shown[dropIndex - 1];
-    const nextIndex = afterTab === undefined ? 0 : tabs.indexOf(afterTab) + 1;
-    const beforeTab = dropIndex === -1 ? undefined : tabs[nextIndex];
+    const afterTab = shown[this.dropSlot(this.leadingEdge(e)) - 1];
+    const beforeTab = tabs[afterTab === undefined ? 0 : tabs.indexOf(afterTab) + 1];
     const afterViewId = afterTab?.getAttribute('data-view-id') ?? null;
     const beforeViewId = beforeTab?.getAttribute('data-view-id') ?? null;
 

@@ -1618,7 +1618,9 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(onReorder).toHaveBeenCalledWith('v0', positionBetween('a1', 'a2'));
     });
 
-    it('drops after every view when the pointer is past a folded row', () => {
+    // notion-motion.md Round 85c §2: past the last shown tab, the tab lands
+    // right after it and stays shown; it does not fold away at the end.
+    it('drops right after the last shown tab when the pointer is past a folded row', () => {
       const views = Array.from({ length: 8 }, (_, i) => makeView({ id: `v${i}`, name: `View ${i}`, position: `a${i}` }));
       const { el } = mount(views, 'v4');
 
@@ -1637,7 +1639,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       document.dispatchEvent(pointer('pointermove', 350));
       document.dispatchEvent(pointer('pointerup', 350));
 
-      expect(onReorder).toHaveBeenCalledWith('v0', positionBetween('a7', null));
+      expect(onReorder).toHaveBeenCalledWith('v0', positionBetween('a4', 'a5'));
     });
 
     it('drops after the last tab when the pointer is past the row', () => {

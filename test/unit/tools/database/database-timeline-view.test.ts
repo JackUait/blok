@@ -1026,6 +1026,18 @@ describe('DatabaseTimelineView', () => {
       expect(month()).toBe('November 2026');
     });
 
+    // notion-motion.md Round 48 A1: Day zoom reads "November 16, 2026" while Nov 17 starts further right.
+    it('names the day under the screen\'s start at Day zoom, even part-way into it', () => {
+      const { root, view } = mount({ view: timelineView({ timelineZoom: 'day' }), locale: 'de-DE' });
+      const el = scroller(root);
+      const dayStart = timelineWindow(CENTER, 'day').start;
+
+      Object.defineProperty(el, 'clientWidth', { value: 400, configurable: true });
+      el.scrollLeft = (daysBetween(dayStart, '2026-10-12') + 0.6) * TIMELINE_DAY_WIDTH.day;
+      view.refreshOffscreen();
+      expect(root.querySelector('[data-blok-database-timeline-month]')?.textContent).toBe('12. Oktober 2026');
+    });
+
     it('‹ and › scroll by one screen', () => {
       const { root } = mount();
       const el = scroller(root);

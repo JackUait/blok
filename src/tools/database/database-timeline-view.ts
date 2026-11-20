@@ -147,8 +147,11 @@ const NEW_BAR_DAY_ZOOM_MINUTES = 3 * 60;
 const EDGE_SHARE = 0.1;
 /** notion-motion.md Round 48 A2-A4: zooms whose labels and today circle sit on start lines, with month lines in the body. */
 const ON_START_LINE: ReadonlySet<TimelineZoom> = new Set(['quarter', 'year', '5_years']);
+const FULL_DATE: Intl.DateTimeFormatOptions = { month: 'long', day: 'numeric', year: 'numeric' };
+/** notion-motion.md Round 48 A1: Hours and Day name the whole date ("November 16, 2026"). */
 const TOOLBAR_LABEL_PARTS: Partial<Record<TimelineZoom, Intl.DateTimeFormatOptions>> = {
-  hours: { month: 'long', day: 'numeric', year: 'numeric' },
+  hours: FULL_DATE,
+  day: FULL_DATE,
   '5_years': { year: 'numeric' },
 };
 /** Zooms whose days are wide enough to shade weekends one by one. */
@@ -467,8 +470,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   }
 
   private monthLabel(day: string): string {
-    // notion-motion.md Round 35 Part B: Hours zoom names the whole date ("November 15, 2026").
-    // Round 48 A1 (fitted to four reads): Quarter and Year name the week under the left edge by its Monday; 5 Years names the year alone.
+    // notion-motion.md Round 48 A1 (fitted to four reads): Quarter and Year name the week under the left edge by its Monday; 5 Years names the year alone.
     const parts = TOOLBAR_LABEL_PARTS[this.zoom] ?? { month: 'long', year: 'numeric' };
     const unitStart = this.zoom === 'quarter' || this.zoom === 'year' ? startOfWeek(day, 1) : day;
 

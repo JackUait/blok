@@ -305,11 +305,14 @@ test.describe('date picker submenus', () => {
   const picker = (page: Page): Locator => page.locator('[data-blok-database-date-editor]');
   const zoneMenu = (page: Page): Locator => page.locator('[data-blok-database-date-setting-menu="timeZone"]');
   const zoneSearch = (page: Page): Locator => zoneMenu(page).locator('[data-blok-database-date-zone-search]');
+  // The submenus scale in from .96, so geometry is only final once the transition ends.
+  const settled = (menu: Locator): Promise<unknown> => menu.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   const openZones = async (page: Page): Promise<void> => {
     await open(page, 'p-due');
     await page.locator('[data-blok-database-date-time-toggle]').click();
     await page.locator('[data-blok-database-date-setting="timeZone"]').click();
     await expect(zoneMenu(page)).toBeVisible();
+    await settled(zoneMenu(page));
   };
 
   // notion-motion.md Round 83 §1: Escape closes the submenu and the row it came from shows the keyboard ring.
@@ -338,6 +341,7 @@ test.describe('date picker submenus', () => {
     await open(page, 'p-due');
     await page.locator('[data-blok-database-date-setting="dateFormat"]').click();
     await page.mouse.move(0, 0);
+    await settled(page.locator('[data-blok-database-date-setting-menu="dateFormat"]'));
     const checked = page.getByRole('menuitemradio', { name: 'Full date' });
     const other = page.getByRole('menuitemradio', { name: 'Short date' });
     const look = await checked.evaluate((row) => {

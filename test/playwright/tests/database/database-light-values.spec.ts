@@ -185,6 +185,8 @@ for (const theme of THEMES) {
         const menu = page.locator(`[data-blok-database-date-setting-menu="${kind}"]`);
 
         await expect(menu).toBeVisible();
+        // The menu scales in from .96; measure once the transition ends.
+        await menu.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
         expect((await menu.boundingBox())?.height).toBe(height);
         expect((await menu.boundingBox())?.width).toBe(180);
         await picker.locator(`[data-blok-database-date-setting="${kind}"]`).click();

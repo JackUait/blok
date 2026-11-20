@@ -393,6 +393,27 @@ test.describe('date picker submenus', () => {
     expect(innerHeight - ((menuBox?.y ?? 0) + (menuBox?.height ?? 0))).toBe(12);
   });
 
+  // notion-motion.md Round 84b §1 (r84-n-tz-geo.raw), offsets from the menu's top: list +48 to the bottom,
+  // heading text +58.3 and +141.1, rows +81.9 and +164.8.
+  test('Time zone: the list and its headings sit where Notion\'s do', async ({ page }) => {
+    await openZones(page);
+    const geo = await zoneMenu(page).evaluate((menu) => {
+      const top = menu.getBoundingClientRect().top;
+      const list = menu.querySelector('[data-blok-database-date-zone-list]');
+      const text = [...menu.querySelectorAll('[data-blok-database-date-zone-heading]')].map((h) => h.getBoundingClientRect().top + parseFloat(getComputedStyle(h).paddingTop) - top);
+      const rows = [...menu.querySelectorAll('[data-blok-database-date-setting-option]')].slice(0, 2).map((r) => r.getBoundingClientRect().top - top);
+
+      return { list: (list?.getBoundingClientRect().top ?? 0) - top, listEnd: menu.getBoundingClientRect().bottom - (list?.getBoundingClientRect().bottom ?? 0), text, rows };
+    });
+
+    expect(geo.list).toBe(48);
+    expect(geo.listEnd).toBe(0);
+    expect(Math.abs(geo.text[0] - 58.3)).toBeLessThanOrEqual(0.1);
+    expect(Math.abs(geo.text[1] - 141.1)).toBeLessThanOrEqual(0.1);
+    expect(Math.abs(geo.rows[0] - 81.9)).toBeLessThanOrEqual(0.1);
+    expect(Math.abs(geo.rows[1] - 164.8)).toBeLessThanOrEqual(0.1);
+  });
+
   for (const [scheme, ink] of [['light', { city: 'rgb(44, 44, 43)', muted: 'rgb(114, 111, 106)' }], ['dark', { city: 'rgb(240, 239, 237)', muted: 'rgb(173, 169, 163)' }]] as const) {
     test(`Time zone in ${scheme}: city, offset and heading inks`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });

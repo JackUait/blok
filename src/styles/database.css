@@ -10216,6 +10216,8 @@ textarea[data-blok-database-cell-input] {
   width: 342px;
   max-height: min(595px, calc(100vh - var(--blok-space-4)));
   gap: var(--blok-space-1);
+  /* notion-motion.md Round 84b §1: the list runs to the menu's bottom edge. */
+  padding-bottom: 0;
 }
 
 /* notion-motion.md Round 83 §1: 12 in from the menu's top and sides, the list rows stay 4 in. */
@@ -10233,18 +10235,31 @@ textarea[data-blok-database-cell-input] {
   gap: var(--blok-space-0-25);
   min-height: 0;
   overflow-y: auto;
+  /* notion-motion.md Round 84b §1 (r84-n-tz-geo.raw): 48 down from the menu's top; Notion's sections pad 4. */
+  margin-top: var(--blok-space-1);
+  padding-bottom: var(--blok-space-1);
 }
 
 [data-blok-database-date-zone-heading],
 [data-blok-database-date-zone-empty] {
-  padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
   font-size: 12px;
   line-height: 14.4px;
   font-weight: 500;
   color: var(--blok-database-ink-secondary);
 }
 
+/* r84-n-tz-geo.raw: section pad 4 + margin 6 above, 8 below a 14.9 box around 14.4 text: text +58.3, first row +81.9. */
+[data-blok-database-date-zone-heading] {
+  padding: 10.25px var(--blok-space-2) 8.25px;
+}
+
+/* Notion's section above ends with its own pad 4; the row gap gives 1 of it. Heading text +141.1, row +164.8. */
+[data-blok-database-date-setting-option] + [data-blok-database-date-zone-heading] {
+  margin-top: var(--blok-space-0-75);
+}
+
 [data-blok-database-date-zone-empty] {
+  padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
   font-weight: 400;
 }
 

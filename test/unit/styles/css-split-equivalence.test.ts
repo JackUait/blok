@@ -1921,6 +1921,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R206_BYTES = 381;
     // Lane r207: Round 83 Number format's "Filter formats…" field at 14px. Net database.css growth against origin/main.
     const DATABASE_R207_BYTES = 240;
+    // Lane r210: Round 84b time zone list 48 down, headings spaced like Notion's sections. Net database.css growth against origin/main.
+    const DATABASE_R210_BYTES = 741;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2575,6 +2577,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R208_BYTES
       + DATABASE_R206_BYTES
       + DATABASE_R207_BYTES
+      + DATABASE_R210_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

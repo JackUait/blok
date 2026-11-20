@@ -61,6 +61,17 @@ describe('database date reminder css', () => {
     expect(rulesFor('[data-blok-database-date-fields]')).toContain('gap: var(--blok-space-2)');
   });
 
+  // notion-motion.md Round 84b §1 (r84-n-tz-geo.raw): the list runs from +48 to the menu's bottom; each section
+  // pads 4 and its heading has 6 above and 8 below a 14.9 box, so the first row sits at +81.9.
+  it('the time zone list starts 48 down, its headings spaced like Notion\'s sections', () => {
+    expect(rulesFor('[data-blok-database-date-zone-menu][data-blok-top-layer][popover]')).toContain('padding-bottom: 0');
+    expect(rulesFor('[data-blok-database-date-zone-list]')).toContain('margin-top: var(--blok-space-1)');
+    expect(rulesFor('[data-blok-database-date-zone-list]')).toContain('padding-bottom: var(--blok-space-1)');
+    expect(rulesFor('[data-blok-database-date-zone-heading]')).toContain('padding: 10.25px var(--blok-space-2) 8.25px');
+    expect(rulesFor('[data-blok-database-date-setting-option] + [data-blok-database-date-zone-heading]')).toContain('margin-top: var(--blok-space-0-75)');
+    expect(rulesFor('[data-blok-database-date-zone-empty]')).toContain('padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1)');
+  });
+
   // research/30 B25: rows are 45 tall and 46 apart.
   it('the time zone rows sit 1px apart', () => {
     expect(rulesFor('[data-blok-database-date-zone-list]')).toContain('gap: var(--blok-space-0-25)');

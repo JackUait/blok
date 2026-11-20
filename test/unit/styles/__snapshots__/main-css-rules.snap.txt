@@ -13456,6 +13456,7 @@ textarea[data-blok-database-cell-input] {
   width: 342px;
   max-height: min(595px, calc(100vh - var(--blok-space-4)));
   gap: var(--blok-space-1);
+  padding-bottom: 0;
 }
 
 [data-blok-database-date-zone-search][data-blok-field] {
@@ -13472,17 +13473,27 @@ textarea[data-blok-database-cell-input] {
   gap: var(--blok-space-0-25);
   min-height: 0;
   overflow-y: auto;
+  margin-top: var(--blok-space-1);
+  padding-bottom: var(--blok-space-1);
 }
 
 [data-blok-database-date-zone-heading], [data-blok-database-date-zone-empty] {
-  padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
   font-size: 12px;
   line-height: 14.4px;
   font-weight: 500;
   color: var(--blok-database-ink-secondary);
 }
 
+[data-blok-database-date-zone-heading] {
+  padding: 10.25px var(--blok-space-2) 8.25px;
+}
+
+[data-blok-database-date-setting-option] + [data-blok-database-date-zone-heading] {
+  margin-top: var(--blok-space-0-75);
+}
+
 [data-blok-database-date-zone-empty] {
+  padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
   font-weight: 400;
 }
 

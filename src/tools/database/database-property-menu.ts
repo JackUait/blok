@@ -206,7 +206,8 @@ const PROPERTY_PANEL_CLASS = `${ROW_PAGE_MENU_CLASS} blok-database-property-pane
 const skipNameRowButtons: ArrowTarget = (arrow, index, count, items) => {
   if (arrow !== 'up' && arrow !== 'down') return undefined;
   const step = arrow === 'down' ? 1 : -1;
-  const start = index === -1 ? (step === 1 ? -1 : 0) : index;
+  const fromEdge = step === 1 ? -1 : 0;
+  const start = index === -1 ? fromEdge : index;
   const candidates = Array.from({ length: count }, (_, scanned) => (((start + step * (scanned + 1)) % count) + count) % count)
     .filter((at) => !items[at].hasAttribute(DATA_ATTR.disabled) && items[at].closest('[hidden]') === null);
 

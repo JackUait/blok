@@ -35,6 +35,18 @@ describe('groupLabel', () => {
       .toBe(new Intl.DateTimeFormat('de', { month: 'short', day: 'numeric', year: 'numeric' }).formatRange(new Date(2026, 9, 11), new Date(2026, 9, 17)));
   });
 
+  // Chromium's Intl pads the range dash with plain spaces; Notion's label has thin ones (r85c-n-dateby.raw bytes).
+  it('pads the week range dash with thin spaces whatever spaces Intl gives', () => {
+    const date: PropertyDefinition = { id: 'p-due', name: 'Due', type: 'date', position: 'a0' };
+    const real = Intl.DateTimeFormat.prototype.formatRangeToParts;
+
+    vi.spyOn(Intl.DateTimeFormat.prototype, 'formatRangeToParts').mockImplementation(function (this: Intl.DateTimeFormat, start, end) {
+      return real.call(this, start, end).map((part) => ({ ...part, value: part.value.replace(/\u2009/g, ' ') }));
+    });
+
+    expect(groupLabel(date, 'week:2026-10-11', { ...i18n, getLocale: () => 'en-US' }, { dateBy: 'week' })).toBe('Oct 11\u2009\u2013\u200917 2026');
+  });
+
   // r84-n-grp-Date.raw: Date by Relative named a date past the last 30 days "Oct 2026" too.
   it('names a relative date past the last 30 days by its short month', () => {
     const date: PropertyDefinition = { id: 'p-due', name: 'Due', type: 'date', position: 'a0' };

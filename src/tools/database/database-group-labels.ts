@@ -18,14 +18,20 @@ const format = (day: string, options: Intl.DateTimeFormatOptions, locale: string
 
 /**
  * notion-motion.md Round 85c §2 (r85c-n-dateby.raw): Notion reads "Oct 11 – 17 2026", Intl's range with no
- * comma before the year. Week ranges across a month or a year are unmeasured.
+ * comma before the year and thin spaces round the dash (Chromium's Intl gives plain ones).
+ * Week ranges across a month or a year are unmeasured.
  */
 const weekLabel = (day: string, locale: string): string => {
   const start = dateOf(day);
   const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
   const parts = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', year: 'numeric' }).formatRangeToParts(start, end);
 
-  return parts.map((part, i) => (part.type === 'literal' && part.value === ', ' && parts[i + 1]?.type === 'year' ? ' ' : part.value)).join('');
+  return parts.map((part, i) => {
+    if (part.type !== 'literal') return part.value;
+    if (part.value === ', ' && parts[i + 1]?.type === 'year') return ' ';
+
+    return parts[i - 1]?.source === 'startRange' && parts[i + 1]?.source === 'endRange' ? part.value.replace(/ /g, '\u2009') : part.value;
+  }).join('');
 };
 
 /** A group key as people read it. Option groups take the option label elsewhere. */

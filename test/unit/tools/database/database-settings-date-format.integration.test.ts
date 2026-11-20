@@ -61,7 +61,7 @@ const make = async (): Promise<void> => {
     dataModel: 'hierarchical',
     tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
     data: { blocks: doc() },
-  } as never) as TestEditor;
+  } as never);
   await editor.isReady;
   await quiet();
 };

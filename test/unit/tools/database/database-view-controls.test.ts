@@ -1575,6 +1575,18 @@ describe('DatabaseViewControls', () => {
       expect(q('database-filter-popover')).toBeNull();
     });
 
+    // notion-motion.md Round 86 §1 #12: the advanced filter panel stays open at the chip.
+    it('Add to advanced filter moves the rule and opens the advanced filter at its chip', () => {
+      const { controls, saved } = open();
+
+      click('database-filter-to-advanced');
+
+      expect(controls.effective(saved.view).filterTree?.filterRules[0]).toEqual(expect.objectContaining({ propertyId: 'title', operator: 'contains', value: 'a' }));
+      expect(q('database-filter-popover')).toBeNull();
+      expect(q('database-advanced-filter')).not.toBeNull();
+      expect(q('database-advanced-pill')?.hasAttribute('data-popover-open')).toBe(true);
+    });
+
     it('Escape closes only the flyout', () => {
       open();
       document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));

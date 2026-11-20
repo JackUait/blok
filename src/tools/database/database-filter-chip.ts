@@ -170,6 +170,8 @@ class FilterChipPages {
   private trackedRoot: HTMLElement | undefined;
   /** The simple popover's day field as last drawn, with the text it was drawn with. */
   private dayField: { input: HTMLInputElement; shown: string } | undefined;
+  /** Runs after "Add to advanced filter" closes the popover. */
+  afterToAdvanced: (() => void) | undefined;
 
   constructor(ctx: ViewSettingsContext, filterId: string, writer?: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void) {
     this.ctx = ctx;
@@ -472,6 +474,7 @@ class FilterChipPages {
             filterTree: addFilterRule(tree, tree.id, { id: nanoid(), propertyId: filter.propertyId, operator: filter.operator, value: filter.value }),
           });
           panel.close();
+          this.afterToAdvanced?.();
         }),
       }),
     ], { beside: MORE_FLYOUT_GAP });
@@ -1085,12 +1088,21 @@ const CHIP_POPOVER_WINDOW_MARGIN = 8;
  * Opens a filter chip's popover under the chip. With `host` it is a flyout
  * over that panel, which stays open under it (the settings Filters page).
  */
-export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, filterId: string, onClose?: (escape: boolean) => void, host?: DatabasePanel): DatabasePanel => {
+export const openFilterChip = (
+  anchor: HTMLElement,
+  ctx: ViewSettingsContext,
+  filterId: string,
+  onClose?: (escape: boolean) => void,
+  host?: DatabasePanel,
+  afterToAdvanced?: () => void
+): DatabasePanel => {
   const filter = withEntryIds(ctx.view().filters).find((f) => f.id === filterId);
   const property = ctx.schema().find((p) => p.id === filter?.propertyId);
   // A rollup of the Name has a text field, as Notion's 220-wide popover shows (r13-filter-ops-rollup.png).
   const listed = property !== undefined && filter !== undefined && LIST_FILTER_TYPES.includes(property.type) && !isQuantifiedText(property, filter.operator);
   const pages = new FilterChipPages(ctx, filterId);
+
+  pages.afterToAdvanced = afterToAdvanced;
   const panel = new DatabasePanel({
     anchor,
     root: pages.root(),

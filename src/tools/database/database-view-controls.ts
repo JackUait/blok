@@ -1023,7 +1023,8 @@ export class DatabaseViewControls {
 
   private openPill(filterId: string, anchor: HTMLElement): void {
     this.panel?.close();
-    this.panel = openFilterChip(anchor, this.settingsContext(), filterId, () => this.panelClosed(anchor));
+    // notion-motion.md Round 86 §1 #12: after "Add to advanced filter" the advanced panel stays open at its chip.
+    this.panel = openFilterChip(anchor, this.settingsContext(), filterId, () => this.panelClosed(anchor), undefined, () => this.openAdvanced(anchor));
     anchor.setAttribute('data-popover-open', '');
   }
 

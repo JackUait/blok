@@ -1434,6 +1434,7 @@
   "tools.database.settingsEditProperties": "تعديل الخصائص",
   "tools.database.settingsNewProperty": "خاصية جديدة",
   "tools.database.settingsFilter": "تصفية",
+  "tools.database.settingsFiltersTitle": "الفلاتر",
   "tools.database.settingsSort": "فرز",
   "tools.database.settingsSource": "المصدر",
   "tools.database.settingsDataSourceSettings": "إعدادات مصدر البيانات",

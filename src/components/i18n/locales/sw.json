@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "Hariri sifa",
   "tools.database.settingsNewProperty": "Sifa mpya",
   "tools.database.settingsFilter": "Chuja",
+  "tools.database.settingsFiltersTitle": "Vichujio",
   "tools.database.settingsSort": "Panga",
   "tools.database.settingsSource": "Chanzo",
   "tools.database.settingsDataSourceSettings": "Mipangilio ya chanzo cha data",

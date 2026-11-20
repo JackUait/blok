@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "Tulajdonságok szerkesztése",
   "tools.database.settingsNewProperty": "Új tulajdonság",
   "tools.database.settingsFilter": "Szűrés",
+  "tools.database.settingsFiltersTitle": "Szűrők",
   "tools.database.settingsSort": "Rendezés",
   "tools.database.settingsSource": "Forrás",
   "tools.database.settingsDataSourceSettings": "Adatforrás-beállítások",

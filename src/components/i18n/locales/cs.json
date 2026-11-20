@@ -1406,6 +1406,7 @@
   "tools.database.settingsEditProperties": "Upravit vlastnosti",
   "tools.database.settingsNewProperty": "Nová vlastnost",
   "tools.database.settingsFilter": "Filtrovat",
+  "tools.database.settingsFiltersTitle": "Filtry",
   "tools.database.settingsSort": "Seřadit",
   "tools.database.settingsSource": "Zdroj",
   "tools.database.settingsDataSourceSettings": "Nastavení zdroje dat",

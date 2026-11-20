@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "Шинжүүдийг засах",
   "tools.database.settingsNewProperty": "Шинэ шинж",
   "tools.database.settingsFilter": "Шүүх",
+  "tools.database.settingsFiltersTitle": "Шүүлтүүрүүд",
   "tools.database.settingsSort": "Эрэмбэлэх",
   "tools.database.settingsSource": "Эх сурвалж",
   "tools.database.settingsDataSourceSettings": "Өгөгдлийн эх сурвалжийн тохиргоо",

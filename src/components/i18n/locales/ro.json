@@ -1392,6 +1392,7 @@
   "tools.database.settingsEditProperties": "Editează proprietățile",
   "tools.database.settingsNewProperty": "Proprietate nouă",
   "tools.database.settingsFilter": "Filtrează",
+  "tools.database.settingsFiltersTitle": "Filtre",
   "tools.database.settingsSort": "Sortează",
   "tools.database.settingsSource": "Sursă",
   "tools.database.settingsDataSourceSettings": "Setări sursă de date",

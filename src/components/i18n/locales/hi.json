@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "प्रॉपर्टीज़ संपादित करें",
   "tools.database.settingsNewProperty": "नई प्रॉपर्टी",
   "tools.database.settingsFilter": "फ़िल्टर करें",
+  "tools.database.settingsFiltersTitle": "फ़िल्टर",
   "tools.database.settingsSort": "क्रमबद्ध करें",
   "tools.database.settingsSource": "स्रोत",
   "tools.database.settingsDataSourceSettings": "डेटा स्रोत सेटिंग्स",

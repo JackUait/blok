@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ ਸੰਪਾਦਿਤ ਕਰੋ",
   "tools.database.settingsNewProperty": "ਨਵੀਂ ਵਿਸ਼ੇਸ਼ਤਾ",
   "tools.database.settingsFilter": "ਫਿਲਟਰ ਕਰੋ",
+  "tools.database.settingsFiltersTitle": "ਫਿਲਟਰ",
   "tools.database.settingsSort": "ਕ੍ਰਮਬੱਧ ਕਰੋ",
   "tools.database.settingsSource": "ਸਰੋਤ",
   "tools.database.settingsDataSourceSettings": "ਡਾਟਾ ਸਰੋਤ ਸੈਟਿੰਗਾਂ",

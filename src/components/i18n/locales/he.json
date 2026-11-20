@@ -1392,6 +1392,7 @@
   "tools.database.settingsEditProperties": "ערוך מאפיינים",
   "tools.database.settingsNewProperty": "מאפיין חדש",
   "tools.database.settingsFilter": "סנן",
+  "tools.database.settingsFiltersTitle": "מסננים",
   "tools.database.settingsSort": "מיין",
   "tools.database.settingsSource": "מקור",
   "tools.database.settingsDataSourceSettings": "הגדרות מקור נתונים",

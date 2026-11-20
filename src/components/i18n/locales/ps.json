@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "ځانګړتیاوې سمې کړئ",
   "tools.database.settingsNewProperty": "نوې ځانګړتیا",
   "tools.database.settingsFilter": "فلټر کړئ",
+  "tools.database.settingsFiltersTitle": "فلټرونه",
   "tools.database.settingsSort": "ترتیب کړئ",
   "tools.database.settingsSource": "سرچینه",
   "tools.database.settingsDataSourceSettings": "د ډیټا سرچینې تنظیمات",

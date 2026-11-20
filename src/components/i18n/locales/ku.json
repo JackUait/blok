@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "دەستکاریکردنی تایبەتمەندییەکان",
   "tools.database.settingsNewProperty": "تایبەتمەندیی نوێ",
   "tools.database.settingsFilter": "فلتەرکردن",
+  "tools.database.settingsFiltersTitle": "فلتەرەکان",
   "tools.database.settingsSort": "ڕیزکردن",
   "tools.database.settingsSource": "سەرچاوە",
   "tools.database.settingsDataSourceSettings": "ڕێکخستنەکانی سەرچاوەی داتا",

@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "ప్రాపర్టీలను సవరించు",
   "tools.database.settingsNewProperty": "కొత్త ప్రాపర్టీ",
   "tools.database.settingsFilter": "ఫిల్టర్ చేయి",
+  "tools.database.settingsFiltersTitle": "ఫిల్టర్‌లు",
   "tools.database.settingsSort": "క్రమబద్ధీకరించు",
   "tools.database.settingsSource": "మూలం",
   "tools.database.settingsDataSourceSettings": "డేటా మూలం సెట్టింగ్‌లు",

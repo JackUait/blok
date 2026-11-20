@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "ویرایش ویژگی‌ها",
   "tools.database.settingsNewProperty": "ویژگی جدید",
   "tools.database.settingsFilter": "فیلتر",
+  "tools.database.settingsFiltersTitle": "فیلترها",
   "tools.database.settingsSort": "مرتب‌سازی",
   "tools.database.settingsSource": "منبع",
   "tools.database.settingsDataSourceSettings": "تنظیمات منبع داده",

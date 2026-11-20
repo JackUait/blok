@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "Özellikleri düzenle",
   "tools.database.settingsNewProperty": "Yeni özellik",
   "tools.database.settingsFilter": "Filtrele",
+  "tools.database.settingsFiltersTitle": "Filtreler",
   "tools.database.settingsSort": "Sırala",
   "tools.database.settingsSource": "Kaynak",
   "tools.database.settingsDataSourceSettings": "Veri kaynağı ayarları",

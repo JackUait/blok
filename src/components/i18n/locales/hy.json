@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "Խմբագրել հատկությունները",
   "tools.database.settingsNewProperty": "Նոր հատկություն",
   "tools.database.settingsFilter": "Ֆիլտրել",
+  "tools.database.settingsFiltersTitle": "Ֆիլտրեր",
   "tools.database.settingsSort": "Տեսակավորել",
   "tools.database.settingsSource": "Աղբյուր",
   "tools.database.settingsDataSourceSettings": "Տվյալների աղբյուրի կարգավորումներ",

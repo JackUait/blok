@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "ગુણધર્મો સંપાદિત કરો",
   "tools.database.settingsNewProperty": "નવો ગુણધર્મ",
   "tools.database.settingsFilter": "ફિલ્ટર કરો",
+  "tools.database.settingsFiltersTitle": "ફિલ્ટર",
   "tools.database.settingsSort": "સૉર્ટ કરો",
   "tools.database.settingsSource": "સ્રોત",
   "tools.database.settingsDataSourceSettings": "ડેટા સ્રોત સેટિંગ્સ",

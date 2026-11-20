@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "பண்புகளைத் திருத்து",
   "tools.database.settingsNewProperty": "புதிய பண்பு",
   "tools.database.settingsFilter": "வடிகட்டு",
+  "tools.database.settingsFiltersTitle": "வடிப்பான்கள்",
   "tools.database.settingsSort": "வரிசைப்படுத்து",
   "tools.database.settingsSource": "மூலம்",
   "tools.database.settingsDataSourceSettings": "தரவு மூல அமைப்புகள்",

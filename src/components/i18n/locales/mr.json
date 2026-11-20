@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "गुणधर्म संपादित करा",
   "tools.database.settingsNewProperty": "नवीन गुणधर्म",
   "tools.database.settingsFilter": "फिल्टर करा",
+  "tools.database.settingsFiltersTitle": "फिल्टर",
   "tools.database.settingsSort": "क्रमवारी लावा",
   "tools.database.settingsSource": "स्रोत",
   "tools.database.settingsDataSourceSettings": "डेटा स्रोत सेटिंग्ज",

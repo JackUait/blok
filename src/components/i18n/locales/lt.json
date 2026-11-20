@@ -1406,6 +1406,7 @@
   "tools.database.settingsEditProperties": "Redaguoti savybes",
   "tools.database.settingsNewProperty": "Nauja savybė",
   "tools.database.settingsFilter": "Filtruoti",
+  "tools.database.settingsFiltersTitle": "Filtrai",
   "tools.database.settingsSort": "Rikiuoti",
   "tools.database.settingsSource": "Šaltinis",
   "tools.database.settingsDataSourceSettings": "Duomenų šaltinio nustatymai",

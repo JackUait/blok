@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "ንብረቶችን አርትዕ",
   "tools.database.settingsNewProperty": "አዲስ ንብረት",
   "tools.database.settingsFilter": "አጣራ",
+  "tools.database.settingsFiltersTitle": "ማጣሪያዎች",
   "tools.database.settingsSort": "ደርድር",
   "tools.database.settingsSource": "ምንጭ",
   "tools.database.settingsDataSourceSettings": "የውሂብ ምንጭ ቅንብሮች",

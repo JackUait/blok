@@ -1800,6 +1800,7 @@ export type BlokMessageKey =
   | 'tools.database.settingsDragToReorder'
   | 'tools.database.settingsEditProperties'
   | 'tools.database.settingsFilter'
+  | 'tools.database.settingsFiltersTitle'
   | 'tools.database.settingsGroup'
   | 'tools.database.settingsHiddenInBoard'
   | 'tools.database.settingsHiddenInCalendar'

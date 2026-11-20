@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "속성 편집",
   "tools.database.settingsNewProperty": "새 속성",
   "tools.database.settingsFilter": "필터",
+  "tools.database.settingsFiltersTitle": "필터",
   "tools.database.settingsSort": "정렬",
   "tools.database.settingsSource": "소스",
   "tools.database.settingsDataSourceSettings": "데이터 소스 설정",

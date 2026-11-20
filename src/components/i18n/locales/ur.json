@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "پراپرٹیز میں ترمیم کریں",
   "tools.database.settingsNewProperty": "نئی پراپرٹی",
   "tools.database.settingsFilter": "فلٹر کریں",
+  "tools.database.settingsFiltersTitle": "فلٹرز",
   "tools.database.settingsSort": "ترتیب دیں",
   "tools.database.settingsSource": "ماخذ",
   "tools.database.settingsDataSourceSettings": "ڈیٹا ماخذ کی ترتیبات",

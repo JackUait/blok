@@ -1392,6 +1392,7 @@
   "tools.database.settingsEditProperties": "Уреди својства",
   "tools.database.settingsNewProperty": "Ново својство",
   "tools.database.settingsFilter": "Филтрирај",
+  "tools.database.settingsFiltersTitle": "Филтери",
   "tools.database.settingsSort": "Сортирај",
   "tools.database.settingsSource": "Извор",
   "tools.database.settingsDataSourceSettings": "Подешавања извора података",

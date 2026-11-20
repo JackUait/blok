@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "プロパティを編集",
   "tools.database.settingsNewProperty": "新しいプロパティ",
   "tools.database.settingsFilter": "フィルター",
+  "tools.database.settingsFiltersTitle": "フィルター",
   "tools.database.settingsSort": "並べ替え",
   "tools.database.settingsSource": "ソース",
   "tools.database.settingsDataSourceSettings": "データソースの設定",

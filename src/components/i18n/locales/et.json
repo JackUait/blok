@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "Muuda omadusi",
   "tools.database.settingsNewProperty": "Uus omadus",
   "tools.database.settingsFilter": "Filtreeri",
+  "tools.database.settingsFiltersTitle": "Filtrid",
   "tools.database.settingsSort": "Sordi",
   "tools.database.settingsSource": "Allikas",
   "tools.database.settingsDataSourceSettings": "Andmeallika seaded",

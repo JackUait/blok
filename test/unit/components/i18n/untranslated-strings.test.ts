@@ -671,7 +671,7 @@ const DATABASE_VIEW_SETTINGS_COGNATE_RETENTIONS: Record<string, string[]> = {
   de: ['tools.database.colorOrange', 'tools.database.groupStatusOption'],
   fr: ['tools.database.settingsLoadLimitPages', 'tools.database.colorOrange'],
   id: ['tools.database.settingsFilter'],
-  nl: ['tools.database.groupDateWeek'],
+  nl: ['tools.database.groupDateWeek', 'tools.database.settingsFiltersTitle'],
   sv: ['tools.database.colorOrange'],
 };
 

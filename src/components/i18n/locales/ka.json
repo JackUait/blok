@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "თვისებების რედაქტირება",
   "tools.database.settingsNewProperty": "ახალი თვისება",
   "tools.database.settingsFilter": "გაფილტვრა",
+  "tools.database.settingsFiltersTitle": "ფილტრები",
   "tools.database.settingsSort": "დალაგება",
   "tools.database.settingsSource": "წყარო",
   "tools.database.settingsDataSourceSettings": "მონაცემთა წყაროს პარამეტრები",

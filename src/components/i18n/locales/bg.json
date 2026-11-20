@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "Редактирай свойствата",
   "tools.database.settingsNewProperty": "Ново свойство",
   "tools.database.settingsFilter": "Филтрирай",
+  "tools.database.settingsFiltersTitle": "Филтри",
   "tools.database.settingsSort": "Сортирай",
   "tools.database.settingsSource": "Източник",
   "tools.database.settingsDataSourceSettings": "Настройки на източника на данни",

@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "Edit properti",
   "tools.database.settingsNewProperty": "Properti baru",
   "tools.database.settingsFilter": "Filter",
+  "tools.database.settingsFiltersTitle": "Filter",
   "tools.database.settingsSort": "Urutkan",
   "tools.database.settingsSource": "Sumber",
   "tools.database.settingsDataSourceSettings": "Pengaturan sumber data",

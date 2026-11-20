@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "خاسلىقلارنى تەھرىرلەش",
   "tools.database.settingsNewProperty": "يېڭى خاسلىق",
   "tools.database.settingsFilter": "سۈزۈش",
+  "tools.database.settingsFiltersTitle": "سۈزگۈچلەر",
   "tools.database.settingsSort": "رەتلەش",
   "tools.database.settingsSource": "مەنبە",
   "tools.database.settingsDataSourceSettings": "سانلىق مەلۇمات مەنبەسى تەڭشىكى",

@@ -349,8 +349,10 @@ describe('view settings panel', () => {
     const search = (): HTMLInputElement | null => document.querySelector<HTMLInputElement>('[data-blok-testid="database-property-picker-search"]');
     const page = (): string | null | undefined => document.querySelector('[data-blok-testid="database-view-settings"]')?.getAttribute('data-blok-database-panel-page');
 
-    it('an empty Filter page reads "Add filter" over a "Filter by…" search, and reads "Filter" once a filter exists', () => {
+    // notion-motion.md Round 88 (r88-n-settext.raw): the page header reads "Filters"; the settings row stays "Filter".
+    it('an empty Filter page reads "Add filter" over a "Filter by…" search, and reads "Filters" once a filter exists', () => {
       harness().open();
+      expect(document.querySelector('[data-blok-testid="database-settings-filter"]')?.textContent).toContain('tools.database.settingsFilter');
       click('database-settings-filter');
 
       expect(title()).toContain('tools.database.filterAdd');
@@ -358,7 +360,7 @@ describe('view settings panel', () => {
       expect(search()?.getAttribute('aria-label')).toBe('tools.database.filterByPlaceholder');
       expect(page()).toBe('pick');
       click('database-pick-property-num');
-      expect(title()).toContain('tools.database.settingsFilter');
+      expect(title()).toContain('tools.database.settingsFiltersTitle');
       expect(title()).not.toContain('tools.database.filterAdd');
       // database.css spaces this page's rules (notion-motion.md Round 88 §1 #4).
       expect(page()).toBe('filters');

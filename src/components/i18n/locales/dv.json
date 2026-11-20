@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "ޕްރޮޕަރޓީތައް ބަދަލުކުރޭ",
   "tools.database.settingsNewProperty": "އައު ޕްރޮޕަރޓީ",
   "tools.database.settingsFilter": "ފިލްޓަރުކުރޭ",
+  "tools.database.settingsFiltersTitle": "ފިލްޓަރުތައް",
   "tools.database.settingsSort": "ތަރުތީބުކުރޭ",
   "tools.database.settingsSource": "ސޯސް",
   "tools.database.settingsDataSourceSettings": "ޑޭޓާ ސޯސްގެ ސެޓިންގްސް",

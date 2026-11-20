@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "ဂုဏ်သတ္တိများ တည်းဖြတ်ရန်",
   "tools.database.settingsNewProperty": "ဂုဏ်သတ္တိ အသစ်",
   "tools.database.settingsFilter": "စစ်ထုတ်ရန်",
+  "tools.database.settingsFiltersTitle": "စစ်ထုတ်မှုများ",
   "tools.database.settingsSort": "စီရန်",
   "tools.database.settingsSource": "ရင်းမြစ်",
   "tools.database.settingsDataSourceSettings": "ဒေတာရင်းမြစ် ဆက်တင်များ",

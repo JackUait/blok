@@ -1406,6 +1406,7 @@
   "tools.database.settingsEditProperties": "Edytuj właściwości",
   "tools.database.settingsNewProperty": "Nowa właściwość",
   "tools.database.settingsFilter": "Filtruj",
+  "tools.database.settingsFiltersTitle": "Filtry",
   "tools.database.settingsSort": "Sortuj",
   "tools.database.settingsSource": "Źródło",
   "tools.database.settingsDataSourceSettings": "Ustawienia źródła danych",

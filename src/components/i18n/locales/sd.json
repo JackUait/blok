@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "پراپرٽيون تبديل ڪريو",
   "tools.database.settingsNewProperty": "نئين پراپرٽي",
   "tools.database.settingsFilter": "فلٽر ڪريو",
+  "tools.database.settingsFiltersTitle": "فلٽر",
   "tools.database.settingsSort": "ترتيب ڏيو",
   "tools.database.settingsSource": "ماخذ",
   "tools.database.settingsDataSourceSettings": "ڊيٽا ماخذ جون سيٽنگون",

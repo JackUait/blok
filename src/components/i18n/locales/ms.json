@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "Sunting sifat",
   "tools.database.settingsNewProperty": "Sifat baharu",
   "tools.database.settingsFilter": "Tapis",
+  "tools.database.settingsFiltersTitle": "Penapis",
   "tools.database.settingsSort": "Isih",
   "tools.database.settingsSource": "Sumber",
   "tools.database.settingsDataSourceSettings": "Tetapan sumber data",

@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "ගුණාංග සංස්කරණය කරන්න",
   "tools.database.settingsNewProperty": "නව ගුණාංගය",
   "tools.database.settingsFilter": "පෙරන්න",
+  "tools.database.settingsFiltersTitle": "පෙරහන්",
   "tools.database.settingsSort": "වර්ග කරන්න",
   "tools.database.settingsSource": "මූලාශ්‍රය",
   "tools.database.settingsDataSourceSettings": "දත්ත මූලාශ්‍ර සැකසුම්",

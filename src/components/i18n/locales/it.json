@@ -1392,6 +1392,7 @@
   "tools.database.settingsEditProperties": "Modifica proprietà",
   "tools.database.settingsNewProperty": "Nuova proprietà",
   "tools.database.settingsFilter": "Filtra",
+  "tools.database.settingsFiltersTitle": "Filtri",
   "tools.database.settingsSort": "Ordina",
   "tools.database.settingsSource": "Origine",
   "tools.database.settingsDataSourceSettings": "Impostazioni origine dati",

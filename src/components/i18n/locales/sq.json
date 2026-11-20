@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "Ndrysho vetitë",
   "tools.database.settingsNewProperty": "Veti e re",
   "tools.database.settingsFilter": "Filtro",
+  "tools.database.settingsFiltersTitle": "Filtrat",
   "tools.database.settingsSort": "Rendit",
   "tools.database.settingsSource": "Burimi",
   "tools.database.settingsDataSourceSettings": "Cilësimet e burimit të të dhënave",

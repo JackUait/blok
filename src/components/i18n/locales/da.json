@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "Rediger egenskaber",
   "tools.database.settingsNewProperty": "Ny egenskab",
   "tools.database.settingsFilter": "Filtrer",
+  "tools.database.settingsFiltersTitle": "Filtre",
   "tools.database.settingsSort": "Sorter",
   "tools.database.settingsSource": "Kilde",
   "tools.database.settingsDataSourceSettings": "Indstillinger for datakilde",

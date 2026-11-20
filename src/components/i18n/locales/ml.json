@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "പ്രോപ്പർട്ടികൾ എഡിറ്റ് ചെയ്യുക",
   "tools.database.settingsNewProperty": "പുതിയ പ്രോപ്പർട്ടി",
   "tools.database.settingsFilter": "ഫിൽട്ടർ ചെയ്യുക",
+  "tools.database.settingsFiltersTitle": "ഫിൽട്ടറുകൾ",
   "tools.database.settingsSort": "അടുക്കുക",
   "tools.database.settingsSource": "ഉറവിടം",
   "tools.database.settingsDataSourceSettings": "ഡാറ്റാ ഉറവിട ക്രമീകരണങ്ങൾ",

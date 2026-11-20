@@ -1406,6 +1406,7 @@
   "tools.database.settingsEditProperties": "Редагувати властивості",
   "tools.database.settingsNewProperty": "Нова властивість",
   "tools.database.settingsFilter": "Фільтрувати",
+  "tools.database.settingsFiltersTitle": "Фільтри",
   "tools.database.settingsSort": "Сортувати",
   "tools.database.settingsSource": "Джерело",
   "tools.database.settingsDataSourceSettings": "Налаштування джерела даних",

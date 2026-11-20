@@ -1940,10 +1940,10 @@ export class ViewSettingsPages {
     const empty = (): boolean => this.ctx.view().filters.length === 0 && countFilterRules(this.ctx.view().filterTree) === 0;
     const t = (key: string): string => this.t(key);
 
-    // notion-motion.md Round 9 (r9-vs-filter.raw): with no filter yet the page reads "Add filter".
+    // notion-motion.md Round 9 (r9-vs-filter.raw): with no filter yet the page reads "Add filter"; Round 88 (r88-n-settext.raw): then "Filters".
     return {
       get title() {
-        return t(empty() ? 'filterAdd' : 'settingsFilter');
+        return t(empty() ? 'filterAdd' : 'settingsFiltersTitle');
       },
       get name() {
         return empty() ? 'pick' : 'filters';

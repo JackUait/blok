@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "Chỉnh sửa thuộc tính",
   "tools.database.settingsNewProperty": "Thuộc tính mới",
   "tools.database.settingsFilter": "Lọc",
+  "tools.database.settingsFiltersTitle": "Bộ lọc",
   "tools.database.settingsSort": "Sắp xếp",
   "tools.database.settingsSource": "Nguồn",
   "tools.database.settingsDataSourceSettings": "Cài đặt nguồn dữ liệu",

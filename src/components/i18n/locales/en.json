@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "Edit properties",
   "tools.database.settingsNewProperty": "New property",
   "tools.database.settingsFilter": "Filter",
+  "tools.database.settingsFiltersTitle": "Filters",
   "tools.database.settingsSort": "Sort",
   "tools.database.settingsSource": "Source",
   "tools.database.settingsDataSourceSettings": "Data source settings",

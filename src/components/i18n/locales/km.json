@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "កែសម្រួលលក្ខណៈ",
   "tools.database.settingsNewProperty": "លក្ខណៈថ្មី",
   "tools.database.settingsFilter": "ត្រង",
+  "tools.database.settingsFiltersTitle": "តម្រង",
   "tools.database.settingsSort": "តម្រៀប",
   "tools.database.settingsSource": "ប្រភព",
   "tools.database.settingsDataSourceSettings": "ការកំណត់ប្រភពទិន្នន័យ",

@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "Επεξεργασία ιδιοτήτων",
   "tools.database.settingsNewProperty": "Νέα ιδιότητα",
   "tools.database.settingsFilter": "Φιλτράρισμα",
+  "tools.database.settingsFiltersTitle": "Φίλτρα",
   "tools.database.settingsSort": "Ταξινόμηση",
   "tools.database.settingsSource": "Πηγή",
   "tools.database.settingsDataSourceSettings": "Ρυθμίσεις πηγής δεδομένων",

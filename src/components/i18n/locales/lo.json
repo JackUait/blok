@@ -1378,6 +1378,7 @@
   "tools.database.settingsEditProperties": "ແກ້ໄຂຄຸນສົມບັດ",
   "tools.database.settingsNewProperty": "ຄຸນສົມບັດໃໝ່",
   "tools.database.settingsFilter": "ກອງ",
+  "tools.database.settingsFiltersTitle": "ຕົວກອງ",
   "tools.database.settingsSort": "ຈັດຮຽງ",
   "tools.database.settingsSource": "ແຫຼ່ງ",
   "tools.database.settingsDataSourceSettings": "ການຕັ້ງຄ່າແຫຼ່ງຂໍ້ມູນ",

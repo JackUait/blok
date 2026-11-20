@@ -76,6 +76,14 @@ describe('table view menus', () => {
     expect(openMenu(anchor(), []).escapeClosesAtOnce).not.toBe(true);
   });
 
+  // notion-motion.md Round 86 §1 #1: with "Open in" open, the first Escape closes only that submenu.
+  it('closes an open submenu of a row handle menu first on Escape', () => {
+    const anchor = (): HTMLElement => document.createElement('button');
+
+    expect(openMenu(anchor(), [], { kind: 'row' }).escapeClosesSubmenuFirst).toBe(true);
+    expect(openMenu(anchor(), [], { kind: 'handle' }).escapeClosesSubmenuFirst).toBe(true);
+  });
+
   it('marks a column header menu, so only it takes the header row size', () => {
     openMenu(document.createElement('button'), [], { kind: 'header' });
 

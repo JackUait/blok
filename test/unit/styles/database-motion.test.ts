@@ -23,6 +23,10 @@ const reducedMotion = [ ...database.matchAll(/@media \(prefers-reduced-motion: r
 const body = (css: string, selector: string): string =>
   rules(css).filter((rule) => rule.selectors.includes(selector)).map((rule) => rule.body).join(';');
 
+/** The rule that wins for `selector`: the last one in the file that names it. */
+const lastBody = (css: string, selector: string): string =>
+  rules(css).filter((rule) => rule.selectors.includes(selector)).map((rule) => rule.body).pop() ?? '';
+
 const MENU = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu']";
 const MENU_CLOSED = `${MENU}:not([data-blok-popover-opened='true'])`;
 
@@ -44,15 +48,18 @@ describe('database menus', () => {
     expect(body(reducedMotion, `${MENU} [data-blok-popover-container]`)).toContain('transition: none');
     expect(body(reducedMotion, `${MENU_CLOSED} [data-blok-popover-container]`)).toContain('transform: none');
   });
+
+  // notion-motion.md Round 86 §1 #1 (r86-n-rowmenu-subesc1-mo.raw): "Open in" fades out over 200ms with no scale.
+  it('a row handle menu\'s submenu closes with a fade only', () => {
+    expect(lastBody(outsideReducedMotion, "[data-blok-popover-custom-class~='blok-database-handle-menu'] [data-blok-nested][data-state='closed'] > [data-blok-popover-container]"))
+      .toContain('transform: none');
+  });
 });
 
 /* Filter, Sort and every other panel or editor that sits in a CellPopover (notion-motion.md "Popovers"). */
 const EDITOR = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor']";
 const EDITOR_CLOSED = `${EDITOR}:not([data-blok-popover-opened='true'])`;
 
-/** The rule that wins for `selector`: the last one in the file that names it. */
-const lastBody = (css: string, selector: string): string =>
-  rules(css).filter((rule) => rule.selectors.includes(selector)).map((rule) => rule.body).pop() ?? '';
 
 describe('database panels (Filter, Sort, pickers)', () => {
   it('open and close like the database menus: 200ms ease, from and back to scale .96', () => {

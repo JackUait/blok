@@ -7550,6 +7550,10 @@ button[data-blok-database-board-lane-count]:hover {
   transform-origin: center;
 }
 
+[data-blok-popover-custom-class~='blok-database-handle-menu'] [data-blok-nested][data-state='closed'] > [data-blok-popover-container] {
+  transform: none;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-peek-mode-menu'] > [data-blok-popover-container] {
   transform-origin: top center;
 }

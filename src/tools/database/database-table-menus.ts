@@ -293,7 +293,8 @@ export const openMenu = (
   const popover = new PopoverDesktop(at === undefined ? params : { ...params, position: at.position, positionContext: at.positionContext });
 
   // notion-motion.md Round 12: Escape closes one layer of a calculation menu at a time.
-  if (options.kind === 'calc') {
+  // Round 86 §1 #1: the row handle menu's submenu too.
+  if (options.kind === 'calc' || options.kind === 'row' || options.kind === 'handle') {
     popover.escapeClosesSubmenuFirst = true;
   }
   // notion-motion.md Round 85c §1: Escape removes the row handle menu at once; other closes still fade.

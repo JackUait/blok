@@ -3558,6 +3558,11 @@ button[data-blok-database-board-lane-count]:hover {
   transform-origin: center;
 }
 
+/* notion-motion.md Round 86 §1 #1: Escape fades its submenu out with no scale. */
+[data-blok-popover-custom-class~='blok-database-handle-menu'] [data-blok-nested][data-state='closed'] > [data-blok-popover-container] {
+  transform: none;
+}
+
 /* notion-motion.md Round 55 §5: the peek mode menu sits centred under its button and grows from there. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-peek-mode-menu'] > [data-blok-popover-container] {
   transform-origin: top center;

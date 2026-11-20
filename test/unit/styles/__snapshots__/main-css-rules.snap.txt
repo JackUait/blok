@@ -8853,6 +8853,10 @@ button[data-blok-database-board-lane-count]:hover {
   font-weight: 500;
 }
 
+[data-blok-database-list-group-label] [data-status-group] {
+  font-weight: 400;
+}
+
 [data-blok-database-list-group-toggle]:hover, [data-blok-database-list-group-actions] button:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }

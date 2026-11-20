@@ -617,6 +617,13 @@ describe('grouped list header (Round 81)', () => {
   });
 });
 
+// notion-motion.md Round 84b §5 (r84-n-list-pill.raw): grouped by Status, the pill text is 14/400; R81's 500 was a Select pill.
+describe('grouped list Status pill (Round 84b)', () => {
+  it('sets a Status group pill in weight 400', () => {
+    expect(ruleBody(database, '[data-blok-database-list-group-label] [data-status-group]')).toContain('font-weight: 400');
+  });
+});
+
 // notion-motion.md Round 82 §1 "Grouped list header" (r81-n-glist.raw, r82-b-a4-glist.raw): Notion's "…" and "+" sit at
 // 609.6 / 633.6, Blok's at 608.6 / 632.6.
 describe('grouped list header (Round 82)', () => {

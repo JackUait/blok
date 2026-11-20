@@ -2611,6 +2611,8 @@ export class ViewSettingsPages {
     if (controls.length === 1 && only instanceof HTMLInputElement) {
       only.setAttribute('data-blok-testid', `database-filter-rule-value-${id}`);
       only.setAttribute('data-blok-database-filter-rule-value', '');
+      // notion-motion.md Round 83 §5 (r83-n-af-one.raw): "Value" here; the simple chip keeps its own placeholder.
+      only.placeholder = this.t('filterValue');
       line.append(only);
     } else if (controls.length > 0) {
       const valueText = (rule: Pick<FilterConfig, 'operator' | 'value'>): string => {

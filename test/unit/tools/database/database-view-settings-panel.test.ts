@@ -2100,6 +2100,26 @@ describe('view settings panel', () => {
 
       expect(q('database-filter-rule-value-r')).toBeInstanceOf(HTMLInputElement);
     });
+
+    // notion-motion.md Round 83 §5 (r83-n-af-one.raw): Name's field reads "Value"; Round 19 §1: Number's too.
+    it('reads "Value" in an empty text or number rule field', () => {
+      const h = harness({
+        filterTree: {
+          id: 'root',
+          conjunction: 'and',
+          filterRules: [
+            { id: 'r', propertyId: 'title', operator: 'contains', value: '' },
+            { id: 'n', propertyId: 'num', operator: 'equals', value: null },
+          ],
+        },
+      });
+
+      h.open('filter');
+      click('database-filter-advanced-chip');
+
+      expect(q('database-filter-rule-value-r')?.getAttribute('placeholder')).toBe('tools.database.filterValue');
+      expect(q('database-filter-rule-value-n')?.getAttribute('placeholder')).toBe('tools.database.filterValue');
+    });
   });
 
   it('sets And or Or on a group', () => {

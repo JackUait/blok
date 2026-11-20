@@ -574,6 +574,22 @@ describe('Round 45 gallery, calendar and settings panel', () => {
     expect(ruleBody('[data-blok-database-layout-tile]')).toMatch(/font-size:\s*11px/);
     expect(ruleBody('[data-blok-database-card-layout-label]')).toMatch(/font-weight:\s*500/);
   });
+
+  // notion-motion.md Round 89 §1 #8 (r89-n-layout.raw, r89-n-layout-boxes.raw): tiles 56.5 tall, pad 6, glyph at +10,
+  // label text at +35.5, top-aligned, r6, a 1px inset ring; the first tile 54 below the page top.
+  it('draws Layout tiles like Notion\'s: top-aligned, pad 6, r6, an inset ring', () => {
+    const tile = ruleBody('[data-blok-database-layout-tile]');
+
+    expect(tile).toMatch(/justify-content:\s*flex-start/);
+    expect(tile).toMatch(/block-size:\s*56\.5px/);
+    expect(tile).toMatch(/padding:\s*var\(--blok-space-1-5\)/);
+    expect(tile).toMatch(/line-height:\s*16\.5px/);
+    expect(tile).toMatch(/border-radius:\s*var\(--blok-radius-control\)/);
+    expect(tile).toMatch(/border:\s*none/);
+    expect(tile).toMatch(/box-shadow:\s*var\(--blok-database-table-border\) 0 0 0 1px inset/);
+    expect(ruleBody('[data-blok-database-layout-tile-glyph]')).toMatch(/margin-block-start:\s*var\(--blok-space-1\)/);
+    expect(ruleBody('[data-blok-database-layout-tiles]')).toMatch(/margin-block-start:\s*var\(--blok-space-2-75\)/);
+  });
 });
 
 // notion-motion.md Round 81 §2 "Gallery card tools" (r81-n-gallery-cardtools.raw): Notion's buttons are r0 in an r4 group

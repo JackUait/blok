@@ -14835,11 +14835,14 @@ button[data-blok-database-table-group-count]:hover {
   padding-block: 0;
 }
 
-/* findings V13 (11-notion-layout.png): 3 columns of 83x56 tiles, a 20px glyph over the label. */
+/* findings V13 (11-notion-layout.png): 3 columns of tiles, a 20px glyph over the label.
+   notion-motion.md Round 89 §1 #8: the first tile 54 below the page top; tiles 56.5 tall, pad 6, glyph at +10,
+   label line at +34, top-aligned, r6, a 1px inset ring. */
 [data-blok-database-layout-tiles] {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--blok-space-2);
+  margin-block-start: var(--blok-space-2-75);
   padding: var(--blok-space-1) var(--blok-space-2) var(--blok-space-2);
 }
 
@@ -14848,16 +14851,18 @@ button[data-blok-database-table-group-count]:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: var(--blok-space-1);
-  block-size: 56px;
-  padding: 0;
-  border: var(--blok-border-width-hairline) solid var(--blok-database-table-border);
-  border-radius: var(--blok-radius-control-lg);
+  block-size: 56.5px;
+  padding: var(--blok-space-1-5);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  box-shadow: var(--blok-database-table-border) 0 0 0 1px inset;
   background: transparent;
   color: var(--blok-database-ink-secondary);
   font: inherit;
   font-size: 11px;
+  line-height: 16.5px;
   cursor: pointer;
 }
 
@@ -14883,6 +14888,7 @@ button[data-blok-database-table-group-count]:hover {
 
 [data-blok-database-layout-tile-glyph] {
   display: inline-flex;
+  margin-block-start: var(--blok-space-1);
 }
 
 [data-blok-database-layout-tile-glyph] svg {

@@ -1958,7 +1958,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r235: Round 89 §1 #3 Quarter "+ New" ghost crosshair. Net database.css growth against origin/main.
     const DATABASE_R235_BYTES = 206;
     // Lane r236: Round 89 §1 #5 Select type existing-property tiles, R88 §1 #8 new-question glyph 20, #8 Layout tiles. Net database.css growth against origin/main.
-    const DATABASE_R236_BYTES = 472;
+    const DATABASE_R236_BYTES = 767;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

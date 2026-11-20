@@ -2100,7 +2100,7 @@ export class DatabaseCardDrawer {
     drawer.after(shell);
     promoteToTopLayer(shell);
     // Read layout so the slide starts from the open place.
-    void shell.offsetWidth;
+    void shell.getBoundingClientRect();
     shell.removeAttribute('data-open');
     this.shell = shell;
     afterSlide(shell, () => {

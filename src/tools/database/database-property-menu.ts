@@ -1,6 +1,7 @@
 import { IconAlarm, IconCalendar, IconChangeType, IconCheck, IconClock, IconHelp, IconCopy, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconPencilLine, IconPreview, IconReplace, IconSliders, IconSort, IconTrash, IconPageLayout, IconWand } from '../../components/icons';
 import { nameTakenError } from './database-name-taken-error';
 import { PopoverDesktop } from '../../components/utils/popover';
+import type { ArrowTarget } from '../../components/flipper';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import type { PopoverItemParams } from '../../../types/utils/popover/popover-item';
@@ -196,6 +197,23 @@ const COLUMN_MENU_CLASS = `${DATABASE_HEADER_MENU_CLASS} blok-database-column-me
 const ROW_PAGE_MENU_CLASS = `${DATABASE_HEADER_MENU_CLASS} blok-database-row-page-menu`;
 /** The row page's Edit property panel: Notion pads it 8px, its menus 4 (notion-spec-2 §1). */
 const PROPERTY_PANEL_CLASS = `${ROW_PAGE_MENU_CLASS} blok-database-property-panel`;
+
+/**
+ * research/27 §7, research/36 §3.2: Notion's second ArrowDown from the name field lights the first row.
+ * The icon and ⓘ buttons beside the field stay Tab stops; Up/Down pass over them.
+ * The scan mirrors DomIterator's wrap and its disabled/hidden skip.
+ */
+const skipNameRowButtons: ArrowTarget = (arrow, index, count, items) => {
+  if (arrow !== 'up' && arrow !== 'down') return undefined;
+  const step = arrow === 'down' ? 1 : -1;
+  const start = index === -1 ? (step === 1 ? -1 : 0) : index;
+  const candidates = Array.from({ length: count }, (_, scanned) => (((start + step * (scanned + 1)) % count) + count) % count)
+    .filter((at) => !items[at].hasAttribute(DATA_ATTR.disabled) && items[at].closest('[hidden]') === null);
+
+  if (!items[candidates[0]]?.matches('[data-blok-database-property-menu-name] > button')) return undefined;
+
+  return candidates.find((at) => !items[at].matches('[data-blok-database-property-menu-name] > button'));
+};
 
 /** notion-spec-2 §16.1: Number format, Decimal places and Calculate open on a click only, under their row. */
 const CLICK_ONLY_UNDER = { clickOnly: true, placement: 'under' } as const;
@@ -660,6 +678,7 @@ export class DatabasePropertyMenu {
 
     // research/27 §7: Escape closes the Edit property submenu only; a second Escape closes the menu.
     popover.escapeClosesSubmenuFirst = true;
+    popover.setArrowTarget(skipNameRowButtons);
     // notion-motion.md Round 10: Notion mounts the Edit property flyout about 130ms after the row lights.
     popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
     this.popover = popover;

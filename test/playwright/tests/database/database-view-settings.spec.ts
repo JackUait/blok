@@ -637,6 +637,28 @@ test.describe('database view settings', () => {
     await expect(name).toHaveValue('');
   });
 
+  // research/27 §7 and research/36 §3.2: Notion's second ArrowDown from the name field lights the first row.
+  // The icon and ⓘ buttons beside the field took two more presses, with no visible highlight.
+  test('ArrowDown from a property\'s name field reaches the first row on the second press', async ({ page }) => {
+    await mount(page, blocks());
+    await byTestId(page, 'database-toolbar-settings').click();
+    await byTestId(page, 'database-settings-edit-properties').click();
+    await byTestId(page, 'database-edit-property-p-amount').click();
+    const panel = page.locator('[data-blok-popover-opened="true"]');
+
+    await expect(panel.getByRole('textbox', { name: 'Property name' })).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await expect(panel.locator('[data-blok-item-name="changeType"]')).toHaveAttribute('data-blok-focused', 'true');
+    await page.keyboard.press('Escape');
+
+    await page.getByRole('columnheader', { name: 'Amount', exact: true }).click();
+    await panel.getByRole('textbox', { name: 'Property name' }).click();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await expect(panel.locator('[data-blok-item-name="editProperty"]')).toHaveAttribute('data-blok-focused', 'true');
+  });
+
   // notion-motion.md Round 80: the Sort picker's checkmark drew the global black, not the row's database ink.
   for (const theme of ['light', 'dark'] as const) {
     test(`a chosen row's checkmark takes its row's ink (${theme})`, async ({ page }) => {

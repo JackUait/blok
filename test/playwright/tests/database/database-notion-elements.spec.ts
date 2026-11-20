@@ -564,9 +564,9 @@ test.describe('property header menu: Edit property opens one level at a time (re
     await page.locator('[data-blok-database-table-column-header][data-property-id="p-amount"]').click();
     await expect(edit).toBeVisible();
     await highlightName();
+    // research/27 §7, research/36 §3.2: the (i) is a Tab stop, not an arrow stop.
     await page.keyboard.press('ArrowDown');
-    await expect(info).toHaveAttribute('data-blok-focused', 'true');
-    await page.keyboard.press('ArrowDown');
+    await expect(info).not.toHaveAttribute('data-blok-focused', 'true');
     await expect(area).not.toHaveAttribute('data-blok-focused', 'true');
     await expect(edit).toHaveAttribute('data-blok-focused', 'true');
 
@@ -574,8 +574,6 @@ test.describe('property header menu: Edit property opens one level at a time (re
     await expect(area).toBeFocused();
     await name.focus();
     await highlightName();
-    await page.keyboard.press('ArrowDown');
-    await expect(info).toHaveAttribute('data-blok-focused', 'true');
     await page.keyboard.press('ArrowDown');
     await expect(area).toHaveAttribute('data-blok-focused', 'true');
   });

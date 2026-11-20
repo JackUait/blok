@@ -67,6 +67,8 @@ vi.mock('../../../../src/components/utils/popover', () => ({
       this.record.hidden[name] = isHidden;
     }
 
+    setArrowTarget(): void {}
+
     focusItemByName(name: string): boolean {
       this.record.focused.push(name);
 

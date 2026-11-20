@@ -10109,6 +10109,12 @@ textarea[data-blok-database-cell-input] {
   }
 }
 
+/* notion-motion.md Round 83 §1: the typed date is the database ink, 44,44,43 and 240 in dark.
+   Two attributes outrank the shared field's `> input { color: inherit }`. */
+[data-blok-database-date-field] > [data-blok-database-date-input] {
+  color: var(--blok-database-ink);
+}
+
 /* Remind row and its menu (research/17 §1a–b): the menu is 250px, rows 28px, a check on the current one. */
 /* Date format, Time format and Time zone rows look the same (notion-measure12/17-date-edit). */
 [data-blok-database-date-remind],

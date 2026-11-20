@@ -197,6 +197,15 @@ for (const theme of THEMES) {
       expect((await remind.boundingBox())?.width).toBe(250);
     });
 
+    // notion-motion.md Round 83 §1: the typed date is 44,44,43, and 240 in dark.
+    test('date picker: the typed date reads in the database ink', async ({ page }) => {
+      await mount(page, blocks({ type: 'table' }));
+      await theme.apply(page);
+      const picker = await openPicker(page, 'r1');
+
+      await expect(picker.locator('[data-blok-database-date-input]').first()).toHaveCSS('color', theme.dark ? 'rgb(240, 239, 237)' : 'rgb(44, 44, 43)');
+    });
+
     test('a reminder date is the AA reminder blue (§4f)', async ({ page }) => {
       await mount(page, blocks({ type: 'table' }));
       await theme.apply(page);

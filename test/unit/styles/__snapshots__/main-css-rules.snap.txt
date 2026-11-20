@@ -13365,6 +13365,10 @@ textarea[data-blok-database-cell-input] {
   transition: none;
 }
 
+[data-blok-database-date-field] > [data-blok-database-date-input] {
+  color: var(--blok-database-ink);
+}
+
 [data-blok-database-date-remind], [data-blok-database-date-setting], [data-blok-database-date-remind-option], [data-blok-database-date-setting-option] {
   display: flex;
   align-items: center;

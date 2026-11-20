@@ -810,37 +810,73 @@ describe('DatabaseTabBar', () => {
       el.remove();
     });
 
-    // notion-motion.md Round 83 §6: Table slid once Board's left edge (580) passed Table's centre (582).
-    it('slides a neighbour aside once the dragged tab\'s leading edge passes its centre', () => {
-      const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' }), makeView({ id: 'v3', position: 'a2' })];
-      const { bar, el } = createBarWithLayout(views, 'v1');
-      const tab = (id: string): HTMLElement => el.querySelector(`[data-view-id="${id}"]`) as HTMLElement;
+    // notion-motion.md Round 91 §1 #7 (r91-n-tabdrag-*.raw): Table 85.4, Board 89.1, Timeline 105.8, gap 1.
+    describe('swaps by the pointer, wherever the tab was grabbed', () => {
+      const boxes = [{ left: 539, width: 85.4 }, { left: 625.4, width: 89.1 }, { left: 715.5, width: 105.8 }];
+      const notionBar = (): { bar: DatabaseTabBar; el: HTMLElement; tab: (id: string) => HTMLElement } => {
+        const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' }), makeView({ id: 'v3', position: 'a2' })];
+        const bar = createTabBar(views, 'v1');
+        const el = bar.render();
 
-      tab('v2').dispatchEvent(new PointerEvent('pointerdown', { clientX: 150, clientY: 15, bubbles: true }));
-      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 105, clientY: 15 }));
-      expect(tab('v1').style.transform).toBe('');
+        document.body.appendChild(el);
+        el.style.columnGap = '1px';
+        Array.from(el.querySelectorAll<HTMLElement>('[data-blok-database-tab]')).forEach((tabEl, index) => {
+          const { left, width } = boxes[index];
 
-      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 95, clientY: 15 }));
-      expect(tab('v1').style.transform).toBe('translateX(100px)');
+          Object.defineProperty(tabEl, 'getBoundingClientRect', {
+            value: () => ({ left, right: left + width, top: 0, bottom: 30, width, height: 30, x: left, y: 0, toJSON: () => ({}) }),
+            configurable: true,
+          });
+        });
 
-      document.dispatchEvent(new PointerEvent('pointerup', { clientX: 95, clientY: 15 }));
-      expect(onReorder).toHaveBeenCalledTimes(1);
-      expect(onReorder.mock.calls[0][1] < 'a0').toBe(true);
-      bar.destroy();
-      el.remove();
-    });
+        return { bar, el, tab: (id: string) => el.querySelector(`[data-view-id="${id}"]`) as HTMLElement };
+      };
+      const move = (x: number): void => {
+        document.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: 15 }));
+      };
 
-    it('slides a neighbour aside once the dragged tab\'s right edge passes its centre when dragged right', () => {
-      const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' }), makeView({ id: 'v3', position: 'a2' })];
-      const { bar, el } = createBarWithLayout(views, 'v1');
-      const tab = (id: string): HTMLElement => el.querySelector(`[data-view-id="${id}"]`) as HTMLElement;
+      it.each([0.2, 0.5, 0.8])('moving right, Board slides at pointer 627, not 626 (grab at %s)', (fx) => {
+        const { bar, el, tab } = notionBar();
 
-      tab('v1').dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
-      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 110, clientY: 15 }));
+        tab('v1').dispatchEvent(new PointerEvent('pointerdown', { clientX: 539 + 85.4 * fx, clientY: 15, bubbles: true }));
+        move(626);
+        expect(tab('v2').style.transform).toBe('');
+        move(627);
+        expect(tab('v2').style.transform).toBe('translateX(-86.4px)');
+        bar.destroy();
+        el.remove();
+      });
 
-      expect(tab('v2').style.transform).toBe('translateX(-100px)');
-      bar.destroy();
-      el.remove();
+      it.each([0.2, 0.8])('moving left, Board slides at pointer 719 and Table at 626 (grab at %s)', (fx) => {
+        const { bar, el, tab } = notionBar();
+
+        tab('v3').dispatchEvent(new PointerEvent('pointerdown', { clientX: 715.5 + 105.8 * fx, clientY: 15, bubbles: true }));
+        move(720);
+        expect(tab('v2').style.transform).toBe('');
+        move(719);
+        expect(tab('v2').style.transform).toBe('translateX(106.8px)');
+        move(627);
+        expect(tab('v1').style.transform).toBe('');
+        move(626);
+        expect(tab('v1').style.transform).toBe('translateX(106.8px)');
+        document.dispatchEvent(new PointerEvent('pointerup', { clientX: 626, clientY: 15 }));
+        expect(onReorder.mock.calls[0][1] < 'a0').toBe(true);
+        bar.destroy();
+        el.remove();
+      });
+
+      // Notion reads whole pixels: from a press at 556.1 the tab sat still at 562 and moved 7 at 563.
+      it('starts following the pointer 7 px from the press', () => {
+        const { bar, el, tab } = notionBar();
+
+        tab('v1').dispatchEvent(new PointerEvent('pointerdown', { clientX: 556, clientY: 15, bubbles: true }));
+        move(562);
+        expect(el.hasAttribute('data-dragging')).toBe(false);
+        move(563);
+        expect(tab('v1').style.transform).toBe('translateX(7px)');
+        bar.destroy();
+        el.remove();
+      });
     });
 
     // notion-motion.md Round 83 §6: Board stopped at the bar start (539) while the pointer went on.

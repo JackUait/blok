@@ -19,7 +19,8 @@ import { isHistoryKey } from './database-keyboard';
 import { propertyHint } from './property-hint';
 import { positionBetween } from '../../shared/database/positions';
 
-const DRAG_THRESHOLD = 10;
+// notion-motion.md Round 91 §1 #7: Notion reads whole pixels; the tab sat still 6 px from the press and moved at 7.
+const DRAG_THRESHOLD = 7;
 
 /**
  * Set when a tab is activated from the keyboard. Switching views makes the
@@ -140,10 +141,9 @@ export class DatabaseTabBar {
   private dragSlots: Array<{ tab: HTMLElement; center: number }> = [];
   /** The dragged tab's own slot among them, and how far a passed tab slides: its width and the bar's gap. */
   private dragHome = 0;
+  private dragBounds: number[] = [];
   private dragStep = 0;
   /** The dragged tab's box at pickup, and the left of the first shown tab: the tab stops there. */
-  private dragLeft = 0;
-  private dragWidth = 0;
   private dragMinDx = 0;
   private dragMaxDx = 0;
   private readonly boundDragMove: (e: PointerEvent) => void;
@@ -962,11 +962,9 @@ export class DatabaseTabBar {
     return this.element?.querySelector<HTMLElement>(`[data-view-id="${this.dragViewId}"]`) ?? null;
   }
 
-  /** Where a drop at `x` lands among the shown tabs other than the dragged one. */
+  /** Where a drop at pointer `x` lands among the shown tabs other than the dragged one. */
   private dropSlot(x: number): number {
-    const index = this.dragSlots.findIndex((slot) => x < slot.center);
-
-    return index === -1 ? this.dragSlots.length : index;
+    return this.dragBounds.filter((bound) => x >= bound).length;
   }
 
   /**
@@ -993,19 +991,31 @@ export class DatabaseTabBar {
       const sourceCenter = source === undefined ? 0 : (source.left + source.right) / 2;
 
       this.dragHome = this.dragSlots.filter((slot) => slot.center < sourceCenter).length;
-      this.dragStep = (source?.width ?? 0) + this.tabGap();
-      this.dragLeft = source?.left ?? 0;
-      this.dragWidth = source?.width ?? 0;
+      const gap = this.tabGap();
+
+      this.dragStep = (source?.width ?? 0) + gap;
+      // notion-motion.md Round 91 §1 #7: the pointer alone picks the place, not the
+      // grab point. Each boundary sits halfway between two shown tabs' centres,
+      // each tab counted with the gap on its right. Fitted to R91's three swap
+      // points (627 right; 719, 626 left) and R83/R84b/R85c; a hypothesis past those.
+      const centres = [...this.dragSlots.map((slot) => slot.tab), ...(sourceTab === null ? [] : [sourceTab])]
+        .map((tab) => tab.getBoundingClientRect())
+        .map((rect) => (rect.left + rect.right + gap) / 2)
+        .sort((a, b) => a - b);
+
+      this.dragBounds = centres.slice(1).map((centre, index) => (centres[index] + centre) / 2);
+      const sourceLeft = source?.left ?? 0;
+      const sourceWidth = source?.width ?? 0;
       const rects = this.dragSlots.map((slot) => slot.tab.getBoundingClientRect());
 
-      this.dragMinDx = Math.min(0, ...rects.map((rect) => rect.left - this.dragLeft));
-      this.dragMaxDx = Math.max(0, ...rects.map((rect) => rect.right - this.dragLeft - this.dragWidth));
+      this.dragMinDx = Math.min(0, ...rects.map((rect) => rect.left - sourceLeft));
+      this.dragMaxDx = Math.max(0, ...rects.map((rect) => rect.right - sourceLeft - sourceWidth));
     }
     if (sourceTab === null) return;
     sourceTab.style.transform = `translateX(${this.dragDx(e)}px)`;
 
     const { dragHome: home, dragStep: step } = this;
-    const drop = this.dropSlot(this.leadingEdge(e));
+    const drop = this.dropSlot(e.clientX);
 
     this.dragSlots.forEach(({ tab }, index) => {
       const right = index < home && index >= drop;
@@ -1021,18 +1031,6 @@ export class DatabaseTabBar {
    */
   private dragDx(e: PointerEvent): number {
     return Math.min(this.dragMaxDx, Math.max(this.dragMinDx, e.clientX - this.dragStartX));
-  }
-
-  /**
-   * notion-motion.md Round 83 §6: a neighbour slides once the dragged tab's
-   * leading edge passes its centre, not the pointer. Moving right leads with
-   * the right edge (Notion was read moving left only).
-   */
-  private leadingEdge(e: PointerEvent): number {
-    const dx = this.dragDx(e);
-    const left = this.dragLeft + dx;
-
-    return dx > 0 ? left + this.dragWidth : left;
   }
 
   private tabGap(): number {
@@ -1054,7 +1052,7 @@ export class DatabaseTabBar {
     // a drop lands right after the shown tab on its left, even past the row,
     // so it stays shown (notion-motion.md Round 85c §2).
     const shown = this.dragSlots.map((slot) => slot.tab);
-    const afterTab = shown[this.dropSlot(this.leadingEdge(e)) - 1];
+    const afterTab = shown[this.dropSlot(e.clientX) - 1];
     const beforeTab = tabs[afterTab === undefined ? 0 : tabs.indexOf(afterTab) + 1];
     const afterViewId = afterTab?.getAttribute('data-view-id') ?? null;
     const beforeViewId = beforeTab?.getAttribute('data-view-id') ?? null;
@@ -1074,6 +1072,7 @@ export class DatabaseTabBar {
     if (sourceTab !== null) sourceTab.style.transform = '';
     this.dragSlots.forEach(({ tab }) => Object.assign(tab.style, { transform: '' }));
     this.dragSlots = [];
+    this.dragBounds = [];
     this.isDragging = false;
     this.removeDragListeners();
   }

@@ -1478,10 +1478,10 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       const { el } = mount(threeViews(), 'v1');
 
       dragFrom(el, 'v1', 50);
-      document.dispatchEvent(pointer('pointermove', 60));
+      document.dispatchEvent(pointer('pointermove', 57));
 
       expect(el.getAttribute('data-dragging')).toBe('');
-      expect(tabOf(el, 'v1').style.transform).toBe('translateX(10px)');
+      expect(tabOf(el, 'v1').style.transform).toBe('translateX(7px)');
       expect(ghost()).toBeNull();
     });
 
@@ -1489,7 +1489,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       const { el } = mount(threeViews(), 'v1');
 
       dragFrom(el, 'v1', 50);
-      document.dispatchEvent(pointer('pointermove', 59));
+      document.dispatchEvent(pointer('pointermove', 56));
 
       expect(ghost()).toBeNull();
       expect(el.hasAttribute('data-dragging')).toBe(false);
@@ -1555,7 +1555,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(el.hasAttribute('data-dragging')).toBe(false);
     });
 
-    it('drops before the tab whose centre the dragged tab\'s right edge has not reached', () => {
+    it('drops before the next tab while the pointer is short of the halfway point to its centre', () => {
       const { el } = mount(threeViews(), 'v1');
 
       dragFrom(el, 'v1', 50);
@@ -1585,7 +1585,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(onReorder).toHaveBeenCalledWith('v1', positionBetween(null, 'a2'));
     });
 
-    it('drops between the two tabs the dragged tab\'s right edge sits between', () => {
+    it('drops between the two tabs the pointer sits between', () => {
       const { el } = mount(threeViews(), 'v1');
 
       dragFrom(el, 'v1', 50);

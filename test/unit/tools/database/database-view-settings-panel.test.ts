@@ -8,7 +8,7 @@ import { COLOR_RULE_TYPES } from '../../../../src/tools/database/view-data';
 import { IconPin, IconPinFilled, IconTable, IconViewBoard } from '../../../../src/components/icons';
 import { PopoverItemType } from '../../../../src/components/utils/popover/components/popover-item';
 import type { PopoverItemParams } from '../../../../types/utils/popover/popover-item';
-import { NUMBER_LIST_ROLLUP, PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
+import { NUMBER_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
 
 const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
@@ -1505,7 +1505,7 @@ describe('view settings panel', () => {
       click('database-filter-more');
       q('database-filter-to-advanced')?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
 
-      expect(document.activeElement).toBe(document.body);
+      expect(document.body).toHaveFocus();
       expect(q('database-advanced-filter')).not.toBeNull();
       expect(settings()).not.toBeNull();
     });

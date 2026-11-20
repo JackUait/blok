@@ -1601,7 +1601,7 @@ describe('DatabaseViewControls', () => {
       open();
       q('database-filter-to-advanced')?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
 
-      expect(document.activeElement).toBe(document.body);
+      expect(document.body).toHaveFocus();
       expect(q('database-advanced-filter')).not.toBeNull();
       document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       expect(q('database-advanced-filter')).toBeNull();

@@ -292,6 +292,7 @@ export class DatabaseViewControls {
     this.automationsButton = iconButton('database-toolbar-automations', this.t('automationTitle'), IconBolt);
     this.autofillButton = iconButton('database-toolbar-autofill', this.t('aiAutofill'), IconWand);
     this.searchButton = iconButton('database-toolbar-search', this.t('searchLabel'), IconSearch);
+    this.searchButton.setAttribute('data-blok-database-toolbar-search', '');
     this.settingsButton = iconButton('database-toolbar-settings', this.t('settingsTitle'), IconSliders);
     this.settingsButton.setAttribute('data-blok-database-toolbar-settings', '');
     this.fullPageLink = this.createFullPageLink();

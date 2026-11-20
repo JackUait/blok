@@ -15512,6 +15512,11 @@ button[data-blok-database-table-group-count]:hover {
   height: 20px;
 }
 
+[data-blok-database-view-toolbar] [data-blok-database-toolbar-search] svg, [data-blok-database-view-toolbar] [data-blok-database-toolbar-settings] svg {
+  width: 18px;
+  height: 18px;
+}
+
 [@media (hover: hover)] [data-blok-database-page]:not(:hover) > :is([data-blok-database-view-bar], [data-blok-database-title-row]) > [data-blok-database-view-toolbar]:not(:has(:focus-visible)) > [data-blok-database-toolbar-foldable]:not([data-popover-open]) {
   opacity: 0;
 }

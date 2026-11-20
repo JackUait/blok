@@ -132,6 +132,12 @@ describe('DatabaseViewControls', () => {
     expect(q('database-toolbar-sort')?.getAttribute('aria-label')).toBe('tools.database.settingsSort');
   });
 
+  it('marks the Search button so the stylesheet can size its glyph', () => {
+    setup();
+
+    expect(q('database-toolbar-search')?.hasAttribute('data-blok-database-toolbar-search')).toBe(true);
+  });
+
   // The fold probes write on it on every resize; they are not edits.
   it('draws the toolbar as mutation-free, so its own writes are not block changes', () => {
     const { controls } = setup();

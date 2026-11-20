@@ -85,6 +85,14 @@ describe('toolbar Filter and Sort (research/07:53)', () => {
     expect(body).toContain('padding: var(--blok-space-1)');
     expect(ruleBody('[data-blok-database-view-toolbar] [data-blok-database-toolbar-icon] svg')).toMatch(/width: 20px;\s*height: 20px/);
   });
+
+  // notion-motion.md R59 §8: Notion's Search ink is 12.5x12.5 and Settings 13x11. At 20px Blok's are 15x15
+  // and 14x15; at 18px they measure 13x13 and 13x14 (Settings' sliders stay taller than wide).
+  it('draw Search and Settings at 18px so their ink matches Notion\'s', () => {
+    for (const button of ['[data-blok-database-toolbar-search]', '[data-blok-database-toolbar-settings]']) {
+      expect(ruleBody(`[data-blok-database-view-toolbar] ${button} svg`)).toMatch(/width: 18px;\s*height: 18px/);
+    }
+  });
 });
 
 describe('board card (research/07:132-135, 08:73, 317)', () => {

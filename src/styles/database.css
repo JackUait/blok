@@ -12650,7 +12650,7 @@ button[data-blok-database-table-group-count]:hover {
 }
 
 /* Filter, Sort, Search and settings: 28px icon buttons in Notion icon gray (research/07:53).
-   The icons draw at their own 20px: Notion's glyphs are 12-13px wide (side-by-side-v1.md X3). */
+   Most icons draw at their own 20px: Notion's glyphs are 12-13px wide (side-by-side-v1.md X3). */
 [data-blok-database-view-toolbar] [data-blok-database-toolbar-icon] {
   width: 28px;
   height: 28px;
@@ -12661,6 +12661,13 @@ button[data-blok-database-table-group-count]:hover {
 [data-blok-database-view-toolbar] [data-blok-database-toolbar-icon] svg {
   width: 20px;
   height: 20px;
+}
+
+/* notion-motion.md R59 §8: Notion's Search ink is 12.5x12.5, Settings 13x11. At 18px Blok's measure 13x13 and 13x14. */
+[data-blok-database-view-toolbar] [data-blok-database-toolbar-search] svg,
+[data-blok-database-view-toolbar] [data-blok-database-toolbar-settings] svg {
+  width: 18px;
+  height: 18px;
 }
 
 /* replica-db-pages/research-live-notion.md:31: a full-page database shows only Settings and New until the

@@ -124,6 +124,15 @@ describe('DatabaseCalendarView', () => {
       expect(label('2026-10-02')).toBe('2');
     });
 
+    // database.css draws today's circle a fixed 24 on a day number; a month-start label keeps its padded pill.
+    it('marks a month-start label, and no plain day number', () => {
+      const { root } = mount();
+      const number = (iso: string): Element | null => day(root, iso).querySelector('[data-blok-database-calendar-day-number]');
+
+      expect(number('2026-10-01')?.hasAttribute('data-month-start')).toBe(true);
+      expect(number('2026-10-12')?.hasAttribute('data-month-start')).toBe(false);
+    });
+
     it('starts the week on the configured day', () => {
       const { root } = mount({ weekStart: 1 });
 

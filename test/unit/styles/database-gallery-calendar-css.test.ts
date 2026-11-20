@@ -150,6 +150,15 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number]')).toContain('var(--blok-database-today)');
   });
 
+  // notion-motion.md Round 87 §1 #10 (r87-n-week-light.raw): today's circle is 24 with no padding, so a two-digit day stays 24 wide.
+  // The min 24 lets a wider label ("20日") grow. Today on a 1st (a "Nov 1" label) is unmeasured and keeps its padded pill.
+  it('draws today\'s circle at least 24, with no padding on a day number', () => {
+    const today = '[data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number]';
+
+    expect(ruleBody(today)).toMatch(/min-inline-size:\s*24px/);
+    expect(ruleBody(`${today}:not([data-month-start])`)).toMatch(/padding-inline:\s*0/);
+  });
+
   // notion-motion.md Round 25 §5: wrapped, every card is 40 tall (46 slot) and its title is two 17px lines at most.
   it('makes every card 40px with a two-line title when page titles wrap', () => {
     const calendar = ruleBody('[data-blok-database-calendar][data-wrap-titles]');

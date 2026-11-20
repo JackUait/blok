@@ -16438,6 +16438,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-calendar-day-today-text);
 }
 
+/* notion-motion.md Round 87 §1 #10: no padding on a day number, so two digits stay 24 wide. A wider label ("20日") still grows.
+   Today on a 1st is unmeasured and keeps the padded pill above. */
+[data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number]:not([data-month-start]) {
+  padding-inline: 0;
+}
+
 /* notion-motion.md Round 24 §4 Calendar: a white 24px chip, radius 8, 6px from the corner, fading in.
    ::before is the 20px radius-6 button inside it, so a hover tints only that. */
 [data-blok-database-calendar-add] {

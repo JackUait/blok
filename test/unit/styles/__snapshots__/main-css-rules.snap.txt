@@ -19000,6 +19000,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-calendar-day-today-text);
 }
 
+[data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number]:not([data-month-start]) {
+  padding-inline: 0;
+}
+
 [data-blok-database-calendar-add] {
   position: absolute;
   inset-block-start: 6px;

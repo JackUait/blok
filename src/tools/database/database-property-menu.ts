@@ -433,7 +433,10 @@ export class DatabasePropertyMenu {
       // The old field goes away without a blur: save its name first, as leaving it would.
       input?.dispatchEvent(new Event('change'));
       redraw(patch, input?.value);
-      if (row !== null) this.popover?.focusItemByName(row);
+      if (row === null) return;
+      this.popover?.focusItemByName(row);
+      // The redraw dropped DOM focus to <body>; Notion keeps it in the flyout, so arrows go on from the row.
+      this.popover?.getElement().querySelector(`[data-blok-item-name="${row}"]`)?.closest<HTMLElement>('[data-blok-popover-items]')?.focus({ preventScroll: true });
     };
   }
 

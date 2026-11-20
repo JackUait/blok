@@ -279,6 +279,30 @@ test('Escape on Number format puts focus back on its row', async ({ page }) => {
   await expect(page.locator('[data-blok-item-name="decimals"]')).toHaveAttribute('data-blok-focused', 'true');
 });
 
+// notion-motion.md Round 84b §1 (r84-n-num-flyout.raw): after a pick the 300 wide flyout keeps focus;
+// its row reads "Australian dollar", without the list's "(AUD)".
+test('picking a currency keeps the Edit property flyout 300 wide and focused on Number format', async ({ page }) => {
+  await openPanel(page);
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await page.getByRole('columnheader', { name: 'Amount' }).getByRole('button', { name: 'Amount' }).click();
+  await page.getByRole('menuitem', { name: 'Edit property' }).hover();
+  const row = page.getByTestId('popover').locator('[data-blok-item-name="numberFormat"]');
+
+  await row.click();
+  await listBox(page, 'format-number');
+  await page.locator('[data-blok-item-name="format-australian_dollar"]').click();
+
+  await expect(page.locator('[data-blok-item-name^="format-"]')).toHaveCount(0);
+  await expect(row).toContainText('Australian dollar');
+  await expect(row).not.toContainText('(AUD)');
+  await expect(page.locator('[data-blok-popover-items]:has([data-blok-item-name="numberFormat"])')).toBeFocused();
+  await expect(row).toHaveAttribute('data-blok-focused', 'true');
+  expect((await listBox(page, 'numberFormat')).width).toBe(300);
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('[data-blok-item-name="decimals"]')).toHaveAttribute('data-blok-focused', 'true');
+});
+
 // §17.8: Notion's box is 156 wide; other hints keep the 300 max-width.
 test('the Show unique values hint is 156 wide', async ({ page }) => {
   await openPanel(page);

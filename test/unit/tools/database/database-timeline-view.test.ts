@@ -1833,6 +1833,18 @@ describe('DatabaseTimelineView', () => {
       expect(handlers.writeDates).not.toHaveBeenCalled();
     });
 
+    it('leaves a moved bar unchanged when it comes back to its press point', () => {
+      const { root, handlers } = mount({ groups: single([row('r1', 'Alpha', '2026-10-15')]) });
+
+      layOut(root);
+      pointer('pointerdown', bar(root, 'r1'), xOf('2026-10-15'), 50);
+      pointer('pointermove', document, xOf('2026-10-16'), 50);
+      pointer('pointermove', document, xOf('2026-10-15'), 50);
+      pointer('pointerup', document, xOf('2026-10-15'), 50);
+
+      expect(handlers.writeDates).not.toHaveBeenCalled();
+    });
+
     it('does not open the bar after a drag, and still opens on the next click', async () => {
       const { root, handlers } = mount();
 
@@ -2097,8 +2109,32 @@ describe('DatabaseTimelineView', () => {
       expect(range(root)?.textContent).toBe('Jan 12');
     });
 
+    // notion-motion.md Round 91 §1 #2: at Quarter the pill stays compact up to 8 days, span + 8 wide at least (104), and splits from 9 days (116).
+    it('keeps the Quarter pill compact through 8 days of a resize and splits it at 9', () => {
+      const start = timelineWindow(CENTER, 'quarter').start;
+      const qx = (day: string): number => daysBetween(start, day) * TIMELINE_DAY_WIDTH.quarter + 6;
+      const { root } = mount({ view: timelineView({ timelineZoom: 'quarter' }), groups: single([row('r1', 'Alpha', '2026-10-15')]) });
+      const handle = bar(root, 'r1').querySelector('[data-blok-database-timeline-resize="end"]');
+
+      rect(canvas(root), 0, 0, timelineWindow(CENTER, 'quarter').days * TIMELINE_DAY_WIDTH.quarter, 400);
+      if (handle === null) throw new Error('no handle');
+      pointer('pointerdown', handle, qx('2026-10-16'), 50);
+      pointer('pointermove', document, qx('2026-10-21'), 50);
+      expect(range(root)?.textContent).toBe('Oct 15 – 20');
+      expect(range(root)?.style.minWidth).toBe(`${6 * TIMELINE_DAY_WIDTH.quarter + 8}px`);
+
+      pointer('pointermove', document, qx('2026-10-23'), 50);
+      expect(range(root)?.hasAttribute('data-split')).toBe(false);
+      expect(range(root)?.textContent).toBe('Oct 15 – 22');
+      expect(range(root)?.style.minWidth).toBe('104px');
+
+      pointer('pointermove', document, qx('2026-10-24'), 50);
+      expect(range(root)?.hasAttribute('data-split')).toBe(true);
+      expect([...(range(root)?.children ?? [])].map((el) => el.textContent)).toEqual(['Oct 15', 'Oct 23']);
+      expect(range(root)?.style.width).toBe('116px');
+    });
+
     // notion-motion.md Round 90 §1 #6: a 14-day bar at Quarter has a 176 pill (span + 8), "Nov 14" at the left, "Nov 27" at the right.
-    // The width where Notion goes from compact to split is unread: Blok splits once the compact pill fits in span + 8.
     it('splits a wide bar\'s Quarter pill into its first and last day, span + 8 wide', () => {
       const { root } = mount({
         view: timelineView({ timelineZoom: 'quarter' }),

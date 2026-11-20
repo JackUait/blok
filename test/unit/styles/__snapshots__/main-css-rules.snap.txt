@@ -20134,6 +20134,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-timeline] [data-blok-database-timeline-header] [data-blok-database-timeline-range][data-label] {
+  box-sizing: border-box;
   margin-inline-start: calc(-1 * var(--blok-space-1));
   padding-inline: var(--blok-space-1-5);
   font-size: 12px;

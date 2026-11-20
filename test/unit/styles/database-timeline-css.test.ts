@@ -321,6 +321,13 @@ describe('database timeline styles', () => {
     expect(pill).toMatch(/justify-content:\s*space-between/);
   });
 
+  // notion-motion.md Round 91 §1 #2: a compact pill is at least span + 8 wide; the view's min-width counts the pads.
+  it('counts the pads in a named date pill\'s width', () => {
+    const pill = ruleBody('[data-blok-database-timeline] [data-blok-database-timeline-header] [data-blok-database-timeline-range][data-label]');
+
+    expect(pill).toMatch(/box-sizing:\s*border-box/);
+  });
+
   it('hides an off-screen arrow that the view marks hidden', () => {
     expect(ruleBody('[data-blok-database-timeline-offscreen][hidden]')).toMatch(/display:\s*none/);
   });

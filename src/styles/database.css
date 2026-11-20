@@ -17758,6 +17758,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 /* notion-motion.md Round 88 §1 #5: at Quarter the pill names the day, its left 6 before the bar.
    The bar sits 2 into its day, so 4 before the day. Same specificity as the rule above, so it must stay after it. */
 [data-blok-database-timeline] [data-blok-database-timeline-header] [data-blok-database-timeline-range][data-label] {
+  /* The view's min-width (span + 8, Round 91 §1 #2) includes the pads. */
+  box-sizing: border-box;
   margin-inline-start: calc(-1 * var(--blok-space-1));
   padding-inline: var(--blok-space-1-5);
   font-size: 12px;

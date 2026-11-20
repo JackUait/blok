@@ -145,6 +145,11 @@ const pillText = (span: EventSpan, locale: string): string => {
 };
 /** notion-motion.md Round 90 §1 #4, #6: a split pill is 4 wider than the span at each end (176 over a 14-day, 168 Quarter span). */
 const SPLIT_PILL_OVERHANG = 4;
+/**
+ * notion-motion.md Round 91 §1 #2: a pill splits only over a span this wide. Notion kept a 96.3 span compact and split a 108.4 one;
+ * the exact switch between them is unread, so this is the middle.
+ */
+const SPLIT_PILL_MIN_SPAN = 102;
 const DAY_MINUTES = 24 * 60;
 /** notion-motion.md Round 71 §3: a day-zoom bar starts 2px into its first day and stops 1px short of its last (851.4 in a day from 849.4, 37 wide). */
 const BAR_START = 2;
@@ -1772,7 +1777,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   /**
    * findings C15: a pill over the dragged range's day numbers; its first and last day in ink.
    * notion-motion.md Round 88 §1 #5, Round 89 §1 #1-#2: at Quarter, Year and 5 Years a bar's pill names its days instead.
-   * Round 90 §1 #4, #6: when that text fits in the span + 8, the pill spans it with the first day at the left and the last at the right.
+   * Round 90 §1 #4, #6, Round 91 §1 #2: over a wide span the pill is span + 8 with the first day at the left and the last at the right.
+   * A compact pill is at least span + 8 wide.
    */
   private showRange(span: EventSpan, { offset, width }: { offset: number; width: number }, hover = false, named = false): void {
     const header = this.root?.querySelector('[data-blok-database-timeline-header]');
@@ -1791,13 +1797,14 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     pill.textContent = label ? pillText(span, resolveLocale(this.options.locale)) : '';
     pill.style.insetInlineStart = `${offset}px`;
     pill.style.width = label ? '' : `${width}px`;
+    pill.style.minWidth = '';
     if (!pill.isConnected) {
       header.prepend(pill);
     }
     const splitWidth = width + 2 * SPLIT_PILL_OVERHANG;
 
-    // The width Notion switches at is unread: Round 90 saw 78.8 of text stay compact over a 78 span + 8, and split over 176.
-    if (label && span.end !== span.start && pill.getBoundingClientRect().width <= splitWidth) {
+    // The compact width is read before min-width is set; a split needs the compact text to fit, so its two days cannot meet.
+    if (label && span.end !== span.start && width >= SPLIT_PILL_MIN_SPAN && pill.getBoundingClientRect().width <= splitWidth) {
       const format = pillFormat(resolveLocale(this.options.locale));
       const ends = [span.start, span.end].map((day) => {
         const end = document.createElement('span');
@@ -1810,6 +1817,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       pill.setAttribute('data-split', '');
       pill.replaceChildren(...ends);
       pill.style.width = `${splitWidth}px`;
+    } else if (label) {
+      pill.style.minWidth = `${splitWidth}px`;
     }
     header.querySelectorAll('[data-blok-database-timeline-units] > [data-day]').forEach((label) => {
       const day = label.getAttribute('data-day');

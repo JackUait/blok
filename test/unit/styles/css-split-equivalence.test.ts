@@ -1939,8 +1939,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R217_BYTES = 408;
     // Lane r212: Round 84b §1 a long value in the fixed 300 Edit property flyout is cut with an ellipsis. Net database.css growth against origin/main.
     const DATABASE_R212_BYTES = 712;
-    // Lane r220: Round 86 §1 the row menu's submenu fades out with no scale. Net database.css growth against origin/main.
-    const DATABASE_R220_BYTES = 242;
+    // Lane r220: Round 86 §1 the row menu's submenu fades out with no scale, Date format fades and scales in. Net database.css growth against origin/main.
+    const DATABASE_R220_BYTES = 833;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

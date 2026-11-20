@@ -401,3 +401,20 @@ describe('side peek properties: the label cell', () => {
     expect(body(outsideReducedMotion, HEAD)).toContain('transition: background-color 20ms ease-in');
   });
 });
+
+// notion-motion.md Round 86 §1 #6 (r86-n-datefmt-open-mo.raw): the date editor's Date format menu fades in and scales from .96, 200ms ease.
+// Time format, Remind and Time zone open motion is unmeasured.
+describe('date editor Date format menu', () => {
+  const MENU_AT = '[data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover]';
+  const startStyle = [ ...database.matchAll(/@starting-style \{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g) ].map((match) => match[1]).join(' ');
+
+  it('opens over 200ms ease from no ink and scale .96', () => {
+    expect(lastBody(outsideReducedMotion, MENU_AT)).toContain('transition: opacity 200ms ease, transform 200ms ease');
+    expect(body(startStyle, MENU_AT)).toContain('opacity: 0');
+    expect(body(startStyle, MENU_AT)).toContain('transform: scale(0.96)');
+  });
+
+  it('does not move under reduced motion', () => {
+    expect(body(reducedMotion, MENU_AT)).toContain('transition: none');
+  });
+});

@@ -193,6 +193,7 @@ import type { DatabasePanel } from './database-panel';
 import { registerGroupToggle } from './database-group-toggle';
 import { GROUPABLE_TYPES, defaultGroupSort, groupValueForKey } from './group-keys';
 import { resolveRowColors, withGroupFlags } from './view-data';
+import { checkboxGroupName } from './database-group-checkbox';
 import { groupLabel } from './database-group-labels';
 import { buildChartData, foldChartData } from './chart-data';
 import type { ChartGroupInput, ChartPoint, ChartSeriesInput } from './chart-data';
@@ -583,21 +584,6 @@ const rowLink: { closed: string | null } = { closed: null };
 
 /** The `#view-<id>` link a database already applied in this page load. */
 const viewLink: { applied: string | null } = { applied: null };
-
-/** notion-motion.md Round 84b §3 (r84-n-grp-checkbox.raw): a 14x14 box before the group name, as Group shows it. */
-const checkboxGroupName = (checked: boolean, label: string): HTMLElement => {
-  const name = document.createElement('span');
-  const box = document.createElement('span');
-
-  name.setAttribute('data-blok-database-group-checkbox', '');
-  box.setAttribute('data-blok-database-checkbox', '');
-  box.setAttribute('data-state', checked ? 'checked' : 'unchecked');
-  box.setAttribute('aria-hidden', 'true');
-  if (checked) box.innerHTML = IconCheck;
-  name.append(box, label);
-
-  return name;
-};
 
 /**
  * The view a "Copy link to view" fragment (`#view-<id>`) names, if `owns` it.
@@ -7700,6 +7686,13 @@ export class DatabaseTool implements BlockTool {
     }
   }
 
+  /** The group property's name when its groups are checkbox states (a formula's result counts), for the box-and-name label. */
+  private checkboxGroupProperty(groupBy: string | undefined): string | undefined {
+    const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === groupBy);
+
+    return property !== undefined && this.computedValues.valueProperty(property).type === 'checkbox' ? property.name : undefined;
+  }
+
   private groupEntries(sub: boolean): ViewGroupEntry[] {
     const saved = this.shownView();
 
@@ -7714,13 +7707,14 @@ export class DatabaseTool implements BlockTool {
 
     const property = data.model.getProperty(groupBy);
     const pills = property !== undefined && OPTION_GROUP_TYPES.includes(property.type);
+    const checkboxName = this.checkboxGroupProperty(groupBy);
 
     return data.groupOptions(groupBy, grouped, this.controls.search).map((option) => ({
       key: option.id,
       label: option.label,
       count: counts.get(option.id) ?? 0,
       ...(pills ? { pill: () => createGroupPill(option, property) } : {}),
-      ...(property?.type === 'checkbox' ? { pill: () => checkboxGroupName(option.id === 'true', option.label) } : {}),
+      ...(checkboxName !== undefined && option.id !== NO_VALUE_GROUP_KEY ? { pill: () => checkboxGroupName(option.id === 'true', checkboxName, option.label) } : {}),
     }));
   }
 
@@ -7852,11 +7846,14 @@ export class DatabaseTool implements BlockTool {
       return groupCalculationText(calculation, rows.filter(inShownLane), localSchema, editorLocale(this.api.i18n), shownOf);
     };
 
+    const checkboxGroup = this.checkboxGroupProperty(groupByPropId);
+
     this.view = new DatabaseBoardView({
       readOnly: this.readOnly,
       structureLocked: this.structureLocked(),
       i18n: this.api.i18n,
       options,
+      ...(checkboxGroup !== undefined ? { checkboxGroup } : {}),
       getRows: (optionId, subKey) => {
         const rows = groups.get(optionId) ?? [];
 
@@ -10108,10 +10105,13 @@ export class DatabaseTool implements BlockTool {
         const options = this.shownGroupOptions(groupByPropId, viewConfig, (context?.controls ?? this.controls).search);
         const groups = new Map(options.map((option) => [option.id, query(option.id, option.id)]));
 
+        const checkboxGroup = this.checkboxGroupProperty(groupByPropId);
+
         return new DatabaseListView({
           ...common,
           rows: [],
           options,
+          ...(checkboxGroup !== undefined ? { checkboxGroup } : {}),
           getRows: (optionId) => nest(groups.get(optionId)?.rows ?? []),
           getTotal: (optionId) => groups.get(optionId)?.total ?? 0,
           collapsedGroupIds: new Set((viewConfig.collapsedGroups ?? []).map((group) => group.id)),

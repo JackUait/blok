@@ -15009,6 +15009,18 @@ button[data-blok-database-table-group-count]:hover {
   height: 14px;
 }
 
+/* Round 85c §2 (r85c-n-board-flag-cols.raw): no pill; the box is the header's first 8px in, the count 3px after the name. */
+[data-blok-database-column-pill]:has(> [data-blok-database-group-checkbox]) {
+  background-color: transparent;
+  padding: 0;
+  margin: 0;
+}
+
+/* Round 85c §2 (r85c-n-list-flag-hdr.raw): the box starts 3px before a list group's other labels. */
+[data-blok-database-list-group-label] > [data-blok-database-group-checkbox] {
+  margin-inline-start: calc(-1 * var(--blok-space-0-75));
+}
+
 /* notion-motion.md Round 20 §4 (r20-cc-list-style.raw): 258-wide filled cards, radius 10, 12px apart.
    The card's inner padding is unmeasured. Round 74 §4: the first card's head is 49 under Back. */
 [data-blok-database-color-rules] {

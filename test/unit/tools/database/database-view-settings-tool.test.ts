@@ -317,7 +317,31 @@ describe('DatabaseTool — view settings', () => {
       row.querySelector('[data-blok-database-panel-label]')?.textContent?.trim(),
     ]);
 
-    expect(groups).toEqual([['checked', 'tools.database.filterChecked'], ['unchecked', 'tools.database.filterUnchecked']]);
+    // notion-motion.md Round 85c §2 (r85c-n-grp-flag-panel.raw): both groups read the property name.
+    expect(groups).toEqual([['checked', 'Done'], ['unchecked', 'Done']]);
+    // The box still tells a screen reader which group it is.
+    expect([...document.querySelectorAll('[data-blok-database-group-visibility-row] [data-blok-database-checkbox]')].map((box) => box.getAttribute('aria-label')))
+      .toEqual(['tools.database.filterChecked', 'tools.database.filterUnchecked']);
+  });
+
+  // notion-motion.md Round 85c §2 (r85c-n-board-flag-cols.raw, r85c-n-list-flag-hdr.raw): a 14x14 box, then the property name.
+  it.each([
+    ['board', '[data-blok-database-column-header]'],
+    ['list', '[data-blok-database-list-group-header]'],
+  ] as const)('heads each checkbox group of a %s with a checkbox and the property name', (type, header) => {
+    const done: PropertyDefinition = { id: 'p-done', name: 'Done', type: 'checkbox', position: 'a3' };
+
+    const { root } = mount({ type, groupBy: 'p-done' }, {}, { schema: [...schema, done] }, [rowBlock('r1', 'a0', { 'p-done': false }), rowBlock('r2', 'a1', { 'p-done': true })]);
+    const heads = [...root.querySelectorAll(header)].map((el) => {
+      const box = el.querySelector('[data-blok-database-group-checkbox] > [data-blok-database-checkbox]');
+
+      return [box?.getAttribute('data-state'), box?.getAttribute('aria-label'), box?.parentElement?.textContent?.trim()];
+    });
+
+    expect(heads).toEqual([
+      ['checked', 'tools.database.filterChecked', 'Done'],
+      ['unchecked', 'tools.database.filterUnchecked', 'Done'],
+    ]);
   });
 
   // research/23 §2e: a select starts with Hide empty groups off.

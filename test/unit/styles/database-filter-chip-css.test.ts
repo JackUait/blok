@@ -313,3 +313,41 @@ describe('option tokens on a rule value button', () => {
     expect(declared('[data-blok-database-filter-rule-button] [data-blok-database-option-pill]', 'margin-inline-end')).toEqual(['var(--blok-space-1-5)']);
   });
 });
+
+// notion-motion.md Round 52 §4 (r52-n-sort-chip-hover.raw, r52-n-sort-close.raw): an active chip's fill goes
+// 0.094 → 0.141 on hover and while its popover is open, background-color 20ms ease-in. Blok's chip stays gray (D3),
+// so the same 1.5× step is applied to the gray tint.
+describe('active chip hover and open fill', () => {
+  const states = '[data-blok-database-filter-pill][data-active]:is(:hover, [data-popover-open])';
+
+  it('steps the gray fill up on hover and while open', () => {
+    expect(declared(states, 'background-color')).toEqual(['var(--blok-database-chip-active-hover-bg)']);
+    expect(database).toMatch(/--blok-database-chip-active-hover-bg: rgba\(55, 53, 47, 0\.15\);/);
+    expect(database).toMatch(/--blok-database-chip-active-hover-bg: rgba\(255, 255, 255, 0\.135\);/);
+  });
+
+  it('eases the fill in over 20ms', () => {
+    expect(declared('[data-blok-database-filter-pill]', 'transition')).toEqual(['background-color 20ms ease-in']);
+  });
+});
+
+// notion-motion.md Round 52 §4: "+ Filter" sits at x 545 alone (chips start at 539) and 31 after a sort chip
+// (Blok 25: the divider's 12 plus the bar gap). After a filter chip it is the bar gap only (Round 26/38 modal reads).
+describe('"+ Filter" offset', () => {
+  it('moves 6px in when it is first or follows the sort divider', () => {
+    expect(declared(':is([data-blok-database-filter-add]:first-child, [data-blok-database-chip-divider] + [data-blok-database-filter-add])', 'margin-inline-start')).toEqual(['var(--blok-space-1-5)']);
+    expect(declared('[data-blok-database-filter-add]', 'margin-inline-start')).toEqual([]);
+  });
+});
+
+// notion-motion.md Round 52 §4 (r52-n-sort-rule-drag.raw): a rule passed by a drag slides over 200ms ease.
+describe('sort rule drag', () => {
+  it('slides a passed rule over 200ms ease, not the dragged one', () => {
+    expect(declared('[data-blok-database-panel-page="sort"] [data-blok-database-panel-list-item]:not([data-dragging])', 'transition').at(0)).toBe('top 200ms ease');
+  });
+
+  // A transition from top: auto does not run; the rule jumps.
+  it('starts every rule at top 0 so the slide has a number to run from', () => {
+    expect(declared('[data-blok-database-panel-page="sort"] [data-blok-database-panel-list-item]', 'top')).toEqual(['0']);
+  });
+});

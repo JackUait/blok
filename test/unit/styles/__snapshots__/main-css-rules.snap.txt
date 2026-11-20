@@ -4792,6 +4792,7 @@ span[data-blok-slash-search] {
   --blok-database-table-header-icon: rgb(142, 139, 134);
   --blok-database-table-title-icon: var(--blok-database-table-header-icon);
   --blok-database-table-header-hover-bg: var(--blok-database-hover-bg);
+  --blok-database-chip-active-hover-bg: rgba(55, 53, 47, 0.15);
   --blok-database-table-cell-text: rgb(44, 44, 43);
   --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-table-calc-value: var(--blok-database-ink-secondary);
@@ -5112,6 +5113,7 @@ span[data-blok-slash-search] {
   --blok-database-table-header-icon: rgb(173, 169, 163);
   --blok-database-table-title-icon: rgb(125, 122, 117);
   --blok-database-table-header-hover-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-chip-active-hover-bg: rgba(255, 255, 255, 0.135);
   --blok-database-table-cell-text: rgb(240, 239, 237);
   --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-table-calc-value: rgb(173, 169, 163);
@@ -5434,6 +5436,7 @@ span[data-blok-slash-search] {
   --blok-database-table-header-icon: rgb(173, 169, 163);
   --blok-database-table-title-icon: rgb(125, 122, 117);
   --blok-database-table-header-hover-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-chip-active-hover-bg: rgba(255, 255, 255, 0.135);
   --blok-database-table-cell-text: rgb(240, 239, 237);
   --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-table-calc-value: rgb(173, 169, 163);
@@ -15711,6 +15714,7 @@ button[data-blok-database-table-group-count]:hover {
   line-height: 24px;
   white-space: nowrap;
   cursor: pointer;
+  transition: background-color 20ms ease-in;
 }
 
 [data-blok-database-chip-glyph], [data-blok-database-chip-chevron] {
@@ -15801,6 +15805,10 @@ button[data-blok-database-table-group-count]:hover {
 [data-blok-database-filter-pill][data-active] {
   background-color: var(--blok-icon-active-bg);
   color: var(--blok-icon-active-text);
+}
+
+[data-blok-database-filter-pill][data-active]:is(:hover, [data-popover-open]) {
+  background-color: var(--blok-database-chip-active-hover-bg);
 }
 
 [data-blok-database-chip-header] {
@@ -16042,6 +16050,10 @@ button[data-blok-database-table-group-count]:hover {
   color: var(--blok-database-filter-add-text);
   font-size: 14px;
   cursor: pointer;
+}
+
+:is([data-blok-database-filter-add]:first-child, [data-blok-database-chip-divider] + [data-blok-database-filter-add]) {
+  margin-inline-start: var(--blok-space-1-5);
 }
 
 [data-blok-database-filter-add] svg {
@@ -18395,6 +18407,18 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   gap: var(--blok-space-2);
   margin-block: var(--blok-space-1) var(--blok-space-1-5);
   padding-inline: var(--blok-space-2-25) var(--blok-space-2-5);
+}
+
+[data-blok-database-panel-page="sort"] [data-blok-database-panel-list-item] {
+  top: 0;
+}
+
+[data-blok-database-panel-page="sort"] [data-blok-database-panel-list-item]:not([data-dragging]) {
+  transition: top 200ms ease;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-panel-page="sort"] [data-blok-database-panel-list-item]:not([data-dragging]) {
+  transition: none;
 }
 
 [data-blok-database-panel-page="sort"] [data-blok-database-panel-handle] {

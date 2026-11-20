@@ -628,7 +628,8 @@ const DRAG_THRESHOLD = 12;
 /**
  * Pointer drag inside one list, as Notion's sort list (r35:497-509): past the
  * threshold the row follows the pointer, clamped to the list ends. A neighbour
- * jumps one slot, with no motion, once the row's leading edge passes its middle.
+ * moves one slot once the row's leading edge passes its middle (the sort panel
+ * slides it in database.css, r52-n-sort-rule-drag.raw).
  * Release commits the order shown. Rows carry their id in `data-item-id`.
  */
 export const startReorderDrag = (

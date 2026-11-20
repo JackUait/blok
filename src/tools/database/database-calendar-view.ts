@@ -406,7 +406,9 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       const number = document.createElement('div');
 
       number.setAttribute('data-blok-database-calendar-day-number', '');
-      number.textContent = (dayIso.endsWith('-01') ? firstOfMonth : dayNumber).format(toLocalDate(dayIso));
+      // notion-motion.md Round 86 §1 #5 (r86-n-cal-labels.raw): Notion's "Nov 1 " ends in a space, so its ink sits 4px off the edge.
+      // Today's pill is unmeasured on a 1st and keeps the bare label.
+      number.textContent = dayIso.endsWith('-01') ? `${firstOfMonth.format(toLocalDate(dayIso))}${dayIso === this.options.today ? '' : ' '}` : dayNumber.format(toLocalDate(dayIso));
       cell.appendChild(number);
 
       if (this.canEdit) {

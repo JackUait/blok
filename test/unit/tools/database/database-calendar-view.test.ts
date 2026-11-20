@@ -115,6 +115,15 @@ describe('DatabaseCalendarView', () => {
       expect(all[0].getAttribute('role')).toBe('gridcell');
     });
 
+    // notion-motion.md Round 86 §1 #5 (r86-n-cal-labels.raw): Notion's "Nov 1" text node ends in a space, which keeps its ink 4px off the right edge.
+    it('ends a month-start label with a kept space, and a plain day number with none', () => {
+      const { root } = mount();
+      const label = (iso: string): string | null | undefined => day(root, iso).querySelector('[data-blok-database-calendar-day-number]')?.textContent;
+
+      expect(label('2026-10-01')).toBe('Oct 1 ');
+      expect(label('2026-10-02')).toBe('2');
+    });
+
     it('starts the week on the configured day', () => {
       const { root } = mount({ weekStart: 1 });
 

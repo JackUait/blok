@@ -16300,6 +16300,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   font-size: 14px;
   line-height: 24px;
   text-align: center;
+  /* Keeps the month-start label's trailing space (database-calendar-view.ts). */
+  white-space: pre;
   color: var(--blok-database-calendar-day-text);
   border-radius: var(--blok-radius-pill);
   transition: color 0.1s ease-out;

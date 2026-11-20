@@ -1511,9 +1511,9 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
 
       dragFrom(el, 'v1', 50);
       document.dispatchEvent(pointer('pointermove', 200));
-      document.dispatchEvent(pointer('pointermove', 260));
+      document.dispatchEvent(pointer('pointermove', 230));
 
-      expect(tabOf(el, 'v1').style.transform).toBe('translateX(210px)');
+      expect(tabOf(el, 'v1').style.transform).toBe('translateX(180px)');
     });
 
     it('survives the dragged tab disappearing mid-gesture', () => {

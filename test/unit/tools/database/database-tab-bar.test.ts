@@ -857,6 +857,22 @@ describe('DatabaseTabBar', () => {
       el.remove();
     });
 
+    // notion-motion.md Round 84b §4: Table stopped at 736 = the last tab's right end (821) − its width.
+    it('stops the dragged tab at the end of the last tab', () => {
+      const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' }), makeView({ id: 'v3', position: 'a2' })];
+      const { bar, el } = createBarWithLayout(views, 'v1');
+      const tab = (id: string): HTMLElement => el.querySelector(`[data-view-id="${id}"]`) as HTMLElement;
+
+      tab('v1').dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 900, clientY: 15 }));
+
+      expect(tab('v1').style.transform).toBe('translateX(200px)');
+      document.dispatchEvent(new PointerEvent('pointerup', { clientX: 900, clientY: 15 }));
+      expect(onReorder.mock.calls[0][1] > 'a2').toBe(true);
+      bar.destroy();
+      el.remove();
+    });
+
     it('puts every tab back at once when the drag ends', () => {
       const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' })];
       const { bar, el } = createBarWithLayout(views, 'v1');

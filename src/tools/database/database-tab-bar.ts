@@ -145,6 +145,7 @@ export class DatabaseTabBar {
   private dragLeft = 0;
   private dragWidth = 0;
   private dragMinDx = 0;
+  private dragMaxDx = 0;
   private readonly boundDragMove: (e: PointerEvent) => void;
   private readonly boundDragUp: (e: PointerEvent) => void;
   private readonly boundDragCancel: () => void;
@@ -995,9 +996,10 @@ export class DatabaseTabBar {
       this.dragStep = (source?.width ?? 0) + this.tabGap();
       this.dragLeft = source?.left ?? 0;
       this.dragWidth = source?.width ?? 0;
-      const lefts = this.dragSlots.map((slot) => slot.tab.getBoundingClientRect().left);
+      const rects = this.dragSlots.map((slot) => slot.tab.getBoundingClientRect());
 
-      this.dragMinDx = Math.min(0, ...lefts.map((left) => left - this.dragLeft));
+      this.dragMinDx = Math.min(0, ...rects.map((rect) => rect.left - this.dragLeft));
+      this.dragMaxDx = Math.max(0, ...rects.map((rect) => rect.right - this.dragLeft - this.dragWidth));
     }
     if (sourceTab === null) return;
     sourceTab.style.transform = `translateX(${this.dragDx(e)}px)`;
@@ -1013,9 +1015,12 @@ export class DatabaseTabBar {
     });
   }
 
-  /** notion-motion.md Round 83 §6: the dragged tab stops at the bar start. */
+  /**
+   * notion-motion.md Round 83 §6 and Round 84b §4: the dragged tab stops at
+   * the bar start and at the last shown tab's end.
+   */
   private dragDx(e: PointerEvent): number {
-    return Math.max(this.dragMinDx, e.clientX - this.dragStartX);
+    return Math.min(this.dragMaxDx, Math.max(this.dragMinDx, e.clientX - this.dragStartX));
   }
 
   /**

@@ -399,7 +399,8 @@ export interface PanelRowOptions {
   /** Secondary ink, as Notion's "Add sort" and "Delete sort" (research/21 §1c). */
   muted?: boolean;
   disabled?: boolean;
-  onClick: () => void;
+  /** `event.detail` is 0 when Enter or Space pressed the row. */
+  onClick: (event: MouseEvent) => void;
 }
 
 export const panelRow = (options: PanelRowOptions): HTMLButtonElement => {
@@ -479,7 +480,7 @@ export const panelRow = (options: PanelRowOptions): HTMLButtonElement => {
     arrow.innerHTML = IconArrowDiagonal;
     row.appendChild(arrow);
   }
-  row.addEventListener('click', () => options.onClick());
+  row.addEventListener('click', (event) => options.onClick(event));
 
   return row;
 };

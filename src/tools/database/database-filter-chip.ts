@@ -463,7 +463,7 @@ class FilterChipPages {
       panelRow({
         label: this.t('filterAddToAdvanced'),
         testId: 'database-filter-to-advanced',
-        onClick: () => pick(() => {
+        onClick: (event) => pick(() => {
           const filter = this.current();
 
           if (filter === undefined) return;
@@ -475,6 +475,10 @@ class FilterChipPages {
           });
           panel.close();
           this.afterToAdvanced?.();
+
+          // notion-motion.md Round 87 §1 #12 (r87-n-chip-addadv.raw): a click leaves focus on the body. A key press
+          // keeps it in the advanced filter, where opening put it.
+          return event.detail === 0 && document.activeElement instanceof HTMLElement ? document.activeElement : false;
         }),
       }),
     ], { beside: MORE_FLYOUT_GAP });

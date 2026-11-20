@@ -1596,6 +1596,25 @@ describe('DatabaseViewControls', () => {
       expect(q('database-filter-popover')).not.toBeNull();
     });
 
+    // notion-motion.md Round 87 §1 #12 (r87-n-chip-addadv.raw, a pointer click): focus goes to the page body.
+    it('a pointer pick of Add to advanced filter leaves focus on the body, the panel open, Escape closing it', () => {
+      open();
+      q('database-filter-to-advanced')?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+
+      expect(document.activeElement).toBe(document.body);
+      expect(q('database-advanced-filter')).not.toBeNull();
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(q('database-advanced-filter')).toBeNull();
+    });
+
+    // A keyboard pick keeps focus in the panel it opens (user-approved: keyboard focus moves into popovers).
+    it('a keyboard pick of Add to advanced filter keeps focus in the advanced filter', () => {
+      open();
+      q('database-filter-to-advanced')?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
+
+      expect(q('database-advanced-filter')?.contains(document.activeElement)).toBe(true);
+    });
+
     const openAt = (more: DOMRect): HTMLElement | null => {
       vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
       vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);

@@ -1616,6 +1616,18 @@ describe('view settings panel', () => {
       expect(settings()?.querySelector('[data-blok-testid="database-filter-advanced-chip"]')).not.toBeNull();
     });
 
+    // r87-n-settings-addadv.raw: after a click, focus is on the body and both panels stay.
+    it('a pointer Add to advanced filter leaves focus on the body, the page and the advanced filter open', () => {
+      withFilter();
+      click('database-filter-row-f1');
+      click('database-filter-more');
+      q('database-filter-to-advanced')?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+
+      expect(document.activeElement).toBe(document.body);
+      expect(q('database-advanced-filter')).not.toBeNull();
+      expect(settings()).not.toBeNull();
+    });
+
     it('has no Advanced filter row while there is no advanced filter', () => {
       withFilter();
 

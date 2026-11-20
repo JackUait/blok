@@ -257,7 +257,7 @@ describe('New data source: every layout on a second source', () => {
     await click(document.querySelector('[data-blok-item-name="database-timeline-zoom-quarter"]'));
 
     expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
-    expect(document.activeElement).toBe(layoutRoot('[data-blok-database-timeline]').querySelector('[data-blok-database-timeline-zoom]'));
+    expect(layoutRoot('[data-blok-database-timeline]').querySelector('[data-blok-database-timeline-zoom]')).toHaveFocus();
   });
 
   it('a zoom pick on a database\'s own timeline also puts focus back on the redrawn zoom button', async () => {
@@ -278,7 +278,7 @@ describe('New data source: every layout on a second source', () => {
 
     expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
     expect(zoomButton()).not.toBe(before);
-    expect(document.activeElement).toBe(zoomButton());
+    expect(zoomButton()).toHaveFocus();
   });
 
   it('a form answer in the Preview becomes a source row', async () => {

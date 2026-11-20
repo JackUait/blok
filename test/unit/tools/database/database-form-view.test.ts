@@ -821,6 +821,17 @@ describe('DatabaseFormView add question between cards', () => {
     expect(document.querySelector('[data-blok-testid="database-form-new-text"]')?.hasAttribute('data-blok-database-form-type-row')).toBe(true);
   });
 
+  // notion-motion.md Round 88 §1 #8: existing-property rows have their own 266 x 45.6 box at + 12.
+  it('marks Select type\'s existing-property rows for their own inset box', () => {
+    const { root } = mount({ setQuestionSetting: vi.fn(), addQuestion: vi.fn(), showQuestion: vi.fn() });
+
+    root.querySelector<HTMLElement>('[data-blok-testid="database-form-add-question"]')?.click();
+    const existing = document.querySelector('[data-blok-testid="database-form-existing-hidden"]');
+
+    expect(existing?.hasAttribute('data-blok-database-form-existing-row')).toBe(true);
+    expect(existing?.hasAttribute('data-blok-database-form-type-row')).toBe(false);
+  });
+
   // notion-motion.md Round 52 and Round 65 §4: Select type opens with no scale.
   it('opens Select type on a popover marked to open without a scale', () => {
     const { root } = mount({ setQuestionSetting: vi.fn(), addQuestion: vi.fn() });

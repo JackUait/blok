@@ -517,6 +517,32 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(none).toBeGreaterThan(scale);
   });
 
+  // notion-motion.md Round 88 §1 #7: Notion's Select type panel has no transition; only the empty slot fades, 200ms ease-out.
+  it('opens Select type at once, and fades in the empty slot instead', () => {
+    const fade = database.indexOf("[data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container] {");
+    const none = database.indexOf("[data-blok-popover][data-blok-popover-custom-class~='blok-database-form-type-menu'] [data-blok-popover-container] {");
+
+    expect(ruleBody("[data-blok-popover][data-blok-popover-custom-class~='blok-database-form-type-menu'] [data-blok-popover-container]")).toContain('transition: none');
+    // Same specificity as the fade rule, so it must come after it.
+    expect(none).toBeGreaterThan(fade);
+    expect(ruleBody('[data-blok-database-form-slot]')).toContain('transition: opacity 200ms ease-out');
+    const starting = [...database.matchAll(/@starting-style\s*\{\s*([^{}]+)\{([^{}]*)\}\s*\}/g)]
+      .filter((match) => match[1].trim() === '[data-blok-database-form-slot]');
+
+    expect(starting.map((match) => match[2].trim())).toEqual(['opacity: 0;']);
+  });
+
+  // notion-motion.md Round 88 §1 #8: existing-property rows 266 x 45.6 at + 12; rows in both sections 1 apart.
+  it('insets existing-property rows like the new-question rows, 45.6 tall, and steps every row 1px apart', () => {
+    const existing = ruleBody('[data-blok-database-form-existing-row]');
+
+    expect(existing).toContain('width: auto');
+    expect(existing).toContain('margin-inline: var(--blok-space-2)');
+    expect(existing).toContain('min-height: 45.6px');
+    expect(ruleBody('[data-blok-database-form-existing-row] + [data-blok-database-form-existing-row]')).toContain('margin-block-start: var(--blok-space-0-25)');
+    expect(ruleBody('[data-blok-database-form-type-row] + [data-blok-database-form-type-row]')).toContain('margin-block-start: var(--blok-space-0-25)');
+  });
+
   // The view box clips; the "+" sits left of the column, so the form bleeds into the gutter as the table does.
   it('the view box bleeds into the gutter for a form, so the "+" is not clipped', () => {
     expect(ruleBody('[data-blok-database-board-container]:has(> [data-blok-database-table], > [data-blok-database-list], > [data-blok-database-form])'))

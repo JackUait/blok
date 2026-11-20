@@ -3741,7 +3741,12 @@ button[data-blok-database-board-lane-count]:hover {
   transform: scale(0.96);
 }
 
-/* notion-motion.md Round 52, Round 65 §4: Select type opens with no scale. Same specificity as the scale rule, so it must stay after it. */
+/* notion-motion.md Round 88 §1 #7: Select type opens at once; the form's empty slot fades instead.
+   Same specificity as the rules above, so these must stay after them. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-form-type-menu'] [data-blok-popover-container] {
+  transition: none;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-form-type-menu']:not([data-blok-popover-opened='true']) [data-blok-popover-container] {
   transform: none;
 }
@@ -21228,6 +21233,14 @@ button[data-blok-database-feed-reaction]:hover,
   block-size: 36px;
   border-radius: var(--blok-radius-dialog);
   background: var(--blok-database-hover-bg);
+  transition: opacity 200ms ease-out;
+}
+
+/* notion-motion.md Round 88 §1 #7: the slot fades in when Select type opens. */
+@starting-style {
+  [data-blok-database-form-slot] {
+    opacity: 0;
+  }
 }
 
 /* notion-motion.md Round 52 §3: Add question is a round 32 "+" centred under the cards; hover 100ms ease-in-out.
@@ -21297,6 +21310,19 @@ button[data-blok-database-feed-reaction]:hover,
   width: auto;
   min-height: 44px;
   margin-inline: var(--blok-space-2);
+}
+
+/* notion-motion.md Round 88 §1 #8: existing-property rows are 266 x 45.6 at + 12. */
+[data-blok-database-form-existing-row] {
+  width: auto;
+  min-height: 45.6px;
+  margin-inline: var(--blok-space-2);
+}
+
+/* Round 88 §1 #8: rows step 45 and 46.6, 1 apart, in both sections. */
+[data-blok-database-form-existing-row] + [data-blok-database-form-existing-row],
+[data-blok-database-form-type-row] + [data-blok-database-form-type-row] {
+  margin-block-start: var(--blok-space-0-25);
 }
 
 [data-blok-database-form-type-row] > [data-blok-database-panel-icon] {

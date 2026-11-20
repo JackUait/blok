@@ -1796,6 +1796,43 @@ describe('DatabaseTimelineView', () => {
       expect(handlers.writeDates).toHaveBeenCalledWith('r1', { start: '2026-10-03' });
     });
 
+    // notion-motion.md Round 91 §1 #1: a handle sticks out past the bar, so its press can land on the next day.
+    // An edge moves by the days dragged, not to the day under the pointer.
+    it.each([
+      ['end', '2026-10-09', '2026-10-10', { end: '2026-10-09' }],
+      ['start', '2026-10-04', '2026-10-03', { start: '2026-10-04' }],
+    ] as const)('moves the %s edge one day for a one-day drag pressed just outside the bar', (edge, pressDay, toDay, written) => {
+      const { root, handlers } = mount({
+        endPropertyId: 'p-end',
+        groups: single([row('r1', 'Build', '2026-10-05', { 'p-end': '2026-10-08' })]),
+      });
+      const handle = bar(root, 'r1').querySelector(`[data-blok-database-timeline-resize="${edge}"]`);
+
+      layOut(root);
+      if (handle === null) throw new Error('no handle');
+      pointer('pointerdown', handle, xOf(pressDay), 50);
+      pointer('pointermove', document, xOf(toDay), 50);
+      pointer('pointerup', document, xOf(toDay), 50);
+
+      expect(handlers.writeDates).toHaveBeenCalledWith('r1', written);
+    });
+
+    // notion-motion.md Round 91 §1 #1: back at the press point the bar is let go unchanged.
+    it.each(['start', 'end'] as const)('leaves the bar unchanged when the %s edge comes back to its press point', (edge) => {
+      const { root, handlers } = mount({ groups: single([row('r1', 'Alpha', '2026-10-15')]) });
+      const handle = bar(root, 'r1').querySelector(`[data-blok-database-timeline-resize="${edge}"]`);
+      const pressDay = edge === 'end' ? '2026-10-16' : '2026-10-14';
+
+      layOut(root);
+      if (handle === null) throw new Error('no handle');
+      pointer('pointerdown', handle, xOf(pressDay), 50);
+      pointer('pointermove', document, xOf(edge === 'end' ? '2026-10-17' : '2026-10-13'), 50);
+      pointer('pointermove', document, xOf(pressDay), 50);
+      pointer('pointerup', document, xOf(pressDay), 50);
+
+      expect(handlers.writeDates).not.toHaveBeenCalled();
+    });
+
     it('does not open the bar after a drag, and still opens on the next click', async () => {
       const { root, handlers } = mount();
 

@@ -1897,19 +1897,22 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
     const deltaDays = daysBetween(drag.grabDay, drag.overDay);
     const deltaMinutes = snapMinutes((drag.overPx - drag.grabPx) / (this.dayWidth / DAY_MINUTES));
+    const span = timelineSpan(values.start, values.end);
+    // A handle sticks out past the bar, so the pressed day may not be the edge's own day (notion-motion.md Round 91 §1 #1).
+    const edgeDay = span === null || drag.mode === 'move' ? drag.overDay : addDays(span[drag.mode], deltaDays);
 
     // notion-motion.md Round 48 A9: Day zoom moves snap to 15 minutes. Round 49 B6: so does a timed bar's resize. Round 50 §3: an all-day one turns timed.
     if (this.zoom === 'day' && drag.mode === 'move') {
       return moveBarByMinutes(values, deltaMinutes);
     }
     if (!BY_TIME.has(this.zoom)) {
-      return drag.mode === 'move' ? moveBar(values, deltaDays) : resizeBar(values, drag.mode, drag.overDay);
+      return drag.mode === 'move' ? moveBar(values, deltaDays) : resizeBar(values, drag.mode, edgeDay);
     }
 
     return drag.mode === 'move'
       ? moveBar(values, deltaDays, deltaMinutes)
       : resizeBarByMinutes(values, drag.mode, deltaMinutes)
-        ?? (this.zoom === 'day' ? resizeAllDayByMinutes(values, drag.mode, deltaMinutes) : resizeBar(values, drag.mode, drag.overDay));
+        ?? (this.zoom === 'day' ? resizeAllDayByMinutes(values, drag.mode, deltaMinutes) : resizeBar(values, drag.mode, edgeDay));
   }
 
   private valuesAfter(drag: BarDrag): BarValues | null {

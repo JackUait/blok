@@ -13885,7 +13885,7 @@ textarea[data-blok-database-cell-input] {
   flex: none;
   box-sizing: border-box;
   min-height: 37px;
-  padding: 7.5px var(--blok-space-2);
+  padding: 7.5px var(--blok-space-2) 6.5px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;

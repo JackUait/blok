@@ -1949,6 +1949,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R226_BYTES = 2477;
     // Lane r229: R59 §8 toolbar Search and Settings glyphs at 18px, R83 §5 filter ⋯ note. Net database.css growth against origin/main.
     const DATABASE_R229_BYTES = 408;
+    // Lane r228: Round 47 §B7 wrapped table rows at 21 per line + 15. Net database.css growth against origin/main.
+    const DATABASE_R228_BYTES = 130;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2617,6 +2619,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R223_BYTES
       + DATABASE_R226_BYTES
       + DATABASE_R229_BYTES
+      + DATABASE_R228_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

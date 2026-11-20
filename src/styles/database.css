@@ -10728,7 +10728,8 @@ textarea[data-blok-database-cell-input] {
   flex: none;
   box-sizing: border-box;
   min-height: 37px;
-  padding: 7.5px var(--blok-space-2);
+  /* notion-motion.md Round 47 §B7: wrapped rows are 21 per line + 15, the border inside. min-height keeps one line 37. */
+  padding: 7.5px var(--blok-space-2) 6.5px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;

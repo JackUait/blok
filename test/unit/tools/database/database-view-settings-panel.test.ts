@@ -2232,6 +2232,29 @@ describe('view settings panel', () => {
     expect(h.state.view.hiddenGroups).toEqual([{ id: 'o1' }, { id: 'none' }]);
   });
 
+  // notion-motion.md Round 84b §3 (r84-n-grp-weights.raw): "Start week on" shows for Date by Week only;
+  // Relative, Day and Month have no such row.
+  it('shows "Start week on" only while a date groups by week', () => {
+    harness({ groupBy: 'due' }).open('group');
+
+    expect(exists('database-group-week-start')).toBe(false);
+
+    click('database-group-date-by');
+    click('database-group-date-by-week');
+
+    expect(exists('database-group-week-start')).toBe(true);
+
+    click('database-group-date-by');
+    click('database-group-date-by-day');
+
+    expect(exists('database-group-week-start')).toBe(false);
+
+    click('database-group-date-by');
+    click('database-group-date-by-month');
+
+    expect(exists('database-group-week-start')).toBe(false);
+  });
+
   // research/22 §7: "Number by: Unique" by default; Range shows 0 – 1000, every 100.
   it('groups a number by Unique, and Range starts at 0 to 1000 every 100', () => {
     const h = harness({ groupBy: 'num' });

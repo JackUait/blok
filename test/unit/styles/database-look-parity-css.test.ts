@@ -465,6 +465,11 @@ describe('row page property drag handle', () => {
   const hoveredHead = '[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]):hover > [data-blok-database-drawer-prop-head]';
   const overIcon = '[data-blok-database-drawer-prop-handle]:has(+ [data-blok-database-drawer-prop-icon])';
 
+  // notion-motion.md Round 83 §7: Notion's name cell reads cursor pointer; only the handle reads grab.
+  it('points over the name cell when it opens the property menu', () => {
+    expect(ruleBody(`${head} > [data-blok-database-drawer-prop-label][role="button"]::before`)).toContain('cursor: pointer');
+  });
+
   it('is hidden at rest, so touch screens never get one', () => {
     expect(ruleBody('[data-blok-database-drawer-prop-handle]')).toContain('display: none');
     expect(ruleBody('[data-blok-database-drawer-prop-handle]')).toContain('cursor: grab');

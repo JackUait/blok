@@ -7012,6 +7012,7 @@ span[data-blok-slash-search] {
   content: "";
   position: absolute;
   inset: 0;
+  cursor: pointer;
 }
 
 [@media (hover: hover)] [data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head]:has(> [data-blok-database-drawer-prop-label][role="button"]:hover) {

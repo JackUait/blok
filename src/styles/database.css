@@ -2919,6 +2919,7 @@
   content: "";
   position: absolute;
   inset: 0;
+  cursor: pointer;
 }
 
 @media (hover: hover) {

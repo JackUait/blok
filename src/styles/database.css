@@ -19588,6 +19588,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-2));
 }
 
+/* Round 72 §5: a 30.5 box at card + 45.5. The negative margins keep what follows where it was. */
+[data-blok-database-feed-byline] + [data-blok-database-feed-title] {
+  padding-block: 2.25px;
+  margin-block: -2.5px calc(var(--blok-space-0-5) * -1);
+}
+
 [data-blok-database-feed-author] {
   font-weight: 500;
   color: var(--blok-database-ink);
@@ -19598,7 +19604,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 [data-blok-database-feed-edited] {
   color: var(--blok-database-table-muted-text);
   font-size: 12px;
-  line-height: 14px;
+  /* Round 72 §5: a 16 box at card + 23, 1 under the byline's centre. */
+  line-height: 16px;
+  margin-block-start: var(--blok-space-0-5);
 }
 
 /* Round 33 §5: "(edited)" sits a space (3.3) after the time, inside the byline's 6 gap. */

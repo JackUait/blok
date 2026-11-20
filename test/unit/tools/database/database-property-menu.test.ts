@@ -1968,6 +1968,19 @@ describe('row page property menu', () => {
     set.menu.destroy();
   });
 
+  // notion-motion.md Round 84b §1 (r84-n-numfmt-labels.raw): the row reads "Australian dollar"; the list keeps "(AUD)".
+  it('the Number format row names a currency without its ISO code, the list keeps it', () => {
+    const labels: Record<string, string> = { 'tools.database.numberFormat.australian_dollar': 'Australian dollar (AUD)' };
+    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => labels[key] ?? key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+    menu.openRowPage(prop('number', { number: { format: 'australian_dollar' } }), document.createElement('div'), { edit: true });
+    const format = byName(lastItems(), 'numberFormat');
+
+    expect(format.valueLabel).toBe('Australian dollar');
+    expect(byName(format.children?.items ?? [], 'format-australian_dollar').title).toBe('Australian dollar (AUD)');
+    menu.destroy();
+  });
+
   it('draws Show as as three tiles, the current one checked', () => {
     const { menu, items } = editPanel(prop('number', { number: { showAs: 'bar' } }));
     const group = byName(items, 'showAs').element?.querySelector('[role="radiogroup"]');

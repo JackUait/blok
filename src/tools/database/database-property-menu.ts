@@ -1595,7 +1595,8 @@ export class DatabasePropertyMenu {
       {
         name: 'numberFormat',
         title: this.t('tools.database.numberFormat'),
-        valueLabel: this.t(`tools.database.numberFormat.${number.format ?? 'number'}`),
+        // Notion's row drops the list's " (AUD)"; every locale's currency label ends in one.
+        valueLabel: this.t(`tools.database.numberFormat.${number.format ?? 'number'}`).replace(/ \([A-Z]{3}\)$/, ''),
         children: {
           ...CLICK_ONLY_UNDER,
           class: FORMAT_SEARCH_LIST_CLASS,

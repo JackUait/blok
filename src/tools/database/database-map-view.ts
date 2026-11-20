@@ -255,6 +255,7 @@ export class DatabaseMapView implements DatabaseViewRenderer {
       anchor,
       content,
       minWidth: '320px',
+      surfaceClass: 'blok-database-map-no-place-menu',
       // notion-motion.md Round 47 §D: 4 under the toolbar button, as the No date popover.
       gap: 4,
       onEscape: () => {

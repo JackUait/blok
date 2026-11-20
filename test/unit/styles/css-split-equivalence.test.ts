@@ -1933,6 +1933,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R213_BYTES = 388;
     // Lane r215: Round 85c §2 checkbox group headers on the board and list (no pill, the box 3px in). Net database.css growth against origin/main.
     const DATABASE_R215_BYTES = 510;
+    // Lane r218: Round 53 §8a "No place" 70vh cap and Round 72 §5 feed byline/title boxes. Net database.css growth against origin/main.
+    const DATABASE_R218_BYTES = 248;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2593,6 +2595,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R214_BYTES
       + DATABASE_R213_BYTES
       + DATABASE_R215_BYTES
+      + DATABASE_R218_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

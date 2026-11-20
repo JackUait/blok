@@ -744,6 +744,12 @@ describe('map view chrome', () => {
     expect(field).toContain('font-size: 14px');
   });
 
+  // Round 53 §8a: Notion's "No place" list caps at 70vh (501.9 in a 717 window), not the editors' window height.
+  it('caps the "No place" list at 70vh', () => {
+    expect(ruleBody("[data-blok-popover-custom-class~='blok-database-map-no-place-menu'] [data-blok-popover-container]"))
+      .toContain('--max-height: 70vh');
+  });
+
   it('holds Add pin in a 28px white pill, radius 6, padding 2, 8 in from the corner', () => {
     const pill = ruleBody('[data-blok-database-map-add-pin-pill]');
 

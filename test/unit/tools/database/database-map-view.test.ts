@@ -252,6 +252,17 @@ describe('DatabaseMapView', () => {
     expect(document.querySelector('[data-blok-database-map-no-place-search]')?.closest<HTMLElement>('[data-blok-popover]')?.style.top).toBe('303px');
   });
 
+  // notion-motion.md Round 53 §8a: the list's own class carries its 70vh cap.
+  it('marks the "No place" popover so CSS can cap its height', async () => {
+    const { mapView } = mount({ render: vi.fn(), writable: true });
+
+    await flush();
+    mapView.noPlaceControl()?.open(anchor());
+
+    expect(document.querySelector('[data-blok-database-map-no-place-search]')?.closest<HTMLElement>('[data-blok-popover]')
+      ?.getAttribute('data-blok-popover-custom-class')).toContain('blok-database-map-no-place-menu');
+  });
+
   // notion-motion.md Round 52 §2: each "No place" row is a page icon, then the title.
   it('leads each "No place" row with its page glyph, then the title', async () => {
     const extra: DatabaseRow[] = [...rows, { id: 'r3', position: 'a2', properties: { title: 'Cid' } }];

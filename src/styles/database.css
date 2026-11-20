@@ -21861,6 +21861,11 @@ button[data-blok-database-feed-reaction]:hover,
   block-size: 16px;
 }
 
+/* notion-motion.md Round 53 §8a: 70vh (501.9 in a 717 window). Same weight as the editors' cap, so it must follow it. */
+[data-blok-popover-custom-class~='blok-database-map-no-place-menu'] [data-blok-popover-container] {
+  --max-height: 70vh;
+}
+
 [data-blok-database-map-no-place-list] {
   display: flex;
   flex-direction: column;

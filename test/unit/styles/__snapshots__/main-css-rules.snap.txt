@@ -23900,6 +23900,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   block-size: 16px;
 }
 
+[data-blok-popover-custom-class~='blok-database-map-no-place-menu'] [data-blok-popover-container] {
+  --max-height: 70vh;
+}
+
 [data-blok-database-map-no-place-list] {
   display: flex;
   flex-direction: column;

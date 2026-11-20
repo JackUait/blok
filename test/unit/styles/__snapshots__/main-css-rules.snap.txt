@@ -14887,7 +14887,7 @@ a[data-blok-database-comment-mention-chip] {
   justify-content: center;
   gap: var(--blok-space-3);
   width: 100cqi;
-  padding-block: var(--blok-space-4);
+  padding-block: var(--blok-space-4-5);
 }
 
 [data-blok-database-table-empty] [data-blok-database-table-add-row] {

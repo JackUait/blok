@@ -11848,7 +11848,8 @@ a[data-blok-database-comment-mention-chip] {
   /* notion-motion.md Round 41 Part B: 12px between "Edit filters" and "+ New page". */
   gap: var(--blok-space-3);
   width: 100cqi;
-  padding-block: var(--blok-space-4);
+  /* notion-motion.md Round 86 §1 #13 (r86-n-noresults.raw): buttons 22 under the header in a 72 block. "+ New page" keeps its 4px row margin, so 18 here. */
+  padding-block: var(--blok-space-4-5);
 }
 
 [data-blok-database-table-empty] [data-blok-database-table-add-row] {

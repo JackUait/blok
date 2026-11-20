@@ -223,6 +223,21 @@ test.describe('form toolbar and no-results buttons (notion-motion.md Round 41)',
     await expect(add).toHaveCSS('color', await edit.evaluate((el) => getComputedStyle(el).color));
   });
 
+  // notion-motion.md Round 86 §1 #13 (r86-n-noresults.raw): the buttons start 22 under the header, in a 72 tall block.
+  test('no results: the buttons sit 22px under the header in a 72px block', async ({ page }) => {
+    await mount(page, 'v-table');
+    const empty = page.locator('[data-blok-database-table-empty]');
+    const header = await page.locator('[data-blok-database-table-header]').first().boundingBox();
+    const block = await empty.boundingBox();
+    const edit = await empty.locator('[data-blok-database-table-edit-filters]').boundingBox();
+    const add = await empty.locator('[data-blok-database-table-add-row]').boundingBox();
+
+    if (header === null || block === null || edit === null || add === null) throw new Error('no box');
+    expect(edit.y - (header.y + header.height)).toBe(22);
+    expect(add.y).toBe(edit.y);
+    expect(block.height).toBe(72);
+  });
+
   test('the table body\'s "+ New page" row stays borderless', async ({ page }) => {
     await mount(page, 'v-table', true);
     const add = page.locator('[data-blok-database-table-add-row]').first();

@@ -196,7 +196,7 @@ describe.each(sessions)('database view settings on a %s session', (_name, open) 
       const view = await viewOf(session);
 
       expect(view.hiddenGroups ?? []).toEqual([]);
-      expect(view.subGroupSettings).toEqual({});
+      expect(view.subGroupSettings).toEqual({ hideEmptyGroups: true });
     } finally {
       await session.close();
     }

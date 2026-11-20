@@ -2412,7 +2412,7 @@ describe('view settings panel', () => {
     });
 
     // notion-motion.md Round 82 (r82-n-a2-sub-repick.raw): a re-pick resets the sort to Manual and shows hidden sub-groups.
-    it('resets the sub-group sort and shows hidden sub-groups when the same sub-group is picked again', () => {
+    it('resets the sub-group sort, shows hidden sub-groups and turns Hide empty groups on when the same sub-group is picked again', () => {
       const h = harness({
         type: 'board', groupBy: 'stage', subGroupBy: 'prog',
         subGroupSettings: { hideEmptyGroups: false, sort: 'descending' }, hiddenGroups: [{ id: 'o1' }, { id: 'sub:s1' }],
@@ -2423,7 +2423,7 @@ describe('view settings panel', () => {
       click('database-subgroup-by');
       click('database-pick-property-prog');
 
-      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ subGroupBy: 'prog', subGroupSettings: { hideEmptyGroups: false }, hiddenGroups: [{ id: 'o1' }] });
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ subGroupBy: 'prog', subGroupSettings: { hideEmptyGroups: true }, hiddenGroups: [{ id: 'o1' }] });
     });
 
     // notion-motion.md Round 82 §3 (r82-n-a2-subgroup.raw, -sub-pick1.raw): unset, Sub-group opens straight into the

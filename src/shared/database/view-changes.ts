@@ -73,10 +73,10 @@ export const groupByChange = (
 };
 
 /**
- * The write when people pick a board's sub-group. Notion hid the bands with no
- * cards right after the pick (research/30 B26); the switch itself was not read.
- * A re-pick of the same property drops the sub-group sort to its default and
- * shows the hidden sub-groups (`sub:`) again, as the group re-pick does (Round 82).
+ * The write when people pick a board's sub-group. Every pick turns Hide empty
+ * groups on, a re-pick of the same property too (Round 84b §3). A re-pick also
+ * drops the sub-group sort to its default and shows the hidden sub-groups
+ * (`sub:`) again, as the group re-pick does (Round 82).
  */
 export const subGroupByChange = (
   view: DatabaseViewConfig | undefined,
@@ -85,7 +85,8 @@ export const subGroupByChange = (
   if (view === undefined || property.id !== view.subGroupBy) {
     return { subGroupBy: property.id, subGroupSettings: { hideEmptyGroups: true } };
   }
-  const { sort: _sort, ...subGroupSettings } = view.subGroupSettings ?? {};
+  const { sort: _sort, ...kept } = view.subGroupSettings ?? {};
+  const subGroupSettings = { ...kept, hideEmptyGroups: true };
 
   if (view.hiddenGroups === undefined) return { subGroupBy: property.id, subGroupSettings };
 

@@ -103,6 +103,15 @@ describe('subGroupByChange', () => {
     expect(change.hiddenGroups).toEqual([{ id: 'todo' }]);
   });
 
+  // Round 84b §3 (r84-n-subgroup.raw): switch off, re-pick Select → on.
+  it('re-picking the same property turns Hide empty groups back on', () => {
+    const change = subGroupByChange({
+      ...table(), type: 'board', groupBy: 'n', subGroupBy: 's', subGroupSettings: { hideEmptyGroups: false, showAggregation: true },
+    }, schema[2]);
+
+    expect(change.subGroupSettings).toEqual({ hideEmptyGroups: true, showAggregation: true });
+  });
+
   it('picking another property leaves the hidden groups alone', () => {
     expect(subGroupByChange({ ...table(), subGroupBy: 'n', hiddenGroups: [{ id: 'sub:x' }] }, schema[2])).not.toHaveProperty('hiddenGroups');
   });

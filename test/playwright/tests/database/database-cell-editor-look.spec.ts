@@ -312,6 +312,20 @@ test.describe('date picker submenus', () => {
     await expect(zoneMenu(page)).toBeVisible();
   };
 
+  // notion-motion.md Round 83 §1: Escape closes the submenu and the row it came from shows the keyboard ring.
+  test('Escape on Date format puts focus on its row, with the keyboard ring', async ({ page }) => {
+    await open(page, 'p-due');
+    const row = page.locator('[data-blok-database-date-setting="dateFormat"]');
+
+    await row.click();
+    await expect(page.getByRole('menuitemradio', { name: 'Full date' })).toBeFocused();
+    await page.keyboard.press('Escape');
+
+    await expect(page.locator('[data-blok-database-date-setting-menu]')).toHaveCount(0);
+    await expect(row).toBeFocused();
+    expect(await row.evaluate((el) => el.matches(':focus-visible') && getComputedStyle(el).outlineStyle !== 'none')).toBe(true);
+  });
+
   test('Time format lists Hidden, 12 hour, 24 hour, in that order', async ({ page }) => {
     await open(page, 'p-due');
     await page.locator('[data-blok-database-date-time-toggle]').click();

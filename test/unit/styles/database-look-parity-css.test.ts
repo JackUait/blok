@@ -239,6 +239,11 @@ describe('row page peek in dark (research/21 §1m)', () => {
     expect(ruleBody('[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-props-spaced]')).toContain('padding-top: var(--blok-space-2)');
   });
 
+  // notion-motion.md Round 84b §9 (r84-n-fullpage.raw): h1 156 + 48, first property row at 212.
+  it('puts a full page\'s first property 8px under the title', () => {
+    expect(ruleBody('[data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-title]')).toContain('margin-bottom: var(--blok-space-2)');
+  });
+
   it('inks the title in the database ink: rgb(44, 44, 43) light (research/26 §1e), rgb(240, 239, 237) dark', () => {
     expect(ruleBody('[data-blok-database-drawer-title]')).toContain('color: var(--blok-database-peek-title)');
     expect(tokenValues('--blok-database-peek-title')).toEqual(['var(--blok-database-ink)', 'rgb(240, 239, 237)', 'rgb(240, 239, 237)']);

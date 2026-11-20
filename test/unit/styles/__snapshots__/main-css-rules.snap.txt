@@ -6577,6 +6577,10 @@ span[data-blok-slash-search] {
   margin-bottom: 9px;
 }
 
+[data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-title] {
+  margin-bottom: var(--blok-space-2);
+}
+
 [data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-props-spaced] {
   padding-top: var(--blok-space-2);
 }

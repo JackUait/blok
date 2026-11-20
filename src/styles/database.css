@@ -2387,6 +2387,11 @@
   margin-bottom: 9px;
 }
 
+/* Round 84b §9: a full page's first property row starts 8 under the title (Notion: h1 156 + 48, row 212). */
+[data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-title] {
+  margin-bottom: var(--blok-space-2);
+}
+
 [data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-props-spaced] {
   padding-top: var(--blok-space-2);
 }

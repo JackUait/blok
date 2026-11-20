@@ -877,6 +877,19 @@ describe('DatabaseTabBar', () => {
         bar.destroy();
         el.remove();
       });
+
+      // The same read with Notion's own press point: still at 562 (5.9 px), moving at 563 (6.9 px).
+      it('starts following a sub-pixel press 6.9 px away, not 5.9', () => {
+        const { bar, el, tab } = notionBar();
+
+        tab('v1').dispatchEvent(new PointerEvent('pointerdown', { clientX: 556.1, clientY: 15, bubbles: true }));
+        move(562);
+        expect(el.hasAttribute('data-dragging')).toBe(false);
+        move(563);
+        expect(el.getAttribute('data-dragging')).toBe('');
+        bar.destroy();
+        el.remove();
+      });
     });
 
     // notion-motion.md Round 83 §6: Board stopped at the bar start (539) while the pointer went on.

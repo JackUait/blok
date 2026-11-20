@@ -19,8 +19,9 @@ import { isHistoryKey } from './database-keyboard';
 import { propertyHint } from './property-hint';
 import { positionBetween } from '../../shared/database/positions';
 
-// notion-motion.md Round 91 §1 #7: Notion reads whole pixels; the tab sat still 6 px from the press and moved at 7.
-const DRAG_THRESHOLD = 7;
+// notion-motion.md Round 91 §1 #7: from a 556.1 press the tab sat still at 5.9 px and moved at 6.9.
+// 6.5 gives that and the whole-pixel read (6 no, 7 yes); Notion's exact cutoff is unread.
+const DRAG_THRESHOLD = 6.5;
 
 /**
  * Set when a tab is activated from the keyboard. Switching views makes the

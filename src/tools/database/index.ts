@@ -7340,7 +7340,13 @@ export class DatabaseTool implements BlockTool {
       name: `database-timeline-zoom-${zoom}`,
       title: this.api.i18n.t(timelineZoomLabelKey(zoom)),
       isActive: zoom === current,
-      onActivate: () => this.updateActiveView({ timelineZoom: zoom }),
+      // notion-motion.md Round 90 §1 #1: a pick closes the menu, focus back on the zoom button.
+      closeOnActivate: true,
+      onActivate: () => {
+        this.updateActiveView({ timelineZoom: zoom });
+        // Focus was in the menu, so a redraw that replaced the button could not hand focus to its twin.
+        (anchor.isConnected ? anchor : this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-timeline-zoom]'))?.focus({ preventScroll: true });
+      },
     })), undefined, { minWidth: '180px' });
   }
 

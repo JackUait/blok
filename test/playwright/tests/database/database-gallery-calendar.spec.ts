@@ -237,6 +237,36 @@ test.describe('gallery', () => {
     expect(small.cover).toBeCloseTo(123.75, 1);
   });
 
+  // notion-motion.md Round 86 §1 #4 (r86-n-gallery-4/5.raw): after full rows "+ New page" is a 40 tall strip 16 under
+  // the last card; beside a card it fills the empty cell at card height.
+  test('"+ New page" is a 40px strip after full rows and card-sized in a row with cards', async ({ page }) => {
+    const seed = (n: number): RowSeed[] => Array.from({ length: n }, (_, i) => ({ id: `g${i}`, properties: { 'p-title': `Card ${i}` } }));
+    const measure = async (n: number): Promise<{ card: DOMRect; tile: DOMRect }> => {
+      await mount(page, blocks({ type: 'gallery', cardSize: 'large' }, seed(n)));
+      await page.locator('[data-blok-database-gallery-grid]').evaluate((grid) => {
+        grid.style.setProperty('width', '692px');
+      });
+
+      return page.locator('[data-blok-database-gallery-grid]').evaluate((grid) => {
+        const cards = grid.querySelectorAll('[data-blok-database-gallery-card]');
+        const tile = grid.querySelector('[data-blok-database-gallery-new]');
+
+        return { card: cards[cards.length - 1].getBoundingClientRect().toJSON() as DOMRect, tile: (tile as Element).getBoundingClientRect().toJSON() as DOMRect };
+      });
+    };
+
+    const full = await measure(4);
+
+    expect(full.tile.height).toBe(40);
+    expect(full.tile.width).toBe(338);
+    expect(full.tile.top - full.card.bottom).toBe(16);
+
+    const partial = await measure(3);
+
+    expect(partial.tile.top).toBe(partial.card.top);
+    expect(partial.tile.height).toBe(partial.card.height);
+  });
+
   test('"+ New" in the trailing card adds a row', async ({ page }) => {
     await mount(page, blocks({ type: 'gallery' }));
 

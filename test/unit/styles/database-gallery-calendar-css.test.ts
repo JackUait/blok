@@ -70,16 +70,11 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-gallery-card]')).not.toContain('padding-block-end');
   });
 
-  // A row stretches to its tallest item (L12), so the "+ New page" tile takes the card's preview height.
-  it('sizes the "+ New page" tile like a card of the same size', () => {
-    expect(ruleBody('[data-blok-database-gallery-new]::before')).toContain('padding-block-start: var(--blok-database-gallery-new-height, calc(56.25% + 38.5px))');
-    expect(ruleBody('[data-blok-database-gallery][data-card-size="medium"]')).toContain('--blok-database-gallery-new-height: calc(146.25px + 38.5px)');
-  });
-
-  // notion-motion.md Round 24 §4 Gallery (r24-gal-empty.png): with no cards the tile is 338×40, not card height.
-  it('draws the "+ New page" tile 40px tall when its grid has no cards', () => {
-    expect(ruleBody('[data-blok-database-gallery-grid][data-empty] > [data-blok-database-gallery-new]')).toContain('block-size: 40px');
-    expect(ruleBody('[data-blok-database-gallery-grid][data-empty] > [data-blok-database-gallery-new]::before')).toContain('content: none');
+  // notion-motion.md Round 86 §1 #4, Round 24 §4: alone on its row the tile is 40 tall; a row with cards stretches it (L12).
+  it('sizes the "+ New page" tile 40px tall and lets its row stretch it', () => {
+    expect(ruleBody('[data-blok-database-gallery-new]')).toContain('min-block-size: 40px');
+    expect(css).not.toContain('[data-blok-database-gallery-new]::before');
+    expect(css).not.toContain('--blok-database-gallery-new-height');
   });
 
   // notion-motion.md Round 24 §4 Gallery: the "+ New page" tile's hover fill comes in over 20ms ease-in.
@@ -106,7 +101,7 @@ describe('database gallery and calendar styles', () => {
   });
 
   // findings-listgallery L14: the "+ New page" tile is a card-size tile with the card ring, 15px gray.
-  it('draws the "+ New page" tile at card height with the card ring', () => {
+  it('draws the "+ New page" tile with the card ring', () => {
     const tile = ruleBody('[data-blok-database-gallery-new]');
 
     expect(tile).toContain('box-shadow: 0 0 0 1px var(--blok-database-gallery-new-ring)');
@@ -126,8 +121,6 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-gallery-new] svg')).toContain('inline-size: 15px');
     expect(ruleBody('[data-blok-database-gallery-new] svg')).toContain('block-size: 15px');
     expect(ruleBody('[data-blok-database-gallery-new]')).toContain('gap: var(--blok-space-1-5)');
-    // The ::before spacer takes no gap, or the glyph and words shift off centre.
-    expect(ruleBody('[data-blok-database-gallery-new]::before')).toContain('margin-inline-end: calc(-1 * var(--blok-space-1-5))');
   });
 
   // notion-motion.md Round 81 §2 (r81-n-gallery-newpage.raw): Notion's centred group starts -6 and its glyph -1,

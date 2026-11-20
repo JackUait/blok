@@ -1010,7 +1010,7 @@ describe('date cell editor', () => {
 
       expect(rowNames()).toEqual(['end-toggle', 'dateFormat', 'time-toggle', 'timeFormat', 'timeZone', 'remind', 'clear']);
       expect(text(setting('timeFormat'))).toBe('Time format12 hour');
-      expect(text(setting('timeZone'))).toBe('Time zoneYour time zone');
+      expect(text(setting('timeZone'))).toBe('TimezoneYour time zone');
     });
 
     it('turning Include time on shows the time rows', () => {
@@ -1220,7 +1220,7 @@ describe('date cell editor', () => {
         setting('timeZone').click();
         zoneRow('local')?.click();
         expect(ctx.onDateDisplayChange).toHaveBeenLastCalledWith({ timeZone: null });
-        expect(text(setting('timeZone'))).toBe('Time zoneYour time zone');
+        expect(text(setting('timeZone'))).toBe('TimezoneYour time zone');
       });
 
       it('a stored zone that is the browser zone checks the pinned current row', () => {

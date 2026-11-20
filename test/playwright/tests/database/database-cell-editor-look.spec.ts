@@ -286,7 +286,7 @@ test.describe('date picker rows', () => {
     const { box: before } = await open(page, 'p-due');
 
     await page.locator('[data-blok-database-date-time-toggle]').click();
-    expect(await rows(page)).toEqual(['End date', 'Date formatFull date', 'Include time', 'Time format12 hour', 'Time zoneYour time zone', 'RemindNone', 'Clear']);
+    expect(await rows(page)).toEqual(['End date', 'Date formatFull date', 'Include time', 'Time format12 hour', 'TimezoneYour time zone', 'RemindNone', 'Clear']);
     const after = await measure(page);
     const clear = await page.locator('[data-blok-database-date-clear]').boundingBox();
 

@@ -1956,7 +1956,7 @@
   "tools.database.timeFormat.12_hour": "12 hour",
   "tools.database.timeFormat.24_hour": "24 hour",
   "tools.database.timeFormat.hidden": "Hidden",
-  "tools.database.timeZone": "Time zone",
+  "tools.database.timeZone": "Timezone",
   "tools.database.timeZoneLocal": "Your time zone",
   "tools.database.timeZoneSearch": "Search cities, timezones…",
   "tools.database.timeZoneCurrent": "Current timezone",

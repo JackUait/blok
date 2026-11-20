@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { PropertyDefinition, PropertyType } from '../../../../src/tools/database/types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
 import { propertyTypeMeta } from '../../../../src/tools/database/database-property-types';
-import { IconChangeType, IconCheck, IconInfo, IconPageLayout, IconPencil, IconPreview, IconReplace, IconSliders, IconSort } from '../../../../src/components/icons';
+import { IconAlarm, IconChangeType, IconCheck, IconClock, IconInfo, IconPageLayout, IconPencil, IconPreview, IconReplace, IconSliders, IconSort } from '../../../../src/components/icons';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 
 interface CapturedItem {
@@ -1502,6 +1502,15 @@ describe('DatabasePropertyMenu', () => {
 
       byName(zones, 'timeZone-Asia/Tokyo').onActivate?.(byName(zones, 'timeZone-Asia/Tokyo'));
       expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { date: { timeFormat: '24_hour', timeZone: 'Asia/Tokyo' } });
+    });
+
+    // notion-motion.md Round 87 §1 #2 (r87-n-dateflyout.raw): Time format has a clock, Notifications an alarm.
+    it('marks Time format with a clock and Notifications with an alarm', () => {
+      open(prop('date'));
+      const items = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+      expect(byName(items, 'timeFormat').icon).toBe(IconClock);
+      expect(byName(items, 'dateNotifications').icon).toBe(IconAlarm);
     });
 
     // research/37 §2: an untouched Date property shows "Full date" and "12 hour".

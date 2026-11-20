@@ -1,4 +1,4 @@
-import { IconCalendar, IconChangeType, IconCheck, IconHelp, IconCopy, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconPencilLine, IconPreview, IconReplace, IconSliders, IconSort, IconTrash, IconPageLayout, IconWand } from '../../components/icons';
+import { IconAlarm, IconCalendar, IconChangeType, IconCheck, IconClock, IconHelp, IconCopy, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconPencilLine, IconPreview, IconReplace, IconSliders, IconSort, IconTrash, IconPageLayout, IconWand } from '../../components/icons';
 import { nameTakenError } from './database-name-taken-error';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -1520,6 +1520,7 @@ export class DatabasePropertyMenu {
         name: 'timeFormat',
         title: this.t('tools.database.timeFormat'),
         valueLabel: this.t(`tools.database.timeFormat.${shownTimeFormat}`),
+        icon: IconClock,
         children: {
           ...VALUE_LIST,
           items: TIME_FORMATS.map((format) => ({
@@ -1570,6 +1571,7 @@ export class DatabasePropertyMenu {
       name: 'dateNotifications',
       title: this.t('tools.database.dateNotifications'),
       valueLabel: reminderLabel(t, chosen, false, hourCycle),
+      icon: IconAlarm,
       children: {
         ...VALUE_LIST,
         items: choices.map((choice) => ({

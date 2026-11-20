@@ -25,6 +25,16 @@ describe('groupLabel', () => {
       .toBe(new Intl.DateTimeFormat('de', { month: 'short', year: 'numeric' }).format(new Date(2026, 9, 1)));
   });
 
+  // notion-motion.md Round 85c §2 (r85c-n-dateby.raw): Date by Week reads "Oct 11\u2009\u2013\u200917 2026", no comma.
+  it('names a week group by its day range and year in the editor locale', () => {
+    const date: PropertyDefinition = { id: 'p-due', name: 'Due', type: 'date', position: 'a0' };
+    expect(groupLabel(date, 'week:2026-10-11', { ...i18n, getLocale: () => 'en-US' }, { dateBy: 'week' })).toBe('Oct 11\u2009\u2013\u200917 2026');
+    // The week's end is six calendar days on, across a month. Other locales keep Intl's own shape.
+    expect(groupLabel(date, 'week:2026-11-29', { ...i18n, getLocale: () => 'en-US' }, { dateBy: 'week' })).toBe('Nov 29\u2009\u2013\u2009Dec 5 2026');
+    expect(groupLabel(date, 'week:2026-10-11', { ...i18n, getLocale: () => 'de' }, { dateBy: 'week' }))
+      .toBe(new Intl.DateTimeFormat('de', { month: 'short', day: 'numeric', year: 'numeric' }).formatRange(new Date(2026, 9, 11), new Date(2026, 9, 17)));
+  });
+
   // r84-n-grp-Date.raw: Date by Relative named a date past the last 30 days "Oct 2026" too.
   it('names a relative date past the last 30 days by its short month', () => {
     const date: PropertyDefinition = { id: 'p-due', name: 'Due', type: 'date', position: 'a0' };

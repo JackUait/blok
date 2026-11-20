@@ -287,6 +287,7 @@ const TRACKED_VIRTUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/cells/cell-popover.ts': 'A table cell editor covers its cell: the 1px-grown cell rect tracks the cell element.',
   'tools/database/cells/options-editor.ts': 'An option row\'s menu tracks the options list, which outlives the row it opened from when an edit redraws the list.',
   'tools/database/database-card-drawer.ts': 'The page ⋯ menu takes its button\'s rect, moved in to stay 12px from the window: the rect tracks the button.',
+  'tools/database/database-comments.ts': 'A calendar event\'s comment box hangs off its week row\'s right edge: the zero-width edge rect tracks the week element.',
   'tools/database/database-move-picker.ts': 'The Move to picker\'s corner (a right-click point, the row menu\'s corner or under an element) is read relative to the row it opened from and tracks it.',
   'tools/database/database-pinned-group-modal.ts': 'The pinned group modal\'s ⋯ menu is centred under its button: the centred rect tracks the button.',
   'tools/database/database-property-menu.ts': 'The type list takes the closed panel\'s corner rect, which then moves with the property anchor that opened the panel.',

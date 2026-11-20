@@ -293,26 +293,49 @@ describe('view settings panel', () => {
       expect(exists('database-filter-advanced')).toBe(true);
     });
 
-    it('a Filter pick makes the filter and opens its editor; Back shows the filter list', () => {
+    // notion-motion.md Round 87 §1 #7 (r87 notes): the Filters page lists the new chip and its 220-wide rule popup
+    // opens beside the page, the value field focused.
+    it('a Filter pick makes the filter and opens its rule popover at its chip, the value focused', () => {
       const h = harness();
 
       h.open();
       click('database-settings-filter');
       click('database-pick-property-num');
 
+      const id = h.state.view.filters[0]?.id ?? '';
+      const popover = q('database-filter-popover');
+      const settings = q('database-view-settings');
+
       expect(h.state.view.filters).toHaveLength(1);
-      expect(document.querySelector('[data-blok-database-panel-header]')?.textContent).not.toContain('tools.database.settingsFilter');
-      click('database-panel-back');
-      expect(exists('database-filter-add')).toBe(true);
+      expect(popover).not.toBeNull();
+      expect(settings?.contains(popover)).toBe(false);
+      expect(popover?.style.width).toBe('220px');
+      expect(document.activeElement?.hasAttribute('data-blok-database-panel-input')).toBe(true);
+      expect(popover?.contains(document.activeElement)).toBe(true);
+      expect(settings?.querySelector(`[data-blok-testid="database-filter-row-${id}"]`)).not.toBeNull();
+      expect(settings?.querySelector('[data-blok-testid="database-filter-to-advanced"]')).toBeNull();
     });
 
-    it('a Filter page opened straight from the toolbar keeps the panel open after a pick', () => {
+    it('a Filter page opened straight from the toolbar stays on its page after a pick', () => {
       const h = harness();
       const panel = h.open('filter');
 
       click('database-pick-property-num');
       expect(h.state.view.filters).toHaveLength(1);
-      expect(panel.depth).toBe(2);
+      expect(panel.depth).toBe(1);
+      expect(q('database-filter-popover')).not.toBeNull();
+    });
+
+    it('an Add filter pick goes back to the Filters page and opens the new rule popover', () => {
+      const h = harness({ filters: [{ id: 'f1', propertyId: 'title', operator: 'contains', value: 'a' }] });
+      const panel = h.open('filter');
+
+      click('database-filter-add');
+      click('database-pick-property-num');
+
+      expect(h.state.view.filters).toHaveLength(2);
+      expect(panel.depth).toBe(1);
+      expect(q('database-filter-popover')?.contains(document.activeElement)).toBe(true);
     });
 
     it('Sort lists the properties in the same order, and a pick makes the sort', () => {
@@ -341,7 +364,6 @@ describe('view settings panel', () => {
       expect(search()?.getAttribute('aria-label')).toBe('tools.database.filterByPlaceholder');
       expect(page()).toBe('pick');
       click('database-pick-property-num');
-      click('database-panel-back');
       expect(title()).toContain('tools.database.settingsFilter');
       expect(title()).not.toContain('tools.database.filterAdd');
       expect(page()).not.toBe('pick');
@@ -1859,10 +1881,9 @@ describe('view settings panel', () => {
 
   // Ledger D30 (7f240977 · database-view-settings-panel.ts:1108): a date filter takes Today, One week ago… from its page.
   it('picks a relative date value for a date filter from the filter page, and an exact date replaces it', () => {
-    const h = harness();
+    const h = harness({ filters: [{ id: 'f1', propertyId: 'due', operator: 'this_week', value: null }] });
 
-    h.open('filter');
-    click('database-pick-property-due');
+    h.openPill('f1');
     // A new date filter starts as "is within this week"; "Is" brings the value rows.
     click('database-filter-operator');
     click('database-filter-op-equals');

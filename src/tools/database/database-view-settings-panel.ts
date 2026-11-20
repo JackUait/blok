@@ -1960,7 +1960,8 @@ export class ViewSettingsPages {
               const filter = defaultFilterFor(property);
 
               this.ctx.updatePersonal({ filters: [filter] });
-              panel.push(this.simpleFilter(filter.id));
+              panel.refresh();
+              this.openRule(panel, filter.id);
             }, { placeholder: this.t('filterByPlaceholder') }),
             panelSeparator(),
             panelRow({
@@ -2020,7 +2021,7 @@ export class ViewSettingsPages {
 
               this.ctx.updatePersonal({ filters: [...withEntryIds(this.ctx.view().filters), filter] });
               panel.back();
-              panel.push(this.simpleFilter(filter.id));
+              this.openRule(panel, filter.id);
             }, {
               measured: true,
               used: () => this.ctx.view().filters.map((f) => f.propertyId),
@@ -2063,14 +2064,23 @@ export class ViewSettingsPages {
   }
 
   /**
-   * A filter chip's rule popover over the Filters page. notion-motion.md Round 87 §1 #6 (r87-n-settings-addadv.raw):
-   * after "Add to advanced filter" the page stays and the advanced filter opens at its chip.
+   * A filter chip's rule popover over the Filters page, also right after a property pick (notion-motion.md Round 87
+   * §1 #7). Round 87 §1 #6 (r87-n-settings-addadv.raw): after "Add to advanced filter" the page stays and the
+   * advanced filter opens at its chip.
    */
   private openRule(panel: DatabasePanel, filterId: string): void {
     const chip = panel.root.querySelector<HTMLElement>(`[data-blok-testid="database-filter-row-${CSS.escape(filterId)}"]`);
 
     if (chip === null) return;
-    openFilterChip(chip, this.ctx, filterId, () => panel.refresh(), panel, () => {
+    // The toolbar refreshes only the settings panel on a write; the rule popover redraws itself, as the bar's does.
+    const ctx: ViewSettingsContext = {
+      ...this.ctx,
+      updatePersonal: (patch, options) => {
+        this.ctx.updatePersonal(patch, options);
+        rule.refresh();
+      },
+    };
+    const rule = openFilterChip(chip, ctx, filterId, () => panel.refresh(), panel, () => {
       panel.refresh();
       const advanced = panel.root.querySelector<HTMLElement>('[data-blok-testid="database-filter-advanced-chip"]');
 

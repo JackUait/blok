@@ -959,6 +959,10 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         title: this.Blok.I18n.t('blockSettings.duplicate'),
         name: 'duplicate',
         children: {
+          // Notion fills the first row even on a hover open. A microtask: the submenu shows after onOpen.
+          onOpen: () => queueMicrotask(() => {
+            if (this.popover instanceof PopoverDesktop) this.popover.focusItemByName('duplicate-with-content');
+          }),
           items: [
             {
               title: this.Blok.I18n.t('blockSettings.duplicateWithContent'),

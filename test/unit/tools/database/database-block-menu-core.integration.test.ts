@@ -175,6 +175,52 @@ describe('the database block menu in core', () => {
     expect(rows.every((row) => row.querySelector('[data-blok-testid="popover-item-secondary-title"]') !== null)).toBe(true);
   });
 
+  // notion-motion.md Round 68 §5: a pointer-opened submenu shows "Duplicate with content" filled and focused at once.
+  it('Duplicate opened by the pointer fills and focuses "Duplicate with content"', async () => {
+    const instance = await boot(setUpDatabase());
+    const rows = await openMenu(instance, 'db');
+    const trigger = rows.find((row) => row.getAttribute('data-blok-item-name') === 'duplicate');
+
+    trigger?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    trigger?.click();
+    const [withContent, withoutContent] = await vi.waitFor(() => {
+      const found = [...document.querySelectorAll<HTMLElement>('[data-blok-item-name^="duplicate-with"]')];
+
+      if (found.length === 0) throw new Error('no Duplicate submenu');
+
+      return found;
+    });
+
+    await vi.waitFor(() => expect(withContent.getAttribute('data-blok-focused')).toBe('true'));
+    expect(withoutContent.hasAttribute('data-blok-focused')).toBe(false);
+
+    (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+    const copy = await vi.waitFor(() => {
+      const found = instance.moduleInstances.BlockManager.blocks.find((candidate) => candidate.name === 'database' && candidate.id !== 'db');
+
+      if (found === undefined) throw new Error('no copy yet');
+
+      return found;
+    });
+
+    expect(copy.contentIds).toHaveLength(3);
+  });
+
+  it('the filled Duplicate submenu still closes when the pointer moves to another row', async () => {
+    const instance = await boot(setUpDatabase());
+    const rows = await openMenu(instance, 'db');
+    const trigger = rows.find((row) => row.getAttribute('data-blok-item-name') === 'duplicate');
+    const other = rows.find((row) => row.getAttribute('data-blok-item-name') === 'copy-link');
+
+    trigger?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    trigger?.click();
+    await vi.waitFor(() => expect(document.querySelector('[data-blok-item-name="duplicate-with-content"]')?.getAttribute('data-blok-focused')).toBe('true'));
+
+    other?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 37, clientY: 41 }));
+
+    await vi.waitFor(() => expect(document.querySelector('[data-blok-item-name="duplicate-with-content"]')).toBeNull(), { timeout: 2000 });
+  });
+
   it('Duplicate without content copies views, columns, filter and sort but no rows, and selects the copy', async () => {
     const instance = await boot(setUpDatabase());
     const before = (await instance.moduleInstances.Saver.save())?.blocks.map((saved) => saved.id) ?? [];

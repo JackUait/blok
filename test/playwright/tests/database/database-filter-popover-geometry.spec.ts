@@ -174,4 +174,18 @@ test.describe('filter popover geometry', () => {
     expect(plus.x - addBox.x).toBeCloseTo(8, 1);
     expect(label.x - addBox.x).toBeCloseTo(36, 1);
   });
+
+  // notion-motion.md Round 83 §5 (r83-n-af-one.raw): after "Add advanced filter" focus stays on the toolbar Filter button.
+  test('keeps focus on the toolbar Filter button, with the advanced filter open', async ({ page }) => {
+    await mount(page, blocks({ filters: [] }));
+    await page.getByTestId('database-toolbar-filter').click();
+    await page.getByTestId('database-filter-picker-advanced').click();
+
+    // The picker's close motion is cut short here, so settledBox's wait on animations would reject.
+    await expect(page.getByTestId('database-advanced-filter')).toBeVisible();
+    await expect(page.getByTestId('database-toolbar-filter')).toBeFocused();
+    // Once the picker's close motion ends, the advanced filter is still open.
+    await page.evaluate(() => Promise.allSettled(document.getAnimations().map((animation) => animation.finished)));
+    await expect(page.getByTestId('database-advanced-filter')).toBeVisible();
+  });
 });

@@ -8820,7 +8820,7 @@ button[data-blok-database-board-lane-count]:hover {
 [data-blok-database-list-group-header] {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-1);
+  gap: var(--blok-space-0-75);
   height: 24px;
   margin-bottom: var(--blok-space-3);
   cursor: pointer;
@@ -8877,7 +8877,7 @@ button[data-blok-database-board-lane-count]:hover {
 
 [data-blok-database-list-group-actions] {
   display: inline-flex;
-  margin-inline-start: var(--blok-space-0-25);
+  margin-inline-start: var(--blok-space-0-75);
   opacity: 0;
   transition: opacity 80ms ease;
 }

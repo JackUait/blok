@@ -5055,10 +5055,11 @@ button[data-blok-database-board-lane-count]:hover {
 }
 
 /* The board header's parts (findings-listgallery L08): caret, value pill, then "…" and "+" on hover. */
+/* Round 84b §5: Notion's pill starts 3 after the caret (x 566). */
 [data-blok-database-list-group-header] {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-1);
+  gap: var(--blok-space-0-75);
   height: 24px;
   margin-bottom: var(--blok-space-3);
   cursor: pointer;
@@ -5119,10 +5120,10 @@ button[data-blok-database-board-lane-count]:hover {
   transform: rotate(90deg);
 }
 
-/* notion-motion.md Round 82 §1 (r81-n-glist.raw): Notion's "…" and "+" sit 1px further along than the header gap puts them. */
+/* notion-motion.md Round 81 §2 (r81-n-glist.raw): Notion's "…" starts 6 after the pill, the header gap plus 3. */
 [data-blok-database-list-group-actions] {
   display: inline-flex;
-  margin-inline-start: var(--blok-space-0-25);
+  margin-inline-start: var(--blok-space-0-75);
   opacity: 0;
   transition: opacity 80ms ease;
 }

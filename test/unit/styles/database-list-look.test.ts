@@ -624,10 +624,14 @@ describe('grouped list Status pill (Round 84b)', () => {
   });
 });
 
-// notion-motion.md Round 82 §1 "Grouped list header" (r81-n-glist.raw, r82-b-a4-glist.raw): Notion's "…" and "+" sit at
-// 609.6 / 633.6, Blok's at 608.6 / 632.6.
-describe('grouped list header (Round 82)', () => {
-  it('starts the "…" and "+" 1px further along', () => {
-    expect(ruleBody(database, '[data-blok-database-list-group-actions]')).toContain('margin-inline-start: var(--blok-space-0-25)');
+// notion-motion.md Round 81 §2 / Round 84b §5 (r81-n-glist.raw, r84-n-list-pill.raw): Notion's pill starts 3 after
+// the 24px caret (x 566), and its "…" starts 6 after the pill's end (609.6 − 603.6).
+describe('grouped list header (Round 82, Round 84b)', () => {
+  it('starts the pill 3px after the caret', () => {
+    expect(ruleBody(database, '[data-blok-database-list-group-header]')).toContain('gap: var(--blok-space-0-75)');
+  });
+
+  it('starts the "…" and "+" 6px after the pill', () => {
+    expect(ruleBody(database, '[data-blok-database-list-group-actions]')).toContain('margin-inline-start: var(--blok-space-0-75)');
   });
 });

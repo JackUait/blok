@@ -18045,6 +18045,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   border: none;
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-column-bg);
+  box-shadow: 0 0 0 1px var(--blok-database-table-border);
 }
 
 [data-blok-database-filter-group] > [data-blok-database-filter-rule], [data-blok-database-filter-group] > [data-blok-database-filter-group-line] {
@@ -18063,6 +18064,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-filter-add-rule] > [data-blok-database-panel-label] {
   flex: 0 1 auto;
+}
+
+[data-blok-database-filter-add-rule] > [data-blok-database-panel-icon] svg {
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-filter-add-rule] > [data-blok-database-chip-chevron] {

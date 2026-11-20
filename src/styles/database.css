@@ -15396,6 +15396,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   border: none;
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-column-bg);
+  /* Round 83 §5 (r83-n-af-group-box.raw): a ring, not a border, so the box keeps its measured size. */
+  box-shadow: 0 0 0 1px var(--blok-database-table-border);
 }
 
 [data-blok-database-filter-group] > [data-blok-database-filter-rule],
@@ -15418,6 +15420,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-filter-add-rule] > [data-blok-database-panel-label] {
   flex: 0 1 auto;
+}
+
+/* Round 83 §5 (r83-n-af-one.raw), r25-addrule-btn.raw: the plus is 20×20 at +8, so the text starts at +36. */
+[data-blok-database-filter-add-rule] > [data-blok-database-panel-icon] svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* r25-addrule-btn.raw: a 14×14 chevron box 6 after the text. The drawing keeps the chip chevron's 8.6 ink. */

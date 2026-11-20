@@ -79,6 +79,19 @@ describe('advanced filter popover', () => {
     expect(declared(group, 'gap')).toEqual(['var(--blok-space-2)']);
   });
 
+  // notion-motion.md Round 83 §5 (r83-n-af-group-box.raw): border 0, a 1px ring rgba(42,28,0,0.07) drawn as a shadow.
+  it('rings a filter group box with a 1px shadow, not a border', () => {
+    expect(declared('[data-blok-database-filter-group]', 'box-shadow')).toEqual(['0 0 0 1px var(--blok-database-table-border)']);
+  });
+
+  // notion-motion.md Round 83 §5 (r83-n-af-one.raw) and Round 25 §3 (r25-addrule-btn.raw): the plus is 20×20 at +8.
+  it('draws the Add filter rule plus at 20px', () => {
+    const svg = '[data-blok-database-filter-add-rule] > [data-blok-database-panel-icon] svg';
+
+    expect(declared(svg, 'width')).toEqual(['20px']);
+    expect(declared(svg, 'height')).toEqual(['20px']);
+  });
+
   // r18-adv-addrule.raw, r19-adv-groupmore.raw, r19-adv-andor.raw: a flyout row with a hint line is 45 tall.
   it('makes a flyout row with a hint 45px tall', () => {
     expect(declared('[data-blok-database-panel-page="sort-flyout"] > [data-blok-database-panel-row]:has(> [data-blok-database-panel-text])', 'min-height')).toEqual(['45px']);

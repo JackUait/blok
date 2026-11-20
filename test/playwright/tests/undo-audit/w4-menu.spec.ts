@@ -133,9 +133,13 @@ const tune = (page: Page, name: string): Locator =>
 const nested = (page: Page, name: string): Locator =>
   page.locator(NESTED_POPOVER).getByRole('menuitem', { name, exact: true });
 
-const duplicate = async (page: Page, id: string): Promise<void> => {
+/** A block with content (a database) opens a submenu; "with content" is the old one-click copy. */
+const duplicate = async (page: Page, id: string, hasContent = false): Promise<void> => {
   await openTunes(page, id);
   await tune(page, 'duplicate').click();
+  if (hasContent) {
+    await nested(page, 'Duplicate with content').click();
+  }
 };
 
 const convert = async (page: Page, id: string, to: string): Promise<void> => {
@@ -369,7 +373,7 @@ test.describe('W4M controls: duplicate from the block menu', () => {
   for (const [title, id, blocks] of DUPLICATE_CASES) {
     test(`W4M control: duplicate ${title}: one undo removes the copy, redo brings the same copy back`, async ({ page }) => {
       await createBlok(page, blocks);
-      const r = await roundTrip(page, () => duplicate(page, id));
+      const r = await roundTrip(page, () => duplicate(page, id, title === 'database'));
 
       expectRoundTrip(r);
       expect(r.after.data.length, 'the copy exists').toBeGreaterThan(r.before.data.length);
@@ -476,6 +480,10 @@ test.describe('W4M controls: delete from the block menu', () => {
       const r = await roundTrip(page, async () => {
         await openTunes(page, id);
         await tune(page, 'delete').click();
+        // Deleting a database asks first.
+        if (title === 'database') {
+          await page.getByRole('alertdialog').getByRole('button', { name: 'Move to Trash' }).click();
+        }
       });
 
       expectRoundTrip(r);

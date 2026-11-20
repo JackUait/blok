@@ -509,6 +509,21 @@ describe('DatabaseViewControls', () => {
       ]);
     });
 
+    // notion-motion.md Round 65 §2 (r65-n-advfilter.raw): "Al", then Add filter rule, gives rules ["Al", "Al"].
+    it('"Add filter rule" copies the value of the rule above', () => {
+      const { controls, saved, ruleId } = openAdvanced();
+      const tree = (): DatabaseViewConfig['filterTree'] => controls.effective(saved.view).filterTree;
+      const input = q(`database-filter-rule-value-${ruleId()}`);
+
+      if (!(input instanceof HTMLInputElement)) throw new Error('no value field');
+      input.value = 'Al';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      click(`database-filter-add-rule-${tree()?.id ?? ''}`);
+      click('database-filter-add-rule');
+
+      expect(tree()?.filterRules[1]).toEqual(expect.objectContaining({ propertyId: 'title', operator: 'contains', value: 'Al' }));
+    });
+
     it('"Add filter group" adds a group that holds one Name rule', () => {
       const { controls, saved } = openAdvanced();
       const tree = (): DatabaseViewConfig['filterTree'] => controls.effective(saved.view).filterTree;

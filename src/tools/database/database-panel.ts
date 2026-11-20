@@ -84,20 +84,20 @@ const keepsNativeUndo = (target: EventTarget | null): boolean =>
 
 /** Each panel by its element, for {@link historyKeyStaysInPanel}. */
 const panels = new WeakMap<Element, DatabasePanel>();
-/** Panels now open: one that ignores history keys holds them from anywhere, focus may stay outside it. */
-const openPanels = new Set<DatabasePanel>();
+/** Open panels with a focus host: one that ignores history keys holds them on its host too. */
+const hostedPanels = new Set<DatabasePanel>();
 
 /**
  * True when a history key pressed at `target` walks no editor history: the panel
  * it is in ignores the key, or the key goes to a text field there, which keeps
- * its native undo (core walks no history from a text field). Outside every panel,
- * an open panel that ignores the keys holds them.
+ * its native undo (core walks no history from a text field), or it is pressed on
+ * the focus host of an open panel that ignores the keys.
  */
 export const historyKeyStaysInPanel = (target: EventTarget | null): boolean => {
   const element = target instanceof Element ? target.closest('[data-blok-database-panel]') : null;
   const panel = element === null ? undefined : panels.get(element);
 
-  if (panel === undefined) return [...openPanels].some((open) => open.ignoringHistoryKeys);
+  if (panel === undefined) return [...hostedPanels].some((open) => open.holdsHistoryKeyAt(target));
 
   return panel.ignoringHistoryKeys || keepsNativeUndo(target);
 };
@@ -174,11 +174,15 @@ export class DatabasePanel {
   open(): void {
     this.render();
     this.popover.show();
-    openPanels.add(this);
+    if (this.options.focusHost === undefined) {
+      this.focusFirst();
+
+      return;
+    }
+    hostedPanels.add(this);
     // Window capture: before core's keyboard-owner check, which runs after the key bubbles.
-    window.addEventListener('keydown', this.holdHistoryKeyOutside, true);
-    if (this.options.focusHost === undefined) this.focusFirst();
-    else this.options.focusHost.focus();
+    window.addEventListener('keydown', this.holdHistoryKeyOnHost, true);
+    this.options.focusHost.focus();
   }
 
   /** Keeps this panel open under a panel it opens; outside presses, focus and Escape go there until the release. */
@@ -245,8 +249,8 @@ export class DatabasePanel {
   private finish(escape = false): void {
     if (this.closed) return;
     this.closed = true;
-    openPanels.delete(this);
-    window.removeEventListener('keydown', this.holdHistoryKeyOutside, true);
+    hostedPanels.delete(this);
+    window.removeEventListener('keydown', this.holdHistoryKeyOnHost, true);
     this.owned.forEach((child) => child.close());
     this.options.onClose?.(escape);
   }
@@ -321,12 +325,16 @@ export class DatabasePanel {
     this.element.querySelector<HTMLElement>(`[data-blok-database-panel-row]:not([disabled]), :is(${FOCUSABLE}):not([data-blok-database-panel-close])`)?.focus();
   }
 
-  /** A history key pressed outside every panel, while this one ignores them: {@link handleKeydown} covers its own. */
-  private readonly holdHistoryKeyOutside = (event: KeyboardEvent): void => {
-    const inPanel = event.target instanceof Element && event.target.closest('[data-blok-database-panel]') !== null;
+  /** True when this panel ignores history keys and `target` is in its focus host. */
+  holdsHistoryKeyAt(target: EventTarget | null): boolean {
+    const host = this.options.focusHost;
 
-    if (inPanel || !this.ignoringHistoryKeys || !isHistoryKey(event) || keepsNativeUndo(event.target)) return;
-    event.preventDefault();
+    return this.ignoringHistoryKeys && host !== undefined && target instanceof Node && host.contains(target);
+  }
+
+  /** {@link handleKeydown} covers keys pressed in the panel; this covers its focus host. */
+  private readonly holdHistoryKeyOnHost = (event: KeyboardEvent): void => {
+    if (isHistoryKey(event) && this.holdsHistoryKeyAt(event.target)) event.preventDefault();
   };
 
   private readonly handleKeydown = (event: KeyboardEvent): void => {

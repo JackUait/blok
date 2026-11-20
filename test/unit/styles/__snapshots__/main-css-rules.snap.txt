@@ -7415,7 +7415,7 @@ button[data-blok-database-board-lane-count]:hover {
   padding: var(--blok-space-1-5) var(--blok-space-3);
   border-radius: var(--blok-radius-pill);
   --blok-radius-inner: var(--blok-radius-control);
-  cursor: grab;
+  cursor: pointer;
   font-size: 14px;
   line-height: 16.8px;
   font-weight: 500;
@@ -7426,7 +7426,6 @@ button[data-blok-database-board-lane-count]:hover {
 }
 
 [data-blok-database-tab-bar][data-dragging] [data-blok-database-tab] {
-  cursor: grabbing;
   transition: background-color 100ms ease-in-out, transform 200ms ease;
 }
 

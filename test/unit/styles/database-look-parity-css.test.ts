@@ -39,6 +39,11 @@ describe('view tabs (research/07:45-50, 222)', () => {
     expect(ruleBody('[data-blok-database-tab] svg')).toContain('width: 20px');
   });
 
+  it('show the pointer cursor at rest and while dragged (notion-motion.md Round 85c §3)', () => {
+    expect(ruleBody('[data-blok-database-tab]')).toContain('cursor: pointer');
+    expect(ruleBody('[data-blok-database-tab-bar][data-dragging] [data-blok-database-tab]')).not.toContain('cursor:');
+  });
+
   it('take the 0.076 pressed fill while their menu is open (notion-motion.md Round 27 §3)', () => {
     expect(ruleBody('[data-blok-database-tab][aria-expanded="true"]')).toContain('background-color: var(--blok-database-button-pressed-bg)');
     expect(tokenValues('--blok-database-button-pressed-bg')[0]).toBe('rgba(33, 27, 23, 0.076)');

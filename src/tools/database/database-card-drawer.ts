@@ -1586,6 +1586,8 @@ export class DatabaseCardDrawer {
       class: DATABASE_MENU_CLASS,
       animateClose: true,
       trigger: anchor,
+      // notion-motion.md Round 56 §8: the list touches the button's bottom.
+      offset: 0,
       width: 'auto',
       // Notion's list is 500 wide; a phone keeps a 16px gutter.
       minWidth: `${Math.max(0, Math.min(500, window.innerWidth - 32))}px`,

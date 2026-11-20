@@ -59,7 +59,8 @@ export const openFlyout = (
     width,
     backLabel: '',
     gap: place.gap ?? 0,
-    ...(place.beside !== undefined ? { beside: place.beside } : {}),
+    // notion-motion.md Round 87 §1 #8: a beside menu opens on the left when its right has no room.
+    ...(place.beside !== undefined ? { beside: place.beside, besideFlip: true } : {}),
     ...(place.aside !== undefined ? { aside: place.aside } : {}),
     ...(place.flip === true ? { flip: true } : {}),
     ...(place.alignEnd === true ? { alignEnd: true } : {}),

@@ -5,6 +5,7 @@ import { operatorPick } from '../../../../src/tools/database/database-filter-chi
 import type { DatabaseViewConfig, FilterRule, PropertyDefinition } from '../../../../src/tools/database/types';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { hover, shownHint } from './hint-harness';
+import { PopoverDesktop } from '../../../../src/components/utils/popover/popover-desktop';
 import { PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
 import { IconLockOpen, IconPencilLine, IconSigma } from '../../../../src/components/icons';
 
@@ -1593,6 +1594,40 @@ describe('DatabaseViewControls', () => {
 
       expect(q('database-filter-more-menu')).toBeNull();
       expect(q('database-filter-popover')).not.toBeNull();
+    });
+
+    const openAt = (more: DOMRect): HTMLElement | null => {
+      vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
+      vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+      vi.spyOn(PopoverDesktop.prototype, 'size', 'get').mockReturnValue({ width: 240, height: 65 });
+      const env = setup();
+
+      env.saved.view = { ...env.saved.view, filters: [{ id: 'f1', propertyId: 'title', operator: 'contains', value: 'a' }] };
+      env.controls.refresh();
+      click('database-filter-pill-f1');
+      const button = q('database-filter-more');
+
+      if (button === null) throw new Error('no ⋯');
+      button.getBoundingClientRect = () => more;
+      button.click();
+
+      return q('database-filter-more-menu')?.closest<HTMLElement>('[data-blok-popover]') ?? null;
+    };
+
+    // notion-motion.md Round 87 §1 #8 (r87 notes): with no room on the right, Notion's 240x65 menu sits at 1192,388,
+    // its right edge 2 left of the ⋯ at 1434, its top on the ⋯ top.
+    it('opens left of the ⋯ when its right has no room', () => {
+      const box = openAt(new DOMRect(1434, 388, 24, 24));
+
+      expect(parseFloat(box?.style.left ?? '')).toBeCloseTo(1192);
+      expect(parseFloat(box?.style.top ?? '')).toBeCloseTo(388);
+    });
+
+    it('opens right of the ⋯ when its right has room', () => {
+      const box = openAt(new DOMRect(793, 358, 24, 24));
+
+      expect(parseFloat(box?.style.left ?? '')).toBeCloseTo(819);
+      expect(parseFloat(box?.style.top ?? '')).toBeCloseTo(358);
     });
   });
 

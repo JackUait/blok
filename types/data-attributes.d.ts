@@ -422,6 +422,10 @@ export const DATA_ATTR: {
    *  them. Text inputs and contenteditables inside keep their native undo.
    *  With the value "select-all", Cmd/Ctrl+A on a target that is
    *  not a text field selects every block at once.
+   *  At its edge, an owner can hand an arrow back: dispatch a cancelable,
+   *  bubbling `blok-keyboard-owner-edge` CustomEvent with `detail.direction`
+   *  "next" or "previous". Blok selects the adjacent block and cancels the
+   *  event; it stays uncancelled when there is no block to move to.
    *  Public authoring hook. */
   readonly keyboardOwner: 'data-blok-keyboard-owner';
   /** Marks an editable field that saves plain text, like an audio title.

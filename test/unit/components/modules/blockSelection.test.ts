@@ -12,6 +12,7 @@ import type { SanitizerConfig } from '../../../../types/configs';
 import type { Block } from '../../../../src/components/block';
 import { clean } from '../../../../src/components/utils/sanitizer';
 import { announce } from '../../../../src/components/utils/announcer';
+import { KEYBOARD_OWNER_EDGE_EVENT } from '../../../../src/components/constants/data-attributes';
 
 vi.mock('../../../../src/components/utils/announcer', () => ({
   announce: vi.fn(),
@@ -105,6 +106,7 @@ const createBlockSelection = (overrides: ModuleOverrides = {}): BlockSelectionSe
     getBlockByIndex: vi.fn((index: number) => blocks[index]),
     withCoveredLayouts: (selected: Block[]): Block[] => selected,
     getBlock: vi.fn((element: HTMLElement) => blocks.find((block) => block.holder === element) ?? null),
+    getBlockByChildNode: vi.fn((node: Node) => blocks.find((block) => block.holder.contains(node))),
     getBlockById: vi.fn((id: string) => blocks.find((block) => block.id === id) ?? undefined),
       getBlockDepth: vi.fn(() => 0),
     removeSelectedBlocks: vi.fn(() => 0),
@@ -1737,6 +1739,77 @@ describe('BlockSelection', () => {
       expect(blocks.some((block) => block.selected)).toBe(false);
       expect(event.defaultPrevented).toBe(false);
       teardown(blockSelection);
+    });
+  });
+
+  describe('a keyboard owner hands an arrow back at its edge', () => {
+    const setup = (): ReturnType<typeof createBlockSelection> & { row: HTMLElement } => {
+      const setupResult = createBlockSelection();
+      const owner = document.createElement('div');
+      const row = document.createElement('div');
+
+      setupResult.blocks.forEach((block) => setupResult.redactor.appendChild(block.holder));
+      owner.setAttribute('data-blok-keyboard-owner', '');
+      row.tabIndex = 0;
+      owner.appendChild(row);
+      setupResult.blocks[0].holder.appendChild(owner);
+      document.body.appendChild(setupResult.redactor);
+      vi.spyOn(Shortcuts, 'add').mockImplementation(() => undefined);
+      setupResult.blockSelection.prepare();
+      row.focus();
+
+      return { ...setupResult, row };
+    };
+
+    const handOff = (target: HTMLElement, direction: 'next' | 'previous'): boolean =>
+      target.dispatchEvent(new CustomEvent(KEYBOARD_OWNER_EDGE_EVENT, { bubbles: true, cancelable: true, detail: { direction } }));
+
+    afterEach(() => {
+      vi.mocked(announce).mockClear();
+    });
+
+    it('selects only the next block, drops focus to the body and cancels the event', () => {
+      const { blockSelection, blocks, row } = setup();
+
+      expect(handOff(row, 'next')).toBe(false);
+      expect(blocks.map((block) => block.selected)).toEqual([false, true, false]);
+      expect(document.activeElement).toBe(document.body);
+      expect(blockSelection.navigationFocusedBlock).toBe(blocks[1]);
+    });
+
+    it('skips a block in a hidden slot, as arrow navigation does', () => {
+      const { blocks, row } = setup();
+      const slot = document.createElement('div');
+
+      slot.hidden = true;
+      blocks[1].holder.replaceWith(slot);
+      slot.appendChild(blocks[1].holder);
+
+      handOff(row, 'next');
+
+      expect(blocks.map((block) => block.selected)).toEqual([false, false, true]);
+    });
+
+    it('leaves everything alone when no block follows', () => {
+      const { blockSelection, blocks, row } = setup();
+
+      blocks[2].holder.appendChild(row.parentElement ?? row);
+      row.focus();
+
+      expect(handOff(row, 'next')).toBe(true);
+      expect(blocks.some((block) => block.selected)).toBe(false);
+      expect(document.activeElement).toBe(row);
+      expect(blockSelection.navigationModeEnabled).toBe(false);
+    });
+
+    it('a plain arrow inside an owner that does not hand off changes nothing', () => {
+      const { blockSelection, blocks, row } = setup();
+
+      row.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+
+      expect(blocks.some((block) => block.selected)).toBe(false);
+      expect(document.activeElement).toBe(row);
+      expect(blockSelection.navigationModeEnabled).toBe(false);
     });
   });
 

@@ -22690,8 +22690,8 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   content: "";
   position: absolute;
   inset-block-start: 50%;
-  inset-inline-end: calc(100% + 1px);
-  inline-size: 6px;
+  inset-inline-end: 100%;
+  inline-size: 7px;
   translate: 0 -50%;
   border-block-start: 2px solid var(--blok-database-timeline-link-ring);
   pointer-events: none;
@@ -22701,7 +22701,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   content: "";
   position: absolute;
   inset-block-start: 50%;
-  inset-inline-start: -1px;
+  inset-inline-start: 0;
   box-sizing: border-box;
   inline-size: 8px;
   block-size: 8px;

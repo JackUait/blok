@@ -20546,15 +20546,15 @@ button[data-blok-database-feed-reaction]:hover,
 
 /*
  * tlhover.png (Gamma): "–o", a 2px line from 1px inside the bar's end into an 8px ring
- * with a 2px stroke, 5px past the bar. Both draw 1px before this hit box, which starts
- * where the end resize handle stops; they overlap that handle, so a press there must resize.
+ * with a 2px stroke. Round 84b §5: the ring starts with this hit box, 6 past the bar
+ * (centre +10). The line overlaps the end resize handle, so a press there must resize.
  */
 [data-blok-database-timeline-link-handle]::before {
   content: "";
   position: absolute;
   inset-block-start: 50%;
-  inset-inline-end: calc(100% + 1px);
-  inline-size: 6px;
+  inset-inline-end: 100%;
+  inline-size: 7px;
   translate: 0 -50%;
   border-block-start: 2px solid var(--blok-database-timeline-link-ring);
   pointer-events: none;
@@ -20564,7 +20564,7 @@ button[data-blok-database-feed-reaction]:hover,
   content: "";
   position: absolute;
   inset-block-start: 50%;
-  inset-inline-start: -1px;
+  inset-inline-start: 0;
   box-sizing: border-box;
   inline-size: 8px;
   block-size: 8px;

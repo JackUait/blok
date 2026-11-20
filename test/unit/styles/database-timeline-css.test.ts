@@ -133,6 +133,14 @@ describe('database timeline styles', () => {
     expect(Number(offset?.[1]) - 10).toBeGreaterThanOrEqual(6);
   });
 
+  // notion-motion.md Round 84b §5 (r84-n-tl-dot.raw): the 8px ring's centre is 10 past the bar's end (+47 on a 37 bar),
+  // the hit box starts 6 past it, and the 2px line runs from 1px inside the bar's end to the ring.
+  it('centres the link ring 10px past the bar and runs the line up to it', () => {
+    expect(ruleBody('[data-blok-database-timeline-link-handle]::after')).toContain('inset-inline-start: 0');
+    expect(ruleBody('[data-blok-database-timeline-link-handle]::before')).toContain('inset-inline-end: 100%');
+    expect(ruleBody('[data-blok-database-timeline-link-handle]::before')).toContain('inline-size: 7px');
+  });
+
   // findings C19/C20 (r26 §4d, r33 §4.6): no line under the toolbar; a near-white canvas with a bottom line.
   it('draws no line under the toolbar, and fills the canvas with a line under it', () => {
     expect(ruleBody('[data-blok-database-timeline-body]')).not.toContain('border-block-start');

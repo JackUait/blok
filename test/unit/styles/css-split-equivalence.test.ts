@@ -1924,7 +1924,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r210: Round 84b time zone list 48 down, headings spaced like Notion's sections. Net database.css growth against origin/main.
     const DATABASE_R210_BYTES = 741;
     // Lane r211: Round 84b grouped list Status pill at 400, its header spacing, full page title gap, timeline link dot. Net database.css growth against origin/main.
-    const DATABASE_R211_BYTES = 464;
+    const DATABASE_R211_BYTES = 442;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

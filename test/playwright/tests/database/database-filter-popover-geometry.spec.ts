@@ -153,4 +153,25 @@ test.describe('filter popover geometry', () => {
     expect(more.x - (value.x + value.width) - 16).toBeCloseTo(value.width - 170, 1);
     expect(more.x).toBeCloseTo(groupMore.x, 1);
   });
+
+  // notion-motion.md Round 83 §5 (r83-n-af-group-box.raw, r83-n-af-one.raw): a 1px ring on the group,
+  // a 20px plus at +8 on "Add filter rule", its text at +36.
+  test('rings a group 1px and draws Add filter rule\'s plus at 20px', async ({ page }) => {
+    await mount(page, blocks({ filterTree: { id: 'root', conjunction: 'and', filterRules: [
+      { id: 'f1', ...RULE },
+      { id: 'g1', conjunction: 'or', filterRules: [{ id: 'f3', ...RULE }] },
+    ] } }));
+    await page.getByTestId('database-advanced-pill').click();
+    await settledBox(page.getByTestId('database-advanced-filter'));
+    const group = page.getByTestId('database-filter-group-g1');
+    const add = page.getByTestId('database-filter-add-rule-root');
+    const addBox = await boxOf(add);
+    const plus = await boxOf(add.locator('svg').first());
+    const label = await boxOf(add.locator('[data-blok-database-panel-label]'));
+
+    expect(await group.evaluate((el) => getComputedStyle(el).boxShadow)).toBe('rgba(42, 28, 0, 0.07) 0px 0px 0px 1px');
+    expect(plus.width).toBeCloseTo(20, 1);
+    expect(plus.x - addBox.x).toBeCloseTo(8, 1);
+    expect(label.x - addBox.x).toBeCloseTo(36, 1);
+  });
 });

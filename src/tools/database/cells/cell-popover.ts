@@ -35,6 +35,10 @@ export interface CellPopoverOptions {
   aside?: { side: 'left' | 'right'; gap: number; flip?: boolean };
   /** Opens above the anchor, `gap` over it, when it fits there and not below. */
   flip?: boolean;
+  /** With `flip`: the space over the anchor when above, when it is not `gap`. */
+  flipGap?: number;
+  /** Moves the box this far along x from the anchor's left. */
+  shiftX?: number;
   /**
    * The anchor is a zero-size point: the top-left on it, or above it, its bottom there, when only that fits.
    * No entrance motion (database.css).
@@ -101,16 +105,16 @@ const PANEL_GAP = 8;
  * panel that would run past the window slides up to stay inside it, as view
  * settings does (side-by-side-v1.md "Filter / Sort popovers").
  */
-const fitPlacement = (anchor: HTMLElement, gap = PANEL_GAP, flip = false, verticalMargin?: number, context = anchor): Pick<PopoverDesktopParams, 'cover' | 'viewportMargin' | 'coverFlipOffset' | 'coverVerticalMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
+const fitPlacement = (anchor: HTMLElement, gap = PANEL_GAP, flip = false, verticalMargin?: number, context = anchor, flipGap = gap, shiftX = 0): Pick<PopoverDesktopParams, 'cover' | 'viewportMargin' | 'coverFlipOffset' | 'coverVerticalMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
   const rect = anchor.getBoundingClientRect();
 
   return {
     cover: true,
     viewportMargin: COVER_VIEWPORT_MARGIN,
-    position: new DOMRect(rect.x, rect.bottom + gap, rect.width, 0),
+    position: new DOMRect(rect.x + shiftX, rect.bottom + gap, rect.width, 0),
     positionContext: context,
-    // Above, its bottom sits `gap` over the anchor's top (r21-cc-date-val.raw, r21-cc-add3.raw).
-    ...(flip ? { coverFlipOffset: rect.height + 2 * gap } : {}),
+    // Above, its bottom sits `flipGap` over the anchor's top (r21-cc-date-val.raw, r21-cc-add3.raw).
+    ...(flip ? { coverFlipOffset: rect.height + gap + flipGap } : {}),
     ...(verticalMargin !== undefined ? { coverVerticalMargin: verticalMargin } : {}),
   };
 };
@@ -213,7 +217,7 @@ export class CellPopover {
     const { aside, beside, besideOf, besideFlipWidth } = this.options;
     const below = (): ReturnType<typeof fitPlacement> | ReturnType<typeof besidePlacement> => (beside !== undefined
       ? besidePlacement(besideOf ?? anchor, beside, besideFlipWidth)
-      : fitPlacement(anchor, this.options.point === true ? 0 : this.options.gap, this.options.point === true || this.options.flip === true, this.options.verticalMargin, this.options.positionContext));
+      : fitPlacement(anchor, this.options.point === true ? 0 : this.options.gap, this.options.point === true || this.options.flip === true, this.options.verticalMargin, this.options.positionContext, this.options.flipGap, this.options.shiftX));
     const fit = aside !== undefined ? asidePlacement(aside) : below();
     const coverOrFit = cover === true || cover === 'value' ? coverPlacement(anchor, cover === 'value', cover === true && this.options.below === true) : fit;
     const docks = {

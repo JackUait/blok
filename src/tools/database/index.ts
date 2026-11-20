@@ -8091,7 +8091,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** Inline edit of a board card property (Notion 2022-08-25): the cell editor, no page. */
-  private editCardProperty(rowId: string, propertyId: string, anchor: HTMLElement, afterClose?: () => void, context?: NativeWidgetContext, atPoint = false): void {
+  private editCardProperty(rowId: string, propertyId: string, anchor: HTMLElement, afterClose?: () => void, context?: NativeWidgetContext, atPoint = false, listChip = false): void {
     const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === propertyId);
     const row = this.model.getRow(rowId);
 
@@ -8107,6 +8107,7 @@ export class DatabaseTool implements BlockTool {
       readOnly: false,
       options: this.model.getProperty(propertyId)?.config?.options ?? [],
       ...(atPoint ? { atPoint } : {}),
+      ...(listChip ? { listChip } : {}),
       ...(reminder !== undefined ? { reminder } : {}),
       ...(property.type === 'date'
         ? { onReminderChange: (next: DateReminderOffset | null) => { if (context === undefined || context.writable()) this.commitReminder(rowId, propertyId, next); } }
@@ -10081,7 +10082,7 @@ export class DatabaseTool implements BlockTool {
       ...this.commentBadgeLever(),
       locale: editorLocale(this.api.i18n),
       onPropertyEdit: (rowId: string, propertyId: string, anchor: HTMLElement) =>
-        this.editCardProperty(rowId, propertyId, anchor, () => this.focusListProperty(rowId, propertyId, context), context),
+        this.editCardProperty(rowId, propertyId, anchor, () => this.focusListProperty(rowId, propertyId, context), context, false, true),
       onNewBelow: (rowId: string, groupKey: string | null) => this.addListRowBelow(rowId, groupKey, context),
       onOpenRow: (rowId: string) => (context === undefined ? this.handleRowClick(rowId) : context.openRow(rowId)),
       ...(context === undefined && !this.readOnly ? { lassoRows: (rowIds: string[]) => this.selectRows(rowIds) } : {}),

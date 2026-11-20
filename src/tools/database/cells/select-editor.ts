@@ -117,6 +117,7 @@ class SelectEditor {
       minWidth: coverMinWidth(anchor, ctx.coverCell, property.type === 'status' ? 240 : 300),
       // notion-motion.md Round 68 §4: 300 wide at a right-click point, above it near the window's bottom.
       point: ctx.atPoint === true,
+      ...(ctx.listChip === true ? { flip: true, flipGap: 1, shiftX: -1 } : {}),
       onEscape: () => this.finish(true),
       onDismiss: () => this.finish(false),
     });

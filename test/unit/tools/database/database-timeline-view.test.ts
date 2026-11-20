@@ -1174,7 +1174,7 @@ describe('DatabaseTimelineView', () => {
         expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-09T22:45', end: '2026-10-10T01:45' });
       });
 
-      // notion-motion.md Round 89 §1 #3: at Quarter the ghost is 165 wide (14 days of 12, less 3). The click's length there is unread.
+      // notion-motion.md Round 89 §1 #3: at Quarter the ghost is 165 wide (14 days of 12, less 3). Round 90: the click makes that bar.
       it('puts a 14-day ghost at Quarter zoom, and adds that bar', () => {
         const start = timelineWindow(CENTER, 'quarter').start;
         const qx = (day: string): number => daysBetween(start, day) * TIMELINE_DAY_WIDTH.quarter;
@@ -1190,6 +1190,45 @@ describe('DatabaseTimelineView', () => {
 
         ghost(root)?.click();
         expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-20/2026-11-02' });
+      });
+
+      // notion-motion.md Round 90 §1 #2: every bar is days x day width - 3. Notion's click length was read at Quarter only.
+      it.each([
+        ['week', 1, '2026-10-09', '2026-10-09'],
+        ['bi_week', 3, '2026-10-09', '2026-10-09/2026-10-11'],
+        ['year', 28, '2026-10-12', '2026-10-12/2026-11-08'],
+        ['5_years', 140, '2026-10-12', '2026-10-12/2027-02-28'],
+      ] as const)('puts a ghost of Notion\'s length at %s zoom (%i days), and adds that bar', (zoom, days, day, written) => {
+        const width = TIMELINE_DAY_WIDTH[zoom];
+        const start = timelineWindow(CENTER, zoom).start;
+        const zx = daysBetween(start, day) * width;
+        const { root, handlers } = mount({ view: timelineView({ timelineZoom: zoom }) });
+
+        rect(canvas(root), 0, 0, timelineWindow(CENTER, zoom).days * width, 400);
+        pointer('pointermove', lane(root), zx + width / 2, 390);
+
+        expect(ghost(root)?.getAttribute('data-day')).toBe(day);
+        expect(ghost(root)?.style.width).toBe(`${days * width - 3}px`);
+
+        ghost(root)?.click();
+        expect(handlers.addRow).toHaveBeenCalledWith(null, { start: written });
+      });
+
+      // notion-motion.md Round 90 §1 #2: Hours is a 1-hour ghost (288.7) in the hovered hour. Its snap is unread: Blok floors to the hour.
+      it('puts a 1-hour ghost on the hovered hour at Hours zoom, and adds that timed bar', () => {
+        const hoursStart = timelineWindow(CENTER, 'hours').start;
+        const perMinute = TIMELINE_DAY_WIDTH.hours / 1440;
+        const midnight = daysBetween(hoursStart, CENTER) * TIMELINE_DAY_WIDTH.hours;
+        const { root, handlers } = mount({ view: timelineView({ timelineZoom: 'hours' }) });
+
+        rect(canvas(root), 0, 0, timelineWindow(CENTER, 'hours').days * TIMELINE_DAY_WIDTH.hours, 400);
+        pointer('pointermove', lane(root), midnight + (14 * 60 + 40) * perMinute, 390);
+
+        expect(parseFloat(ghost(root)?.style.width ?? '')).toBeCloseTo(60 * perMinute - 3, 5);
+        expect(parseFloat(ghost(root)?.style.insetInlineStart ?? '')).toBeCloseTo(midnight + 14 * 60 * perMinute + 2, 5);
+
+        ghost(root)?.click();
+        expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-09T14:00/2026-10-09T15:00' });
       });
 
       it('has no ghost when read-only', () => {

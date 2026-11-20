@@ -150,12 +150,14 @@ const FAR_BAR_TRIM = 3;
 const FAR_BAR_MIN = 11;
 /** findings C07: Notion's "+ New" made a 5-day bar. */
 const NEW_BAR_DAYS = 5;
-/** notion-motion.md Round 89 §1 #3: the Quarter lane ghost spans 14 days (165 + 3 = 14 x 12). Other zooms are unread. */
-const NEW_BAR_DAYS_BY_ZOOM: Partial<Record<TimelineZoom, number>> = { quarter: 14 };
+/** notion-motion.md Round 90 §1 #2: the lane ghost's days at each zoom. Hours and Day draw a timed ghost instead. */
+const NEW_BAR_DAYS_BY_ZOOM: Partial<Record<TimelineZoom, number>> = { week: 1, bi_week: 3, month: 5, quarter: 14, year: 28, '5_years': 140 };
 /** notion-motion.md Round 88 §1 #5, Round 89 §1 #2: zooms whose bar pill names its days. */
 const LABELLED_PILL: ReadonlySet<TimelineZoom> = new Set(['quarter', 'year', '5_years']);
 /** notion-motion.md Round 48 A9: at Day zoom Notion's "+ New" made a 3-hour bar (6:30 PM → 9:30 PM). */
 const NEW_BAR_DAY_ZOOM_MINUTES = 3 * 60;
+/** notion-motion.md Round 90 §1 #2: the Hours ghost is 1 hour. */
+const HOUR_MINUTES = 60;
 /** Within this share of either canvas end, a scroll redraws around a new centre. */
 const EDGE_SHARE = 0.1;
 /** notion-motion.md Round 48 A2-A4: zooms whose labels and today circle sit on start lines, with month lines in the body. */
@@ -464,7 +466,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
    */
   private newBar(day?: string, time?: string): BarWrite {
     if (day !== undefined && time !== undefined) {
-      return newTimedBarWrite(`${day}T${time}`, NEW_BAR_DAY_ZOOM_MINUTES, this.options.endPropertyId !== undefined);
+      return newTimedBarWrite(`${day}T${time}`, this.zoom === 'hours' ? HOUR_MINUTES : NEW_BAR_DAY_ZOOM_MINUTES, this.options.endPropertyId !== undefined);
     }
     const viewport = this.scroller?.clientWidth ?? 0;
     const start = day ?? (viewport > 0
@@ -743,7 +745,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
   private placeGhost(ghost: HTMLElement, x: number): void {
     const day = this.dayAt(x);
-    const time = this.zoom === 'day' ? this.slotAt(this.canvasOffset(x), day) : undefined;
+    const time = BY_TIME.has(this.zoom) ? this.slotAt(this.canvasOffset(x), day, this.zoom === 'hours' ? HOUR_MINUTES : SNAP_MINUTES) : undefined;
 
     if (this.drag?.active === true || (ghost.getAttribute('data-day') === day && ghost.getAttribute('data-time') === (time ?? null))) {
       return;
@@ -768,10 +770,13 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     this.showRange(span, barGeometry(span, this.window.start, this.zoom), true);
   }
 
-  /** The 15-minute slot at a canvas offset, floored, as `HH:mm` (notion-motion.md Round 49 B7, B8). */
-  private slotAt(offset: number, day: string): string {
+  /**
+   * The slot at a canvas offset, floored, as `HH:mm`: 15 minutes (notion-motion.md Round 49 B7, B8).
+   * The Hours ghost takes whole hours: Notion's snap there is unread.
+   */
+  private slotAt(offset: number, day: string, step = SNAP_MINUTES): string {
     const minutes = (offset - daysBetween(this.window.start, day) * this.dayWidth) / (this.dayWidth / DAY_MINUTES);
-    const slot = Math.min(Math.max(Math.floor(minutes / SNAP_MINUTES) * SNAP_MINUTES, 0), DAY_MINUTES - SNAP_MINUTES);
+    const slot = Math.min(Math.max(Math.floor(minutes / step) * step, 0), DAY_MINUTES - step);
     const pad = (n: number): string => String(n).padStart(2, '0');
 
     return `${pad(Math.floor(slot / 60))}:${pad(slot % 60)}`;

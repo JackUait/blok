@@ -180,7 +180,7 @@
   --blok-database-table-header-icon: rgb(142, 139, 134);
   --blok-database-table-title-icon: var(--blok-database-table-header-icon);
   --blok-database-table-header-hover-bg: var(--blok-database-hover-bg);
-  /* --blok-icon-active-bg × 1.5, Notion's 0.094 → 0.141 step on its blue chip (R52 §4). */
+  /* --blok-icon-active-bg × 1.5: Notion's blue chip steps 0.094 → 0.141 (R52 §4, R91 §1 #5). Only the ratio carries over to the gray. */
   --blok-database-chip-active-hover-bg: rgba(55, 53, 47, 0.15);
   --blok-database-table-cell-text: rgb(44, 44, 43);
   --blok-database-table-muted-text: var(--blok-database-ink-tertiary);

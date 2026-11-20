@@ -1187,6 +1187,13 @@ test.describe('property and row menus', () => {
     await expect(treeRow('Plans')).toBeVisible();
     await expect(chevron).toBeFocused();
     await expect(page.locator('[data-row-id="r1"]')).toBeVisible();
+
+    // notion-motion.md Round 68 §5: Shift+Tab focuses the chevron's own row, and nothing else changes.
+    await page.keyboard.press('Shift+Tab');
+    await expect(treeRow('Home')).toBeFocused();
+    await expect(chevron).toHaveAttribute('aria-expanded', 'true');
+    await expect(search).toHaveValue('');
+    await expect(page.locator('[data-row-id="r1"]')).toBeVisible();
   });
 });
 

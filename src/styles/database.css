@@ -9098,14 +9098,14 @@ textarea[data-blok-database-cell-input] {
   padding-inline: var(--blok-space-3);
 }
 
-/* notion-spec-2 §9: the header submenu's tiles fill a row 16px in from the panel, 6px apart. */
+/* notion-spec-2 §9: the header submenu's tiles fill a row 16px in from the panel; 8 apart (Round 83 §4). */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-database-show-as] {
   padding-inline: var(--blok-space-3);
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-database-show-as-tiles] {
   padding-inline: 0;
-  gap: var(--blok-space-1-5);
+  gap: var(--blok-space-2);
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-database-show-as-tile] {

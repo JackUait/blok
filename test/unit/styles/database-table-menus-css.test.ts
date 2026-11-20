@@ -451,11 +451,11 @@ describe('row page property menu (research parity row 9)', () => {
     expect(declared(row, 'inline-size')).toEqual(['100%']);
   });
 
-  // notion-spec-2 §9: the header submenu's tiles fill a row 16px in from the panel, 6px apart (about 85 wide each).
+  // notion-spec-2 §9: the header submenu's tiles fill a row 16px in from the panel; 8px apart (notion-motion.md Round 83 §4).
   it('stretches the header submenu tiles across the row, as Notion', () => {
     expect(declared(`${SUB} [data-blok-database-show-as]`, 'padding-inline')).toEqual(['var(--blok-space-3)']);
     expect(declared(`${SUB} [data-blok-database-show-as-tiles]`, 'padding-inline')).toEqual(['0']);
-    expect(declared(`${SUB} [data-blok-database-show-as-tiles]`, 'gap')).toEqual(['var(--blok-space-1-5)']);
+    expect(declared(`${SUB} [data-blok-database-show-as-tiles]`, 'gap')).toEqual(['var(--blok-space-2)']);
     expect(declared(`${SUB} [data-blok-database-show-as-tile]`, 'flex')).toEqual(['1']);
   });
 

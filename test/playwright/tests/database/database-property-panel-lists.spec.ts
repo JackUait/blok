@@ -329,6 +329,21 @@ test('the longest Number format label keeps the Edit property flyout 300 wide', 
   expect(value.overflow).toBe('ellipsis');
 });
 
+// notion-motion.md Round 83 §4: the header flyout's Show as tiles sit 8 apart.
+test('the Edit property flyout\'s Show as tiles are 8 apart', async ({ page }) => {
+  await openPanel(page);
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await page.getByRole('columnheader', { name: 'Amount' }).getByRole('button', { name: 'Amount' }).click();
+  await page.getByRole('menuitem', { name: 'Edit property' }).hover();
+  await listBox(page, 'numberFormat');
+  const tiles = await page.getByTestId('popover').locator('[data-blok-database-show-as-tile]').evaluateAll((els) => els.map((el) => el.getBoundingClientRect()).map((r) => ({ left: r.left, right: r.right })));
+
+  expect(tiles).toHaveLength(3);
+  expect(tiles[1].left - tiles[0].right).toBeCloseTo(8, 1);
+  expect(tiles[2].left - tiles[1].right).toBeCloseTo(8, 1);
+});
+
 // §17.8: Notion's box is 156 wide; other hints keep the 300 max-width.
 test('the Show unique values hint is 156 wide', async ({ page }) => {
   await openPanel(page);

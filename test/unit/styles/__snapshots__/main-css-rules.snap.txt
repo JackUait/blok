@@ -12482,7 +12482,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-database-show-as-tiles] {
   padding-inline: 0;
-  gap: var(--blok-space-1-5);
+  gap: var(--blok-space-2);
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-database-show-as-tile] {

@@ -17193,7 +17193,7 @@ button[data-blok-database-table-group-count]:hover {
 }
 
 [data-blok-database-panel-input][data-blok-database-filter-number-value] {
-  margin-block-end: var(--blok-space-3);
+  margin-block-end: var(--blok-space-2);
 }
 
 [data-blok-database-picker-list] {

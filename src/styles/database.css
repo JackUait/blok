@@ -14497,7 +14497,7 @@ button[data-blok-database-table-group-count]:hover {
 
 /* notion-motion.md Round 88 §1 #3 (r88-n-setnum-kids.raw): Number's value row is pad 4 8 8, so its rule popup is 75; Text's is 71. */
 [data-blok-database-panel-input][data-blok-database-filter-number-value] {
-  margin-block-end: var(--blok-space-3);
+  margin-block-end: var(--blok-space-2);
 }
 
 /* Filter / Sort property picker (notion-motion.md Round 5): only the list scrolls, so the search and the footer stay. */

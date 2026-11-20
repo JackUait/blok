@@ -528,7 +528,7 @@ class FilterChipPages {
           this.update({ value: text.trim() === '' || !Number.isFinite(n) ? null : n }, true, true);
         });
 
-        // database.css: Notion's Number value row has 8px more below it (Round 88 §1 #3). ID's is unmeasured.
+        // database.css: Notion's Number value row has 4px more below it (Round 88 §1 #3). ID's is unmeasured.
         input.toggleAttribute('data-blok-database-filter-number-value', property.type === 'number');
 
         return [input];

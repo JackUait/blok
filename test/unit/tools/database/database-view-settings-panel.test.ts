@@ -1579,6 +1579,21 @@ describe('view settings panel', () => {
       expect(settings()).not.toBeNull();
     });
 
+    // notion-motion.md Round 87 §1 #6 (r87-n-settings-addadv.raw): the Filters page stays and the advanced panel opens.
+    it('Add to advanced filter from a chip\'s ⋯ opens the advanced filter at its chip, the page staying', () => {
+      const h = withFilter();
+
+      click('database-filter-row-f1');
+      click('database-filter-more');
+      click('database-filter-to-advanced');
+
+      expect(h.state.view.filterTree?.filterRules[0]).toEqual(expect.objectContaining({ propertyId: 'title', operator: 'contains', value: 'a' }));
+      expect(q('database-filter-popover')).toBeNull();
+      expect(q('database-advanced-filter')).not.toBeNull();
+      expect(settings()?.contains(q('database-advanced-filter'))).toBe(false);
+      expect(settings()?.querySelector('[data-blok-testid="database-filter-advanced-chip"]')).not.toBeNull();
+    });
+
     it('has no Advanced filter row while there is no advanced filter', () => {
       withFilter();
 

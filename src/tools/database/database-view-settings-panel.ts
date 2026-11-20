@@ -1988,9 +1988,7 @@ export class ViewSettingsPages {
           });
 
           chip.toggleAttribute('data-active', parts.value !== '');
-          chip.addEventListener('click', () => {
-            openFilterChip(chip, this.ctx, filter.id, () => panel.refresh(), panel);
-          });
+          chip.addEventListener('click', () => this.openRule(panel, filter.id));
 
           return [{ id: filter.id, element: chip }];
         });
@@ -2062,6 +2060,22 @@ export class ViewSettingsPages {
         return rows;
       },
     };
+  }
+
+  /**
+   * A filter chip's rule popover over the Filters page. notion-motion.md Round 87 §1 #6 (r87-n-settings-addadv.raw):
+   * after "Add to advanced filter" the page stays and the advanced filter opens at its chip.
+   */
+  private openRule(panel: DatabasePanel, filterId: string): void {
+    const chip = panel.root.querySelector<HTMLElement>(`[data-blok-testid="database-filter-row-${CSS.escape(filterId)}"]`);
+
+    if (chip === null) return;
+    openFilterChip(chip, this.ctx, filterId, () => panel.refresh(), panel, () => {
+      panel.refresh();
+      const advanced = panel.root.querySelector<HTMLElement>('[data-blok-testid="database-filter-advanced-chip"]');
+
+      if (advanced !== null) openAdvancedFilter(advanced, this.ctx, () => panel.refresh(), panel);
+    });
   }
 
   /** The editor of one simple filter. Also the root page of a filter pill's popover. */

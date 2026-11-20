@@ -2273,6 +2273,12 @@ describe('view settings panel', () => {
     click('database-group-date-by-month');
 
     expect(exists('database-group-week-start')).toBe(false);
+
+    // notion-motion.md Round 85c §2: Year has no such row either.
+    click('database-group-date-by');
+    click('database-group-date-by-year');
+
+    expect(exists('database-group-week-start')).toBe(false);
   });
 
   // research/22 §7: "Number by: Unique" by default; Range shows 0 – 1000, every 100.

@@ -3227,8 +3227,8 @@ export class ViewSettingsPages {
           choice('database-group-date-by', 'groupDateBy', 'dateBy', [
             ['relative', 'groupDateRelative'], ['day', 'groupDateDay'], ['week', 'groupDateWeek'], ['month', 'groupDateMonth'], ['year', 'groupDateYear'],
           ], 'relative'),
-          // Round 84b §3: Notion has no such row for Relative, Day or Month. Year was not read.
-          ...(['relative', 'day', 'month'].includes(settings.dateBy ?? 'relative')
+          // Round 84b §3, Round 85c §2: Notion shows it for Week only.
+          ...(settings.dateBy !== 'week'
             ? []
             : [choice('database-group-week-start', 'groupWeekStart', 'weekStart', [[0, 'groupWeekSunday'], [1, 'groupWeekMonday']], 0)]),
         ];

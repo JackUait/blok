@@ -553,7 +553,7 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(tile).toContain('block-size: 32px');
     expect(tile).toContain('border: 1px solid var(--blok-database-form-type-frame)');
     expect(tile).toContain('border-radius: var(--blok-radius-control-sm)');
-    expect(tile).toContain('background-color: var(--blok-database-form-question-bg)');
+    expect(tile).toContain('background-color: var(--blok-database-form-type-bg)');
     expect(ruleBody('[data-blok-database-form-existing-row] > [data-blok-database-panel-icon] svg')).toContain('width: 19.2px');
   });
 
@@ -563,6 +563,27 @@ describe('form builder question card (research/21 §1k)', () => {
 
     expect(svg).toContain('width: 20px');
     expect(svg).toContain('height: 20px');
+  });
+
+  // notion-motion.md Round 90 §1 #9 (r90-n-dark-formtype.raw): a new-question row's tile sits at + 6 and its name
+  // text at + 13.6, as in the existing-property rows; Blok read + 8 and + 12.6.
+  it('puts the new-question tile 6 in from the row edge and its name 1px lower', () => {
+    expect(ruleBody('[data-blok-database-form-type-row]')).toContain('padding-inline-start: var(--blok-space-1-5)');
+    expect(ruleBody('[data-blok-database-form-type-row] > [data-blok-database-panel-label]')).toContain('top: 1px');
+  });
+
+  // Round 90 §1 #13 (r89-n-formtype-existing.raw via R90 table): name + 6, type + 23.8; Blok read + 5, + 22.8.
+  it('drops the existing-property text 1px', () => {
+    expect(ruleBody('[data-blok-database-form-existing-row] > [data-blok-database-panel-text]')).toContain('top: 1px');
+  });
+
+  // Round 90 §1 #10 (r90-n-dark-formtype.raw): dark tiles are rgba(255,255,255,0.03) in a 1px rgba(255,255,255,0.094) frame.
+  it('fills Select type tiles from their own token, with Notion\'s dark fill and frame', () => {
+    const tile = ruleBody('[data-blok-database-form-type-row] > [data-blok-database-panel-icon]');
+
+    expect(tile).toContain('background-color: var(--blok-database-form-type-bg)');
+    expect(tokenValues('--blok-database-form-type-bg')).toEqual(['#ffffff', 'rgba(255, 255, 255, 0.03)', 'rgba(255, 255, 255, 0.03)']);
+    expect(tokenValues('--blok-database-form-type-frame')).toEqual(['rgba(84, 72, 49, 0.15)', 'rgba(255, 255, 255, 0.094)', 'rgba(255, 255, 255, 0.094)']);
   });
 
   // The view box clips; the "+" sits left of the column, so the form bleeds into the gutter as the table does.

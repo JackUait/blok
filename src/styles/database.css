@@ -172,6 +172,8 @@
   /* Table view (research/07 and 08). */
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(42, 28, 0, 0.07);
+  /* notion-motion.md Round 90 §1 #8: Layout tile ring. */
+  --blok-database-layout-tile-ring: rgb(230, 229, 227);
   /* notion-motion.md Round 78 §3: a respondent's checkbox ring. Dark is unmeasured: the builder mark's dark ring. */
   --blok-database-form-answer-mark-ring: rgba(27, 21, 0, 0.19);
   --blok-database-table-header-text: var(--blok-database-ink-secondary);
@@ -411,7 +413,8 @@
   /* Form builder question card (research/21 §1k). */
   --blok-database-form-question-bg: #ffffff;
   --blok-database-form-question-ring: rgb(182, 212, 243);
-  /* Select type's icon frame (notion-motion.md Round 31 §1). Dark is unmeasured: the dark answer ring. */
+  /* Select type's icon tile (notion-motion.md Round 31 §1; dark Round 90 §1 #10). */
+  --blok-database-form-type-bg: #ffffff;
   --blok-database-form-type-frame: rgba(84, 72, 49, 0.15);
   /* "New" split button: research/08's blue rgb(39,131,222) is 3.7:1 against its
      text, below AA for 14px words; a darker step of it is used in both themes.
@@ -587,6 +590,7 @@
     /* Table view (research/07, 08; research/21 §1a, §1d; research/22 §12 for OPEN and "+ New page"). The gutter is unmeasured in dark. */
     --blok-database-table-bg: var(--blok-bg-primary);
     --blok-database-table-border: rgba(255, 255, 243, 0.082);
+    --blok-database-layout-tile-ring: rgba(255, 255, 243, 0.082);
     --blok-database-form-answer-mark-ring: rgba(255, 255, 243, 0.082);
     --blok-database-table-header-text: rgb(173, 169, 163);
     --blok-database-table-header-icon: rgb(173, 169, 163);
@@ -795,7 +799,8 @@
     --blok-database-feed-actions-border: rgb(44, 44, 43);
     --blok-database-form-question-bg: rgb(25, 25, 25);
     --blok-database-form-question-ring: rgb(53, 95, 139);
-    --blok-database-form-type-frame: var(--blok-database-form-answer-border);
+    --blok-database-form-type-bg: rgba(255, 255, 255, 0.03);
+    --blok-database-form-type-frame: rgba(255, 255, 255, 0.094);
     --blok-database-new-bg: rgb(30, 110, 195);
     --blok-database-new-hover-bg: rgb(36, 115, 201);
     /* Notion's lighter pressed blue fails AA; no lighter step passes, so pressed equals hover. */
@@ -958,6 +963,7 @@
   /* Table view (research/07, 08; research/21 §1a, §1d; research/22 §12 for OPEN and "+ New page"). The gutter is unmeasured in dark. */
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(255, 255, 243, 0.082);
+  --blok-database-layout-tile-ring: rgba(255, 255, 243, 0.082);
   --blok-database-form-answer-mark-ring: rgba(255, 255, 243, 0.082);
   --blok-database-table-header-text: rgb(173, 169, 163);
   --blok-database-table-header-icon: rgb(173, 169, 163);
@@ -1165,7 +1171,8 @@
   --blok-database-feed-actions-border: rgb(44, 44, 43);
   --blok-database-form-question-bg: rgb(25, 25, 25);
   --blok-database-form-question-ring: rgb(53, 95, 139);
-  --blok-database-form-type-frame: var(--blok-database-form-answer-border);
+  --blok-database-form-type-bg: rgba(255, 255, 255, 0.03);
+  --blok-database-form-type-frame: rgba(255, 255, 255, 0.094);
   --blok-database-new-bg: rgb(30, 110, 195);
   --blok-database-new-hover-bg: rgb(36, 115, 201);
   /* Notion's lighter pressed blue fails AA; no lighter step passes, so pressed equals hover. */
@@ -14857,13 +14864,14 @@ button[data-blok-database-table-group-count]:hover {
   padding: var(--blok-space-1-5);
   border: none;
   border-radius: var(--blok-radius-control);
-  box-shadow: var(--blok-database-table-border) 0 0 0 1px inset;
+  box-shadow: var(--blok-database-layout-tile-ring) 0 0 0 1px inset;
   background: transparent;
   color: var(--blok-database-ink-secondary);
   font: inherit;
   font-size: 11px;
   line-height: 16.5px;
   cursor: pointer;
+  transition: background 0.02s ease-in;
 }
 
 [data-blok-database-layout-tile]:hover:not(:disabled),
@@ -14889,6 +14897,12 @@ button[data-blok-database-table-group-count]:hover {
 [data-blok-database-layout-tile-glyph] {
   display: inline-flex;
   margin-block-start: var(--blok-space-1);
+}
+
+/* Round 90 §2: the label text sits at + 35.5. */
+[data-blok-database-layout-tile-glyph] + span {
+  position: relative;
+  top: 0.5px;
 }
 
 [data-blok-database-layout-tile-glyph] svg {
@@ -21345,11 +21359,19 @@ button[data-blok-database-feed-reaction]:hover,
   visibility: hidden;
 }
 
-/* notion-motion.md Round 52, Round 65 §4: rows 266 wide at the panel's + 12, 8 inside its 4px padding. */
+/* notion-motion.md Round 52, Round 65 §4: rows 266 wide at the panel's + 12, 8 inside its 4px padding. Round 90 §1 #9: tile at + 6. */
 [data-blok-database-form-type-row] {
   width: auto;
   min-height: 44px;
   margin-inline: var(--blok-space-2);
+  padding-inline-start: var(--blok-space-1-5);
+}
+
+/* Round 90 §1 #9, #13: Notion's text sits 1px lower than Blok's line box puts it. */
+[data-blok-database-form-type-row] > [data-blok-database-panel-label],
+[data-blok-database-form-existing-row] > [data-blok-database-panel-text] {
+  position: relative;
+  top: 1px;
 }
 
 /* notion-motion.md Round 88 §1 #8: existing-property rows are 266 x 45.6 at + 12. Round 89 §1 #5: tile at + 6. */
@@ -21375,7 +21397,7 @@ button[data-blok-database-feed-reaction]:hover,
   justify-content: center;
   border: 1px solid var(--blok-database-form-type-frame);
   border-radius: var(--blok-radius-control-sm);
-  background-color: var(--blok-database-form-question-bg);
+  background-color: var(--blok-database-form-type-bg);
 }
 
 /* Round 88 §1 #8, Round 89 §1 #5: new-question glyphs 20, existing-property glyphs 19.2. */

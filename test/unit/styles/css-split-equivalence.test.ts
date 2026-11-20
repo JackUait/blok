@@ -1959,6 +1959,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R235_BYTES = 206;
     // Lane r236: Round 89 §1 #5 Select type existing-property tiles, R88 §1 #8 new-question glyph 20, #8 Layout tiles. Net database.css growth against origin/main.
     const DATABASE_R236_BYTES = 767;
+    // Lane r239: Round 90 §1 #8 Layout tile ring, #9 #13 Select type row insets, #10 dark tiles, §3 Layout tile hover. Net database.css growth against origin/main.
+    const DATABASE_R239_BYTES = 886;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2632,6 +2634,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R232_BYTES
       + DATABASE_R235_BYTES
       + DATABASE_R236_BYTES
+      + DATABASE_R239_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

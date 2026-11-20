@@ -586,9 +586,22 @@ describe('Round 45 gallery, calendar and settings panel', () => {
     expect(tile).toMatch(/line-height:\s*16\.5px/);
     expect(tile).toMatch(/border-radius:\s*var\(--blok-radius-control\)/);
     expect(tile).toMatch(/border:\s*none/);
-    expect(tile).toMatch(/box-shadow:\s*var\(--blok-database-table-border\) 0 0 0 1px inset/);
+    expect(tile).toMatch(/box-shadow:\s*var\(--blok-database-layout-tile-ring\) 0 0 0 1px inset/);
     expect(ruleBody('[data-blok-database-layout-tile-glyph]')).toMatch(/margin-block-start:\s*var\(--blok-space-1\)/);
     expect(ruleBody('[data-blok-database-layout-tiles]')).toMatch(/margin-block-start:\s*var\(--blok-space-2-75\)/);
+  });
+
+  // Round 90 §1 #8: light ring rgb(230,229,227) (r89-n-layout.raw); dark rgb(56,56,54) already matched Blok's ring.
+  it('rings Layout tiles with Notion\'s light ring and keeps the dark one', () => {
+    const values = [...css.matchAll(/--blok-database-layout-tile-ring:\s*([^;]+);/g)].map((m) => m[1].trim());
+
+    expect(values).toEqual(['rgb(230, 229, 227)', 'rgba(255, 255, 243, 0.082)', 'rgba(255, 255, 243, 0.082)']);
+  });
+
+  // Round 90 §2 (r90-n-dark-layout.raw): label text at + 35.5, Blok + 35. §3: hover is `background 0.02s ease-in`.
+  it('sets the Layout label half a pixel lower and fades the hover fill in 0.02s', () => {
+    expect(ruleBody('[data-blok-database-layout-tile]')).toMatch(/transition:\s*background 0\.02s ease-in/);
+    expect(ruleBody('[data-blok-database-layout-tile-glyph] + span')).toMatch(/top:\s*0\.5px/);
   });
 });
 

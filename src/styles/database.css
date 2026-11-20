@@ -14994,6 +14994,18 @@ button[data-blok-database-table-group-count]:hover {
   font-weight: 500;
 }
 
+/* notion-motion.md Round 84b §3 (r84-n-grp-checkbox.raw): a 14x14 box, the name 6px after it. */
+[data-blok-database-group-checkbox] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+}
+
+[data-blok-database-group-checkbox] > [data-blok-database-checkbox] {
+  width: 14px;
+  height: 14px;
+}
+
 /* notion-motion.md Round 20 §4 (r20-cc-list-style.raw): 258-wide filled cards, radius 10, 12px apart.
    The card's inner padding is unmeasured. Round 74 §4: the first card's head is 49 under Back. */
 [data-blok-database-color-rules] {

@@ -17656,6 +17656,17 @@ button[data-blok-database-table-group-count]:hover {
   font-weight: 500;
 }
 
+[data-blok-database-group-checkbox] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+}
+
+[data-blok-database-group-checkbox] > [data-blok-database-checkbox] {
+  width: 14px;
+  height: 14px;
+}
+
 [data-blok-database-color-rules] {
   display: flex;
   flex-direction: column;

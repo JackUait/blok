@@ -1925,6 +1925,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R210_BYTES = 741;
     // Lane r211: Round 84b grouped list Status pill at 400, its header spacing, full page title gap, timeline link dot. Net database.css growth against origin/main.
     const DATABASE_R211_BYTES = 442;
+    // Lane r209: Round 84b §3 a 14x14 checkbox before each checkbox group name on the Group page. Net database.css growth against origin/main.
+    const DATABASE_R209_BYTES = 321;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2581,6 +2583,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R207_BYTES
       + DATABASE_R210_BYTES
       + DATABASE_R211_BYTES
+      + DATABASE_R209_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

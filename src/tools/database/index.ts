@@ -584,6 +584,21 @@ const rowLink: { closed: string | null } = { closed: null };
 /** The `#view-<id>` link a database already applied in this page load. */
 const viewLink: { applied: string | null } = { applied: null };
 
+/** notion-motion.md Round 84b §3 (r84-n-grp-checkbox.raw): a 14x14 box before the group name, as Group shows it. */
+const checkboxGroupName = (checked: boolean, label: string): HTMLElement => {
+  const name = document.createElement('span');
+  const box = document.createElement('span');
+
+  name.setAttribute('data-blok-database-group-checkbox', '');
+  box.setAttribute('data-blok-database-checkbox', '');
+  box.setAttribute('data-state', checked ? 'checked' : 'unchecked');
+  box.setAttribute('aria-hidden', 'true');
+  if (checked) box.innerHTML = IconCheck;
+  name.append(box, label);
+
+  return name;
+};
+
 /**
  * The view a "Copy link to view" fragment (`#view-<id>`) names, if `owns` it.
  * Applied once per page load: a later render (undo, a peer replace) must not
@@ -7705,6 +7720,7 @@ export class DatabaseTool implements BlockTool {
       label: option.label,
       count: counts.get(option.id) ?? 0,
       ...(pills ? { pill: () => createGroupPill(option, property) } : {}),
+      ...(property?.type === 'checkbox' ? { pill: () => checkboxGroupName(option.id === 'true', option.label) } : {}),
     }));
   }
 

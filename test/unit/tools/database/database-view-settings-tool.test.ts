@@ -52,7 +52,7 @@ const tableView = (overrides: Partial<DatabaseViewConfig> = {}): DatabaseViewCon
   id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], ...overrides,
 });
 
-const mount = (view: Partial<DatabaseViewConfig> = {}, config: DatabaseConfig = {}, extra: Partial<DatabaseData> = {}): {
+const mount = (view: Partial<DatabaseViewConfig> = {}, config: DatabaseConfig = {}, extra: Partial<DatabaseData> = {}, children = rows()): {
   tool: DatabaseTool;
   root: HTMLElement;
   dispatchChange: ReturnType<typeof vi.fn>;
@@ -61,7 +61,7 @@ const mount = (view: Partial<DatabaseViewConfig> = {}, config: DatabaseConfig = 
   const options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig> = {
     data: { schema, views: [tableView(view)], activeViewId: 'v1', ...extra },
     config,
-    api: createApi(rows()),
+    api: createApi(children),
     readOnly: false,
     block: { id: 'db1', dispatchChange } as never,
   };
@@ -302,6 +302,22 @@ describe('DatabaseTool — view settings', () => {
 
     expect(tool.save(root).views[0].groupSettings).toEqual({ hideEmptyGroups: true, colorColumns: false });
     expect(tool.save(root).views[0].hiddenGroups ?? []).toEqual([]);
+  });
+
+  // notion-motion.md Round 84b §3 (r84-n-grp-checkbox.raw): each checkbox group shows a 14x14 box, ticked first.
+  it('draws a checkbox before each checkbox group name, the checked group first', () => {
+    const done: PropertyDefinition = { id: 'p-done', name: 'Done', type: 'checkbox', position: 'a3' };
+
+    mount({ type: 'board', groupBy: 'p-done' }, {}, { schema: [...schema, done] }, [rowBlock('r1', 'a0', { 'p-done': false }), rowBlock('r2', 'a1', { 'p-done': true })]);
+    click('database-toolbar-settings');
+    click('database-settings-group');
+
+    const groups = [...document.querySelectorAll('[data-blok-database-group-visibility-row]')].map((row) => [
+      row.querySelector('[data-blok-database-checkbox]')?.getAttribute('data-state'),
+      row.querySelector('[data-blok-database-panel-label]')?.textContent?.trim(),
+    ]);
+
+    expect(groups).toEqual([['checked', 'tools.database.filterChecked'], ['unchecked', 'tools.database.filterUnchecked']]);
   });
 
   // research/23 §2e: a select starts with Hide empty groups off.

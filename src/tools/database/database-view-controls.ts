@@ -175,12 +175,15 @@ const SEARCH_CLOSE_FALLBACK_MS = 250;
 const hasTransition = (el: HTMLElement): boolean =>
   getComputedStyle(el).transitionDuration.split(',').some((part) => parseFloat(part) > 0);
 
+/** notion-motion.md Round 86 §1 #7 (r86-n-tip-sort.raw): a toolbar hint sits above its button, 6 clear. */
+const TOOLBAR_HINT = { placement: 'top', gap: 6 } as const;
+
 /** A 28px toolbar button that holds only an icon; its aria-label names it, and so does its hover hint. */
 const iconButton = (testId: string, label: string, icon: string): HTMLButtonElement => {
   const el = button(testId, label, { icon });
 
   el.setAttribute('data-blok-database-toolbar-icon', '');
-  onHover(el, label);
+  onHover(el, label, TOOLBAR_HINT);
 
   return el;
 };

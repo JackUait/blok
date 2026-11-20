@@ -100,6 +100,23 @@ describe('DatabaseViewControls', () => {
     expect(saved.view.colorRules?.[0]).toMatchObject({ propertyId: 'fn', operator: 'equals' });
   });
 
+  // notion-motion.md Round 86 §1 #7 (r86-n-tip-sort.raw): the Sort hint sits above the button, its bottom 6 over the button's top.
+  it('shows a toolbar icon button\'s hint above it, 6 clear, after the hover delay', () => {
+    destroyTooltip();
+    vi.useFakeTimers();
+    try {
+      setup();
+      hover(q('database-toolbar-sort'));
+      vi.advanceTimersByTime(HINT_DELAY - 1);
+      expect(shownHint()).toBeNull();
+      vi.advanceTimersByTime(1);
+      expect(shownHint()?.placement).toBe('top');
+      expect(document.querySelector<HTMLElement>('[data-blok-testid="tooltip"]')?.style.top).toBe('294px');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('draws Filter, Sort, search and settings as named icon buttons, as Notion does (research/07:53)', () => {
     setup();
 

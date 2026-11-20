@@ -923,7 +923,7 @@ export class DatabasePropertyMenu {
           // The submenu's rows mount right after onOpen.
           // notion-spec-2 §25.6: the submenu's top is the row's top; a divider follows Sort.
           // database.css: the class fades it with no scale (notion-motion.md Round 10).
-          children: { items: ruleAfterSort(this.editItems(property, update)), align: 'start', minWidth: '300px', class: 'blok-database-edit-property', onOpen: () => queueMicrotask(() => this.bindRowHints()) },
+          children: { items: ruleAfterSort(this.editItems(property, update)), align: 'start', width: '300px', class: 'blok-database-edit-property', onOpen: () => queueMicrotask(() => this.bindRowHints()) },
         };
       case 'showFullUrl': {
         // notion-spec-2 §19.21: a click on the row toggles it. The row's icon was not measured: Blok draws URL's type icon.

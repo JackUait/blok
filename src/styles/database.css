@@ -3962,6 +3962,14 @@ button[data-blok-database-board-lane-count]:hover {
   color: var(--blok-database-menu-value-text);
 }
 
+/* The Edit property flyout is a fixed 300 (Round 84b §1), so a long value is cut, not let to widen it. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-popover-item-value] {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right] {
   color: var(--blok-database-value-chevron);
 }

@@ -1937,6 +1937,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R218_BYTES = 621;
     // Lane r217: Round 64 §6 1px more between list groups, Round 52 §1 default cursor while a list row drags. Net database.css growth against origin/main.
     const DATABASE_R217_BYTES = 408;
+    // Lane r212: Round 84b §1 a long value in the fixed 300 Edit property flyout is cut with an ellipsis. Net database.css growth against origin/main.
+    const DATABASE_R212_BYTES = 308;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2599,6 +2601,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R215_BYTES
       + DATABASE_R218_BYTES
       + DATABASE_R217_BYTES
+      + DATABASE_R212_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

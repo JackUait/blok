@@ -303,6 +303,32 @@ test('picking a currency keeps the Edit property flyout 300 wide and focused on 
   await expect(page.locator('[data-blok-item-name="decimals"]')).toHaveAttribute('data-blok-focused', 'true');
 });
 
+// notion-motion.md Round 84b §1 and Round 10: the flyout is 300 wide in every read. Its width does not follow
+// the row's label, whose width depends on the platform's fonts; a long label is cut inside the row.
+test('the longest Number format label keeps the Edit property flyout 300 wide', async ({ page }) => {
+  await openPanel(page);
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await page.getByRole('columnheader', { name: 'Amount' }).getByRole('button', { name: 'Amount' }).click();
+  await page.getByRole('menuitem', { name: 'Edit property' }).hover();
+  const row = page.getByTestId('popover').locator('[data-blok-item-name="numberFormat"]');
+
+  await row.click();
+  await listBox(page, 'format-number');
+  await page.locator('[data-blok-item-name="format-number_with_commas"]').click();
+
+  await expect(page.locator('[data-blok-item-name^="format-"]')).toHaveCount(0);
+  expect((await listBox(page, 'numberFormat')).width).toBe(300);
+  const value = await row.locator('[data-blok-popover-item-value]').evaluate((el) => {
+    const chevron = el.parentElement?.querySelector('[data-blok-testid="popover-item-chevron-right"]');
+
+    return { right: el.getBoundingClientRect().right, chevron: chevron?.getBoundingClientRect().left ?? 0, overflow: getComputedStyle(el).textOverflow };
+  });
+
+  expect(value.right).toBeLessThanOrEqual(value.chevron);
+  expect(value.overflow).toBe('ellipsis');
+});
+
 // §17.8: Notion's box is 156 wide; other hints keep the 300 max-width.
 test('the Show unique values hint is 156 wide', async ({ page }) => {
   await openPanel(page);

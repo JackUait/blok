@@ -1223,10 +1223,11 @@ describe('DatabasePropertyMenu', () => {
     });
 
     // research/27 §7: the header's Edit property submenu is 300 wide; the all-views note no longer sets it.
-    it('opens the header Edit property submenu at least 300 wide', () => {
+    // notion-motion.md Round 84b §1: a long Number format label leaves it 300 wide.
+    it('opens the header Edit property submenu 300 wide, whatever its rows hold', () => {
       const { menu } = headerMenu(prop('number'));
 
-      expect(byName(lastItems(), 'editProperty').children?.minWidth).toBe('300px');
+      expect(byName(lastItems(), 'editProperty').children?.width).toBe('300px');
       menu.destroy();
     });
 

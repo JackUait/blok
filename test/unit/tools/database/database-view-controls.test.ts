@@ -532,6 +532,30 @@ describe('DatabaseViewControls', () => {
       expect(tree()?.filterRules[1]).toEqual(expect.objectContaining({ propertyId: 'title', operator: 'contains', value: 'Al' }));
     });
 
+    // notion-motion.md Round 86 §1 #2 (r86-n-advrule-copy.raw): "Name Starts with zzq" is copied whole, by a new rule and by a new group's rule.
+    it('a new rule and a new group\'s rule copy the operator and value of the rule above, not only on the default operator', () => {
+      const { controls, saved, ruleId } = openAdvanced();
+      const tree = (): DatabaseViewConfig['filterTree'] => controls.effective(saved.view).filterTree;
+      const id = ruleId();
+
+      click(`database-filter-rule-operator-${id}`);
+      click('database-filter-op-starts_with');
+      const input = q(`database-filter-rule-value-${id}`);
+
+      if (!(input instanceof HTMLInputElement)) throw new Error('no value field');
+      input.value = 'zzq';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      click(`database-filter-add-rule-${tree()?.id ?? ''}`);
+      click('database-filter-add-rule');
+      click(`database-filter-add-rule-${tree()?.id ?? ''}`);
+      click('database-filter-add-group');
+
+      const copy = { propertyId: 'title', operator: 'starts_with', value: 'zzq' };
+
+      expect(tree()?.filterRules[1]).toEqual(expect.objectContaining(copy));
+      expect(tree()?.filterRules[2]).toEqual(expect.objectContaining({ filterRules: [expect.objectContaining(copy)] }));
+    });
+
     it('"Add filter group" adds a group that holds one Name rule', () => {
       const { controls, saved } = openAdvanced();
       const tree = (): DatabaseViewConfig['filterTree'] => controls.effective(saved.view).filterTree;

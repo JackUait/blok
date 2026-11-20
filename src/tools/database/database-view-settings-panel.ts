@@ -2470,7 +2470,7 @@ export class ViewSettingsPages {
     });
 
     const addRule = (): void => {
-      write(addFilterRule(tree(), group.id, this.firstRule(group, tree(), true)));
+      write(addFilterRule(tree(), group.id, this.firstRule(group, tree())));
       panel.refresh();
     };
     const canAddGroup = layer < MAX_FILTER_DEPTH && filterGroupDepth(tree(), group.id) < MAX_FILTER_DEPTH;
@@ -2741,17 +2741,17 @@ export class ViewSettingsPages {
   /**
    * A new advanced rule on the property already in use: the last rule in `group`, else the
    * tree's first rule, else Name (Round 19 §1, Round 20 §2). Which rule Notion copies is unread.
-   * `copyValue`: Round 65 §2 (r65-n-advfilter.raw) saw "Add filter rule" copy the value of a rule
-   * on its default operator. A seed on another operator is unmeasured, so it stays empty.
+   * Round 86 §1 #2 (r86-n-advrule-copy.raw): the new rule, and a new group's rule, also copy the
+   * seed's operator and value, on any operator.
    */
-  private firstRule(group: FilterGroup, tree: FilterGroup, copyValue = false): FilterConfig & { id: string } {
+  private firstRule(group: FilterGroup, tree: FilterGroup): FilterConfig & { id: string } {
     const filterable = this.ctx.schema().filter((p) => FILTERABLE_TYPES.includes(p.type));
     const seed = rulesOf(group).at(-1) ?? rulesOf(tree)[0];
     const property = filterable.find((p) => p.id === seed?.propertyId) ?? filterable.find((p) => p.type === 'title') ?? filterable[0];
     const { id: _id, ...condition } = defaultFilterFor(property);
 
-    if (copyValue && seed !== undefined && seed.propertyId === property.id && seed.operator === condition.operator) {
-      return { id: nanoid(), ...condition, value: Array.isArray(seed.value) ? [...seed.value] : seed.value };
+    if (seed !== undefined && seed.propertyId === property.id) {
+      return { id: nanoid(), ...condition, operator: seed.operator, value: structuredClone(seed.value) };
     }
 
     return { id: nanoid(), ...condition };

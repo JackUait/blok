@@ -361,6 +361,10 @@ export class DatabaseListView implements DatabaseViewRenderer {
         return;
       }
       this.editTitle(rowEl.getAttribute('data-row-id') ?? '');
+      // notion-motion.md Round 52 §1: the pill puts the caret at the end; other paths are unmeasured.
+      const input = rowEl.querySelector<HTMLInputElement>('[data-blok-database-list-title-input]');
+
+      input?.setSelectionRange(input.value.length, input.value.length);
 
       return;
     }

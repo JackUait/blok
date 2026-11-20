@@ -800,6 +800,17 @@ describe('DatabaseListView', () => {
 
       expect(onTitleEdit).toHaveBeenCalledWith('r2', 'Renamed');
     });
+
+    // notion-motion.md Round 52 §1: the Edit pill puts the caret at the end (4/4), nothing selected.
+    it('the Edit pill opens the title with the caret at its end', () => {
+      const list = mount();
+
+      rowEl(list, 'r2').querySelector<HTMLElement>('[data-blok-database-list-row-edit]')?.click();
+      const input = list.querySelector<HTMLInputElement>('[data-blok-database-list-title-input]');
+
+      expect(input).toHaveFocus();
+      expect([input?.selectionStart, input?.selectionEnd]).toEqual([3, 3]);
+    });
   });
 
   describe('title edit look (findings-listgallery L05)', () => {

@@ -215,24 +215,43 @@ describe('row selection after undo', () => {
     expect(selectedRows()).toEqual(['r2']);
   });
 
-  it('keeps a row selection when it undoes a reorder', async () => {
-    const blok = await make();
-    const block = blok.blocks.getById('r1');
+  const dragToTop = async (id: string): Promise<void> => {
+    const rows = [...document.querySelectorAll<HTMLElement>('[data-blok-database-table-row]')];
 
-    if (block === null) throw new Error('no r1');
-    const saved = await block.save();
+    rows.forEach((el, index) => {
+      vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, index * 38, 800, 38));
+    });
+    const handle = row(id)?.querySelector<HTMLElement>('[data-blok-database-table-row-handle]');
 
-    await blok.blocks.update('r1', { ...(saved?.data as Record<string, unknown>), position: 'a3' });
+    if (handle === null || handle === undefined) throw new Error('no row drag handle');
+    handle.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: 10, clientY: rows.indexOf(row(id) as HTMLElement) * 38 + 19, bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 10, clientY: 5, bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    handle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await quiet();
-    await pickRow('r3');
-    expect(order()).toEqual(['r2', 'r3', 'r1']);
+  };
+
+  // notion-motion.md Round 63 §1: drag, Escape, undo selects the row it moves back; redo moves it and clears that pick.
+  it('selects a dragged row its undo moves back, and its redo clears that selection', async () => {
+    const blok = await make();
+
+    await dragToTop('r3');
+    expect(order()).toEqual(['r3', 'r1', 'r2']);
     expect(selectedRows()).toEqual(['r3']);
+    await pickRow('r3');
+    expect(selectedRows()).toEqual([]);
 
     blok.history.undo();
     await quiet();
 
     expect(selectedRows()).toEqual(['r3']);
     expect(order()).toEqual(['r1', 'r2', 'r3']);
+
+    blok.history.redo();
+    await quiet();
+
+    expect(selectedRows()).toEqual([]);
+    expect(order()).toEqual(['r3', 'r1', 'r2']);
   });
 
   it('drops the restored row from the selection when redo deletes it again', async () => {

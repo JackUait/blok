@@ -3662,8 +3662,8 @@ export class DatabaseTool implements BlockTool {
   /**
    * notion-motion.md Round 63 §1 (table): an undone row delete selects the
    * row. Round 65 §2: an undone cell edit brings back the pick recorded with
-   * it, and its redo the pick the undo replaced. A reorder writes only the
-   * position, and its undo keeps the selection.
+   * it, and its redo the pick the undo replaced. A table reorder follows the
+   * same rule: its drag picks the row, so undo picks it and redo clears it.
    */
   private noteUndoPick(capture: BlockReplayCapture): void {
     const native = capture.native;
@@ -3676,7 +3676,10 @@ export class DatabaseTool implements BlockTool {
     if (this.linked && this.sourceMissing()) return;
     const restored = capture.origin === 'undo' && capture.type === 'add';
 
-    if (!restored && (capture.type !== 'update' || !capture.changes.some((change) => change.path[0] === 'properties'))) return;
+    // A reorder is measured only in a table (Round 63 §1).
+    const picksOn = (key: unknown): boolean => key === 'properties' || (key === 'position' && this.view instanceof DatabaseTableView);
+
+    if (!restored && (capture.type !== 'update' || !capture.changes.some((change) => picksOn(change.path[0])))) return;
     const pick = this.undoPick ?? { restored: [], edited: false, redone: false };
 
     if (restored) pick.restored.push(capture.blockId);

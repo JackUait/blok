@@ -45,4 +45,11 @@ describe('peek header rules', () => {
     expect(ruleBody('[data-blok-database-drawer-toolbar]')).toContain('gap: var(--blok-space-0-5)');
     expect(ruleBody('[data-blok-database-peek-separator]')).toContain('margin-inline: var(--blok-space-1-5)');
   });
+
+  // notion-motion.md Round 81 §1 (r81-n-peek-header.raw): light rule ink. Dark is unmeasured and keeps its value.
+  it('inks the light rule as Notion\'s', () => {
+    const values = [...database.matchAll(/--blok-database-peek-separator: ([^;]+);/g)].map((m) => m[1]);
+
+    expect(values).toEqual(['rgba(28, 19, 1, 0.11)', 'rgba(255, 255, 235, 0.1)', 'rgba(255, 255, 235, 0.1)']);
+  });
 });

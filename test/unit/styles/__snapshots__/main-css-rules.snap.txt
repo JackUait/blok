@@ -4943,7 +4943,7 @@ span[data-blok-slash-search] {
   --blok-database-peek-value-hover-bg: transparent;
   --blok-database-peek-glyph: rgb(142, 139, 134);
   --blok-database-peek-glyph-strong: rgb(56, 56, 54);
-  --blok-database-peek-separator: rgba(55, 53, 47, 0.09);
+  --blok-database-peek-separator: rgba(28, 19, 1, 0.11);
   --blok-database-fill-handle-bg: #ffffff;
   --blok-database-peek-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-chart-blue: #2a78d6;
@@ -6321,7 +6321,7 @@ span[data-blok-slash-search] {
   cursor: pointer;
 }
 
-[data-peek-mode="side"] [data-blok-database-drawer-close], [data-peek-mode="side"] [data-blok-database-peek-expand], [data-peek-mode="side"] [data-blok-database-peek-mode], [data-peek-mode="side"] [data-blok-database-peek-prev], [data-peek-mode="side"] [data-blok-database-peek-next], [data-peek-mode="side"] [data-blok-database-peek-copy-link], [data-peek-mode="side"] [data-blok-database-peek-actions], [data-peek-mode="center"] [data-blok-database-peek-expand], [data-peek-mode="center"] [data-blok-database-peek-mode], [data-peek-mode="center"] [data-blok-database-peek-prev], [data-peek-mode="center"] [data-blok-database-peek-next], [data-peek-mode="center"] [data-blok-database-peek-copy-link], [data-peek-mode="center"] [data-blok-database-peek-actions] {
+[data-peek-mode="side"] [data-blok-database-drawer-close], [data-peek-mode="side"] [data-blok-database-peek-expand], [data-peek-mode="side"] [data-blok-database-peek-mode], [data-peek-mode="side"] [data-blok-database-peek-prev], [data-peek-mode="side"] [data-blok-database-peek-next], [data-peek-mode="side"] [data-blok-database-peek-copy-link], [data-peek-mode="side"] [data-blok-database-peek-actions], [data-peek-mode="center"] [data-blok-database-peek-expand], [data-peek-mode="center"] [data-blok-database-peek-mode], [data-peek-mode="center"] [data-blok-database-peek-prev], [data-peek-mode="center"] [data-blok-database-peek-next], [data-peek-mode="center"] [data-blok-database-peek-copy-link], [data-peek-mode="center"] [data-blok-database-peek-actions], [data-peek-mode="side"] [data-blok-database-peek-favorite], [data-peek-mode="center"] [data-blok-database-peek-favorite], [data-peek-mode="full"] [data-blok-database-peek-copy-link], [data-peek-mode="full"] [data-blok-database-peek-favorite], [data-peek-mode="full"] [data-blok-database-peek-actions] {
   border-radius: var(--blok-radius-control);
 }
 

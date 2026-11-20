@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, onTestFinished, vi } from 'vitest';
 import { DatabaseModel } from '../../../../src/tools/database/database-model';
-import { openFilterPill, openViewSettings } from '../../../../src/tools/database/database-view-settings-panel';
+import { openViewSettings } from '../../../../src/tools/database/database-view-settings-panel';
 import type { ViewSettingsContext, ViewSettingsStart } from '../../../../src/tools/database/database-view-settings-panel';
 import type { DatabasePanel } from '../../../../src/tools/database/database-panel';
 import type { ColorRule, DatabaseViewConfig, FilterGroup, FilterRule, PropertyDefinition } from '../../../../src/tools/database/types';
@@ -33,7 +33,6 @@ interface Harness {
   ctx: ViewSettingsContext;
   state: { view: DatabaseViewConfig; locked: boolean };
   open: (start?: ViewSettingsStart) => DatabasePanel;
-  openPill: (filterId: string) => DatabasePanel;
 }
 
 const harness = (view: Partial<DatabaseViewConfig> = {}): Harness => {
@@ -73,11 +72,6 @@ const harness = (view: Partial<DatabaseViewConfig> = {}): Harness => {
     state,
     open: (start = 'root') => {
       holder.panel = openViewSettings(anchor, ctx, start);
-
-      return holder.panel;
-    },
-    openPill: (filterId) => {
-      holder.panel = openFilterPill(anchor, ctx, filterId);
 
       return holder.panel;
     },
@@ -426,118 +420,6 @@ describe('view settings panel', () => {
 
       expect(h.state.view.groupBy).toBe('stage');
       expect(exists('database-group-by')).toBe(true);
-    });
-  });
-
-  // notion-motion.md Round 13: the rule editor picks a date's Start date / End date and a Name rollup's Any / None / Every too.
-  describe('rule editor lead parts', () => {
-    const ops = (): Array<string | undefined> => [...document.querySelectorAll('[data-blok-testid^="database-filter-op-"]')]
-      .map((el) => el.getAttribute('data-blok-testid')?.replace('database-filter-op-', ''));
-
-    it('keeps End date through the date editor and an operator pick, and goes back to Start date', () => {
-      const h = harness({ filters: [{ id: 'f1', propertyId: 'due', operator: 'end:this_week', value: null }] });
-
-      h.openPill('f1');
-      expect(document.querySelector('[data-blok-testid="database-filter-side"]')?.textContent).toContain('tools.database.dateEnd');
-
-      const unit = document.querySelector<HTMLSelectElement>('[data-blok-testid="database-filter-unit"]');
-
-      if (unit === null) throw new Error('no unit');
-      unit.value = 'month';
-      unit.dispatchEvent(new Event('change'));
-      expect(h.state.view.filters[0]).toMatchObject({ operator: 'end:relative_to_today', value: 'this:1:month' });
-
-      click('database-filter-operator');
-      click('database-filter-op-before');
-      expect(h.state.view.filters[0]).toMatchObject({ operator: 'end:before' });
-
-      click('database-filter-side');
-      expect(document.querySelector('[data-blok-testid="database-filter-side-end"]')?.getAttribute('aria-checked')).toBe('true');
-      click('database-filter-side-start');
-      expect(h.state.view.filters[0]).toMatchObject({ operator: 'before' });
-    });
-
-    it('edits a Name rollup rule with Any / None / Every, the text operators and a text field', () => {
-      const names = Object.assign(
-        { id: 'names', name: 'Names', type: 'relation', position: 'a6', rollup: { relationPropertyId: 'rel', targetPropertyId: 'title', function: 'show_original' } } as PropertyDefinition,
-        { [PAGE_LIST_ROLLUP]: true }
-      );
-      const h = harness({ filters: [{ id: 'f1', propertyId: 'names', operator: 'any:contains', value: '' }] });
-
-      h.ctx.schema = () => [...schema, names];
-      h.openPill('f1');
-
-      click('database-filter-quantifier');
-      expect([...document.querySelectorAll('[data-blok-testid^="database-filter-quantifier-"]')].map((el) => el.getAttribute('data-blok-testid')))
-        .toEqual(['database-filter-quantifier-any', 'database-filter-quantifier-none', 'database-filter-quantifier-every']);
-      click('database-filter-quantifier-none');
-      expect(h.state.view.filters[0]).toMatchObject({ operator: 'none:contains' });
-
-      click('database-filter-operator');
-      expect(ops()).toEqual(['equals', 'does_not_equal', 'contains', 'does_not_contain', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty']);
-      click('database-filter-op-starts_with');
-      expect(h.state.view.filters[0]).toMatchObject({ operator: 'none:starts_with' });
-
-      const input = document.querySelector<HTMLInputElement>('[data-blok-testid="database-filter-value"]');
-
-      if (input === null) throw new Error('no value field');
-      input.value = 'x';
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      expect(h.state.view.filters[0]).toMatchObject({ operator: 'none:starts_with', value: 'x' });
-    });
-  });
-
-  // filter-sort's date filter (findings V18): the settings rule editor reuses the chip's date editor.
-  describe('date rule editor', () => {
-    const openRule = (filter: { operator: string; value: unknown }): ReturnType<typeof harness> => {
-      const h = harness({ filters: [{ id: 'f1', propertyId: 'due', operator: filter.operator, value: filter.value as never }] });
-
-      h.openPill('f1');
-
-      return h;
-    };
-    const saved = (h: ReturnType<typeof harness>): unknown => h.state.view.filters[0];
-
-    it('edits a saved window filter with the This/Past/Next editor, not the old preset list', () => {
-      const h = openRule({ operator: 'this_week', value: null });
-
-      expect(exists('database-filter-within-this_week')).toBe(false);
-      expect(exists('database-filter-direction')).toBe(true);
-      const unit = document.querySelector<HTMLSelectElement>('[data-blok-testid="database-filter-unit"]');
-
-      if (unit === null) throw new Error('no unit');
-      unit.value = 'month';
-      unit.dispatchEvent(new Event('change'));
-      expect(saved(h)).toMatchObject({ operator: 'relative_to_today', value: 'this:1:month' });
-    });
-
-    it('picking "Is relative to today" starts a span, not a day', () => {
-      const h = openRule({ operator: 'equals', value: 'today' });
-
-      click('database-filter-operator');
-      click('database-filter-op-relative_to_today');
-      expect(saved(h)).toMatchObject({ operator: 'this_week', value: null });
-      expect(exists('database-filter-direction')).toBe(true);
-    });
-
-    it('"Is between" starts empty and saves a start/end range once both days are whole', () => {
-      const h = openRule({ operator: 'equals', value: 'today' });
-
-      click('database-filter-operator');
-      click('database-filter-op-is_between');
-      expect(saved(h)).toMatchObject({ operator: 'is_between', value: null });
-      const type = (which: string, text: string): void => {
-        const input = document.querySelector<HTMLInputElement>(`[data-blok-testid="database-filter-between-${which}"]`);
-
-        if (input === null) throw new Error(`no ${which}`);
-        input.value = text;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      };
-
-      type('start', '2026-10-01');
-      expect(saved(h)).toMatchObject({ value: null });
-      type('end', '2026-10-09');
-      expect(saved(h)).toMatchObject({ operator: 'is_between', value: '2026-10-01/2026-10-09' });
     });
   });
 
@@ -1891,31 +1773,28 @@ describe('view settings panel', () => {
     });
   });
 
-  // Ledger D30 (7f240977 · database-view-settings-panel.ts:1108): a date filter takes Today, One week ago… from its page.
-  it('picks a relative date value for a date filter from the filter page, and an exact date replaces it', () => {
-    const h = harness({ filters: [{ id: 'f1', propertyId: 'due', operator: 'this_week', value: null }] });
+  // Ledger D30 (7f240977): a date filter takes Today, One week ago… from the Filters page, now in its chip's rule popover.
+  it('picks a relative date value for a date filter from the filter page, and a typed date replaces it', () => {
+    const h = harness({ filters: [{ id: 'f1', propertyId: 'due', operator: 'equals', value: null }] });
 
-    h.openPill('f1');
-    // A new date filter starts as "is within this week"; "Is" brings the value rows.
-    click('database-filter-operator');
-    click('database-filter-op-equals');
+    h.open('filter');
+    click('database-filter-row-f1');
+    click('database-filter-date-presets');
     click('database-filter-date-one_week_ago');
-
     expect(h.state.view.filters).toEqual([expect.objectContaining({ propertyId: 'due', operator: 'equals', value: 'one_week_ago' })]);
-    expect(document.querySelector('[data-blok-testid="database-filter-date-one_week_ago"]')?.getAttribute('aria-checked')).toBe('true');
-    expect(document.querySelector('[data-blok-testid="database-filter-date-today"]')?.getAttribute('aria-checked')).toBe('false');
 
+    click('database-filter-date-presets');
+    expect(q('database-filter-date-one_week_ago')?.getAttribute('aria-checked')).toBe('true');
     click('database-filter-date-today');
     expect(h.state.view.filters[0]?.value).toBe('today');
 
-    const exact = document.querySelector<HTMLInputElement>('[data-blok-testid="database-filter-value"]');
+    const field = document.querySelector<HTMLInputElement>('[data-blok-database-chip-date-input]');
 
-    if (exact === null) throw new Error('no exact date field');
-    exact.value = '2026-10-20';
-    exact.dispatchEvent(new Event('input', { bubbles: true }));
-
+    if (field === null) throw new Error('no date field');
+    field.value = '2026-10-20';
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect(h.state.view.filters[0]?.value).toBe('2026-10-20');
-    expect(document.querySelector('[data-blok-testid="database-filter-date-today"]')?.getAttribute('aria-checked')).toBe('false');
   });
 
   it('moves flat filters into the advanced tree on its first edit', () => {
@@ -3368,27 +3247,6 @@ describe('view settings panel', () => {
     click('database-pick-property-num');
 
     expect(h.state.view.filters).toHaveLength(1);
-  });
-
-  it('opens a filter pill popover at its editor, 220 wide', () => {
-    const h = harness({ filters: [{ id: 'f1', propertyId: 'due', operator: 'this_week', value: null }] });
-
-    h.openPill('f1');
-
-    expect((document.querySelector('[data-blok-testid="database-filter-popover"]') as HTMLElement).style.width).toBe('220px');
-
-    // The window editor is filter-sort's This/Past/Next editor (findings V18).
-    const direction = document.querySelector<HTMLSelectElement>('[data-blok-testid="database-filter-direction"]');
-
-    if (direction === null) throw new Error('no direction');
-    direction.value = 'past';
-    direction.dispatchEvent(new Event('change'));
-
-    expect(h.state.view.filters[0]).toMatchObject({ operator: 'relative_to_today', value: 'past:1:week' });
-
-    click('database-filter-delete');
-
-    expect(h.state.view.filters).toEqual([]);
   });
 });
 

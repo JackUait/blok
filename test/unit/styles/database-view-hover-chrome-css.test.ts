@@ -543,6 +543,28 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(ruleBody('[data-blok-database-form-type-row] + [data-blok-database-form-type-row]')).toContain('margin-block-start: var(--blok-space-0-25)');
   });
 
+  // notion-motion.md Round 89 §1 #5 (r89-n-formtype-existing.raw): an existing-property row has a 32 tile at +6
+  // (white, r4, 1px frame) around a 19.2 glyph, and its text at +46.
+  it('frames the existing-property glyph in a 32px tile 6 in from the row edge', () => {
+    const tile = ruleBody('[data-blok-database-form-existing-row] > [data-blok-database-panel-icon]');
+
+    expect(ruleBody('[data-blok-database-form-existing-row]')).toContain('padding-inline-start: var(--blok-space-1-5)');
+    expect(tile).toContain('inline-size: 32px');
+    expect(tile).toContain('block-size: 32px');
+    expect(tile).toContain('border: 1px solid var(--blok-database-form-type-frame)');
+    expect(tile).toContain('border-radius: var(--blok-radius-control-sm)');
+    expect(tile).toContain('background-color: var(--blok-database-form-question-bg)');
+    expect(ruleBody('[data-blok-database-form-existing-row] > [data-blok-database-panel-icon] svg')).toContain('width: 19.2px');
+  });
+
+  // notion-motion.md Round 88 §1 #8, Round 89 §5 (r89-n-formtype.raw): new-question glyphs are 20, not 16.
+  it('draws the new-question glyph 20px', () => {
+    const svg = ruleBody('[data-blok-database-form-type-row] > [data-blok-database-panel-icon] svg');
+
+    expect(svg).toContain('width: 20px');
+    expect(svg).toContain('height: 20px');
+  });
+
   // The view box clips; the "+" sits left of the column, so the form bleeds into the gutter as the table does.
   it('the view box bleeds into the gutter for a form, so the "+" is not clipped', () => {
     expect(ruleBody('[data-blok-database-board-container]:has(> [data-blok-database-table], > [data-blok-database-list], > [data-blok-database-form])'))

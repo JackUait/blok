@@ -21346,11 +21346,12 @@ button[data-blok-database-feed-reaction]:hover,
   margin-inline: var(--blok-space-2);
 }
 
-/* notion-motion.md Round 88 §1 #8: existing-property rows are 266 x 45.6 at + 12. */
+/* notion-motion.md Round 88 §1 #8: existing-property rows are 266 x 45.6 at + 12. Round 89 §1 #5: tile at + 6. */
 [data-blok-database-form-existing-row] {
   width: auto;
   min-height: 45.6px;
   margin-inline: var(--blok-space-2);
+  padding-inline-start: var(--blok-space-1-5);
 }
 
 /* Round 88 §1 #8: rows step 45 and 46.6, 1 apart, in both sections. */
@@ -21359,7 +21360,8 @@ button[data-blok-database-feed-reaction]:hover,
   margin-block-start: var(--blok-space-0-25);
 }
 
-[data-blok-database-form-type-row] > [data-blok-database-panel-icon] {
+[data-blok-database-form-type-row] > [data-blok-database-panel-icon],
+[data-blok-database-form-existing-row] > [data-blok-database-panel-icon] {
   inline-size: 32px;
   block-size: 32px;
   box-sizing: border-box;
@@ -21368,6 +21370,17 @@ button[data-blok-database-feed-reaction]:hover,
   border: 1px solid var(--blok-database-form-type-frame);
   border-radius: var(--blok-radius-control-sm);
   background-color: var(--blok-database-form-question-bg);
+}
+
+/* Round 88 §1 #8, Round 89 §1 #5: new-question glyphs 20, existing-property glyphs 19.2. */
+[data-blok-database-form-type-row] > [data-blok-database-panel-icon] svg {
+  width: 20px;
+  height: 20px;
+}
+
+[data-blok-database-form-existing-row] > [data-blok-database-panel-icon] svg {
+  width: 19.2px;
+  height: 19.2px;
 }
 
 /* r32-b-form-geom.raw: the answer starts 18 under the name; the card's 4px gap gives the rest. */

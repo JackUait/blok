@@ -181,6 +181,30 @@ describe('DatabaseListRowDrag', () => {
     expect(onDrop).not.toHaveBeenCalled();
   });
 
+  it('cancels on Escape while a block holds focus, as after a reload', () => {
+    // Blok's editor hears keydown in capture on document; with a block focused it
+    // stops an Escape there to enter navigation mode.
+    const editorEscape = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') event.stopPropagation();
+    };
+    const block = document.createElement('div');
+
+    block.contentEditable = 'true';
+    document.body.appendChild(block);
+    document.addEventListener('keydown', editorEscape, true);
+
+    drag.beginTracking('row-0', 0, 0);
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 0, clientY: 120 }));
+    block.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 0, clientY: 120 }));
+
+    document.removeEventListener('keydown', editorEscape, true);
+    block.remove();
+
+    expect(onDrop).not.toHaveBeenCalled();
+    expect(document.querySelector('[data-blok-database-ghost]')).toBeNull();
+  });
+
   // notion-motion.md Round 53 §7: a drag cancelled with Escape opens nothing on release.
   it('does not open the row when a drag cancelled with Escape is released on it', async () => {
     const row = wrapper.querySelector<HTMLElement>('[data-row-id="row-0"]');

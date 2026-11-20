@@ -69,15 +69,15 @@ export class DatabaseListRowDrag {
     document.addEventListener('pointermove', this.boundPointerMove);
     document.addEventListener('pointerup', this.boundPointerUp);
     document.addEventListener('pointercancel', this.boundPointerCancel);
-    // Capture: with a block focused, Blok's own Escape handling stops the key before it bubbles to document.
-    document.addEventListener('keydown', this.boundKeyDown, true);
+    // Window capture runs before Blok's own keydown capture on document, so its Escape never enters navigation mode.
+    window.addEventListener('keydown', this.boundKeyDown, true);
   }
 
   public cleanup(): void {
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
     document.removeEventListener('pointercancel', this.boundPointerCancel);
-    document.removeEventListener('keydown', this.boundKeyDown, true);
+    window.removeEventListener('keydown', this.boundKeyDown, true);
 
     this.autoScroll?.destroy();
     this.autoScroll = null;

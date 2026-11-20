@@ -38,14 +38,15 @@ export class DatabaseFormQuestionDrag {
     document.addEventListener('pointermove', this.move);
     document.addEventListener('pointerup', this.up);
     document.addEventListener('pointercancel', this.cleanup);
-    document.addEventListener('keydown', this.key);
+    // Window capture runs before Blok's own keydown capture on document, so its Escape never enters navigation mode.
+    window.addEventListener('keydown', this.key, true);
   }
 
   readonly cleanup = (): void => {
     document.removeEventListener('pointermove', this.move);
     document.removeEventListener('pointerup', this.up);
     document.removeEventListener('pointercancel', this.cleanup);
-    document.removeEventListener('keydown', this.key);
+    window.removeEventListener('keydown', this.key, true);
     this.autoScroll?.destroy();
     this.autoScroll = null;
     this.zones.forEach((zone) => zone.remove());
@@ -58,7 +59,12 @@ export class DatabaseFormQuestionDrag {
   };
 
   private readonly key = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') this.cleanup();
+    if (event.key !== 'Escape') return;
+    if (this.dragging) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    this.cleanup();
   };
 
   private readonly move = (event: PointerEvent): void => {

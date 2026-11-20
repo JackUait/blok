@@ -97,8 +97,8 @@ export class DatabaseTableColumnDrag {
     mountGhost(header, ghost);
     this.ghost = ghost;
     this.slots = this.headers().map((el) => ({ el, rect: el.getBoundingClientRect() }));
-    // Capture: the drag's Escape must not also reach Blok's own Escape handling.
-    document.addEventListener('keydown', this.handleKey, true);
+    // Window capture runs before Blok's own keydown capture on document, so its Escape never enters navigation mode.
+    window.addEventListener('keydown', this.handleKey, true);
     header.setAttribute('data-dragging', '');
     this.grid.setAttribute('data-column-dragging', '');
     this.state.busy = true;
@@ -167,7 +167,7 @@ export class DatabaseTableColumnDrag {
     document.removeEventListener('pointermove', this.handleMove);
     document.removeEventListener('pointerup', this.handleUp);
     document.removeEventListener('pointercancel', this.handleCancel);
-    document.removeEventListener('keydown', this.handleKey, true);
+    window.removeEventListener('keydown', this.handleKey, true);
     this.ghost?.remove();
     // The slide transition goes first, so the headers jump back instead of sliding.
     this.grid.removeAttribute('data-column-dragging');

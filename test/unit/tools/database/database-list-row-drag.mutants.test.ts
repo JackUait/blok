@@ -346,20 +346,29 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       expect(onDrop).not.toHaveBeenCalled();
     });
 
-    it('adds and removes exactly the four document listeners it owns', () => {
+    it('adds and removes exactly the pointer listeners on document and the keydown capture on window', () => {
       const addSpy = vi.spyOn(document, 'addEventListener');
       const removeSpy = vi.spyOn(document, 'removeEventListener');
-      const expected = ['pointermove', 'pointerup', 'pointercancel', 'keydown'];
+      const windowAdd = vi.spyOn(window, 'addEventListener');
+      const windowRemove = vi.spyOn(window, 'removeEventListener');
+      const expected = ['pointermove', 'pointerup', 'pointercancel'];
+      const keydown = [['keydown', true]];
+      const names = (spy: typeof addSpy): string[] => spy.mock.calls.map((call) => String(call[0]));
+      const keyCalls = (spy: typeof windowAdd): unknown[][] => spy.mock.calls.map((call) => [call[0], call[2]]);
 
       drag.beginTracking('row-0', 0, 0);
 
-      expect(removeSpy.mock.calls.map((call) => String(call[0]))).toEqual(expected);
-      expect(addSpy.mock.calls.map((call) => String(call[0]))).toEqual(expected);
+      expect(names(removeSpy)).toEqual(expected);
+      expect(names(addSpy)).toEqual(expected);
+      expect(keyCalls(windowRemove)).toEqual(keydown);
+      expect(keyCalls(windowAdd)).toEqual(keydown);
 
       removeSpy.mockClear();
+      windowRemove.mockClear();
       drag.cleanup();
 
-      expect(removeSpy.mock.calls.map((call) => String(call[0]))).toEqual(expected);
+      expect(names(removeSpy)).toEqual(expected);
+      expect(keyCalls(windowRemove)).toEqual(keydown);
     });
 
     it('destroy() ends a live gesture', () => {

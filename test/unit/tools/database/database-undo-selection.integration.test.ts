@@ -215,7 +215,7 @@ describe('row selection after undo', () => {
     expect(selectedRows()).toEqual(['r2']);
   });
 
-  const dragToTop = async (id: string): Promise<void> => {
+  const dragToTop = async (id: string, click = true): Promise<void> => {
     const rows = [...document.querySelectorAll<HTMLElement>('[data-blok-database-table-row]')];
 
     rows.forEach((el, index) => {
@@ -227,7 +227,8 @@ describe('row selection after undo', () => {
     handle.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: 10, clientY: rows.indexOf(row(id) as HTMLElement) * 38 + 19, bubbles: true }));
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 10, clientY: 5, bubbles: true }));
     document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    handle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    // The drop redraws the grid, so a click on this handle lands in detached DOM, past the document's swallow.
+    if (click) handle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await quiet();
   };
 
@@ -252,6 +253,47 @@ describe('row selection after undo', () => {
 
     expect(selectedRows()).toEqual([]);
     expect(order()).toEqual(['r3', 'r1', 'r2']);
+  });
+
+  const escapeOnBody = async (): Promise<void> => {
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await quiet();
+  };
+
+  // notion-motion.md Round 63 §1 (r63-n-undo.raw edit5): after the drop focus is on body, and Escape clears the row.
+  it('clears a dropped row on Escape with focus left on body', async () => {
+    await make();
+
+    await dragToTop('r3', false);
+    expect(selectedRows()).toEqual(['r3']);
+    expect(document.activeElement).toBe(document.body);
+
+    await escapeOnBody();
+
+    expect(selectedRows()).toEqual([]);
+    expect(order()).toEqual(['r3', 'r1', 'r2']);
+  });
+
+  // r63-n-undo.raw edit5: after undo and redo the active element stays body.
+  it('leaves focus on body through the undo and redo of a drop', async () => {
+    const blok = await make();
+
+    await dragToTop('r3', false);
+    await escapeOnBody();
+
+    blok.history.undo();
+    await quiet();
+    expect(selectedRows()).toEqual(['r3']);
+    expect(document.activeElement).toBe(document.body);
+
+    blok.history.redo();
+    await quiet();
+    expect(document.activeElement).toBe(document.body);
+
+    blok.history.undo();
+    await quiet();
+    await escapeOnBody();
+    expect(selectedRows()).toEqual([]);
   });
 
   it('drops the restored row from the selection when redo deletes it again', async () => {

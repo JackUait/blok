@@ -1997,6 +1997,19 @@ describe('DatabaseTimelineView', () => {
       expect(range(root)?.textContent).toBe('Oct 12 \u2013 14');
     });
 
+    // notion-motion.md Round 90 §1 #5: "Dec 25 – Jan 7" across a year, with no years. Round 89: a single other-year day is "Jan 12".
+    it.each(['year', '5_years'] as const)('names a range across a year with no years at %s zoom', (zoom) => {
+      const { root } = mount({
+        view: timelineView({ timelineZoom: zoom }),
+        groups: single([row('r1', 'Turn', '2026-12-25/2027-01-07'), row('r2', 'Later', '2027-01-12')]),
+      });
+
+      over(bar(root, 'r1'));
+      expect(range(root)?.textContent).toBe('Dec 25 \u2013 Jan 7');
+      over(bar(root, 'r2'), bar(root, 'r1'));
+      expect(range(root)?.textContent).toBe('Jan 12');
+    });
+
     it('keeps the Month pill a bare span, with no day named', () => {
       const { root } = mount();
 

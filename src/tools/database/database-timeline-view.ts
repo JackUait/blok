@@ -132,12 +132,15 @@ const DRAG_THRESHOLD = 4;
 
 /**
  * notion-motion.md Round 89 §1 #1: "Nov 16 – 20", plain spaces round the en dash (some Intl builds give thin ones).
- * Ranges across a month or a year are unread, so they keep Intl's own text.
+ * Round 90 §1 #5: across a year "Dec 25 – Jan 7", no years; Intl would add them.
  */
-const pillText = (span: EventSpan, locale: string): string =>
-  new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' })
-    .formatRange(toLocalDate(span.start), toLocalDate(span.end))
-    .replace(/\u2009/g, ' ');
+const pillText = (span: EventSpan, locale: string): string => {
+  const format = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' });
+
+  return span.start.slice(0, 4) === span.end.slice(0, 4)
+    ? format.formatRange(toLocalDate(span.start), toLocalDate(span.end)).replace(/\u2009/g, ' ')
+    : `${format.format(toLocalDate(span.start))} \u2013 ${format.format(toLocalDate(span.end))}`;
+};
 const DAY_MINUTES = 24 * 60;
 /** notion-motion.md Round 71 §3: a day-zoom bar starts 2px into its first day and stops 1px short of its last (851.4 in a day from 849.4, 37 wide). */
 const BAR_START = 2;

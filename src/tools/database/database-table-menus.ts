@@ -296,6 +296,10 @@ export const openMenu = (
   if (options.kind === 'calc') {
     popover.escapeClosesSubmenuFirst = true;
   }
+  // notion-motion.md Round 85c §1: Escape removes the row handle menu at once; other closes still fade.
+  if (options.kind === 'row' || options.kind === 'handle') {
+    popover.escapeClosesAtOnce = true;
+  }
   popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
   popover.alignEnd = options.alignEnd === true;
 

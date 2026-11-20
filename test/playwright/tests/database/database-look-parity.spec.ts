@@ -181,6 +181,35 @@ test('"+ Filter" over a long schema keeps a 28px "Filter by…" field and its "A
   expect((box?.y ?? Infinity) + (box?.height ?? 0)).toBeLessThanOrEqual(717);
 });
 
+// notion-motion.md Round 89 §1 #9: a filter picker that runs past the window stops 8 from its bottom, not 12.
+test('the filter picker slides up to stop 8 from the window bottom', async ({ page }) => {
+  const many = [
+    { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+    ...Array.from({ length: 24 }, (_, i) => ({ id: `p-t${i}`, name: `Text ${String(i).padStart(2, '0')}`, type: 'text', position: `b${String(i).padStart(2, '0')}` })),
+  ];
+
+  await page.setViewportSize({ width: 1512, height: 717 });
+  await mount(page, undefined, [{
+    id: 'db-1',
+    type: 'database',
+    data: { schema: many, views: [{ id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }], activeViewId: 'v1' },
+  }]);
+  await page.evaluate(() => {
+    const holder = document.getElementById('blok');
+
+    if (holder !== null) holder.style.marginTop = '300px';
+  });
+  await page.getByTestId('database-toolbar-filter').click();
+  await expect(page.getByTestId('database-filter-picker-search')).toBeVisible();
+  const bottom = await page.evaluate(async () => {
+    await Promise.all(document.getAnimations().map((a) => a.finished));
+
+    return document.querySelector('[data-blok-testid="database-filter-picker-search"]')?.closest('[data-blok-popover-container]')?.getBoundingClientRect().bottom;
+  });
+
+  expect(717 - (bottom ?? 0)).toBeCloseTo(8, 0);
+});
+
 test('rows stay 37px with Files and Button columns and a long URL (research/07:70, 08:380)', async ({ page }) => {
   for (const rowId of ['r1', 'r2']) {
     expect((await page.locator(`[data-blok-database-table-row][data-row-id="${rowId}"]`).boundingBox())?.height).toBe(37);

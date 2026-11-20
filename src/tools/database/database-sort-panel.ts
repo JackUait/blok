@@ -34,6 +34,8 @@ export interface PropertyPickerOptions {
   over?: { width: number; maxHeight: number };
   /** Space under the anchor when not `over`; the panel's usual gap when unset. */
   gap?: number;
+  /** How close to the window's top and bottom it may slide; the panel's usual 12 when unset. */
+  verticalMargin?: number;
   onClose: (escape: boolean) => void;
 }
 
@@ -129,6 +131,7 @@ export const propertyPicker = (options: PropertyPickerOptions): DatabasePanel =>
     backLabel: options.i18n.t('tools.database.settingsBack'),
     ...(options.gap !== undefined ? { gap: options.gap } : {}),
     ...(options.over !== undefined ? { gap: 0 } : {}),
+    ...(options.verticalMargin !== undefined ? { verticalMargin: options.verticalMargin } : {}),
     onClose: options.onClose,
   });
 

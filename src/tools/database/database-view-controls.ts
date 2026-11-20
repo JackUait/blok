@@ -1049,6 +1049,8 @@ export class DatabaseViewControls {
     this.openPropertyPicker(anchor, 'database-filter-picker', FILTERABLE_TYPES, (property) => this.filterBy(property.id, anchor), {
       placeholder: this.t('filterByPlaceholder'),
       kind: 'filter',
+      // notion-motion.md Round 89 §1 #9: it stops 8 from the window bottom. The sort picker's is unread.
+      verticalMargin: 8,
       // notion-motion.md Round 10 "Add filter picker": a property already filtered is left out.
       used: this.view()?.filters.map((filter) => filter.propertyId) ?? [],
       footer: (close) => panelRow({
@@ -1109,6 +1111,7 @@ export class DatabaseViewControls {
       footer?: (close: () => void) => HTMLElement;
       used?: string[];
       kind?: 'filter' | 'sort';
+      verticalMargin?: number;
     }
   ): DatabasePanel {
     const panel = propertyPicker({

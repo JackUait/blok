@@ -288,7 +288,7 @@ describe('DatabasePanel', () => {
 
       down(list, 'num', 189);
       move(186);
-      move(180);
+      move(183);
       expect(row('num').style.top).toBe('');
       expect(row('num').hasAttribute('data-dragging')).toBe(false);
 
@@ -314,6 +314,27 @@ describe('DatabasePanel', () => {
       expect(row('f').style.top).toBe('');
       expect(row('f').style.position).toBe('');
       expect(row('num').hasAttribute('data-dragging')).toBe(false);
+    });
+
+    // notion-motion.md Round 91 §1 #6 (r91-n-sort-ruledrag.raw), grabbed at the handle centre: the row follows from +8
+    // (not at +6); the next row swaps at +18, when the pointer crosses into its slot (its 8 gap, then its box), and is
+    // back at +16. The pointer rule is R91's hypothesis from one sample each way.
+    it('follows from 8px and passes the next row when the pointer enters its slot', () => {
+      const { list, row } = dragList(['a', 'b']);
+
+      down(list, 'a', 149);
+      move(155);
+      expect(row('a').hasAttribute('data-dragging')).toBe(false);
+
+      move(157);
+      expect(row('a').style.top).toBe('8px');
+
+      move(165);
+      expect(row('b').style.top).toBe('');
+      move(167);
+      expect(row('b').style.top).toBe('-40px');
+      move(165);
+      expect(row('b').style.top).toBe('');
     });
 
     it('clamps at the list end and passes every row it crosses', () => {
@@ -360,8 +381,8 @@ describe('DatabasePanel', () => {
       const { list, row, onMove } = dragList(['a', 'b']);
 
       down(list, 'b', 189);
-      move(180);
-      up(180);
+      move(183);
+      up(183);
 
       expect(onMove).not.toHaveBeenCalled();
       expect(row('b').hasAttribute('data-dragging')).toBe(false);

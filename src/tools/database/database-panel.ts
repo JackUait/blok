@@ -622,14 +622,15 @@ export const panelReorderList = (options: {
   return list;
 };
 
-/** Notion starts a list drag somewhere in 10–19px (r35:509, not narrowed). */
-const DRAG_THRESHOLD = 12;
+/** notion-motion.md Round 91 §1 #6: Notion's sort row stays at +6 and follows from +8. */
+const DRAG_THRESHOLD = 8;
 
 /**
  * Pointer drag inside one list, as Notion's sort list (r35:497-509): past the
  * threshold the row follows the pointer, clamped to the list ends. A neighbour
- * moves one slot once the row's leading edge passes its middle (the sort panel
- * slides it in database.css, r52-n-sort-rule-drag.raw).
+ * moves one slot once the pointer enters its slot: the gap before it, then its
+ * box (Round 91 §1 #6, a hypothesis from one sample each way; the upward pass
+ * is unmeasured). The sort panel slides it in database.css (r52-n-sort-rule-drag.raw).
  * Release commits the order shown. Rows carry their id in `data-item-id`.
  */
 export const startReorderDrag = (
@@ -677,15 +678,14 @@ export const startReorderDrag = (
       for (const row of rows) row.style.position = 'relative';
     }
     const offset = Math.min(maxOffset, Math.max(minOffset, delta));
-    const top = self.top + offset;
-    const bottom = self.bottom + offset;
+    const pointer = moveEvent.clientY;
 
     source.style.top = `${offset}px`;
     state.slot = from;
     for (const [index, row] of rows.entries()) {
-      const middle = rects[index].top + rects[index].height / 2;
-      const passedAbove = index < from && top < middle;
-      const passedBelow = index > from && bottom > middle;
+      // A row's slot runs from the previous row's bottom to its own bottom.
+      const passedAbove = index < from && pointer < rects[index].bottom;
+      const passedBelow = index > from && pointer > rects[index - 1].bottom;
       const shift = (passedAbove ? pitchUp : 0) - (passedBelow ? pitchDown : 0);
 
       state.slot += (passedBelow ? 1 : 0) - (passedAbove ? 1 : 0);

@@ -1642,6 +1642,33 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(onReorder).toHaveBeenCalledWith('v0', positionBetween('a4', 'a5'));
     });
 
+    // notion-motion.md Round 85c §2: Table, Timeline shown, two folded; Table dropped past Timeline lands right after it.
+    it('drops right after the last shown tab, ahead of the folded ones', () => {
+      const views = Array.from({ length: 4 }, (_, i) => makeView({ id: `v${i}`, name: `View ${i}`, position: `a${i}` }));
+      const { el } = mount(views, 'v0');
+
+      for (const tab of Array.from(el.querySelectorAll('[data-blok-database-tab]'))) {
+        Object.defineProperty(tab, 'offsetWidth', { value: 100, configurable: true });
+      }
+      Object.defineProperty(el, 'clientWidth', { value: 246, configurable: true });
+      lastResizeProbe().fire();
+      const shownIds = Array.from(el.querySelectorAll<HTMLElement>('[data-blok-database-tab]'))
+        .filter((tab) => tab.style.display !== 'none').map((tab) => tab.getAttribute('data-view-id'));
+
+      expect(shownIds).toEqual(['v0', 'v1']);
+      Array.from(el.querySelectorAll<HTMLElement>('[data-blok-database-tab]')).forEach((tab) => {
+        const slot = ['v0', 'v1'].indexOf(tab.getAttribute('data-view-id') ?? '');
+
+        vi.spyOn(tab, 'getBoundingClientRect').mockReturnValue(slot === -1 ? makeRect(0, 0) : makeRect(slot * 100, slot * 100 + 100));
+      });
+
+      tabOf(el, 'v0').dispatchEvent(pointer('pointerdown', 50));
+      document.dispatchEvent(pointer('pointermove', 350));
+      document.dispatchEvent(pointer('pointerup', 350));
+
+      expect(onReorder).toHaveBeenCalledWith('v0', positionBetween('a1', 'a2'));
+    });
+
     it('drops after the last tab when the pointer is past the row', () => {
       const { el } = mount(threeViews(), 'v1');
 

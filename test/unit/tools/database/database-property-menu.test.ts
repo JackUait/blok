@@ -321,9 +321,14 @@ describe('DatabasePropertyMenu', () => {
     menu.destroy();
   });
 
-  const open = (property: PropertyDefinition, hasPeople = false): ReturnType<typeof callbacks> => {
+  const open = (property: PropertyDefinition, hasPeople = false, hasTimedValue?: (propertyId: string) => boolean): ReturnType<typeof callbacks> => {
     const cb = callbacks();
-    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople, ...cb });
+    const menu = new DatabasePropertyMenu({
+      i18n: { t: (key: string) => key, getLocale: () => 'en' } as never,
+      hasPeople,
+      ...(hasTimedValue === undefined ? {} : { hasTimedValue }),
+      ...cb,
+    });
 
     menu.open(property, document.createElement('button'));
 
@@ -1488,7 +1493,7 @@ describe('DatabasePropertyMenu', () => {
 
   describe('Edit property for a date', () => {
     it('sets the date format, time format and time zone', () => {
-      const cb = open(prop('date', { date: { timeFormat: '24_hour' } }));
+      const cb = open(prop('date', { date: { timeFormat: '24_hour' } }), false, () => true);
       const items = byName(lastItems(), 'editProperty').children?.items ?? [];
       const formats = byName(items, 'dateFormat').children?.items ?? [];
 
@@ -1502,6 +1507,32 @@ describe('DatabasePropertyMenu', () => {
 
       byName(zones, 'timeZone-Asia/Tokyo').onActivate?.(byName(zones, 'timeZone-Asia/Tokyo'));
       expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { date: { timeFormat: '24_hour', timeZone: 'Asia/Tokyo' } });
+    });
+
+    // notion-motion.md Round 87 §1 #2, Round 88 §1 #2: no Timezone row while no row of the property has a time.
+    it('has no Timezone row while no row includes a time', () => {
+      const asked: string[] = [];
+
+      open(prop('date'), false, (id) => { asked.push(id); return false; });
+
+      expect((byName(lastItems(), 'editProperty').children?.items ?? []).map((item) => item.name))
+        .toEqual(['dateFormat', 'timeFormat', 'dateNotifications']);
+      expect(asked).toEqual(['p']);
+    });
+
+    // A timed row's flyout is unread in Notion, so the row stays.
+    it('keeps the Timezone row once a row includes a time', () => {
+      open(prop('date'), false, () => true);
+
+      expect((byName(lastItems(), 'editProperty').children?.items ?? []).map((item) => item.name))
+        .toEqual(['dateFormat', 'timeFormat', 'timeZone', 'dateNotifications']);
+    });
+
+    // Created time and Last edited time always hold a time; their flyouts are unmeasured.
+    it.each<PropertyType>(['createdTime', 'lastEditedTime'])('keeps the Timezone row on %s', (type) => {
+      open(prop(type), false, () => false);
+
+      expect((byName(lastItems(), 'editProperty').children?.items ?? []).some((item) => item.name === 'timeZone')).toBe(true);
     });
 
     // notion-motion.md Round 87 §1 #2 (r87-n-dateflyout.raw): Time format has a clock, Notifications an alarm.

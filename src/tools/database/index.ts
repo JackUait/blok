@@ -82,7 +82,7 @@ import { DatabaseGalleryView } from './database-gallery-view';
 import type { GalleryGroup } from './database-gallery-view';
 import { DatabaseCalendarView } from './database-calendar-view';
 import { addDays, eventSpan } from './calendar-dates';
-import { formatDateValue } from '../../shared/database/date-value';
+import { formatDateValue, parseDateValue } from '../../shared/database/date-value';
 import { freePropertyName } from '../../shared/database/schema-ops';
 import type { ViewCreateConfig } from '../../shared/database/schema-ops';
 import { DEFAULT_VIEW_NAMES, OPTION_GROUP_TYPES, layoutChange } from '../../shared/database/view-changes';
@@ -13891,6 +13891,7 @@ export class DatabaseTool implements BlockTool {
       i18n: this.api.i18n,
       hasPeople: this.hasPeople,
       databaseName: () => (this.title.trim() === '' ? this.api.i18n.t('tools.database.titlePlaceholder') : this.title.trim()),
+      hasTimedValue: (id) => this.model.getOrderedRows().some((row) => parseDateValue(row.properties[id])?.hasTime === true),
       ...(onCustomizeLayout === undefined ? {} : { onCustomizeLayout }),
       ...(rowPage === undefined ? { liveAnchor: () => this.liveColumnHeader(propertyId, context, groupKey) } : {}),
       onClose: () => {

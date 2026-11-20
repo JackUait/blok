@@ -209,6 +209,8 @@ export const sortEditor = (options: SortEditorOptions): DatabasePanel => {
     root: {
       // database.css: the measured rule spacing (r35:497-509).
       name: 'sort',
+      // Notion's panel sizes to its words, so no label is cut; the popover box grows with it when a rule is added (Round 91 §1 #4).
+      fitContent: true,
       build: (current) => {
         const schema = options.schema();
         const all = sorts();
@@ -316,13 +318,8 @@ export const sortEditor = (options: SortEditorOptions): DatabasePanel => {
     },
   });
 
-  // Notion's panel sizes to its words, so no label is cut.
-  panel.root.style.width = 'max-content';
-  if (options.compact === true) {
-    panel.root.setAttribute('data-blok-database-sort-compact', '');
-    // r27-pm-sortpop.raw: 290 wide, with room to spare after the direction button.
-    panel.root.style.minWidth = '290px';
-  }
+  // r27-pm-sortpop.raw: the compact panel is 290 wide, the fitContent floor, with room to spare after the direction button.
+  if (options.compact === true) panel.root.setAttribute('data-blok-database-sort-compact', '');
 
   return panel;
 };

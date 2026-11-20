@@ -2546,6 +2546,18 @@ describe('DatabaseViewControls', () => {
       expect(q('database-sort-panel')?.querySelectorAll('[data-blok-database-sort-row]')).toHaveLength(2);
     });
 
+    // notion-motion.md Round 91 §1 #4 (r91-n-sort-2rules.raw): the panel grows at once to fit the new rule.
+    // data-fit-content lets the popover box follow the panel (database.css), so the rule's × is not cut off.
+    it('lets the popover box grow with the panel when a rule is added', () => {
+      withSort();
+      click('database-sort-pill');
+      click('database-sort-add');
+      click('database-pick-property-title');
+
+      expect(q('database-sort-panel')?.hasAttribute('data-fit-content')).toBe(true);
+      expect(q('database-sort-panel')?.style.width).toBe('max-content');
+    });
+
     it('moves focus to "Delete sort" when the last unsorted property is added', () => {
       withSort();
       click('database-sort-pill');
@@ -2601,6 +2613,15 @@ describe('DatabaseViewControls', () => {
 
       it('opens above the row, its bottom on the row top, when it does not fit under', () => {
         expect(parseFloat(openAt(396.2)?.style.top ?? '')).toBeCloseTo(396.2 - 287, 1);
+      });
+
+      // notion-motion.md Round 91 §1 #3 (r91-n-sort-side.raw): under with 299.8 below the row, above with 298.8.
+      it('stays under with 299.8 below the row', () => {
+        expect(parseFloat(openAt(717 - 28 - 299.8)?.style.top ?? '')).toBeCloseTo(717 - 299.8, 1);
+      });
+
+      it('flips above with 298.8 below the row', () => {
+        expect(parseFloat(openAt(717 - 28 - 298.8)?.style.top ?? '')).toBeCloseTo(717 - 28 - 298.8 - 287, 1);
       });
     });
 

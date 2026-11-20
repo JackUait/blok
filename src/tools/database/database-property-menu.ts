@@ -184,8 +184,6 @@ export interface PropertyMenuOptions extends PropertyMenuCallbacks {
   liveAnchor?: () => HTMLElement | null;
   /** The database's shown title, named in Delete property's question (notion-motion.md Round 14). */
   databaseName?: () => string;
-  /** A row's value of this date property includes a time. Without one, a Date property has no Timezone row. */
-  hasTimedValue?: (propertyId: string) => boolean;
 }
 
 const SHOW_AS: readonly NumberShowAs[] = ['number', 'bar', 'ring'];
@@ -1560,9 +1558,9 @@ export class DatabasePropertyMenu {
           })),
         },
       },
-      // notion-motion.md Round 87 §1 #2, Round 88 §1 #2: Notion's Date flyout has no Timezone row while no row has
-      // a time. Its flyout with a timed row is unread, so the row stays then.
-      ...(property.type === 'date' && this.options.hasTimedValue?.(property.id) !== true ? [] : [{
+      // notion-motion.md Round 89 §1 #6: Notion's Date flyout has no Timezone row, even with a timed row. The date
+      // cell editor's Timezone row sets the same setting.
+      ...(property.type === 'date' ? [] : [{
         name: 'timeZone',
         title: this.t('tools.database.timeZone'),
         children: {

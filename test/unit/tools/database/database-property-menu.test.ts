@@ -323,14 +323,9 @@ describe('DatabasePropertyMenu', () => {
     menu.destroy();
   });
 
-  const open = (property: PropertyDefinition, hasPeople = false, hasTimedValue?: (propertyId: string) => boolean): ReturnType<typeof callbacks> => {
+  const open = (property: PropertyDefinition, hasPeople = false): ReturnType<typeof callbacks> => {
     const cb = callbacks();
-    const menu = new DatabasePropertyMenu({
-      i18n: { t: (key: string) => key, getLocale: () => 'en' } as never,
-      hasPeople,
-      ...(hasTimedValue === undefined ? {} : { hasTimedValue }),
-      ...cb,
-    });
+    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople, ...cb });
 
     menu.open(property, document.createElement('button'));
 
@@ -1494,8 +1489,8 @@ describe('DatabasePropertyMenu', () => {
   });
 
   describe('Edit property for a date', () => {
-    it('sets the date format, time format and time zone', () => {
-      const cb = open(prop('date', { date: { timeFormat: '24_hour' } }), false, () => true);
+    it('sets the date format', () => {
+      const cb = open(prop('date', { date: { timeFormat: '24_hour' } }));
       const items = byName(lastItems(), 'editProperty').children?.items ?? [];
       const formats = byName(items, 'dateFormat').children?.items ?? [];
 
@@ -1504,35 +1499,29 @@ describe('DatabasePropertyMenu', () => {
       ]);
       byName(formats, 'dateFormat-relative').onActivate?.(byName(formats, 'dateFormat-relative'));
       expect(cb.onUpdate).toHaveBeenCalledWith('p', { date: { timeFormat: '24_hour', dateFormat: 'relative' } });
+    });
 
+    it('sets the time zone of a Created time property', () => {
+      const cb = open(prop('createdTime', { date: { timeFormat: '24_hour' } }));
+      const items = byName(lastItems(), 'editProperty').children?.items ?? [];
       const zones = byName(items, 'timeZone').children?.items ?? [];
 
       byName(zones, 'timeZone-Asia/Tokyo').onActivate?.(byName(zones, 'timeZone-Asia/Tokyo'));
       expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { date: { timeFormat: '24_hour', timeZone: 'Asia/Tokyo' } });
     });
 
-    // notion-motion.md Round 87 §1 #2, Round 88 §1 #2: no Timezone row while no row of the property has a time.
-    it('has no Timezone row while no row includes a time', () => {
-      const asked: string[] = [];
-
-      open(prop('date'), false, (id) => { asked.push(id); return false; });
+    // notion-motion.md Round 89 §1 #6 (r89-n-dateflyout-time.raw): no Timezone row, even with a timed row.
+    // The cell editor's Timezone row sets the same setting.
+    it('has no Timezone row', () => {
+      open(prop('date'));
 
       expect((byName(lastItems(), 'editProperty').children?.items ?? []).map((item) => item.name))
         .toEqual(['dateFormat', 'timeFormat', 'dateNotifications']);
-      expect(asked).toEqual(['p']);
-    });
-
-    // A timed row's flyout is unread in Notion, so the row stays.
-    it('keeps the Timezone row once a row includes a time', () => {
-      open(prop('date'), false, () => true);
-
-      expect((byName(lastItems(), 'editProperty').children?.items ?? []).map((item) => item.name))
-        .toEqual(['dateFormat', 'timeFormat', 'timeZone', 'dateNotifications']);
     });
 
     // Created time and Last edited time always hold a time; their flyouts are unmeasured.
     it.each<PropertyType>(['createdTime', 'lastEditedTime'])('keeps the Timezone row on %s', (type) => {
-      open(prop(type), false, () => false);
+      open(prop(type));
 
       expect((byName(lastItems(), 'editProperty').children?.items ?? []).some((item) => item.name === 'timeZone')).toBe(true);
     });

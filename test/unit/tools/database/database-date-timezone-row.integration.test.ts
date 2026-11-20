@@ -59,8 +59,8 @@ const editPropertyRows = async (due: string): Promise<string[]> => {
     .filter((name) => document.querySelector(`[data-blok-item-name="${name}"]`) !== null);
 };
 
-// notion-motion.md Round 87 §1 #2, Round 88 §1 #2 (r87-n-dateflyout.raw): with no row holding a time, Notion's
-// Date flyout has Date format, Time format and Notifications only. With a timed row it is unread, so the row stays.
+// notion-motion.md Round 87 §1 #2 (r87-n-dateflyout.raw), Round 89 §1 #6 (r89-n-dateflyout-time.raw): Notion's
+// Date flyout has Date format, Time format and Notifications only, with or without a timed row.
 describe('the Date column Edit property flyout: Timezone row', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -81,7 +81,7 @@ describe('the Date column Edit property flyout: Timezone row', () => {
     expect(await editPropertyRows('2026-11-20')).toEqual(['dateFormat', 'timeFormat', 'dateNotifications']);
   });
 
-  it('keeps the Timezone row once a row includes a time', async () => {
-    expect(await editPropertyRows('2026-11-20T09:30')).toEqual(['dateFormat', 'timeFormat', 'timeZone', 'dateNotifications']);
+  it('has no Timezone row once a row includes a time', async () => {
+    expect(await editPropertyRows('2026-11-20T09:30')).toEqual(['dateFormat', 'timeFormat', 'dateNotifications']);
   });
 });

@@ -1773,7 +1773,7 @@ describe('BlockSelection', () => {
 
       expect(handOff(row, 'next')).toBe(false);
       expect(blocks.map((block) => block.selected)).toEqual([false, true, false]);
-      expect(document.activeElement).toBe(document.body);
+      expect(document.body).toHaveFocus();
       expect(blockSelection.navigationFocusedBlock).toBe(blocks[1]);
     });
 
@@ -1798,7 +1798,7 @@ describe('BlockSelection', () => {
 
       expect(handOff(row, 'next')).toBe(true);
       expect(blocks.some((block) => block.selected)).toBe(false);
-      expect(document.activeElement).toBe(row);
+      expect(row).toHaveFocus();
       expect(blockSelection.navigationModeEnabled).toBe(false);
     });
 
@@ -1808,7 +1808,7 @@ describe('BlockSelection', () => {
       row.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
 
       expect(blocks.some((block) => block.selected)).toBe(false);
-      expect(document.activeElement).toBe(row);
+      expect(row).toHaveFocus();
       expect(blockSelection.navigationModeEnabled).toBe(false);
     });
   });

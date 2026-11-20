@@ -1174,6 +1174,24 @@ describe('DatabaseTimelineView', () => {
         expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-09T22:45', end: '2026-10-10T01:45' });
       });
 
+      // notion-motion.md Round 89 §1 #3: at Quarter the ghost is 165 wide (14 days of 12, less 3). The click's length there is unread.
+      it('puts a 14-day ghost at Quarter zoom, and adds that bar', () => {
+        const start = timelineWindow(CENTER, 'quarter').start;
+        const qx = (day: string): number => daysBetween(start, day) * TIMELINE_DAY_WIDTH.quarter;
+        const { root, handlers } = mount({ view: timelineView({ timelineZoom: 'quarter' }) });
+
+        rect(canvas(root), 0, 0, timelineWindow(CENTER, 'quarter').days * TIMELINE_DAY_WIDTH.quarter, 400);
+        pointer('pointermove', lane(root), qx('2026-10-20') + 6, 390);
+
+        expect(ghost(root)?.style.insetInlineStart).toBe(`${qx('2026-10-20') + 2}px`);
+        expect(ghost(root)?.style.width).toBe('165px');
+        expect(range(root)?.style.width).toBe(`${14 * TIMELINE_DAY_WIDTH.quarter}px`);
+        expect(range(root)?.textContent).toBe('');
+
+        ghost(root)?.click();
+        expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-20/2026-11-02' });
+      });
+
       it('has no ghost when read-only', () => {
         expect(ghost(mount({ readOnly: true }).root)).toBeNull();
       });

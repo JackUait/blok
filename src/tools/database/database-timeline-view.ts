@@ -150,6 +150,8 @@ const FAR_BAR_TRIM = 3;
 const FAR_BAR_MIN = 11;
 /** findings C07: Notion's "+ New" made a 5-day bar. */
 const NEW_BAR_DAYS = 5;
+/** notion-motion.md Round 89 §1 #3: the Quarter lane ghost spans 14 days (165 + 3 = 14 x 12). Other zooms are unread. */
+const NEW_BAR_DAYS_BY_ZOOM: Partial<Record<TimelineZoom, number>> = { quarter: 14 };
 /** notion-motion.md Round 88 §1 #5, Round 89 §1 #2: zooms whose bar pill names its days. */
 const LABELLED_PILL: ReadonlySet<TimelineZoom> = new Set(['quarter', 'year', '5_years']);
 /** notion-motion.md Round 48 A9: at Day zoom Notion's "+ New" made a 3-hour bar (6:30 PM → 9:30 PM). */
@@ -469,7 +471,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       ? addDays(visibleRange({ scrollStart: this.scrollStart, viewport, windowStart: this.window.start, zoom: this.zoom }).first, 1)
       : this.options.today);
 
-    return newBarWrite(start, NEW_BAR_DAYS, this.options.endPropertyId !== undefined);
+    return newBarWrite(start, day === undefined ? NEW_BAR_DAYS : NEW_BAR_DAYS_BY_ZOOM[this.zoom] ?? NEW_BAR_DAYS, this.options.endPropertyId !== undefined);
   }
 
   /** notion-motion.md Round 49 B8: a Day-zoom "No date" pick is 3 hours from the chart's centre, floored to 15 minutes. */

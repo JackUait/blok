@@ -1955,6 +1955,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R231_BYTES = 1412;
     // Lane r232: Round 88 §1 #1 Date format open motion, #3 Number rule value row, #4 Filters page header. Net database.css growth against origin/main.
     const DATABASE_R232_BYTES = 1207;
+    // Lane r235: Round 89 §1 #3 Quarter "+ New" ghost crosshair. Net database.css growth against origin/main.
+    const DATABASE_R235_BYTES = 206;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2626,6 +2628,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R228_BYTES
       + DATABASE_R231_BYTES
       + DATABASE_R232_BYTES
+      + DATABASE_R235_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

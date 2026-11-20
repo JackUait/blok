@@ -19480,6 +19480,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   transition: opacity 0.2s ease-out;
 }
 
+[data-blok-database-timeline][data-zoom="quarter"] [data-blok-database-timeline-new-ghost] {
+  cursor: crosshair;
+}
+
 [data-blok-database-timeline-new-lane]:hover [data-blok-database-timeline-new-ghost][data-day] {
   opacity: 1;
 }

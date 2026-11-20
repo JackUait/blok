@@ -762,6 +762,29 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-motion.md Round 87 §1 #5 (r87-n-numfmt-long.raw): a value row pads 8 at its end, the value starts 16 after
+  // the label and a 16 chevron sits 6 after it, so the value ends 30 from the row edge.
+  describe('Edit property value rows', () => {
+    const FLYOUT = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] > [data-blok-popover-container]";
+
+    it('pads the row end 8', () => {
+      expect(declared(`${FLYOUT} [data-blok-popover-item]:has(> [data-blok-popover-item-value])`, 'padding-inline-end')).toEqual(['var(--blok-space-2)']);
+    });
+
+    it('starts the value 16 after the label', () => {
+      expect(declared(`${FLYOUT} [data-blok-popover-item-value]`, 'padding-inline-start')).toEqual(['var(--blok-space-4)']);
+    });
+
+    it('draws a 16 chevron 6 after the value, flush with the row end', () => {
+      const CHEVRON = `${FLYOUT} [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right]`;
+
+      expect(declared(CHEVRON, 'width')).toEqual(['16px']);
+      expect(declared(CHEVRON, 'margin-inline')).toEqual(['var(--blok-space-1-5) 0']);
+      expect(declared(`${CHEVRON} svg`, 'width')).toEqual(['16px']);
+      expect(declared(`${CHEVRON} svg`, 'height')).toEqual(['16px']);
+    });
+  });
+
   // notion-motion.md Round 10 "Edit property flyout": opacity only, no scale.
   it('fades the Edit property flyout with no scale', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] > [data-blok-popover-container]", 'transform')).toEqual(['none']);

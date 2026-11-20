@@ -1951,8 +1951,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R229_BYTES = 408;
     // Lane r228: Round 47 §B7 wrapped table rows at 21 per line + 15. Net database.css growth against origin/main.
     const DATABASE_R228_BYTES = 130;
-    // Lane r231: Round 88 §1 #7 Select type opens at once and its slot fades, #8 Select type row boxes and steps. Net database.css growth against origin/main.
-    const DATABASE_R231_BYTES = 851;
+    // Lane r231: Round 88 §1 #7 Select type opens at once and its slot fades, #8 Select type row boxes and steps, #5 Quarter date pill. Net database.css growth against origin/main.
+    const DATABASE_R231_BYTES = 1412;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

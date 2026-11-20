@@ -1891,6 +1891,35 @@ describe('DatabaseTimelineView', () => {
       expect(edges(root)).toEqual(['2026-10-09']);
     });
 
+    // notion-motion.md Round 88 §1 #5: at Quarter the pill names the bar's day ("Oct 15"), mid-drag too ("Oct 18").
+    it('names the bar\'s day in the pill at Quarter zoom, live as the bar is dragged', () => {
+      const { root } = mount({ view: timelineView({ timelineZoom: 'quarter' }) });
+      const qx = (day: string): number => daysBetween(timelineWindow(CENTER, 'quarter').start, day) * TIMELINE_DAY_WIDTH.quarter;
+
+      rect(canvas(root), 0, 0, timelineWindow(CENTER, 'quarter').days * TIMELINE_DAY_WIDTH.quarter, 400);
+      over(bar(root, 'r1'));
+
+      expect(range(root)?.textContent).toBe('Oct 9');
+      expect(range(root)?.hasAttribute('data-label')).toBe(true);
+      expect(range(root)?.style.width).toBe('');
+      expect(range(root)?.getAttribute('aria-hidden')).toBe('true');
+
+      pointer('pointerdown', bar(root, 'r1'), qx('2026-10-09') + 6, 50);
+      pointer('pointermove', document, qx('2026-10-12') + 6, 50);
+      expect(range(root)?.textContent).toBe('Oct 12');
+      expect(range(root)?.hasAttribute('data-label')).toBe(true);
+      pointer('pointerup', document, qx('2026-10-12') + 6, 50);
+    });
+
+    it('keeps the Month pill a bare span, with no day named', () => {
+      const { root } = mount();
+
+      over(bar(root, 'r2'));
+
+      expect(range(root)?.textContent).toBe('');
+      expect(range(root)?.hasAttribute('data-label')).toBe(false);
+    });
+
     it('leaves a drag\'s pill alone when the pointer leaves the bar mid-drag', () => {
       const { root } = mount();
 

@@ -1706,7 +1706,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
     // The pill spans whole days, whatever inset the bar has. Round 51 §4: an Hours edge drag has none.
     if (this.zoom !== 'day' && !(this.zoom === 'hours' && drag.mode !== 'move')) {
-      this.showRange(span, this.zoom === 'hours' ? { offset, width } : barGeometry(span, this.window.start, this.zoom));
+      this.showRange(span, this.zoom === 'hours' ? { offset, width } : barGeometry(span, this.window.start, this.zoom), false, true);
     }
     if (drag.mode !== 'move') {
       this.showDayReadout(barEl, drag.mode, span, values);
@@ -1728,7 +1728,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     if (this.drag?.active === true || row === undefined || span === null || this.zoom === 'day') {
       return;
     }
-    this.showRange(span, this.zoom === 'hours' ? this.geometryOf(span, this.valuesOf(row)) : barGeometry(span, this.window.start, this.zoom), true);
+    this.showRange(span, this.zoom === 'hours' ? this.geometryOf(span, this.valuesOf(row)) : barGeometry(span, this.window.start, this.zoom), true, true);
   };
 
   private readonly onPointerOut = (event: PointerEvent): void => {
@@ -1740,19 +1740,26 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
   };
 
-  /** findings C15: a pill over the dragged range's day numbers; its first and last day in ink. */
-  private showRange(span: EventSpan, { offset, width }: { offset: number; width: number }, hover = false): void {
+  /**
+   * findings C15: a pill over the dragged range's day numbers; its first and last day in ink.
+   * notion-motion.md Round 88 §1 #5: at Quarter a bar's pill names its day instead. A multi-day bar there is unread.
+   */
+  private showRange(span: EventSpan, { offset, width }: { offset: number; width: number }, hover = false, ofBar = false): void {
     const header = this.root?.querySelector('[data-blok-database-timeline-header]');
 
     if (header === null || header === undefined) {
       return;
     }
     const pill = header.querySelector<HTMLElement>('[data-blok-database-timeline-range]') ?? document.createElement('div');
+    const label = ofBar && this.zoom === 'quarter';
 
     pill.setAttribute('data-blok-database-timeline-range', '');
+    pill.setAttribute('aria-hidden', 'true');
     pill.toggleAttribute('data-hover', hover);
+    pill.toggleAttribute('data-label', label);
+    pill.textContent = label ? formatShortDatePart(span.start, resolveLocale(this.options.locale)) : '';
     pill.style.insetInlineStart = `${offset}px`;
-    pill.style.width = `${width}px`;
+    pill.style.width = label ? '' : `${width}px`;
     if (!pill.isConnected) {
       header.prepend(pill);
     }

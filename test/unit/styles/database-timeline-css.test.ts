@@ -295,6 +295,23 @@ describe('database timeline styles', () => {
     expect(pill).toMatch(/box-sizing:\s*content-box/);
   });
 
+  // notion-motion.md Round 88 §1 #5: the Quarter date pill, padding 0 6, 12/400 ink, its left 6 before the bar (the bar sits 2 into its day).
+  it('draws the Quarter date pill fitted to its 12px text, 4 before the day', () => {
+    const selector = '[data-blok-database-timeline] [data-blok-database-timeline-header] [data-blok-database-timeline-range][data-label]';
+    const pill = ruleBody(selector);
+    const drag = css.indexOf('[data-blok-database-timeline]:not([data-zoom="hours"]):is([data-dragging="move"]');
+
+    expect(pill).toMatch(/padding-inline:\s*var\(--blok-space-1-5\)/);
+    expect(pill).toMatch(/margin-inline-start:\s*calc\(-1 \* var\(--blok-space-1\)\)/);
+    expect(pill).toMatch(/font-size:\s*12px/);
+    expect(pill).toMatch(/font-weight:\s*400/);
+    expect(pill).toMatch(/line-height:\s*22px/);
+    expect(pill).toMatch(/color:\s*var\(--blok-database-timeline-text\)/);
+    expect(pill).toMatch(/white-space:\s*nowrap/);
+    // Same specificity as the mid-drag rule, so it must come after it.
+    expect(css.indexOf(`${selector} {`)).toBeGreaterThan(drag);
+  });
+
   it('hides an off-screen arrow that the view marks hidden', () => {
     expect(ruleBody('[data-blok-database-timeline-offscreen][hidden]')).toMatch(/display:\s*none/);
   });

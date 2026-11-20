@@ -166,7 +166,11 @@ test.describe('filter popover geometry', () => {
     const group = page.getByTestId('database-filter-group-g1');
     const add = page.getByTestId('database-filter-add-rule-root');
     const addBox = await boxOf(add);
-    const plus = await boxOf(add.locator('svg').first());
+    const plus = await add.evaluate((el) => {
+      const r = el.querySelector('svg')?.getBoundingClientRect();
+
+      return { x: r?.x ?? Number.NaN, width: r?.width ?? Number.NaN };
+    });
     const label = await boxOf(add.locator('[data-blok-database-panel-label]'));
 
     expect(await group.evaluate((el) => getComputedStyle(el).boxShadow)).toBe('rgba(42, 28, 0, 0.07) 0px 0px 0px 1px');

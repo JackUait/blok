@@ -360,7 +360,8 @@ describe('view settings panel', () => {
       click('database-pick-property-num');
       expect(title()).toContain('tools.database.settingsFilter');
       expect(title()).not.toContain('tools.database.filterAdd');
-      expect(page()).not.toBe('pick');
+      // database.css spaces this page's rules (notion-motion.md Round 88 §1 #4).
+      expect(page()).toBe('filters');
     });
 
     it('an empty Sort page reads "New sort" over a "Sort by…" search, and reads "Sort" once a sort exists', () => {

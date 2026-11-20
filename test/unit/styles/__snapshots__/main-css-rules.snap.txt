@@ -16150,6 +16150,14 @@ button[data-blok-database-table-group-count]:hover {
   gap: var(--blok-space-2);
 }
 
+[data-blok-database-panel][data-docked][data-blok-database-panel-page="filters"] > [data-blok-database-panel-header] + [data-blok-database-panel-list] {
+  margin-block-start: var(--blok-space-1-75);
+}
+
+[data-blok-database-panel][data-docked][data-blok-database-panel-page="filters"] > [data-blok-database-panel-list] + [data-blok-database-panel-row] {
+  margin-block-start: var(--blok-space-0-25);
+}
+
 [data-blok-database-panel-close] {
   display: inline-flex;
   flex: none;

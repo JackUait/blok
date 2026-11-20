@@ -13385,6 +13385,16 @@ button[data-blok-database-table-group-count]:hover {
   gap: var(--blok-space-2);
 }
 
+/* notion-motion.md Round 88 §1 #4 (r88-n-setnum-kids.raw): Notion's Filters page header is 42 tall, so the first rule
+   sits at y+46; Add filter sits 1px under the rules. The shared header rule above serves other pages, so not there. */
+[data-blok-database-panel][data-docked][data-blok-database-panel-page="filters"] > [data-blok-database-panel-header] + [data-blok-database-panel-list] {
+  margin-block-start: var(--blok-space-1-75);
+}
+
+[data-blok-database-panel][data-docked][data-blok-database-panel-page="filters"] > [data-blok-database-panel-list] + [data-blok-database-panel-row] {
+  margin-block-start: var(--blok-space-0-25);
+}
+
 /* research/26 §1b, §4a: a round × at the header's end, no hint. */
 [data-blok-database-panel-close] {
   display: inline-flex;

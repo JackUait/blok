@@ -1946,7 +1946,7 @@ export class ViewSettingsPages {
         return t(empty() ? 'filterAdd' : 'settingsFilter');
       },
       get name() {
-        return empty() ? 'pick' : undefined;
+        return empty() ? 'pick' : 'filters';
       },
       build: (panel) => {
         const view = this.ctx.view();

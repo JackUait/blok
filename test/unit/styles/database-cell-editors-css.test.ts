@@ -1163,6 +1163,16 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-motion.md Round 88 §1 #4 (r88-n-setnum-kids.raw): the Filters page's rule at y+46, Add filter 1px under it, 111 tall.
+  describe('view settings Filters page', () => {
+    const PAGE = '[data-blok-database-panel][data-docked][data-blok-database-panel-page="filters"]';
+
+    it('drops the first rule to y+46 and Add filter 1px under the rules', () => {
+      expect(declared(`${PAGE} > [data-blok-database-panel-header] + [data-blok-database-panel-list]`, 'margin-block-start')).toEqual(['var(--blok-space-1-75)']);
+      expect(declared(`${PAGE} > [data-blok-database-panel-list] + [data-blok-database-panel-row]`, 'margin-block-start')).toEqual(['var(--blok-space-0-25)']);
+    });
+  });
+
   // notion-motion.md Round 9 (r9-vs-group.raw, table grouped by Select): Group by at y+46, Sort at y+75, Hide empty groups at y+104.
   describe('view settings Group page', () => {
     const PAGE = '[data-blok-database-panel-page="group"]';

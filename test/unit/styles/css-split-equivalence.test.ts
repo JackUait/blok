@@ -1954,7 +1954,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r231: Round 88 §1 #7 Select type opens at once and its slot fades, #8 Select type row boxes and steps, #5 Quarter date pill. Net database.css growth against origin/main.
     const DATABASE_R231_BYTES = 1412;
     // Lane r232: Round 88 §1 #1 Date format open motion, #3 Number rule value row, #4 Filters page header. Net database.css growth against origin/main.
-    const DATABASE_R232_BYTES = 566;
+    const DATABASE_R232_BYTES = 1207;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

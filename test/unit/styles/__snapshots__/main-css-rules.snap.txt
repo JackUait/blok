@@ -8816,6 +8816,10 @@ button[data-blok-database-board-lane-count]:hover {
   margin-top: var(--blok-space-2);
 }
 
+[data-blok-database-list-group] + [data-blok-database-list-group] {
+  margin-top: 1px;
+}
+
 [data-blok-database-list-group] [data-blok-database-list-row] + [data-blok-database-list-row] {
   margin-top: 0;
 }

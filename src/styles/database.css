@@ -3877,6 +3877,17 @@ button[data-blok-database-board-lane-count]:hover {
   color: var(--blok-database-peek-glyph-strong);
 }
 
+/* notion-motion.md Round 93 §1 #5: at most 470 tall (seen at a 717 window), so it centres on its row.
+   It fades about its centre with no scale. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-change-type'] > [data-blok-popover-container] {
+  --max-height: 470px;
+  transform-origin: center;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-change-type']:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
+  transform: none;
+}
+
 /* notion-motion.md Round 81 §2 (r81-n-bd-cardmenu.raw): the card menu's row glyphs paint rgb(56, 56, 54).
    The ">" steps keep its submenus out; chevrons keep their own ink. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item]:not([data-blok-popover-item-destructive]) > [data-blok-popover-item-icon]:not([data-blok-popover-item-icon-chevron-right]) {

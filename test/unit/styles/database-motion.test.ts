@@ -446,3 +446,20 @@ describe('Edit property Date format list', () => {
     expect(body(database, `${LIST} > [data-blok-popover-container]`)).toContain('transform-origin: top right');
   });
 });
+
+// notion-motion.md Round 93 §1 #5 (r93-n-changetype-mo.raw): the Change type list is at most 470 tall,
+// and it fades in about its centre with no scale.
+describe('column header Change type list', () => {
+  const LIST = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-change-type']";
+
+  it('opens with no scale', () => {
+    expect(lastBody(database, `${LIST}:not([data-blok-popover-opened='true']) > [data-blok-popover-container]`)).toContain('transform: none');
+  });
+
+  it('is at most 470 tall and fades about its centre', () => {
+    const container = lastBody(database, `${LIST} > [data-blok-popover-container]`);
+
+    expect(container).toContain('--max-height: 470px');
+    expect(container).toContain('transform-origin: center');
+  });
+});

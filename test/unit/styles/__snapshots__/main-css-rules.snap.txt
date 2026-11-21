@@ -7809,6 +7809,15 @@ button[data-blok-database-board-lane-count]:hover {
   color: var(--blok-database-peek-glyph-strong);
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-change-type'] > [data-blok-popover-container] {
+  --max-height: 470px;
+  transform-origin: center;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-change-type']:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
+  transform: none;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item]:not([data-blok-popover-item-destructive]) > [data-blok-popover-item-icon]:not([data-blok-popover-item-icon-chevron-right]) {
   color: var(--blok-database-peek-glyph-strong);
 }

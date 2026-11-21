@@ -54,6 +54,29 @@ describe('DatabaseColumnControls', () => {
       expect(headerEl.querySelector('[data-blok-database-column-title]')).toBeNull();
     });
 
+    // notion-motion.md Round 97 §1 #1: the header pill is a Tab stop.
+    it('makes the pill a button that Enter and Space rename', () => {
+      const headerEl = makePillHeaderEl('BACKLOG');
+      const pill = headerEl.querySelector<HTMLElement>('[data-blok-database-column-pill]');
+
+      document.body.appendChild(headerEl);
+      controls.makePillTitleEditable(headerEl, 'opt-1');
+
+      expect(pill?.tabIndex).toBe(0);
+      expect(pill?.getAttribute('role')).toBe('button');
+
+      for (const key of ['Enter', ' ']) {
+        const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+
+        pill?.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(true);
+        expect(headerEl.querySelector('[data-blok-database-column-title-input]')).not.toBeNull();
+        simulateKeydown(headerEl.querySelector('[data-blok-database-column-title-input]') as HTMLElement, 'Escape');
+        expect(headerEl.querySelector('[data-blok-database-column-title-input]')).toBeNull();
+      }
+      headerEl.remove();
+    });
+
     it('input is pre-filled with the current title', () => {
       const headerEl = makePillHeaderEl('IN PROGRESS');
       controls.makePillTitleEditable(headerEl, 'opt-1');

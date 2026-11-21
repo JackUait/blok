@@ -622,10 +622,11 @@ describe('row selection after undo', () => {
   });
 
   // notion-motion.md Round 94 §1 #3: a Board or List drop focuses the dropped item with no range; Escape on it clears it.
+  // Every board card stays a Tab stop (Round 97 §1 #1); a list keeps one.
   it.each([
-    ['board', 'board-one-group'],
-    ['list', 'list'],
-  ] as const)('focuses the dropped %s item, and Escape on it clears the item', async (type, layout) => {
+    ['board', 'board-one-group', 3],
+    ['list', 'list', 1],
+  ] as const)('focuses the dropped %s item, and Escape on it clears the item', async (type, layout, tabStops) => {
     const blok = await make(layout);
 
     await caretInParagraph(blok);
@@ -633,7 +634,7 @@ describe('row selection after undo', () => {
 
     expect(itemOf(type, 'r3')).toHaveFocus();
     expect(itemOf(type, 'r3')?.getAttribute('tabindex')).toBe('0');
-    expect([...document.querySelectorAll(`${ITEM[type]}[tabindex="0"]`)]).toHaveLength(1);
+    expect([...document.querySelectorAll(`${ITEM[type]}[tabindex="0"]`)]).toHaveLength(tabStops);
     expect(window.getSelection()?.rangeCount).toBe(0);
 
     await escapeOnFocus();

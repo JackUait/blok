@@ -25,6 +25,19 @@ export class DatabaseColumnControls {
 
     titleEl.style.cursor = 'text';
 
+    const pill = headerEl.querySelector<HTMLElement>('[data-blok-database-column-pill]');
+
+    // notion-motion.md Round 97 §1 #1: the pill is a Tab stop. A rename re-runs this, so the key listener goes on once.
+    if (pill !== null && pill.tabIndex < 0) {
+      pill.tabIndex = 0;
+      pill.setAttribute('role', 'button');
+      pill.addEventListener('keydown', (e) => {
+        if (e.target !== pill || (e.key !== 'Enter' && e.key !== ' ')) return;
+        e.preventDefault();
+        pill.querySelector<HTMLElement>('[data-blok-database-column-title]')?.click();
+      });
+    }
+
     titleEl.addEventListener('click', (e: MouseEvent) => {
       e.stopPropagation(); // prevent column drag from starting
 

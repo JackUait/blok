@@ -115,6 +115,9 @@ const INDIRECTLY_NAMED: Record<string, string> = {
     'DELIBERATE — named by PlusButton.refreshI18n(plusButton), which sets aria-label to ' +
     'a11y.insertBlock on creation and again on every runtime locale change; the scan ' +
     'cannot follow the element through the helper parameter',
+  'tools/database/database-column-controls.ts » pill » button':
+    'DELIBERATE — the board header pill is named by its text content: the group title that ' +
+    'DatabaseBoardView.createColumnHeader puts inside it',
   'tools/video/controls.ts » loopTile » switch':
     'DELIBERATE — tile() sets aria-label from its label argument before returning the tile',
   'tools/video/controls.ts » ctxLoop » menuitemcheckbox':

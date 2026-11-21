@@ -12279,11 +12279,9 @@ export class DatabaseTool implements BlockTool {
     const item = items.find((el) => day !== undefined && el.closest('[data-blok-database-calendar-week]')?.querySelector(`[data-day="${CSS.escape(day)}"]`) != null) ?? items[0];
 
     if (item === undefined) return;
-    // Board cards and list rows keep one tabbable item, so Tab and the arrows go on from here. Gallery cards are all tabbable.
-    if (!item.matches('[data-blok-database-calendar-event], [data-blok-database-gallery-card]')) {
-      const kind = item.hasAttribute('data-blok-database-card') ? '[data-blok-database-card]' : '[data-blok-database-list-row]';
-
-      root?.querySelectorAll<HTMLElement>(kind).forEach((el) => el.setAttribute('tabindex', el === item ? '0' : '-1'));
+    // List rows keep one tabbable item, so Tab and the arrows go on from here. Board and gallery cards are all tabbable.
+    if (item.matches('[data-blok-database-list-row]')) {
+      root?.querySelectorAll<HTMLElement>('[data-blok-database-list-row]').forEach((el) => el.setAttribute('tabindex', el === item ? '0' : '-1'));
     }
     item.focus({ preventScroll: true });
     // A range from before the drag outlives focus (and jsdom's focus adds one); Notion leaves none.

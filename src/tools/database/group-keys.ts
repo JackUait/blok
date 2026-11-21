@@ -30,7 +30,7 @@ export const defaultGroupSort = (type: PropertyType): GroupSort =>
  * in `workflow`, and takes that option's key, so the no-value group stays on the same side of both.
  */
 export const statusViewOrder = (workflow: SelectOption[], order: Record<string, string> | undefined): SelectOption[] => {
-  if (order === undefined) return workflow;
+  if (order === undefined || !workflow.some((option) => order[option.id] !== undefined)) return workflow;
   const result = workflow
     .flatMap((option) => (order[option.id] === undefined ? [] : [{ ...option, position: order[option.id] }]))
     .sort((a, b) => (a.position < b.position ? -1 : 1));

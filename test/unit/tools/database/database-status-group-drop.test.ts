@@ -118,6 +118,16 @@ describe('a Status board column dropped among its status groups', () => {
     expect(boardColumns(buildDatabase(doc, 'db', save(tool)).el)).toEqual(['dn', 'ns', 'ns2', 'ip', NO_VALUE]);
   });
 
+  it('an order with no Status option in it draws as no order at all', () => {
+    const doc = makeDoc([
+      { id: 'db', name: 'database', parentId: null, data: {} },
+      rowSeed('r1', 'db', { properties: { title: 'One', st: null }, position: 'a0' }),
+    ]);
+    const { el } = buildDatabase(doc, 'db', data({ groupOrder: { gone: 'a0' }, noValueGroupPosition: 'a0V' }));
+
+    expect(boardColumns(el)).toEqual(['ns', NO_VALUE, 'ns2', 'ip', 'dn']);
+  });
+
   it('a descending board keeps its drawn order: a drop there writes nothing that the reversed draw would undo', () => {
     const doc = seed();
     const { tool, el } = buildDatabase(doc, 'db', data({ groupSettings: { sort: 'descending' } }));

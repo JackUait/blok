@@ -12220,7 +12220,7 @@ export class DatabaseTool implements BlockTool {
       root?.querySelectorAll<HTMLElement>(kind).forEach((el) => el.setAttribute('tabindex', el === item ? '0' : '-1'));
     }
     item.focus({ preventScroll: true });
-    // After focus, which can leave a range on the item; Notion leaves none.
+    // A range from before the drag outlives focus (and jsdom's focus adds one); Notion leaves none.
     window.getSelection()?.removeAllRanges();
   }
 

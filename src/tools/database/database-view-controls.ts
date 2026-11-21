@@ -561,16 +561,12 @@ export class DatabaseViewControls {
 
   /** Shows ⤢ only where it can open. Touches the toolbar alone: a filter bar redraw is a block change. */
   syncFullPage(): void {
-    // notion-motion.md Round 99 §1 #8: an open search beside the tabs hides ⤢. Read only in the view bar.
-    const searching = this.searchShown() && this.toolbar.parentElement?.hasAttribute('data-blok-database-view-bar') === true;
-
-    this.fullPageLink.hidden = searching || this.host.openFullPage?.() === undefined;
+    this.fullPageLink.hidden = this.host.openFullPage?.() === undefined;
   }
 
-  /** The mark the tab bar's fold reads (database-tab-bar.ts refold), and ⤢. */
+  /** The mark the tab bar's fold reads (database-tab-bar.ts refold). */
   private syncSearching(): void {
     this.toolbar.toggleAttribute('data-blok-database-searching', this.searchShown());
-    this.syncFullPage();
   }
 
   /** Syncs the toolbar and filter bar to the active view, and the open panel. */

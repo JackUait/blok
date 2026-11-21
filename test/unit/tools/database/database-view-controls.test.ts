@@ -1048,7 +1048,7 @@ describe('DatabaseViewControls', () => {
     controls.destroy();
   });
 
-  // notion-motion.md Round 99 §1 #8 (r99-n-search-open.raw): with search open beside the tabs, Notion folds the tabs and hides ⤢.
+  // notion-motion.md Round 99 §1 #8 (r99-n-search-open.raw): with search open beside the tabs, Notion folds the tabs.
   describe('search open in the view bar', () => {
     const inViewBar = (controls: DatabaseViewControls): { viewBar: HTMLElement; pill: HTMLElement } => {
       const viewBar = document.createElement('div');
@@ -1080,7 +1080,8 @@ describe('DatabaseViewControls', () => {
       controls.destroy();
     });
 
-    it('hides ⤢ while the search is open and shows it again on close', () => {
+    // notion-motion.md Round 100 §1 #2 (r100-n-search-open-rest.raw): ⤢ stays at rest with search open; R99 missed it (an A, not a button).
+    it('keeps ⤢ while the search is open', () => {
       const { controls } = setup({ levers: { openFullPage } });
 
       inViewBar(controls);
@@ -1091,10 +1092,22 @@ describe('DatabaseViewControls', () => {
       input.dispatchEvent(new Event('input'));
       controls.refresh();
 
-      expect(q('database-toolbar-full-page')?.hidden).toBe(true);
-      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-
       expect(q('database-toolbar-full-page')?.hidden).toBe(false);
+      controls.destroy();
+    });
+
+    // notion-motion.md Round 100 §1 #10 (r100-n-empty-search-tab.raw): Tab from the search lands on ⤢.
+    it('puts ⤢ next after the search field', () => {
+      const { controls } = setup({ levers: { openFullPage } });
+
+      inViewBar(controls);
+      click('database-toolbar-search');
+      const input = q('database-search-input') as HTMLInputElement;
+      const focusable = Array.from(controls.toolbar.querySelectorAll<HTMLElement>('button, input, a[tabindex="0"]'))
+        .filter((el) => !el.hidden && !(el instanceof HTMLButtonElement && el.disabled));
+      const next = focusable[focusable.indexOf(input) + 1];
+
+      expect(next).toBe(q('database-toolbar-full-page'));
       controls.destroy();
     });
 

@@ -1350,6 +1350,7 @@
   "tools.database.calcPercentChecked": "Postotak označenih",
   "tools.database.calcPercentUnchecked": "Postotak neoznačenih",
   "tools.database.settingsTitle": "Postavke prikaza",
+  "tools.database.settingsHint": "Postavke",
   "tools.database.settingsBack": "Nazad",
   "tools.database.automationTitle": "Automatizacije",
   "tools.database.automationNew": "Nova automatizacija",

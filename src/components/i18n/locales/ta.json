@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "தேர்ந்தெடுக்கப்பட்டவற்றின் சதவீதம்",
   "tools.database.calcPercentUnchecked": "தேர்ந்தெடுக்கப்படாதவற்றின் சதவீதம்",
   "tools.database.settingsTitle": "காட்சி அமைப்புகள்",
+  "tools.database.settingsHint": "அமைப்புகள்",
   "tools.database.settingsBack": "பின்செல்",
   "tools.database.automationTitle": "தன்னியக்கங்கள்",
   "tools.database.automationNew": "புதிய தன்னியக்கம்",

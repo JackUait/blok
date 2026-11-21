@@ -1350,6 +1350,7 @@
   "tools.database.calcPercentChecked": "Porcentaje marcado",
   "tools.database.calcPercentUnchecked": "Porcentaje sin marcar",
   "tools.database.settingsTitle": "Configuración de la vista",
+  "tools.database.settingsHint": "Configuración",
   "tools.database.settingsBack": "Atrás",
   "tools.database.automationTitle": "Automatizaciones",
   "tools.database.automationNew": "Nueva automatización",

@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "درصد علامت‌خورده",
   "tools.database.calcPercentUnchecked": "درصد بدون علامت",
   "tools.database.settingsTitle": "تنظیمات نما",
+  "tools.database.settingsHint": "تنظیمات",
   "tools.database.settingsBack": "بازگشت",
   "tools.database.automationTitle": "اتوماسیون‌ها",
   "tools.database.automationNew": "اتوماسیون جدید",

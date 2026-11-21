@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "ភាគរយបានធីក",
   "tools.database.calcPercentUnchecked": "ភាគរយមិនបានធីក",
   "tools.database.settingsTitle": "ការកំណត់ទិដ្ឋភាព",
+  "tools.database.settingsHint": "ការកំណត់",
   "tools.database.settingsBack": "ថយក្រោយ",
   "tools.database.automationTitle": "ស្វ័យប្រវត្តិកម្ម",
   "tools.database.automationNew": "ស្វ័យប្រវត្តិកម្មថ្មី",

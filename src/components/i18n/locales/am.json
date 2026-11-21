@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "የተመረጡ መቶኛ",
   "tools.database.calcPercentUnchecked": "ያልተመረጡ መቶኛ",
   "tools.database.settingsTitle": "የዕይታ ቅንብሮች",
+  "tools.database.settingsHint": "ቅንብሮች",
   "tools.database.settingsBack": "ተመለስ",
   "tools.database.automationTitle": "አውቶሜሽኖች",
   "tools.database.automationNew": "አዲስ አውቶሜሽን",

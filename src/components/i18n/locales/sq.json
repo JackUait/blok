@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "Përqindja e zgjedhurave",
   "tools.database.calcPercentUnchecked": "Përqindja e pazgjedhurave",
   "tools.database.settingsTitle": "Cilësimet e pamjes",
+  "tools.database.settingsHint": "Cilësimet",
   "tools.database.settingsBack": "Prapa",
   "tools.database.automationTitle": "Automatizime",
   "tools.database.automationNew": "Automatizim i ri",

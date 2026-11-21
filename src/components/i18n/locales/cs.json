@@ -1364,6 +1364,7 @@
   "tools.database.calcPercentChecked": "Procento zaškrtnutých",
   "tools.database.calcPercentUnchecked": "Procento nezaškrtnutých",
   "tools.database.settingsTitle": "Nastavení zobrazení",
+  "tools.database.settingsHint": "Nastavení",
   "tools.database.settingsBack": "Zpět",
   "tools.database.automationTitle": "Automatizace",
   "tools.database.automationNew": "Nová automatizace",

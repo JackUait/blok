@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "चेक किए गए का प्रतिशत",
   "tools.database.calcPercentUnchecked": "चेक न किए गए का प्रतिशत",
   "tools.database.settingsTitle": "दृश्य सेटिंग्स",
+  "tools.database.settingsHint": "सेटिंग",
   "tools.database.settingsBack": "वापस",
   "tools.database.automationTitle": "ऑटोमेशन",
   "tools.database.automationNew": "नया ऑटोमेशन",

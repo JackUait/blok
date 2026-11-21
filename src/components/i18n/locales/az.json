@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "İşarələnmiş faizi",
   "tools.database.calcPercentUnchecked": "İşarələnməmiş faizi",
   "tools.database.settingsTitle": "Görünüş ayarları",
+  "tools.database.settingsHint": "Parametrlər",
   "tools.database.settingsBack": "Geri",
   "tools.database.automationTitle": "Avtomatlaşdırmalar",
   "tools.database.automationNew": "Yeni avtomatlaşdırma",

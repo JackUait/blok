@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "ފާހަގަކޮށްފައިވާ ޕަސެންޓް",
   "tools.database.calcPercentUnchecked": "ފާހަގަނުކޮށް ހުރި ޕަސެންޓް",
   "tools.database.settingsTitle": "ވިއު ސެޓިންގްސް",
+  "tools.database.settingsHint": "ސެޓިންގްސް",
   "tools.database.settingsBack": "ފަހަތަށް",
   "tools.database.automationTitle": "އޮޓޮމޭޝަންތައް",
   "tools.database.automationNew": "އައު އޮޓޮމޭޝަނެއް",

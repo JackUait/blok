@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "ಗುರುತಿಸಿದವುಗಳ ಶೇಕಡಾ",
   "tools.database.calcPercentUnchecked": "ಗುರುತಿಸದವುಗಳ ಶೇಕಡಾ",
   "tools.database.settingsTitle": "ವೀಕ್ಷಣೆ ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
+  "tools.database.settingsHint": "ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
   "tools.database.settingsBack": "ಹಿಂದೆ",
   "tools.database.automationTitle": "ಸ್ವಯಂಚಾಲನೆಗಳು",
   "tools.database.automationNew": "ಹೊಸ ಸ್ವಯಂಚಾಲನೆ",

@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "მონიშნულების პროცენტი",
   "tools.database.calcPercentUnchecked": "მოუნიშნავების პროცენტი",
   "tools.database.settingsTitle": "ხედის პარამეტრები",
+  "tools.database.settingsHint": "პარამეტრები",
   "tools.database.settingsBack": "უკან",
   "tools.database.automationTitle": "ავტომატიზაციები",
   "tools.database.automationNew": "ახალი ავტომატიზაცია",

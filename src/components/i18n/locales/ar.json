@@ -1392,6 +1392,7 @@
   "tools.database.calcPercentChecked": "نسبة المحدد",
   "tools.database.calcPercentUnchecked": "نسبة غير المحدد",
   "tools.database.settingsTitle": "إعدادات العرض",
+  "tools.database.settingsHint": "الإعدادات",
   "tools.database.settingsBack": "رجوع",
   "tools.database.automationTitle": "عمليات الأتمتة",
   "tools.database.automationNew": "أتمتة جديدة",

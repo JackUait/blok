@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "तपासलेल्यांची टक्केवारी",
   "tools.database.calcPercentUnchecked": "न तपासलेल्यांची टक्केवारी",
   "tools.database.settingsTitle": "दृश्य सेटिंग्ज",
+  "tools.database.settingsHint": "सेटिंग्ज",
   "tools.database.settingsBack": "मागे",
   "tools.database.automationTitle": "ऑटोमेशन्स",
   "tools.database.automationNew": "नवीन ऑटोमेशन",

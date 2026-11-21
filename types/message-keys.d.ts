@@ -1811,6 +1811,7 @@ export type BlokMessageKey =
   | 'tools.database.settingsHiddenInTable'
   | 'tools.database.settingsHiddenInTimeline'
   | 'tools.database.settingsHiddenProperties'
+  | 'tools.database.settingsHint'
   | 'tools.database.settingsLayout'
   | 'tools.database.settingsLoadLimit'
   | 'tools.database.settingsLoadLimitPages'

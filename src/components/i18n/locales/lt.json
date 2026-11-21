@@ -1364,6 +1364,7 @@
   "tools.database.calcPercentChecked": "Procentas pažymėtų",
   "tools.database.calcPercentUnchecked": "Procentas nepažymėtų",
   "tools.database.settingsTitle": "Rodinio nustatymai",
+  "tools.database.settingsHint": "Nustatymai",
   "tools.database.settingsBack": "Atgal",
   "tools.database.automationTitle": "Automatizacijos",
   "tools.database.automationNew": "Nauja automatizacija",

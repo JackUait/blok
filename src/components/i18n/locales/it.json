@@ -1350,6 +1350,7 @@
   "tools.database.calcPercentChecked": "Percentuale selezionate",
   "tools.database.calcPercentUnchecked": "Percentuale non selezionate",
   "tools.database.settingsTitle": "Impostazioni vista",
+  "tools.database.settingsHint": "Impostazioni",
   "tools.database.settingsBack": "Indietro",
   "tools.database.automationTitle": "Automazioni",
   "tools.database.automationNew": "Nuova automazione",

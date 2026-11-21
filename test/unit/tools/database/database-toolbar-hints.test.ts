@@ -64,7 +64,8 @@ describe('database toolbar hints', () => {
     ['database-toolbar-filter', 'tools.database.settingsFilter'],
     ['database-toolbar-sort', 'tools.database.settingsSort'],
     ['database-toolbar-search', 'tools.database.searchLabel'],
-    ['database-toolbar-settings', 'tools.database.settingsTitle'],
+    // notion-motion.md Round 101 §1 #6 (r101-n-toolbar-hints.raw): the hint reads "Settings"; the panel keeps "View settings".
+    ['database-toolbar-settings', 'tools.database.settingsHint'],
     ['database-toolbar-automations', 'tools.database.automationTitle'],
     ['database-toolbar-autofill', 'tools.database.aiAutofill'],
     ['database-toolbar-minimize', 'tools.database.filterBarMinimize'],

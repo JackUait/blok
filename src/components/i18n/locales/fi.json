@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "Prosenttia valittuja",
   "tools.database.calcPercentUnchecked": "Prosenttia ei valittuja",
   "tools.database.settingsTitle": "Näkymän asetukset",
+  "tools.database.settingsHint": "Asetukset",
   "tools.database.settingsBack": "Takaisin",
   "tools.database.automationTitle": "Automaatiot",
   "tools.database.automationNew": "Uusi automaatio",

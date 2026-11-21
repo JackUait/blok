@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "Процент означени",
   "tools.database.calcPercentUnchecked": "Процент неозначени",
   "tools.database.settingsTitle": "Поставки за приказ",
+  "tools.database.settingsHint": "Поставки",
   "tools.database.settingsBack": "Назад",
   "tools.database.automationTitle": "Автоматизации",
   "tools.database.automationNew": "Нова автоматизација",

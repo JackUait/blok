@@ -1364,6 +1364,7 @@
   "tools.database.calcPercentChecked": "Відсоток позначених",
   "tools.database.calcPercentUnchecked": "Відсоток непозначених",
   "tools.database.settingsTitle": "Налаштування подання",
+  "tools.database.settingsHint": "Налаштування",
   "tools.database.settingsBack": "Назад",
   "tools.database.automationTitle": "Автоматизації",
   "tools.database.automationNew": "Нова автоматизація",

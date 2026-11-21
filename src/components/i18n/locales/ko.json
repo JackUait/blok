@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "선택됨 비율",
   "tools.database.calcPercentUnchecked": "선택 안 됨 비율",
   "tools.database.settingsTitle": "보기 설정",
+  "tools.database.settingsHint": "설정",
   "tools.database.settingsBack": "뒤로",
   "tools.database.automationTitle": "자동화",
   "tools.database.automationNew": "새 자동화",

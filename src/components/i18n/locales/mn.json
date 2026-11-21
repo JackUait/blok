@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "Тэмдэглэсний хувь",
   "tools.database.calcPercentUnchecked": "Тэмдэглээгүйн хувь",
   "tools.database.settingsTitle": "Харагдацын тохиргоо",
+  "tools.database.settingsHint": "Тохиргоо",
   "tools.database.settingsBack": "Буцах",
   "tools.database.automationTitle": "Автоматжуулалтууд",
   "tools.database.automationNew": "Шинэ автоматжуулалт",

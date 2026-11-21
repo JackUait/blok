@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "Persen dicentang",
   "tools.database.calcPercentUnchecked": "Persen tidak dicentang",
   "tools.database.settingsTitle": "Pengaturan tampilan",
+  "tools.database.settingsHint": "Setelan",
   "tools.database.settingsBack": "Kembali",
   "tools.database.automationTitle": "Otomatisasi",
   "tools.database.automationNew": "Otomatisasi baru",

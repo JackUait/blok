@@ -1364,6 +1364,7 @@
   "tools.database.calcPercentChecked": "Procent zaznaczonych",
   "tools.database.calcPercentUnchecked": "Procent niezaznaczonych",
   "tools.database.settingsTitle": "Ustawienia widoku",
+  "tools.database.settingsHint": "Ustawienia",
   "tools.database.settingsBack": "Wstecz",
   "tools.database.automationTitle": "Automatyzacje",
   "tools.database.automationNew": "Nowa automatyzacja",

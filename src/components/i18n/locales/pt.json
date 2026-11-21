@@ -1350,6 +1350,7 @@
   "tools.database.calcPercentChecked": "Porcentagem marcada",
   "tools.database.calcPercentUnchecked": "Porcentagem desmarcada",
   "tools.database.settingsTitle": "Configurações da visualização",
+  "tools.database.settingsHint": "Configurações",
   "tools.database.settingsBack": "Voltar",
   "tools.database.automationTitle": "Automações",
   "tools.database.automationNew": "Nova automação",

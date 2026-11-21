@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "เปอร์เซ็นต์ที่เลือกแล้ว",
   "tools.database.calcPercentUnchecked": "เปอร์เซ็นต์ที่ยังไม่ได้เลือก",
   "tools.database.settingsTitle": "การตั้งค่ามุมมอง",
+  "tools.database.settingsHint": "การตั้งค่า",
   "tools.database.settingsBack": "ย้อนกลับ",
   "tools.database.automationTitle": "ระบบอัตโนมัติ",
   "tools.database.automationNew": "ระบบอัตโนมัติใหม่",

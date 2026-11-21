@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "සලකුණු කළ ප්‍රතිශතය",
   "tools.database.calcPercentUnchecked": "සලකුණු නොකළ ප්‍රතිශතය",
   "tools.database.settingsTitle": "දසුන් සැකසීම්",
+  "tools.database.settingsHint": "සැකසුම්",
   "tools.database.settingsBack": "ආපසු",
   "tools.database.automationTitle": "ස්වයංක්‍රීයකරණ",
   "tools.database.automationNew": "නව ස්වයංක්‍රීයකරණයක්",

@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "പരിശോധിച്ചവയുടെ ശതമാനം",
   "tools.database.calcPercentUnchecked": "പരിശോധിക്കാത്തവയുടെ ശതമാനം",
   "tools.database.settingsTitle": "കാഴ്ച ക്രമീകരണങ്ങൾ",
+  "tools.database.settingsHint": "ക്രമീകരണങ്ങൾ",
   "tools.database.settingsBack": "പിന്നോട്ട്",
   "tools.database.automationTitle": "ഓട്ടോമേഷനുകൾ",
   "tools.database.automationNew": "പുതിയ ഓട്ടോമേഷൻ",

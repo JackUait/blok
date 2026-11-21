@@ -1350,6 +1350,7 @@
   "tools.database.calcPercentChecked": "Procent bifate",
   "tools.database.calcPercentUnchecked": "Procent nebifate",
   "tools.database.settingsTitle": "Setări vizualizare",
+  "tools.database.settingsHint": "Setări",
   "tools.database.settingsBack": "Înapoi",
   "tools.database.automationTitle": "Automatizări",
   "tools.database.automationNew": "Automatizare nouă",

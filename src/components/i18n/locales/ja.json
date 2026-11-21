@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "チェック済みの割合",
   "tools.database.calcPercentUnchecked": "未チェックの割合",
   "tools.database.settingsTitle": "ビューの設定",
+  "tools.database.settingsHint": "設定",
   "tools.database.settingsBack": "戻る",
   "tools.database.automationTitle": "オートメーション",
   "tools.database.automationNew": "新しいオートメーション",

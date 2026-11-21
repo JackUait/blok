@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "بەلگە قويۇلغانلار پىرسەنتى",
   "tools.database.calcPercentUnchecked": "بەلگە قويۇلمىغانلار پىرسەنتى",
   "tools.database.settingsTitle": "كۆرۈنۈش تەڭشىكى",
+  "tools.database.settingsHint": "تەڭشەكلەر",
   "tools.database.settingsBack": "قايتىش",
   "tools.database.automationTitle": "ئاپتوماتلاشتۇرۇشلار",
   "tools.database.automationNew": "يېڭى ئاپتوماتلاشتۇرۇش",

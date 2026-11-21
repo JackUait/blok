@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "အမှန်ခြစ်ထားသည့် ရာခိုင်နှုန်း",
   "tools.database.calcPercentUnchecked": "အမှန်ခြစ်မထားသည့် ရာခိုင်နှုန်း",
   "tools.database.settingsTitle": "မြင်ကွင်း ဆက်တင်များ",
+  "tools.database.settingsHint": "ဆက်တင်များ",
   "tools.database.settingsBack": "နောက်သို့",
   "tools.database.automationTitle": "အလိုအလျောက်လုပ်ဆောင်မှုများ",
   "tools.database.automationNew": "အလိုအလျောက်လုပ်ဆောင်မှု အသစ်",

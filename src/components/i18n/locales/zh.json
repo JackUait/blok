@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "已选中百分比",
   "tools.database.calcPercentUnchecked": "未选中百分比",
   "tools.database.settingsTitle": "视图设置",
+  "tools.database.settingsHint": "设置",
   "tools.database.settingsBack": "返回",
   "tools.database.automationTitle": "自动化",
   "tools.database.automationNew": "新建自动化",

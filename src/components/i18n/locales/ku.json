@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "ڕێژەی هەڵبژێردراو",
   "tools.database.calcPercentUnchecked": "ڕێژەی هەڵنەبژێردراو",
   "tools.database.settingsTitle": "ڕێکخستنەکانی بینین",
+  "tools.database.settingsHint": "ڕێکخستنەکان",
   "tools.database.settingsBack": "گەڕانەوە",
   "tools.database.automationTitle": "ئۆتۆماسیۆنەکان",
   "tools.database.automationNew": "ئۆتۆماسیۆنی نوێ",

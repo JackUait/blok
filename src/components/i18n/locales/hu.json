@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "Bejelöltek százaléka",
   "tools.database.calcPercentUnchecked": "Be nem jelöltek százaléka",
   "tools.database.settingsTitle": "Nézetbeállítások",
+  "tools.database.settingsHint": "Beállítások",
   "tools.database.settingsBack": "Vissza",
   "tools.database.automationTitle": "Automatizációk",
   "tools.database.automationNew": "Új automatizáció",

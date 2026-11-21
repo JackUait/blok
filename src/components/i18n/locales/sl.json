@@ -1364,6 +1364,7 @@
   "tools.database.calcPercentChecked": "Odstotek označenih",
   "tools.database.calcPercentUnchecked": "Odstotek neoznačenih",
   "tools.database.settingsTitle": "Nastavitve pogleda",
+  "tools.database.settingsHint": "Nastavitve",
   "tools.database.settingsBack": "Nazaj",
   "tools.database.automationTitle": "Avtomatizacije",
   "tools.database.automationNew": "Nova avtomatizacija",

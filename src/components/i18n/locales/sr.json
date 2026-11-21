@@ -1350,6 +1350,7 @@
   "tools.database.calcPercentChecked": "Проценат означених",
   "tools.database.calcPercentUnchecked": "Проценат неозначених",
   "tools.database.settingsTitle": "Подешавања приказа",
+  "tools.database.settingsHint": "Подешавања",
   "tools.database.settingsBack": "Назад",
   "tools.database.automationTitle": "Аутоматизације",
   "tools.database.automationNew": "Нова аутоматизација",

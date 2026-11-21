@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "Asilimia zilizowekewa tiki",
   "tools.database.calcPercentUnchecked": "Asilimia zisizowekewa tiki",
   "tools.database.settingsTitle": "Mipangilio ya mwonekano",
+  "tools.database.settingsHint": "Mipangilio",
   "tools.database.settingsBack": "Rudi",
   "tools.database.automationTitle": "Otomatiki",
   "tools.database.automationNew": "Otomatiki mpya",

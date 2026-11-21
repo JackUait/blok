@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "نشان لڳل سيڪڙو",
   "tools.database.calcPercentUnchecked": "نشان نه لڳل سيڪڙو",
   "tools.database.settingsTitle": "ويو جون سيٽنگون",
+  "tools.database.settingsHint": "سيٽنگون",
   "tools.database.settingsBack": "پوئتي",
   "tools.database.automationTitle": "آٽوميشنز",
   "tools.database.automationNew": "نئون آٽوميشن",

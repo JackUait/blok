@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "פּראָצענט אָפּגעצייכנט",
   "tools.database.calcPercentUnchecked": "פּראָצענט ניט אָפּגעצייכנט",
   "tools.database.settingsTitle": "אויסשטעל־באַשטימונגען",
+  "tools.database.settingsHint": "איינשטעלונגען",
   "tools.database.settingsBack": "צוריק",
   "tools.database.automationTitle": "אויטאָמאַטיזאַציעס",
   "tools.database.automationNew": "נייע אויטאָמאַטיזאַציע",

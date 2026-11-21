@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "Процент отметнати",
   "tools.database.calcPercentUnchecked": "Процент без отметка",
   "tools.database.settingsTitle": "Настройки на изгледа",
+  "tools.database.settingsHint": "Настройки",
   "tools.database.settingsBack": "Назад",
   "tools.database.automationTitle": "Автоматизации",
   "tools.database.automationNew": "Нова автоматизация",

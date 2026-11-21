@@ -1350,6 +1350,7 @@
   "tools.database.calcPercentChecked": "Pourcentage de cochées",
   "tools.database.calcPercentUnchecked": "Pourcentage de décochées",
   "tools.database.settingsTitle": "Paramètres de la vue",
+  "tools.database.settingsHint": "Paramètres",
   "tools.database.settingsBack": "Retour",
   "tools.database.automationTitle": "Automatisations",
   "tools.database.automationNew": "Nouvelle automatisation",

@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "Peratus ditandai",
   "tools.database.calcPercentUnchecked": "Peratus tidak ditandai",
   "tools.database.settingsTitle": "Tetapan paparan",
+  "tools.database.settingsHint": "Tetapan",
   "tools.database.settingsBack": "Kembali",
   "tools.database.automationTitle": "Automasi",
   "tools.database.automationNew": "Automasi baharu",

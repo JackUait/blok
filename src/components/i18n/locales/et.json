@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "Protsent märgitud",
   "tools.database.calcPercentUnchecked": "Protsent märkimata",
   "tools.database.settingsTitle": "Vaate seaded",
+  "tools.database.settingsHint": "Seaded",
   "tools.database.settingsBack": "Tagasi",
   "tools.database.automationTitle": "Automatiseeringud",
   "tools.database.automationNew": "Uus automatiseering",

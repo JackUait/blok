@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "Phần trăm đã chọn",
   "tools.database.calcPercentUnchecked": "Phần trăm chưa chọn",
   "tools.database.settingsTitle": "Cài đặt chế độ xem",
+  "tools.database.settingsHint": "Cài đặt",
   "tools.database.settingsBack": "Quay lại",
   "tools.database.automationTitle": "Tự động hóa",
   "tools.database.automationNew": "Tự động hóa mới",

@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "نشان زد فیصد",
   "tools.database.calcPercentUnchecked": "غیر نشان زد فیصد",
   "tools.database.settingsTitle": "ویو کی ترتیبات",
+  "tools.database.settingsHint": "ترتیبات",
   "tools.database.settingsBack": "واپس",
   "tools.database.automationTitle": "آٹومیشنز",
   "tools.database.automationNew": "نیا آٹومیشن",

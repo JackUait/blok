@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "ເປີເຊັນທີ່ໝາຍແລ້ວ",
   "tools.database.calcPercentUnchecked": "ເປີເຊັນທີ່ຍັງບໍ່ໝາຍ",
   "tools.database.settingsTitle": "ການຕັ້ງຄ່າມຸມມອງ",
+  "tools.database.settingsHint": "ການຕັ້ງຄ່າ",
   "tools.database.settingsBack": "ກັບຄືນ",
   "tools.database.automationTitle": "ການເຮັດວຽກອັດຕະໂນມັດ",
   "tools.database.automationNew": "ການເຮັດວຽກອັດຕະໂນມັດໃໝ່",

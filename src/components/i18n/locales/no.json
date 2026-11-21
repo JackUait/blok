@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "Prosent avmerket",
   "tools.database.calcPercentUnchecked": "Prosent ikke avmerket",
   "tools.database.settingsTitle": "Visningsinnstillinger",
+  "tools.database.settingsHint": "Innstillinger",
   "tools.database.settingsBack": "Tilbake",
   "tools.database.automationTitle": "Automatiseringer",
   "tools.database.automationNew": "Ny automatisering",

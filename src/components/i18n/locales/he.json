@@ -1350,6 +1350,7 @@
   "tools.database.calcPercentChecked": "אחוז מסומנים",
   "tools.database.calcPercentUnchecked": "אחוז לא מסומנים",
   "tools.database.settingsTitle": "הגדרות תצוגה",
+  "tools.database.settingsHint": "הגדרות",
   "tools.database.settingsBack": "חזרה",
   "tools.database.automationTitle": "אוטומציות",
   "tools.database.automationNew": "אוטומציה חדשה",

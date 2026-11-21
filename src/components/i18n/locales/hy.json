@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "Նշվածների տոկոս",
   "tools.database.calcPercentUnchecked": "Չնշվածների տոկոս",
   "tools.database.settingsTitle": "Տեսքի կարգավորումներ",
+  "tools.database.settingsHint": "Կարգավորումներ",
   "tools.database.settingsBack": "Հետ",
   "tools.database.automationTitle": "Ավտոմատացումներ",
   "tools.database.automationNew": "Նոր ավտոմատացում",

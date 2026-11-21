@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "টিক দেওয়ার শতাংশ",
   "tools.database.calcPercentUnchecked": "টিক না দেওয়ার শতাংশ",
   "tools.database.settingsTitle": "ভিউ সেটিংস",
+  "tools.database.settingsHint": "সেটিংস",
   "tools.database.settingsBack": "ফিরে যান",
   "tools.database.automationTitle": "অটোমেশনসমূহ",
   "tools.database.automationNew": "নতুন অটোমেশন",

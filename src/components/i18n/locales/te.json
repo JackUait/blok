@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "ఎంపిక చేసిన వాటి శాతం",
   "tools.database.calcPercentUnchecked": "ఎంపిక చేయని వాటి శాతం",
   "tools.database.settingsTitle": "వీక్షణ సెట్టింగ్‌లు",
+  "tools.database.settingsHint": "సెట్టింగ్‌లు",
   "tools.database.settingsBack": "వెనుకకు",
   "tools.database.automationTitle": "ఆటోమేషన్‌లు",
   "tools.database.automationNew": "కొత్త ఆటోమేషన్",

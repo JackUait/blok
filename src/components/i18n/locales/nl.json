@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "Percentage aangevinkt",
   "tools.database.calcPercentUnchecked": "Percentage niet aangevinkt",
   "tools.database.settingsTitle": "Weergave-instellingen",
+  "tools.database.settingsHint": "Instellingen",
   "tools.database.settingsBack": "Terug",
   "tools.database.automationTitle": "Automatiseringen",
   "tools.database.automationNew": "Nieuwe automatisering",

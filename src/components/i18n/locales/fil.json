@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "Porsiyento ng naka-check",
   "tools.database.calcPercentUnchecked": "Porsiyento ng hindi naka-check",
   "tools.database.settingsTitle": "Mga setting ng view",
+  "tools.database.settingsHint": "Mga setting",
   "tools.database.settingsBack": "Bumalik",
   "tools.database.automationTitle": "Mga automation",
   "tools.database.automationNew": "Bagong automation",

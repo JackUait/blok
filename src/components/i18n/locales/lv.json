@@ -1350,6 +1350,7 @@
   "tools.database.calcPercentChecked": "Procents atzīmēto",
   "tools.database.calcPercentUnchecked": "Procents neatzīmēto",
   "tools.database.settingsTitle": "Skata iestatījumi",
+  "tools.database.settingsHint": "Iestatījumi",
   "tools.database.settingsBack": "Atpakaļ",
   "tools.database.automationTitle": "Automatizācijas",
   "tools.database.automationNew": "Jauna automatizācija",

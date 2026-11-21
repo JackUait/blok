@@ -302,7 +302,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2261 + 146 + 610 + 12 closure for all 3029 keys', () => {
+  it('rebuilds a disjoint 2261 + 146 + 611 + 12 closure for all 3030 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -316,7 +316,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(3029);
+    expect(lifecycle.size).toBe(3030);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -715,7 +715,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +6: the database Locked button's label, Re-lock, both unlock rows and its two hint lines, via the tools.database. prefix.
       // +1: tools.database.subGroupBy, the Sub-group page's "Sub-group by", via the panel's prefix.
       // +1: tools.database.groupWeekOf, above.
-      'registered-namespace-compatible': 610,
+      // +1: tools.database.settingsHint, the toolbar Settings hint, via the view controls' prefix.
+      'registered-namespace-compatible': 611,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
       // +2: tools.database.rowLastEditedBy and rowWordCount, above.

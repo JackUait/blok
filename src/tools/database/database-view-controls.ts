@@ -299,7 +299,7 @@ export class DatabaseViewControls {
     this.autofillButton = iconButton('database-toolbar-autofill', this.t('aiAutofill'), IconWand);
     this.searchButton = iconButton('database-toolbar-search', this.t('searchLabel'), IconSearch);
     this.searchButton.setAttribute('data-blok-database-toolbar-search', '');
-    this.settingsButton = iconButton('database-toolbar-settings', this.t('settingsTitle'), IconSliders);
+    this.settingsButton = iconButton('database-toolbar-settings', this.t('settingsHint'), IconSliders);
     this.settingsButton.setAttribute('data-blok-database-toolbar-settings', '');
     this.fullPageLink = this.createFullPageLink();
     // A narrow view bar hides these together (notion-spec-2 §26.1, database-tab-bar.ts).

@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "Procent markerade",
   "tools.database.calcPercentUnchecked": "Procent omarkerade",
   "tools.database.settingsTitle": "Vyinställningar",
+  "tools.database.settingsHint": "Inställningar",
   "tools.database.settingsBack": "Tillbaka",
   "tools.database.automationTitle": "Automatiseringar",
   "tools.database.automationNew": "Ny automatisering",

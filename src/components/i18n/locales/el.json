@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "Ποσοστό επιλεγμένων",
   "tools.database.calcPercentUnchecked": "Ποσοστό μη επιλεγμένων",
   "tools.database.settingsTitle": "Ρυθμίσεις προβολής",
+  "tools.database.settingsHint": "Ρυθμίσεις",
   "tools.database.settingsBack": "Πίσω",
   "tools.database.automationTitle": "Αυτοματισμοί",
   "tools.database.automationNew": "Νέος αυτοματισμός",

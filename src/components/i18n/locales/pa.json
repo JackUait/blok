@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "ਨਿਸ਼ਾਨਬੱਧ ਦਾ ਪ੍ਰਤੀਸ਼ਤ",
   "tools.database.calcPercentUnchecked": "ਗੈਰ-ਨਿਸ਼ਾਨਬੱਧ ਦਾ ਪ੍ਰਤੀਸ਼ਤ",
   "tools.database.settingsTitle": "ਦ੍ਰਿਸ਼ ਸੈਟਿੰਗਾਂ",
+  "tools.database.settingsHint": "ਸੈਟਿੰਗਾਂ",
   "tools.database.settingsBack": "ਪਿੱਛੇ",
   "tools.database.automationTitle": "ਆਟੋਮੇਸ਼ਨਾਂ",
   "tools.database.automationNew": "ਨਵੀਂ ਆਟੋਮੇਸ਼ਨ",

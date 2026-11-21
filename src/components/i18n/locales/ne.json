@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "जाँच गरिएकाको प्रतिशत",
   "tools.database.calcPercentUnchecked": "जाँच नगरिएकाको प्रतिशत",
   "tools.database.settingsTitle": "दृश्य सेटिङहरू",
+  "tools.database.settingsHint": "सेटिङहरू",
   "tools.database.settingsBack": "पछाडि",
   "tools.database.automationTitle": "स्वचालनहरू",
   "tools.database.automationNew": "नयाँ स्वचालन",

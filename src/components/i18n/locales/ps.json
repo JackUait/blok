@@ -1336,6 +1336,7 @@
   "tools.database.calcPercentChecked": "د نښه شویو سلنه",
   "tools.database.calcPercentUnchecked": "د نه نښه شویو سلنه",
   "tools.database.settingsTitle": "د لید تنظیمات",
+  "tools.database.settingsHint": "ترتیبات",
   "tools.database.settingsBack": "شاته",
   "tools.database.automationTitle": "اتوماسیونونه",
   "tools.database.automationNew": "نوی اتوماسیون",

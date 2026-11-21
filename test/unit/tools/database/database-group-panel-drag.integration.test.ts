@@ -171,6 +171,28 @@ describe('View settings › Group: reorder groups by their handle (notion-motion
     expect(byTestId('database-group-list-handle-a')).toBeNull();
   });
 
+  it('a Descending Status board lists its groups with handles, and a move there turns the sort to Manual', async () => {
+    const status = doc({ groupSettings: { sort: 'descending' } });
+    const db = status[0].data as DatabaseData;
+
+    db.schema[1] = { id: 'st', name: 'Status', type: 'status', position: 'a1', config: { options: [
+      { id: 'ns', label: 'Not started', position: 'a0', groupId: 'todo' },
+      { id: 'ip', label: 'In progress', color: 'blue', position: 'a0', groupId: 'inProgress' },
+      { id: 'dn', label: 'Done', color: 'green', position: 'a0', groupId: 'complete' },
+    ] } };
+    status[1].data = { properties: { t: 'One', st: 'ip' }, position: 'a0' };
+    const api = await make(status);
+
+    expect(columns()).toEqual(['dn', 'ip', 'ns']);
+    await openGroupPage();
+    altArrow('ns', 'ArrowUp');
+    await quiet();
+
+    expect(columns()).toEqual(['dn', 'ns', 'ip']);
+    expect(byTestId('database-group-sort')?.textContent).toContain('Manual');
+    expect((await viewOf(api))?.groupSettings?.sort).toBe('manual');
+  });
+
   it('a Status group moved into another status group reorders this view only, in the list too, and one undo puts it back', async () => {
     const status = doc();
     const db = status[0].data as DatabaseData;
@@ -193,6 +215,9 @@ describe('View settings › Group: reorder groups by their handle (notion-motion
 
     expect(columns()).toEqual(['ip', 'ns', 'dn']);
     expect(panelGroups().filter((key) => key !== NO_VALUE)).toEqual(['ip', 'ns', 'dn']);
+    // notion-motion.md Round 95 §1 #1: a Status drop turns the group sort to Manual.
+    expect(byTestId('database-group-sort')?.textContent).toContain('Manual');
+    expect((await viewOf(api))?.groupSettings?.sort).toBe('manual');
     expect(JSON.stringify(((await api.save()).blocks.find((b) => b.id === 'db')?.data as DatabaseData).schema)).toBe(schema);
 
     stopCapturing();
@@ -200,5 +225,6 @@ describe('View settings › Group: reorder groups by their handle (notion-motion
     await quiet();
 
     expect(columns()).toEqual(['ns', 'ip', 'dn']);
+    expect((await viewOf(api))?.groupSettings?.sort ?? 'ascending').toBe('ascending');
   });
 });

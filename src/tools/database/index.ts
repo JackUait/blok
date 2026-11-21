@@ -191,7 +191,7 @@ import type { DataSourceChoice, ViewGroupEntry, StarterRow, ViewSettingsAction, 
 import { openFilterList } from './database-view-settings-panel';
 import type { DatabasePanel } from './database-panel';
 import { registerGroupToggle } from './database-group-toggle';
-import { GROUPABLE_TYPES, defaultGroupSort, groupValueForKey, statusViewOrder } from './group-keys';
+import { GROUPABLE_TYPES, defaultGroupSort, groupValueForKey, statusSortedOptions, statusViewOrder } from './group-keys';
 import { resolveRowColors, withGroupFlags } from './view-data';
 import { checkboxGroupName } from './database-group-checkbox';
 import { groupLabel } from './database-group-labels';
@@ -7442,11 +7442,11 @@ export class DatabaseTool implements BlockTool {
     const reorder = (): SelectOption[] => property?.type === 'status'
       ? [...listed].reverse()
       : [...listed].sort((x, y) => x.label.localeCompare(y.label) * (sort === 'descending' ? -1 : 1));
-    // research/31 §8: a view's own manual order. A Status board reads it under its default Ascending too (Round 94 §1 #1).
+    // research/31 §8: a view's own manual order. A Status board reads it under Manual only (notion-motion.md Round 95 §1 #1).
     const order = sort === 'manual' && property?.type !== 'status' ? view?.groupOrder : undefined;
     const keyOf = (option: SelectOption): string => order?.[option.id] ?? option.position;
     const sorted = order === undefined ? listed : [...listed].sort((x, y) => (keyOf(x) < keyOf(y) ? -1 : 1));
-    const manual = property?.type === 'status' && statusBy !== 'group' ? statusViewOrder(listed, view?.groupOrder) : sorted;
+    const manual = property?.type === 'status' && statusBy !== 'group' && sort === 'manual' ? statusViewOrder(listed, view?.groupOrder) : sorted;
     const options = inOrder ? manual : reorder();
     const stored = view?.noValueGroupPosition;
     const index = stored === undefined || !inOrder ? -1 : options.findIndex((option) => keyOf(option) > stored);
@@ -7759,7 +7759,8 @@ export class DatabaseTool implements BlockTool {
     if (view === undefined || property === undefined || !this.isOptionGroup(property.id) || this.readOnly || this.structureLocked() || this.activeSource() !== this) return false;
     const sort = view.groupSettings?.sort ?? defaultGroupSort(property.type);
 
-    if (property.type === 'status') return view.groupByStatus !== 'group' && (sort === 'manual' || sort === 'ascending');
+    // notion-motion.md Round 95 §1 #1: a Status drop under any sort turns it to Manual. The Group page list under Descending is inferred from the board.
+    if (property.type === 'status') return view.groupByStatus !== 'group';
 
     return sort === 'manual';
   }
@@ -11974,26 +11975,27 @@ export class DatabaseTool implements BlockTool {
    */
   /**
    * notion-motion.md Round 94 §1 #1: a Status column drop, inside or across status groups, reorders this view only;
-   * the options and status groups stay as they are. Every drop rewrites the view's whole order, so options
-   * that had no key yet get one, all in one write (one undo step).
-   * A descending board draws the workflow reversed and ignores the order, so a drop there writes nothing.
+   * the options and status groups stay as they are. Every drop rewrites the view's whole order from the drawn
+   * columns, so options that had no key yet get one.
+   * Round 95 §1 #1: the drop also turns the group sort to Manual, in the same write (one undo step). Measured on a
+   * Descending board; on an Ascending board it is inferred (Board 1's sort was not read before its drop).
    */
   private dropStatusColumn(prop: PropertyDefinition, view: DatabaseViewConfig, { optionId, beforeOptionId, afterOptionId }: GroupDragResult): void {
     const sort = view.groupSettings?.sort ?? defaultGroupSort(prop.type);
 
-    if ((sort !== 'manual' && sort !== 'ascending') || view.groupByStatus === 'group') {
+    if (view.groupByStatus === 'group') {
       return;
     }
-    const shown = statusViewOrder(orderedStatusOptions(prop), view.groupOrder);
+    const shown = statusSortedOptions(orderedStatusOptions(prop), sort, view.groupOrder);
 
     if (!shown.some((o) => o.id === optionId)) {
       return;
     }
     const keys = shown.reduce<string[]>((all) => [...all, DatabaseModel.positionBetween(all.at(-1) ?? null, null)], []);
     const order: Record<string, string> = Object.fromEntries(shown.map((o, i) => [o.id, keys[i]]));
+    // The no-value group keeps its place among the re-keyed options. A descending board draws it last.
     const stored = view.noValueGroupPosition;
-    // The no-value group keeps its place among the re-keyed options.
-    const found = stored === undefined ? -1 : shown.findIndex((o) => o.position > stored);
+    const found = stored === undefined || sort === 'descending' ? -1 : shown.findIndex((o) => o.position > stored);
     const at = found === -1 ? keys.length : found;
     const remapped = stored === undefined ? undefined : DatabaseModel.positionBetween(keys[at - 1] ?? null, keys[at] ?? null);
     // A drop right after the no-value group pins it just past the other options, as a Select board does.
@@ -12006,7 +12008,11 @@ export class DatabaseTool implements BlockTool {
     };
 
     order[optionId] = DatabaseModel.positionBetween(keyOf(afterOptionId), keyOf(beforeOptionId));
-    this.writeView(view.id, { groupOrder: order, ...(noValue === undefined ? {} : { noValueGroupPosition: noValue }) });
+    this.writeView(view.id, {
+      groupOrder: order,
+      groupSettings: { ...view.groupSettings, sort: 'manual' },
+      ...(noValue === undefined ? {} : { noValueGroupPosition: noValue }),
+    });
     this.moveColumnInDom(optionId, beforeOptionId);
   }
 

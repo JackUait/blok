@@ -98,9 +98,33 @@ describe('a Status board column dropped among its status groups', () => {
     expect(JSON.stringify(save(tool).schema)).toBe(schema);
   });
 
-  it('an option the view has no place for follows the option before it in the workflow', () => {
-    const { el } = buildDatabase(seed(), 'db', data({ groupOrder: { dn: 'a0', ns: 'a1', ip: 'a2' } }));
+  // notion-motion.md Round 95 §1 #2: a new option on a board with a manual order gets the last column.
+  it('an option the manual order has no place for goes last', () => {
+    const { el } = buildDatabase(seed(), 'db', data({ groupOrder: { dn: 'a0', ns: 'a1', ip: 'a2' }, groupSettings: { sort: 'manual' } }));
 
+    expect(boardColumns(el).slice(0, 4)).toEqual(['dn', 'ns', 'ip', 'ns2']);
+  });
+
+  // notion-motion.md Round 95 §1 #1: only Manual reads the view's order.
+  it('Ascending shows the option order over a saved order, and Manual brings the order back', () => {
+    const order = { dn: 'a0', ns: 'a1', ns2: 'a2', ip: 'a3' };
+
+    expect(boardColumns(buildDatabase(seed(), 'db', data({ groupOrder: order, groupSettings: { sort: 'ascending' } })).el).slice(0, 4))
+      .toEqual(['ns', 'ns2', 'ip', 'dn']);
+    document.body.innerHTML = '';
+    expect(boardColumns(buildDatabase(seed(), 'db', data({ groupOrder: order, groupSettings: { sort: 'descending' } })).el).slice(0, 4))
+      .toEqual(['dn', 'ip', 'ns2', 'ns']);
+    document.body.innerHTML = '';
+    expect(boardColumns(buildDatabase(seed(), 'db', data({ groupOrder: order, groupSettings: { sort: 'manual' } })).el).slice(0, 4))
+      .toEqual(['dn', 'ns', 'ns2', 'ip']);
+  });
+
+  it('a drop on an Ascending board turns the group sort to Manual and keeps the other group settings', () => {
+    const { tool, el } = buildDatabase(seed(), 'db', data({ groupSettings: { sort: 'ascending', colorColumns: true, hideEmptyGroups: false } }));
+
+    drop(tool, 'dn', 'ns', null);
+
+    expect(save(tool).views[0].groupSettings).toEqual({ sort: 'manual', colorColumns: true, hideEmptyGroups: false });
     expect(boardColumns(el).slice(0, 4)).toEqual(['dn', 'ns', 'ns2', 'ip']);
   });
 
@@ -123,21 +147,39 @@ describe('a Status board column dropped among its status groups', () => {
       { id: 'db', name: 'database', parentId: null, data: {} },
       rowSeed('r1', 'db', { properties: { title: 'One', st: null }, position: 'a0' }),
     ]);
-    const { el } = buildDatabase(doc, 'db', data({ groupOrder: { gone: 'a0' }, noValueGroupPosition: 'a0V' }));
+    const { el } = buildDatabase(doc, 'db', data({ groupOrder: { gone: 'a0' }, noValueGroupPosition: 'a0V', groupSettings: { sort: 'manual' } }));
 
     expect(boardColumns(el)).toEqual(['ns', NO_VALUE, 'ns2', 'ip', 'dn']);
   });
 
-  it('a descending board keeps its drawn order: a drop there writes nothing that the reversed draw would undo', () => {
+  // notion-motion.md Round 95 §1 #1 (r95-n-status-desc-drop.raw): the drop keeps the descending order, applies the move,
+  // and the Group page Sort reads Manual after.
+  it('a drop on a Descending board keeps the drawn order with the move, and turns the group sort to Manual', () => {
     const doc = seed();
     const { tool, el } = buildDatabase(doc, 'db', data({ groupSettings: { sort: 'descending' } }));
-    const before = boardColumns(el);
-    const saved = JSON.stringify(save(tool));
 
-    expect(before.slice(0, 4)).toEqual(['dn', 'ip', 'ns2', 'ns']);
+    expect(boardColumns(el).slice(0, 4)).toEqual(['dn', 'ip', 'ns2', 'ns']);
     drop(tool, 'ns', 'ns2', 'ip');
 
-    expect(JSON.stringify(save(tool))).toBe(saved);
-    expect(boardColumns(el)).toEqual(before);
+    expect(boardColumns(el).slice(0, 4)).toEqual(['dn', 'ip', 'ns', 'ns2']);
+    const saved = save(tool);
+
+    expect(saved.views[0].groupSettings?.sort).toBe('manual');
+    document.body.innerHTML = '';
+    expect(boardColumns(buildDatabase(doc, 'db', saved).el).slice(0, 4)).toEqual(['dn', 'ip', 'ns', 'ns2']);
+  });
+
+  it('a drop on a Descending board leaves the no-value group last, where that board drew it', () => {
+    const doc = makeDoc([
+      { id: 'db', name: 'database', parentId: null, data: {} },
+      rowSeed('r1', 'db', { properties: { title: 'One', st: null }, position: 'a0' }),
+    ]);
+    const { tool, el } = buildDatabase(doc, 'db', data({ groupSettings: { sort: 'descending' }, noValueGroupPosition: 'a0V' }));
+
+    expect(boardColumns(el)).toEqual(['dn', 'ip', 'ns2', 'ns', NO_VALUE]);
+    drop(tool, 'ns', 'ns2', 'ip');
+    document.body.innerHTML = '';
+
+    expect(boardColumns(buildDatabase(doc, 'db', save(tool)).el)).toEqual(['dn', 'ip', 'ns', 'ns2', NO_VALUE]);
   });
 });

@@ -798,6 +798,17 @@ describe('view settings panel', () => {
       expect(document.querySelector('[data-blok-testid="database-settings-data-source-title"]')?.textContent).toContain(label);
     });
 
+    // notion-motion.md Round 98 §1 #4: a source block with one view reads "title" too; with two, "titles".
+    it.each([[1, 'tools.database.settingsShowDataSourceTitle'], [2, 'tools.database.showDataSourceTitles']] as const)('on a source block with %i view(s) reads %s', (count, label) => {
+      const h = harness();
+
+      h.ctx.dataSourceTitles = { shown: () => true, toggle: vi.fn(), views: () => count };
+      h.open();
+      click('database-settings-layout');
+
+      expect(document.querySelector('[data-blok-testid="database-settings-data-source-title"]')?.textContent).toContain(label);
+    });
+
     it('is not offered on a database that holds its own rows', () => {
       const h = harness();
 
@@ -813,7 +824,7 @@ describe('view settings panel', () => {
       const h = harness();
       const toggle = vi.fn();
 
-      h.ctx.dataSourceTitles = { shown: () => false, toggle };
+      h.ctx.dataSourceTitles = { shown: () => false, toggle, views: () => 2 };
       h.open();
       click('database-settings-layout');
 

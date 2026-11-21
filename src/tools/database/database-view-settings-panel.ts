@@ -393,8 +393,8 @@ export class ViewSettingsPages {
   /** notion-motion.md Round 32 §3: a database with its own rows lists "Show data source titles" first. */
   private ownSourceTitle(): HTMLButtonElement[] {
     const titles = this.ctx.dataSourceTitles;
-    // Round 97 (notes): a linked block's label reads "title" with one view, "titles" with several.
-    const singular = this.ctx.linked?.() === true && (titles?.views?.() ?? 1) < 2;
+    // Round 97 (notes), Round 98 §1 #4: linked or source, the label reads "title" with one view, "titles" with several.
+    const singular = (titles?.views?.() ?? 1) < 2;
 
     return titles === undefined ? [] : [panelSwitch({
       label: this.t(singular ? 'settingsShowDataSourceTitle' : 'showDataSourceTitles'),

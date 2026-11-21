@@ -2009,7 +2009,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R275_BYTES = 388 + 435 + 279;
     // Lane r276: "No date (N)" sits flush on its neighbours.
     // +459: the filtered-empty "New page" takes Notion's 8 inset, 6 gap and a box round the plus ink.
-    const DATABASE_R276_BYTES = 83 + 459;
+    // +382: the AI Autofill rows sit 30 apart, and the "Basic" tag is 11/500.
+    const DATABASE_R276_BYTES = 83 + 459 + 382;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

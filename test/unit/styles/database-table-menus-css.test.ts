@@ -160,6 +160,17 @@ describe('add property menu (T12)', () => {
     expect(declared('[data-blok-database-property-type-heading]', 'font-size')).toEqual(['12px']);
   });
 
+  // notion-motion.md Round 102 §2 Row 44 (r102-n-row44-picker.raw, r44-tp-add-head.raw): the AI rows are 28 tall at a 30 pitch,
+  // and the "Basic" tag is 11/500 on a 14.3 line with 2px 4px padding (36.9x18.3). Its ink stays Blok's AA gray.
+  it('spaces the AI Autofill rows 30 apart and sets the Basic tag 11/500', () => {
+    expect(declared('[data-blok-database-property-autofill-option] + [data-blok-database-property-autofill-option]', 'margin-block-start'))
+      .toEqual(['var(--blok-space-0-5)']);
+    expect(declared('[data-blok-database-property-autofill-tag]', 'font-size')).toEqual(['11px']);
+    expect(declared('[data-blok-database-property-autofill-tag]', 'font-weight')).toEqual(['500']);
+    expect(declared('[data-blok-database-property-autofill-tag]', 'line-height')).toEqual(['1.3']);
+    expect(declared('[data-blok-database-property-autofill-tag]', 'padding')).toEqual(['var(--blok-space-0-5) var(--blok-space-1)']);
+  });
+
   // research/08 line 203, 267: the table header "+" menu is 400 wide, a two-column grid of 32px items.
   it('draws the header "+" grid 400 wide in two columns of 32px items', () => {
     const GRID = "[data-blok-database-property-type-layout='grid']";

@@ -7068,13 +7068,20 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   background-color: var(--blok-database-table-border);
 }
 
+/* notion-motion.md Round 102 §2 Row 44 (r44-tp-add-head.raw): 28 tall rows at a 30 pitch. */
+[data-blok-database-property-autofill-option] + [data-blok-database-property-autofill-option] {
+  margin-block-start: var(--blok-space-0-5);
+}
+
+/* r44-tp-add-head.raw: "Basic" is 11/500 on a 14.3 line, padded 2px 4px. The ink stays the AA step. */
 [data-blok-database-property-autofill-tag] {
-  padding: 0 var(--blok-space-1);
+  padding: var(--blok-space-0-5) var(--blok-space-1);
   border-radius: var(--blok-radius-mark);
   background: var(--blok-database-option-gray-bg);
   color: var(--blok-database-option-gray-text);
-  font-size: 12px;
-  line-height: 18px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
 }
 
 /**

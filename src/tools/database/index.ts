@@ -7818,7 +7818,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** "Edit view" or "Rename" on a tab: show that view, then its settings. */
-  private editView(viewId: string, anchor: HTMLElement, start: 'root' | 'rename' | 'source' = 'root'): void {
+  private editView(viewId: string, anchor: HTMLElement, start: 'edit' | 'rename' | 'source' = 'edit'): void {
     this.showView(viewId);
     const tab = this.element?.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${CSS.escape(viewId)}"]`);
 

@@ -3722,8 +3722,8 @@ const idList = (value: FilterConfig['value']): string[] => {
   return typeof value === 'string' && value !== '' ? [value] : [];
 };
 
-/** `rename` is the root with the name field focused and selected (findings V08). */
-export type ViewSettingsStart = 'root' | 'rename' | 'filter' | 'sort' | 'group' | 'layout' | 'properties' | 'automations' | 'autofill' | 'source';
+/** `rename` is the root with the name field focused and selected (findings V08); `edit` is the root with Close focused. */
+export type ViewSettingsStart = 'root' | 'rename' | 'edit' | 'filter' | 'sort' | 'group' | 'layout' | 'properties' | 'automations' | 'autofill' | 'source';
 
 /** Opens the view settings panel under `anchor`, at `start`. */
 export const openViewSettings = (
@@ -3736,6 +3736,7 @@ export const openViewSettings = (
   const root = {
     root: (): PanelPage => pages.root(),
     rename: (): PanelPage => pages.root(),
+    edit: (): PanelPage => pages.root(),
     filter: (): PanelPage => pages.filters(),
     sort: (): PanelPage => pages.sorts(),
     group: (): PanelPage => pages.group(false),
@@ -3765,6 +3766,8 @@ export const openViewSettings = (
     name?.focus();
     name?.select();
   }
+  // notion-motion.md Round 94 §1 #4: tab menu › Edit view lands on Close on every layout.
+  if (start === 'edit') panel.root.querySelector<HTMLElement>('[data-blok-testid="database-panel-close"]')?.focus();
 
   return panel;
 };

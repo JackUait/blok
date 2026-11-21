@@ -426,6 +426,7 @@
   "tools.database.cardMenuLabel": "Opciones de tarjeta",
   "tools.database.deleteColumn": "Eliminar columna",
   "tools.database.renameColumn": "Renombrar columna",
+  "tools.database.renameGroup": "Renombrar grupo",
   "tools.database.emptyColumn": "Sin tarjetas",
   "tools.database.rowTitlePlaceholder": "Nueva página",
   "tools.database.addRow": "Añadir fila",

@@ -434,6 +434,7 @@
   "tools.database.openRow": "Відкрити рядок",
   "tools.database.deleteRow": "Видалити рядок",
   "tools.database.renameColumn": "Перейменувати стовпець",
+  "tools.database.renameGroup": "Перейменувати групу",
   "tools.callout.color": "Колір",
   "tools.callout.colorDefault": "за замовчуванням",
   "tools.callout.colorGray": "Сірий",

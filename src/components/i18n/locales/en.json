@@ -423,6 +423,7 @@
   "tools.database.addColumn": "Add column",
   "tools.database.newGroup": "New group",
   "tools.database.renameColumn": "Rename column",
+  "tools.database.renameGroup": "Rename group",
   "tools.database.deleteColumn": "Delete column",
   "tools.database.addCard": "Add card",
   "tools.database.newPage": "New page",

@@ -424,6 +424,7 @@
   "tools.database.cardMenuLabel": "Քարտի ընտրանքներ",
   "tools.database.deleteColumn": "Ջնջել սյունակը",
   "tools.database.renameColumn": "Վերանվանել սյունակը",
+  "tools.database.renameGroup": "Վերանվանել խումբը",
   "tools.database.emptyColumn": "Քարտեր չկան",
   "tools.database.rowTitlePlaceholder": "Նոր էջ",
   "tools.database.addRow": "Ավելացնել տող",

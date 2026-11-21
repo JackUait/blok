@@ -432,6 +432,7 @@
   "tools.database.openRow": "Abrir linha",
   "tools.database.deleteRow": "Excluir linha",
   "tools.database.renameColumn": "Renomear coluna",
+  "tools.database.renameGroup": "Renomear grupo",
   "tools.callout.color": "Cor",
   "tools.callout.colorDefault": "Padrão",
   "tools.callout.colorGray": "Cinza",

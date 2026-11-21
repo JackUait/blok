@@ -450,6 +450,7 @@
   "tools.database.openRow": "Buka baris",
   "tools.database.deleteRow": "Padam baris",
   "tools.database.renameColumn": "Namakan semula lajur",
+  "tools.database.renameGroup": "Namakan semula kumpulan",
   "tools.callout.color": "Warna",
   "tools.callout.colorDefault": "Lalai",
   "tools.callout.colorGray": "Kelabu",

@@ -434,6 +434,7 @@
   "tools.database.openRow": "Otwórz wiersz",
   "tools.database.deleteRow": "Usuń wiersz",
   "tools.database.renameColumn": "Zmień nazwę kolumny",
+  "tools.database.renameGroup": "Zmień nazwę grupy",
   "tools.callout.color": "Kolor",
   "tools.callout.colorDefault": "Domyślny",
   "tools.callout.colorGray": "Szary",

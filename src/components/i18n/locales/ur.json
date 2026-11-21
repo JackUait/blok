@@ -430,6 +430,7 @@
   "tools.database.openRow": "قطار کھولیں",
   "tools.database.deleteRow": "قطار حذف کریں",
   "tools.database.renameColumn": "کالم کا نام بدلیں",
+  "tools.database.renameGroup": "گروپ کا نام بدلیں",
   "tools.callout.color": "رنگ",
   "tools.callout.colorDefault": "طے شدہ",
   "tools.callout.colorGray": "سرمئی",

@@ -424,6 +424,7 @@
   "tools.database.cardMenuLabel": "ბარათის პარამეტრები",
   "tools.database.deleteColumn": "სვეტის წაშლა",
   "tools.database.renameColumn": "სვეტის გადარქმევა",
+  "tools.database.renameGroup": "ჯგუფის გადარქმევა",
   "tools.database.emptyColumn": "ბარათები არ არის",
   "tools.database.rowTitlePlaceholder": "ახალი გვერდი",
   "tools.database.addRow": "მწკრივის დამატება",

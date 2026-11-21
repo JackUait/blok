@@ -450,6 +450,7 @@
   "tools.database.openRow": "Мөр нээх",
   "tools.database.deleteRow": "Мөр устгах",
   "tools.database.renameColumn": "Баганын нэрийг өөрчлөх",
+  "tools.database.renameGroup": "Бүлгийн нэрийг өөрчлөх",
   "tools.callout.color": "Өнгө",
   "tools.callout.colorDefault": "Өгөгдмөл",
   "tools.callout.colorGray": "Саарал",

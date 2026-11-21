@@ -430,6 +430,7 @@
   "tools.database.openRow": "打开行",
   "tools.database.deleteRow": "删除行",
   "tools.database.renameColumn": "重命名列",
+  "tools.database.renameGroup": "重命名分组",
   "tools.callout.color": "颜色",
   "tools.callout.colorDefault": "默认",
   "tools.callout.colorGray": "灰色",

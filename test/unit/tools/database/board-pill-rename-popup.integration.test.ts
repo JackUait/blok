@@ -168,3 +168,75 @@ describe('board: column pill rename popup', () => {
     expect(pill()).toHaveFocus();
   });
 });
+
+/**
+ * notion-motion.md Round 99 §1 #2-#4 (r99-n-band-pill-enter.raw, r99-n-select-col-pill-click.raw, r99-n-pill-click.raw):
+ * the popup is 240 wide for a Status option and 300 for a Select one, its empty field reads "Rename group".
+ */
+describe('board: rename popup by property type', () => {
+  const statusGroups = [
+    { id: 'todo', kind: 'todo', name: 'To-do', color: 'gray', position: 'a0' },
+    { id: 'ip', kind: 'inProgress', name: 'In progress', color: 'blue', position: 'a1' },
+    { id: 'c', kind: 'complete', name: 'Complete', color: 'green', position: 'a2' },
+  ];
+  const schema = [
+    { id: 't', name: 'Name', type: 'title', position: 'a0' },
+    { id: 'st', name: 'Status', type: 'status', position: 'a1', status: { groups: statusGroups }, config: { options: [{ id: 's1', label: 'Not started', groupId: 'todo', position: 'a0' }] } },
+    { id: 'sel', name: 'Select', type: 'select', position: 'a2', config: { options: [{ id: 'red', label: 'Red', position: 'a0' }] } },
+    { id: 'ms', name: 'Tags', type: 'multiSelect', position: 'a3', config: { options: [{ id: 'one', label: 'One', position: 'a0' }] } },
+  ];
+  const mount = async (view: Record<string, unknown>): Promise<void> => {
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
+      data: {
+        blocks: [
+          {
+            id: 'db',
+            type: 'database',
+            data: { schema, views: [{ id: 'v', name: 'Board', type: 'board', position: 'a0', sorts: [], filters: [], visibleProperties: [], ...view }], activeViewId: 'v' },
+            content: ['r1'],
+          },
+          { id: 'r1', type: 'database-row', parent: 'db', data: { properties: { t: 'Alpha', st: 's1', sel: 'red', ms: ['one'] }, position: 'a0' } },
+        ],
+      },
+    } as never) as unknown as TestEditor;
+    await editor.isReady;
+    await quiet();
+  };
+  // jsdom measures 0, so the popover's --width is its minWidth floor.
+  const popupWidth = (): string | undefined => field()?.closest<HTMLElement>('[data-blok-popover]')?.style.getPropertyValue('--width');
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    editor?.destroy();
+    editor = undefined;
+    holder?.remove();
+    holder = undefined;
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  it.each([['st', '240px'], ['sel', '300px'], ['ms', '300px']])('a %s column opens a %s popup', async (groupBy, width) => {
+    await mount({ groupBy });
+    pill()?.click();
+    await quiet();
+
+    expect(field()).toHaveFocus();
+    expect(popupWidth()).toBe(width);
+  });
+
+  it('the rename field reads "Rename group" when it is empty', async () => {
+    await mount({ groupBy: 'sel' });
+    pill()?.click();
+    await quiet();
+
+    expect(field()?.placeholder).toBe('Rename group');
+  });
+});

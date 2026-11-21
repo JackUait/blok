@@ -430,6 +430,7 @@
   "tools.database.openRow": "Satırı aç",
   "tools.database.deleteRow": "Satırı sil",
   "tools.database.renameColumn": "Sütunu yeniden adlandır",
+  "tools.database.renameGroup": "Grubu yeniden adlandır",
   "tools.callout.color": "Renk",
   "tools.callout.colorDefault": "Varsayılan",
   "tools.callout.colorGray": "Gri",

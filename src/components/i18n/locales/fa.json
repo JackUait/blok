@@ -424,6 +424,7 @@
   "tools.database.cardMenuLabel": "گزینه‌های کارت",
   "tools.database.deleteColumn": "حذف ستون",
   "tools.database.renameColumn": "تغییر نام ستون",
+  "tools.database.renameGroup": "تغییر نام گروه",
   "tools.database.emptyColumn": "بدون کارت",
   "tools.database.rowTitlePlaceholder": "صفحه جدید",
   "tools.database.addRow": "افزودن ردیف",

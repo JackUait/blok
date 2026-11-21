@@ -393,6 +393,7 @@
   "tools.database.addColumn": "Sütun əlavə et",
   "tools.database.newGroup": "Yeni qrup",
   "tools.database.renameColumn": "Sütunu yenidən adlandır",
+  "tools.database.renameGroup": "Qrupu yenidən adlandır",
   "tools.database.deleteColumn": "Sütunu sil",
   "tools.database.addCard": "Kart əlavə et",
   "tools.database.newPage": "Yeni səhifə",

@@ -11123,21 +11123,24 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * notion-motion.md Round 98 §1 #1: Enter or Space on a column pill opens this under the pill:
-   * 240 wide, 4 below it, the name selected, and the same field and "Done ↵" as "+ New group".
-   * `done` gets the trimmed name on Done or Enter, and null on any other close.
+   * notion-motion.md Round 98 §1 #1, Round 99 §1 #1-#4: a click, Enter or Space on a column pill, or Enter on a band pill,
+   * opens this under the pill: 4 below it, the name selected, and the same field and "Done ↵" as "+ New group".
+   * `propertyId` is the grouped property: a Status option's popup is 240 wide, a Select one's 300
+   * (a Multi-select's is unread and takes Select's). `done` gets the trimmed name on Done or Enter, and null on any other close.
    */
-  private openGroupRename(pill: HTMLElement, label: string, done: (label: string | null) => void): void {
+  private openGroupRename(pill: HTMLElement, label: string, propertyId: string | undefined, done: (label: string | null) => void): void {
     const result: { label: string | null } = { label: null };
     const field = this.groupNameField(label, (value) => {
       result.label = value === '' ? null : value;
       this.groupMenuPopover?.hide();
     });
+    const status = propertyId !== undefined && this.model.getProperty(propertyId)?.type === 'status';
 
     field.input.setAttribute('aria-label', this.api.i18n.t('tools.database.renameColumn'));
+    field.input.placeholder = this.api.i18n.t('tools.database.renameGroup');
     this.showGroupPopover(pill, [{ type: PopoverItemType.Html, element: field.wrap, name: 'rename-group' }], pill, {
       class: `${DATABASE_MENU_CLASS} blok-database-new-group-menu`,
-      minWidth: '240px',
+      minWidth: status ? '240px' : '300px',
       offset: 4,
     });
     this.groupMenuPopover?.on(PopoverEvent.Closed, () => done(result.label));
@@ -11568,7 +11571,7 @@ export class DatabaseTool implements BlockTool {
 
       this.columnControls = new DatabaseColumnControls({
         onRename: (optionId, label) => this.handleOptionRename(optionId, label),
-        openRename: (pill, label, done) => this.openGroupRename(pill, label, done),
+        openRename: (pill, label, done) => this.openGroupRename(pill, label, this.shownView()?.groupBy, done),
         onRenameCommit: (optionId, label) => {
           // Debounced backend persist
           const viewConfig = this.shownView();

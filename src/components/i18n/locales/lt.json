@@ -452,6 +452,7 @@
   "tools.database.cardMenuLabel": "Kortelės parinktys",
   "tools.database.deleteColumn": "Ištrinti stulpelį",
   "tools.database.renameColumn": "Pervadinti stulpelį",
+  "tools.database.renameGroup": "Pervadinti grupę",
   "tools.database.emptyColumn": "Nėra kortelių",
   "tools.database.rowTitlePlaceholder": "Naujas puslapis",
   "tools.database.addRow": "Pridėti eilutę",

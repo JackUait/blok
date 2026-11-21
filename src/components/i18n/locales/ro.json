@@ -432,6 +432,7 @@
   "tools.database.openRow": "Deschide rândul",
   "tools.database.deleteRow": "Șterge rândul",
   "tools.database.renameColumn": "Redenumește coloana",
+  "tools.database.renameGroup": "Redenumește grupul",
   "tools.callout.color": "Culoare",
   "tools.callout.colorDefault": "Implicit",
   "tools.callout.colorGray": "Gri",

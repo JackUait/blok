@@ -424,6 +424,7 @@
   "tools.database.cardMenuLabel": "Kaardi valikud",
   "tools.database.deleteColumn": "Kustuta veerg",
   "tools.database.renameColumn": "Nimeta veerg ümber",
+  "tools.database.renameGroup": "Nimeta rühm ümber",
   "tools.database.emptyColumn": "Kaarte pole",
   "tools.database.rowTitlePlaceholder": "Uus leht",
   "tools.database.addRow": "Lisa rida",

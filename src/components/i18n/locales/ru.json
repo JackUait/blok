@@ -434,6 +434,7 @@
   "tools.database.openRow": "Открыть строку",
   "tools.database.deleteRow": "Удалить строку",
   "tools.database.renameColumn": "Переименовать столбец",
+  "tools.database.renameGroup": "Переименовать группу",
   "tools.callout.color": "Цвет",
   "tools.callout.colorDefault": "По умолчанию",
   "tools.callout.colorGray": "Серый",

@@ -424,6 +424,7 @@
   "tools.database.cardMenuLabel": "Opsi kartu",
   "tools.database.deleteColumn": "Hapus kolom",
   "tools.database.renameColumn": "Ubah nama kolom",
+  "tools.database.renameGroup": "Ubah nama grup",
   "tools.database.emptyColumn": "Tidak ada kartu",
   "tools.database.rowTitlePlaceholder": "Halaman baru",
   "tools.database.addRow": "Tambah baris",

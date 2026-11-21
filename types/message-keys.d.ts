@@ -1710,6 +1710,7 @@ export type BlokMessageKey =
   | 'tools.database.removeSortingConfirm'
   | 'tools.database.removeSortingTitle'
   | 'tools.database.renameColumn'
+  | 'tools.database.renameGroup'
   | 'tools.database.renameView'
   | 'tools.database.restore'
   | 'tools.database.rollupConfigure'

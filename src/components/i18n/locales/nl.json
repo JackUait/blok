@@ -430,6 +430,7 @@
   "tools.database.openRow": "Rij openen",
   "tools.database.deleteRow": "Rij verwijderen",
   "tools.database.renameColumn": "Kolom hernoemen",
+  "tools.database.renameGroup": "Groep hernoemen",
   "tools.callout.color": "Kleur",
   "tools.callout.colorDefault": "Standaard",
   "tools.callout.colorGray": "Grijs",

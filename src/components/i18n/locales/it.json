@@ -426,6 +426,7 @@
   "tools.database.cardMenuLabel": "Opzioni scheda",
   "tools.database.deleteColumn": "Elimina colonna",
   "tools.database.renameColumn": "Rinomina colonna",
+  "tools.database.renameGroup": "Rinomina gruppo",
   "tools.database.emptyColumn": "Nessuna scheda",
   "tools.database.rowTitlePlaceholder": "Nuova pagina",
   "tools.database.addRow": "Aggiungi riga",

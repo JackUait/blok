@@ -424,6 +424,7 @@
   "tools.database.cardMenuLabel": "Flere handlinger for kortet",
   "tools.database.deleteColumn": "Slet kolonne",
   "tools.database.renameColumn": "Omdøb kolonne",
+  "tools.database.renameGroup": "Omdøb gruppe",
   "tools.database.emptyColumn": "Ingen kort",
   "tools.database.rowTitlePlaceholder": "Ny side",
   "tools.database.addRow": "Tilføj række",

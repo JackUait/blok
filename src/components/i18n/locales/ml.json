@@ -413,6 +413,7 @@
   "tools.database.addColumn": "കോളം ചേർക്കുക",
   "tools.database.newGroup": "പുതിയ ഗ്രൂപ്പ്",
   "tools.database.renameColumn": "കോളം പുനർനാമകരണം ചെയ്യുക",
+  "tools.database.renameGroup": "ഗ്രൂപ്പ് പുനർനാമകരണം ചെയ്യുക",
   "tools.database.deleteColumn": "കോളം ഇല്ലാതാക്കുക",
   "tools.database.addCard": "കാർഡ് ചേർക്കുക",
   "tools.database.newPage": "പുതിയ പേജ്",

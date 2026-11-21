@@ -393,6 +393,7 @@
   "tools.database.addColumn": "තීරුව එක් කරන්න",
   "tools.database.newGroup": "නව සමූහය",
   "tools.database.renameColumn": "තීරුව නැවත නම් කරන්න",
+  "tools.database.renameGroup": "සමූහය නැවත නම් කරන්න",
   "tools.database.deleteColumn": "තීරුව මකන්න",
   "tools.database.addCard": "කාඩ්පත එක් කරන්න",
   "tools.database.newPage": "නව පිටුව",

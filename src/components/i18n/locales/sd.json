@@ -430,6 +430,7 @@
   "tools.database.openRow": "قطار کوليو",
   "tools.database.deleteRow": "قطار ختم ڪريو",
   "tools.database.renameColumn": "ڪالم جو نالو تبديل ڪريو",
+  "tools.database.renameGroup": "گروپ جو نالو تبديل ڪريو",
   "tools.callout.color": "رنگ",
   "tools.callout.colorDefault": "ڊفالٽ",
   "tools.callout.colorGray": "خاڪي",

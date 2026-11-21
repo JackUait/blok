@@ -393,6 +393,7 @@
   "tools.database.addColumn": "បន្ថែមជួរឈរ",
   "tools.database.newGroup": "ក្រុមថ្មី",
   "tools.database.renameColumn": "ប្ដូរឈ្មោះជួរឈរ",
+  "tools.database.renameGroup": "ប្ដូរឈ្មោះក្រុម",
   "tools.database.deleteColumn": "លុបជួរឈរ",
   "tools.database.addCard": "បន្ថែមកាត",
   "tools.database.newPage": "ទំព័រថ្មី",

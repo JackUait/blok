@@ -430,6 +430,7 @@
   "tools.database.openRow": "قۇرنى ئېچىش",
   "tools.database.deleteRow": "قۇرنى ئۆچۈرۈش",
   "tools.database.renameColumn": "ئىستون نامىنى ئۆزگەرتىش",
+  "tools.database.renameGroup": "گۇرۇپپا نامىنى ئۆزگەرتىش",
   "tools.callout.color": "رەڭ",
   "tools.callout.colorDefault": "سۈكۈتتىكى",
   "tools.callout.colorGray": "كۈلرەڭ",

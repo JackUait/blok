@@ -432,6 +432,7 @@
   "tools.database.openRow": "Отвори ред",
   "tools.database.deleteRow": "Обриши ред",
   "tools.database.renameColumn": "Преименуј колону",
+  "tools.database.renameGroup": "Преименуј групу",
   "tools.callout.color": "Боја",
   "tools.callout.colorDefault": "Подразумевано",
   "tools.callout.colorGray": "Сива",

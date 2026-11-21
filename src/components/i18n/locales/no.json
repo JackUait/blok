@@ -430,6 +430,7 @@
   "tools.database.openRow": "Åpne rad",
   "tools.database.deleteRow": "Slett rad",
   "tools.database.renameColumn": "Gi nytt navn til kolonne",
+  "tools.database.renameGroup": "Gi nytt navn til gruppe",
   "tools.callout.color": "Farge",
   "tools.callout.colorDefault": "Standard",
   "tools.callout.colorGray": "Grå",

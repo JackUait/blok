@@ -430,6 +430,7 @@
   "tools.database.openRow": "Mở hàng",
   "tools.database.deleteRow": "Xóa hàng",
   "tools.database.renameColumn": "Đổi tên cột",
+  "tools.database.renameGroup": "Đổi tên nhóm",
   "tools.callout.color": "Màu",
   "tools.callout.colorDefault": "Mặc định",
   "tools.callout.colorGray": "Xám",

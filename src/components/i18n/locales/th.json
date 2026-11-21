@@ -430,6 +430,7 @@
   "tools.database.openRow": "เปิดแถว",
   "tools.database.deleteRow": "ลบแถว",
   "tools.database.renameColumn": "เปลี่ยนชื่อคอลัมน์",
+  "tools.database.renameGroup": "เปลี่ยนชื่อกลุ่ม",
   "tools.callout.color": "สี",
   "tools.callout.colorDefault": "ค่าเริ่มต้น",
   "tools.callout.colorGray": "สีเทา",

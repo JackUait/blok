@@ -430,6 +430,7 @@
   "tools.database.openRow": "Hap rreshtin",
   "tools.database.deleteRow": "Fshi rreshtin",
   "tools.database.renameColumn": "Riemërto kolonën",
+  "tools.database.renameGroup": "Riemërto grupin",
   "tools.callout.color": "Ngjyra",
   "tools.callout.colorDefault": "Parazgjedhur",
   "tools.callout.colorGray": "Gri",

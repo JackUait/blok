@@ -424,6 +424,7 @@
   "tools.database.cardMenuLabel": "Επιλογές κάρτας",
   "tools.database.deleteColumn": "Διαγραφή στήλης",
   "tools.database.renameColumn": "Μετονομασία στήλης",
+  "tools.database.renameGroup": "Μετονομασία ομάδας",
   "tools.database.emptyColumn": "Χωρίς κάρτες",
   "tools.database.rowTitlePlaceholder": "Νέα σελίδα",
   "tools.database.addRow": "Προσθήκη γραμμής",

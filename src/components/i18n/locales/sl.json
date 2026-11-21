@@ -434,6 +434,7 @@
   "tools.database.openRow": "Odpri vrstico",
   "tools.database.deleteRow": "Izbriši vrstico",
   "tools.database.renameColumn": "Preimenuj stolpec",
+  "tools.database.renameGroup": "Preimenuj skupino",
   "tools.callout.color": "Barva",
   "tools.callout.colorDefault": "Privzeto",
   "tools.callout.colorGray": "Siva",

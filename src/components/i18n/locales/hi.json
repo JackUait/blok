@@ -424,6 +424,7 @@
   "tools.database.cardMenuLabel": "कार्ड विकल्प",
   "tools.database.deleteColumn": "कॉलम हटाएं",
   "tools.database.renameColumn": "कॉलम का नाम बदलें",
+  "tools.database.renameGroup": "समूह का नाम बदलें",
   "tools.database.emptyColumn": "कोई कार्ड नहीं",
   "tools.database.rowTitlePlaceholder": "नया पृष्ठ",
   "tools.database.addRow": "पंक्ति जोड़ें",

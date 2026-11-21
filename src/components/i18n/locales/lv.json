@@ -448,6 +448,7 @@
   "tools.database.cardMenuLabel": "Kartītes opcijas",
   "tools.database.deleteColumn": "Dzēst kolonnu",
   "tools.database.renameColumn": "Pārdēvēt kolonnu",
+  "tools.database.renameGroup": "Pārdēvēt grupu",
   "tools.database.emptyColumn": "Nav kartīšu",
   "tools.database.rowTitlePlaceholder": "Jauna lapa",
   "tools.database.addRow": "Pievienot rindu",

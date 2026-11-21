@@ -192,7 +192,8 @@ for (const key of ['Enter', 'Space']) {
     expect(Math.round((popupBox?.x ?? 0) - (pillBox?.x ?? 0))).toBe(0);
     expect(Math.round((popupBox?.y ?? 0) - (pillBox?.y ?? 0) - (pillBox?.height ?? 0))).toBe(4);
     // The open motion scales the box, so the layout width is read, not the drawn one.
-    expect(await popup.evaluate((el: HTMLElement) => el.offsetWidth)).toBe(240);
+    // notion-motion.md Round 99 §1 #3: a Select option's popup is 300 wide (a Status one's 240).
+    expect(await popup.evaluate((el: HTMLElement) => el.offsetWidth)).toBe(300);
 
     await page.keyboard.press('Escape');
 

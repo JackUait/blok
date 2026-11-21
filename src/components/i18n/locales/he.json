@@ -426,6 +426,7 @@
   "tools.database.cardMenuLabel": "אפשרויות כרטיס",
   "tools.database.deleteColumn": "מחק עמודה",
   "tools.database.renameColumn": "שנה שם עמודה",
+  "tools.database.renameGroup": "שנה שם קבוצה",
   "tools.database.emptyColumn": "אין כרטיסים",
   "tools.database.rowTitlePlaceholder": "דף חדש",
   "tools.database.addRow": "הוסף שורה",

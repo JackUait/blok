@@ -432,6 +432,7 @@
   "tools.database.cardMenuLabel": "خيارات البطاقة",
   "tools.database.deleteColumn": "حذف العمود",
   "tools.database.renameColumn": "إعادة تسمية العمود",
+  "tools.database.renameGroup": "إعادة تسمية المجموعة",
   "tools.database.emptyColumn": "لا توجد بطاقات",
   "tools.database.rowTitlePlaceholder": "صفحة جديدة",
   "tools.database.addRow": "إضافة صف",

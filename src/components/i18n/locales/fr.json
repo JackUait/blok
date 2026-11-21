@@ -426,6 +426,7 @@
   "tools.database.cardMenuLabel": "Options de la carte",
   "tools.database.deleteColumn": "Supprimer la colonne",
   "tools.database.renameColumn": "Renommer la colonne",
+  "tools.database.renameGroup": "Renommer le groupe",
   "tools.database.emptyColumn": "Aucune carte",
   "tools.database.rowTitlePlaceholder": "Nouvelle page",
   "tools.database.addRow": "Ajouter une ligne",

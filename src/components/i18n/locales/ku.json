@@ -444,6 +444,7 @@
   "tools.database.cardMenuLabel": "هەڵبژاردنەکانی کارت",
   "tools.database.deleteColumn": "سڕینەوەی ستوون",
   "tools.database.renameColumn": "ناوگۆڕینی ستوون",
+  "tools.database.renameGroup": "ناوگۆڕینی گرووپ",
   "tools.database.emptyColumn": "هیچ کارتێک نییە",
   "tools.database.rowTitlePlaceholder": "پەڕەی نوێ",
   "tools.database.addRow": "ڕیز زیاد بکە",

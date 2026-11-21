@@ -430,6 +430,7 @@
   "tools.database.openRow": "Fungua safu mlalo",
   "tools.database.deleteRow": "Futa safu mlalo",
   "tools.database.renameColumn": "Badilisha jina la safu wima",
+  "tools.database.renameGroup": "Badilisha jina la kikundi",
   "tools.callout.color": "Rangi",
   "tools.callout.colorDefault": "Chaguo-msingi",
   "tools.callout.colorGray": "Kijivu",

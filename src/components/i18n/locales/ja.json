@@ -424,6 +424,7 @@
   "tools.database.cardMenuLabel": "カードメニュー",
   "tools.database.deleteColumn": "列を削除",
   "tools.database.renameColumn": "列名を変更",
+  "tools.database.renameGroup": "グループ名を変更",
   "tools.database.emptyColumn": "カードなし",
   "tools.database.rowTitlePlaceholder": "新しいページ",
   "tools.database.addRow": "行を追加",

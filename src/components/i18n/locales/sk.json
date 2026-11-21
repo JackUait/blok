@@ -434,6 +434,7 @@
   "tools.database.openRow": "Otvoriť riadok",
   "tools.database.deleteRow": "Odstrániť riadok",
   "tools.database.renameColumn": "Premenovať stĺpec",
+  "tools.database.renameGroup": "Premenovať skupinu",
   "tools.callout.color": "Farba",
   "tools.callout.colorDefault": "Predvolené",
   "tools.callout.colorGray": "Sivá",

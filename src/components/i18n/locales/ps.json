@@ -430,6 +430,7 @@
   "tools.database.openRow": "قطار خلاص کړئ",
   "tools.database.deleteRow": "قطار ړنګ کړئ",
   "tools.database.renameColumn": "د کالم نوم بدل کړئ",
+  "tools.database.renameGroup": "د ګروپ نوم بدل کړئ",
   "tools.callout.color": "رنګ",
   "tools.callout.colorDefault": "تلواله",
   "tools.callout.colorGray": "خړ",

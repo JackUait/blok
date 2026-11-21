@@ -393,6 +393,7 @@
   "tools.database.addColumn": "કૉલમ ઉમેરો",
   "tools.database.newGroup": "નવું જૂથ",
   "tools.database.renameColumn": "કૉલમનું નામ બદલો",
+  "tools.database.renameGroup": "જૂથનું નામ બદલો",
   "tools.database.deleteColumn": "કૉલમ કાઢી નાખો",
   "tools.database.addCard": "કાર્ડ ઉમેરો",
   "tools.database.newPage": "નવું પૃષ્ઠ",

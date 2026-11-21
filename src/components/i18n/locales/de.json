@@ -424,6 +424,7 @@
   "tools.database.cardMenuLabel": "Kartenoptionen",
   "tools.database.deleteColumn": "Spalte löschen",
   "tools.database.renameColumn": "Spalte umbenennen",
+  "tools.database.renameGroup": "Gruppe umbenennen",
   "tools.database.emptyColumn": "Keine Karten",
   "tools.database.rowTitlePlaceholder": "Neue Seite",
   "tools.database.addRow": "Zeile hinzufügen",

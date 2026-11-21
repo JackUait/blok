@@ -424,6 +424,7 @@
   "tools.database.cardMenuLabel": "Kortin vaihtoehdot",
   "tools.database.deleteColumn": "Poista sarake",
   "tools.database.renameColumn": "Nimeä sarake uudelleen",
+  "tools.database.renameGroup": "Nimeä ryhmä uudelleen",
   "tools.database.emptyColumn": "Ei kortteja",
   "tools.database.rowTitlePlaceholder": "Uusi sivu",
   "tools.database.addRow": "Lisää rivi",

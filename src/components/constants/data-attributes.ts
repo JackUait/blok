@@ -102,6 +102,8 @@ export const DATA_ATTR = {
   stretched: 'data-blok-stretched',
   /** Editor or element is empty */
   empty: 'data-blok-empty',
+  /** Sides ("start", "end" or both) where a mark's background fill touches another fill. Never saved. */
+  markJoined: 'data-blok-mark-joined',
   /** Present on the editor wrapper while read-only mode is active.
    *  Public styling hook — lets hosts key rules off the editing state
    *  without JS. Deliberately does NOT collapse the gutter: plain

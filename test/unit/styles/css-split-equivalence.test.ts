@@ -2049,6 +2049,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const FIELD_FOCUS_RING_BYTES = 1_297;
     // preflight.css: a mark's rounded fill that reaches past the letters and rounds each wrapped line (measured preflight.css growth).
     const MARK_ROUNDED_FILL_BYTES = 376;
+    // preflight.css: the square shared edge of two mark fills that touch (measured preflight.css growth).
+    const MARK_JOINED_EDGE_BYTES = 548;
     // file.css: the object on a file card — pages, editor tab, filmstrip, record, folder, punch card (measured file.css growth).
     const FILE_CARD_OBJECT_BYTES = 27_626;
     // emoji-picker.css: the database icon pickers' keyboard highlight (measured emoji-picker.css growth).
@@ -2708,7 +2710,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + BLOCK_MENU_QUIET_BYTES
       + LINK_PICKER_SHELF_BYTES
       + FIELD_FOCUS_RING_BYTES
-      + MARK_ROUNDED_FILL_BYTES;
+      + MARK_ROUNDED_FILL_BYTES
+      + MARK_JOINED_EDGE_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

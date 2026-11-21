@@ -1934,6 +1934,20 @@
   box-decoration-break: clone;
 }
 
+[@layer base] :where([data-blok-interface], [data-blok-popover]) mark[data-blok-mark-joined~="start"] {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  padding-inline-start: 0;
+  margin-inline-start: 0;
+}
+
+[@layer base] :where([data-blok-interface], [data-blok-popover]) mark[data-blok-mark-joined~="end"] {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+  padding-inline-end: 0;
+  margin-inline-end: 0;
+}
+
 [@layer base] :where([data-blok-interface], [data-blok-popover]) :is(code, kbd, samp, pre) {
   font-family: var(--blok-font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace);
   font-feature-settings: --theme(--default-mono-font-feature-settings, normal);

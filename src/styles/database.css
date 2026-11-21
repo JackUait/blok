@@ -15612,10 +15612,13 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-panel-value-text);
 }
 
-/* r20-cc-is-parts.raw: the "Select..." field ends in a 16x16 ⌄ in rgb(173, 169, 163). */
+/* r20-cc-is-parts.raw: the "Select..." field ends in a 16x16 ⌄ in rgb(173, 169, 163).
+   Round 104 §2: the text is 200 wide; the ⌄ is level with its top, 2 after it and 8 in from the end. */
 button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-field] {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  gap: var(--blok-space-0-5);
+  padding-inline-end: var(--blok-space-2);
 }
 
 [data-blok-database-color-rule-text] {
@@ -15637,9 +15640,11 @@ button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-fie
 }
 
 /* Round 95 §1 #7 (r95-n-condcolor-empty.raw): the intro text is 258 wide at +16, in line with the button under it. */
+/* Round 104 §1 #5: 16 between the text and the button. */
 [data-blok-database-panel-note][data-blok-database-color-blurb] {
   padding-inline: 0;
   margin-inline: var(--blok-space-3);
+  margin-block-end: var(--blok-space-4);
 }
 
 /* r20-cc-intro.raw: a blue 258x28 "New color setting", 14px 500, radius 6; the blue is Blok's AA step of it. */

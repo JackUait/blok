@@ -517,6 +517,11 @@ describe('conditional color intro text', () => {
     expect(body).toContain('padding-inline: 0');
     expect(body).toContain('margin-inline: var(--blok-space-3)');
   });
+
+  // Round 104 §1 #5 (r104-n-cc-empty-light.raw): Notion's wrapper has margin 16px 0, so the button sits 16 under the text.
+  it('leaves 16 between the text and the New color setting button', () => {
+    expect(ruleBody(database, '[data-blok-database-panel-note][data-blok-database-color-blurb]')).toContain('margin-block-end: var(--blok-space-4)');
+  });
 });
 
 // notion-motion.md Round 20 §4 (r20-cc-is-parts.raw): a 16x16 ⌄ in rgb(173, 169, 163) at the "Select..." field's end.
@@ -532,6 +537,18 @@ describe('conditional color value chevron', () => {
 
     expect(svg).toContain('width: 16px');
     expect(svg).toContain('height: 16px');
+  });
+});
+
+// notion-motion.md Round 104 §2 (r104-n-cc-rule-relation-contains-light.raw): "Select..." is 200 wide; the ⌄ is level
+// with its top and ends 8 in from the inner box, 2 after the text.
+describe('conditional color value chevron place (Round 104)', () => {
+  it('tops the text and the chevron together and keeps the chevron 8 in from the field end', () => {
+    const field = ruleBody(database, 'button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-field]');
+
+    expect(field).toContain('align-items: flex-start');
+    expect(field).toContain('padding-inline-end: var(--blok-space-2)');
+    expect(field).toContain('gap: var(--blok-space-0-5)');
   });
 });
 

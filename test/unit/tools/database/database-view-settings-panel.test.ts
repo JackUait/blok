@@ -3266,6 +3266,19 @@ describe('view settings panel', () => {
       expect(field?.querySelector('[data-blok-database-color-rule-text]')?.textContent).toBe('tools.database.colorValuePlaceholder');
     });
 
+    // The ⌄ was read on Select, Status, Multi-select, Date, Checkbox and Person only.
+    it('draws no chevron in a Relation rule\'s field', () => {
+      const h = harness({ colorRules: [{ id: 'c1', propertyId: 'rel', operator: 'contains', value: null, color: 'green' }] });
+
+      h.ctx.schema = () => [...schema, { id: 'rel', name: 'Rel', type: 'relation', position: 'b0', relation: { targetDatabaseId: 'x' } }];
+      h.ctx.relatedRows = () => [{ id: 'r1', title: 'Alpha' }];
+      h.open();
+      click('database-settings-color');
+
+      expect(q('database-color-value-c1')).not.toBeNull();
+      expect(q('database-color-value-c1')?.querySelector('[data-blok-database-color-rule-chevron]')).toBeNull();
+    });
+
     // notion-motion.md Round 22 §3: "Select..." on Relation, Created by/time and Last edited by/time too.
     it('reads "Select..." on Relation, Created and Last edited rules while empty', () => {
       const h = harness({ colorRules: [

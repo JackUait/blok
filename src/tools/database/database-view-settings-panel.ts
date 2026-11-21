@@ -3330,7 +3330,6 @@ export class ViewSettingsPages {
     const button = document.createElement('button');
     const field = document.createElement('span');
     const label = marked(document.createElement('span'), 'data-blok-database-color-rule-text');
-    const chevron = marked(document.createElement('span'), 'data-blok-database-color-rule-chevron');
     const text = filterValueText(rule, property, (key, vars) => this.ctx.i18n.t(key, vars), (person) => this.personName(person), (row) => this.ctx.relatedRows?.(property).find((r) => r.id === row)?.title, editorLocale(this.ctx.i18n));
     const scoped: ViewSettingsContext = { ...this.ctx, thisPageDatabase: () => null };
 
@@ -3350,10 +3349,15 @@ export class ViewSettingsPages {
 
       if (tokens.length > 0) label.replaceChildren(...tokens);
     }
-    // r20-cc-is-parts.raw: the field ends in a 16x16 ⌄.
-    chevron.setAttribute('aria-hidden', 'true');
-    chevron.innerHTML = IconChevronDown;
-    field.append(label, chevron);
+    field.append(label);
+    // r20-cc-is-parts.raw: the field ends in a 16x16 ⌄. Other types are unread.
+    if (CHEVRON_VALUE_TYPES.includes(property.type)) {
+      const chevron = marked(document.createElement('span'), 'data-blok-database-color-rule-chevron');
+
+      chevron.setAttribute('aria-hidden', 'true');
+      chevron.innerHTML = IconChevronDown;
+      field.append(chevron);
+    }
     button.append(field);
     button.addEventListener('click', () => openRuleValueFlyout(button, panel, scoped, read, save, COLOR_VALUE_FLYOUT_WIDTH, COLOR_VALUE_FLYOUT_GAP, true));
 
@@ -3615,6 +3619,9 @@ const SELECT_PLACEHOLDER_TYPES: readonly PropertyType[] = [
   'select', 'status', 'multiSelect', 'date', 'checkbox', 'person',
   'relation', 'createdBy', 'createdTime', 'lastEditedBy', 'lastEditedTime',
 ];
+
+/** notion-motion.md Round 21 §1: the colour rule value types read with a ⌄ at the field's end. */
+const CHEVRON_VALUE_TYPES: readonly PropertyType[] = ['select', 'status', 'multiSelect', 'date', 'checkbox', 'person'];
 
 /** notion-motion.md Round 21 §1 (r21-cc-ms-bg.raw): Multi-select's switch reads "Match first option". */
 const matchOptionLabelKey = (property: PropertyDefinition | undefined): string =>

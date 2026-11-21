@@ -157,18 +157,21 @@ describe('board: column pill rename popup', () => {
     await vi.waitFor(() => expect(pill()).toHaveFocus());
   });
 
-  // Notion is unread here; a typed name is kept, as the old in-pill field kept it on blur.
-  it('a click outside commits a typed name', async () => {
+  // notion-motion.md Round 100 §1 #1 (r100-n-outside-click.raw): a click outside drops the typed name.
+  it('a click outside drops a typed name, and the pill takes focus back', async () => {
     pill()?.click();
     await quiet();
     await type('Review');
     document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    // A real mousedown on the page then moves focus to the body.
+    (document.activeElement as HTMLElement | null)?.blur();
     document.body.click();
     await quiet();
 
     await vi.waitFor(() => expect(field()).toBeNull());
-    expect(await labels()).toEqual(['Review']);
-    expect(pill()?.textContent).toBe('Review');
+    expect(await labels()).toEqual(['Todo']);
+    expect(pill()?.textContent).toBe('Todo');
+    expect(pill()).toHaveFocus();
   });
 
   it('a click outside with the name cleared keeps the old name', async () => {

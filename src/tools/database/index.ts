@@ -11147,11 +11147,11 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * notion-motion.md Round 98 §1 #1, Round 99 §1 #1-#4: a click, Enter or Space on a column pill, or Enter on a band pill,
-   * opens this under the pill: 4 below it, the name selected, and the same field and "Done ↵" as "+ New group".
-   * `propertyId` is the grouped property: a Status option's popup is 240 wide, a Select one's 300
-   * (a Multi-select's is unread and takes Select's). `done` gets the trimmed name on Done, Enter or a click outside,
-   * and null on Escape or an empty name. Notion's click outside is unread: a typed name is kept, not lost.
+   * notion-motion.md Round 98 §1 #1, Round 99 §1 #1-#4, Round 100 §1 #3-#4: a click, Enter or Space on a column pill
+   * or a band pill opens this under the pill: 4 below it, the name selected, and the same field and "Done ↵" as "+ New group".
+   * `propertyId` is the grouped property: a Status option's popup is 240 wide, a Select or Multi-select one's 300.
+   * `done` gets the trimmed name on Done or Enter, and null on any other close
+   * (Round 100 §1 #1: Notion drops a typed name on a click outside).
    */
   private openGroupRename(pill: HTMLElement, label: string, propertyId: string | undefined, done: (label: string | null) => void): void {
     const result: { label: string | null } = { label: null };
@@ -11160,13 +11160,6 @@ export class DatabaseTool implements BlockTool {
       this.groupMenuPopover?.hide();
     });
     const status = propertyId !== undefined && this.model.getProperty(propertyId)?.type === 'status';
-    const cancel = { escaped: false };
-    // On window in capture: the popover registry closes on Escape in document capture, which runs after it.
-    const onEscape = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') cancel.escaped = true;
-    };
-
-    window.addEventListener('keydown', onEscape, true);
 
     field.input.setAttribute('aria-label', this.api.i18n.t('tools.database.renameColumn'));
     field.input.placeholder = this.api.i18n.t('tools.database.renameGroup');
@@ -11175,12 +11168,26 @@ export class DatabaseTool implements BlockTool {
       minWidth: status ? '240px' : '300px',
       offset: 4,
     });
-    this.groupMenuPopover?.on(PopoverEvent.Closed, () => {
-      const typed = field.input.value.trim();
+    const popover = this.groupMenuPopover;
 
-      window.removeEventListener('keydown', onEscape, true);
+    if (popover === null) return;
+    popover.on(PopoverEvent.Closed, () => {
+      done(result.label);
+      // Round 100 §1 #1: after a click outside, the pill gets focus once the close motion ends.
+      // The click's mousedown moves focus to the body after `done` focused the pill.
+      const target = document.activeElement;
+      const refocus = (): void => {
+        if (popover.isClosing) {
+          requestAnimationFrame(refocus);
 
-      done(result.label ?? (cancel.escaped || typed === '' ? null : typed));
+          return;
+        }
+        if (target instanceof HTMLElement && target.isConnected && (document.activeElement === null || document.activeElement === document.body)) {
+          target.focus();
+        }
+      };
+
+      requestAnimationFrame(refocus);
     });
     field.input.focus();
     field.input.select();

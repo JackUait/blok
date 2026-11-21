@@ -459,6 +459,15 @@ describe('row page property menu (research parity row 9)', () => {
     expect(declared(`${SUB} [data-blok-database-show-as-tile]`, 'flex')).toEqual(['1']);
   });
 
+  // notion-motion.md Round 92 §1 #7 (r92-n-dark-editprop-number.raw): the line over Show as is 268 wide at x 16 of
+  // the 300 flyout, and the Bar tile's track is 59.3 of its 83.3 tile, so it spans the tile inside the 12px padding.
+  it('insets the Show as divider 16 and stretches the Bar tile track, as Notion', () => {
+    expect(declared(`${SUB} [data-blok-popover-item-separator]:has(+ [data-blok-item-name='showAs'])`, 'padding-inline')).toEqual(['var(--blok-space-3)']);
+    expect(declared(`${SUB} [data-blok-database-show-as-tile="bar"] > [data-blok-database-show-as-glyph]`, 'align-self')).toEqual(['stretch']);
+    expect(declared(`${SUB} [data-blok-database-show-as-tile="bar"] > [data-blok-database-show-as-glyph]`, 'inline-size')).toEqual(['auto']);
+    expect(declared(`${SUB} [data-blok-database-show-as-tile="bar"] [data-blok-database-number-bar]`, 'inline-size')).toEqual(['100%']);
+  });
+
   // notion-spec-2 §9: Notion's Color value is swatch, name, then a down chevron 8px after the name.
   // The turn sits on the svg, so it also replaces the RTL mirror (a down chevron needs none).
   it('draws the Color row\'s chevron pointing down, 8px after the name', () => {

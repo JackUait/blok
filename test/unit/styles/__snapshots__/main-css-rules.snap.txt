@@ -4905,6 +4905,7 @@ span[data-blok-slash-search] {
   --blok-database-builder-tile-ring: var(--blok-database-drawer-border);
   --blok-database-builder-tile-text: rgb(115, 114, 110);
   --blok-database-builder-tile-text-active: rgb(29, 27, 22);
+  --blok-database-show-as-tile-text: var(--blok-database-builder-tile-text);
   --blok-database-calendar-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-calendar-day-text: rgb(44, 44, 43);
   --blok-database-calendar-nav-icon: rgb(142, 139, 134);
@@ -5232,6 +5233,7 @@ span[data-blok-slash-search] {
   --blok-database-builder-tile-ring: rgb(55, 55, 55);
   --blok-database-builder-tile-text: var(--blok-database-ink-tertiary);
   --blok-database-builder-tile-text-active: rgb(255, 255, 255);
+  --blok-database-show-as-tile-text: var(--blok-database-ink-secondary);
   --blok-database-calendar-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-calendar-day-text: rgb(240, 239, 237);
   --blok-database-calendar-nav-icon: rgb(173, 169, 163);
@@ -5555,6 +5557,7 @@ span[data-blok-slash-search] {
   --blok-database-builder-tile-ring: rgb(55, 55, 55);
   --blok-database-builder-tile-text: var(--blok-database-ink-tertiary);
   --blok-database-builder-tile-text-active: rgb(255, 255, 255);
+  --blok-database-show-as-tile-text: var(--blok-database-ink-secondary);
   --blok-database-calendar-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-calendar-day-text: rgb(240, 239, 237);
   --blok-database-calendar-nav-icon: rgb(173, 169, 163);
@@ -12553,6 +12556,19 @@ textarea[data-blok-database-cell-input] {
   flex: 1;
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-separator]:has(+ [data-blok-item-name='showAs']) {
+  padding-inline: var(--blok-space-3);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-database-show-as-tile="bar"] > [data-blok-database-show-as-glyph] {
+  align-self: stretch;
+  inline-size: auto;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-database-show-as-tile="bar"] [data-blok-database-number-bar] {
+  inline-size: 100%;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-database-property-menu-note], [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-database-property-menu-note] {
   line-height: 18px;
 }
@@ -12677,7 +12693,7 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control);
   background-color: transparent;
   box-shadow: 0 0 0 1px var(--blok-database-card-ring);
-  color: var(--blok-database-builder-tile-text);
+  color: var(--blok-database-show-as-tile-text);
   font: inherit;
   font-size: 12px;
   line-height: 1;

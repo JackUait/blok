@@ -89,21 +89,24 @@ test('the hidden ⋯ and + take no pointer, and the keyboard still reaches and s
   expect(await hitsCentre(more)).toBe(false);
   expect(await hitsCentre(add)).toBe(false);
 
-  // Blok keeps Tab outside a keyboard owner, so the way in is Shift+Tab out of the cards.
-  await column.locator('[data-blok-database-card]').first().focus();
-  await page.keyboard.press('Shift+Tab');
+  // notion-motion.md Round 97 §1 #1: Tab goes on from the count to the ⋯ and +.
+  await column.getByTestId('database-column-count').focus();
+  await page.keyboard.press('Tab');
+  await expect(more).toBeFocused();
+  await page.keyboard.press('Tab');
 
   await expect(add).toBeFocused();
   await expect(actions).toHaveCSS('opacity', '1');
   expect(await hitsCentre(add)).toBe(true);
 });
 
-test('the header holds only the count, ⋯ and +', async ({ page }) => {
+// The pill is a button too (Round 97 §1 #1): it renames the group.
+test('the header holds only the pill, count, ⋯ and +', async ({ page }) => {
   await mount(page);
   const header = page.locator('[data-blok-database-column][data-option-id="o-todo"] [data-blok-database-column-header]');
 
   await header.hover();
-  await expect(header.getByRole('button')).toHaveCount(3);
+  await expect(header.getByRole('button')).toHaveCount(4);
   await expect(page.getByRole('button', { name: 'Delete column' })).toHaveCount(0);
 });
 

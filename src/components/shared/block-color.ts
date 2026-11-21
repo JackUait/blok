@@ -28,23 +28,50 @@ export interface BlockColorData {
 }
 
 /**
+ * Options for {@link applyBlockColor}.
+ */
+export interface ApplyBlockColorOptions {
+  /** Pass false for a block that shapes its own fill. Default true. */
+  hang?: boolean;
+}
+
+/**
  * Apply (or clear) block-level text/background color on a rendered element.
  * Idempotent: passing data without a field removes that inline style.
  * @param element - the block's content element
  * @param data - the block's color data
+ * @param options - how the fill is shaped
  */
-export const applyBlockColor = (element: HTMLElement, data: BlockColorData): void => {
+export const applyBlockColor = (element: HTMLElement, data: BlockColorData, options: ApplyBlockColorOptions = {}): void => {
   if (data.textColor) {
     element.style.setProperty('color', colorVarName(data.textColor, 'text'));
   } else {
     element.style.removeProperty('color');
   }
 
-  if (data.backgroundColor) {
-    element.style.setProperty('background-color', colorVarName(data.backgroundColor, 'bg'));
-  } else {
+  if (!data.backgroundColor) {
     element.style.removeProperty('background-color');
+    element.style.removeProperty('border-radius');
+    element.style.removeProperty('box-shadow');
+
+    return;
   }
+
+  const fill = colorVarName(data.backgroundColor, 'bg');
+
+  element.style.setProperty('background-color', fill);
+
+  if (options.hang === false) {
+    return;
+  }
+
+  // Shadows, not padding: the fill reaches past the block and the text does not move.
+  // Two side shadows of a rounded box make one wider rounded box.
+  element.style.setProperty('border-radius', 'var(--blok-radius-control-sm)');
+  element.style.setProperty(
+    'box-shadow',
+    `var(--blok-space-0-5) 0 0 ${fill}, calc(-1 * var(--blok-space-0-5)) 0 0 ${fill}`
+  );
 };
 
 /**

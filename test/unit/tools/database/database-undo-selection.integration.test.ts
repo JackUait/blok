@@ -665,6 +665,16 @@ describe('row selection after undo', () => {
     expect(picked('board')).toEqual(['r3']);
   });
 
+  // notion-motion.md Round 94 §1 #2 (r94-n-list-selbar.raw): a List drop shows no "N selected" bar, as Board and Calendar.
+  it('shows no selection bar after a list drop', async () => {
+    await make('list');
+
+    await dragItemToTop('list', 'r3');
+
+    expect(document.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
+    expect(picked('list')).toEqual(['r3']);
+  });
+
   // notion-motion.md Round 93 §1 #2 (r93-n-caret-bdrag.raw): the drop clears the caret, so Escape clears the item.
   it.each([
     ['board', 'board-one-group'],

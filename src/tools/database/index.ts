@@ -11612,6 +11612,8 @@ export class DatabaseTool implements BlockTool {
     }
 
     releaseCaret();
+    // notion-motion.md Round 94 §1 #2: the dropped row shows no bar, as on a board or calendar.
+    this.barlessRowId = rowId;
     // Picked before the write, so the step records it and its undo picks the row again.
     this.selectRows([rowId]);
     this.placeRow(this.shownView(), rowId, afterRowId, beforeRowId);

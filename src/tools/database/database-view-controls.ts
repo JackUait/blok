@@ -76,7 +76,7 @@ export interface ViewControlsHost {
   /** A linked view: its lock reads "Lock views". */
   linked?: () => boolean;
   /** The block's "Show data source titles" (Layout page). */
-  dataSourceTitles?: { shown: () => boolean; toggle: () => void };
+  dataSourceTitles?: { shown: () => boolean; toggle: () => void; views?: () => number };
   duplicateView: () => void;
   deleteView: () => void;
   copyViewLink: () => void;

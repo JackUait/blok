@@ -2700,13 +2700,20 @@
   content: none;
 }
 
-/* "Drag image to reposition": 180×25.2 at the cover's centre. Centred by auto margins, so RTL needs nothing. */
+/* "Drag image to reposition": 180×25.2 at the cover's centre. Centred by auto margins, so RTL needs nothing.
+   180 is a floor, not a cap: most locales run past English's 139.2 of text and widen it instead of being cut. */
 [data-blok-database-drawer-cover-hint] {
   position: absolute;
   inset: 0;
+  box-sizing: border-box;
   inline-size: fit-content;
+  min-inline-size: 180px;
+  max-inline-size: 100%;
   block-size: fit-content;
   margin: auto;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
   padding: 3.6px var(--blok-space-4-5);
   border-radius: var(--blok-radius-control-sm);
   background: var(--blok-page-cover-hint-bg, rgba(0, 0, 0, 0.4));

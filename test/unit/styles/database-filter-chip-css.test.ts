@@ -359,4 +359,20 @@ describe('property and group list drag', () => {
     expect(declared(`[data-blok-database-panel-page="${page}"] [data-blok-database-panel-list-item]:not([data-dragging])`, 'transition').at(0)).toBe('top 200ms ease');
     expect(declared(`[data-blok-database-panel-page="${page}"] [data-blok-database-panel-list-item]`, 'top')).toEqual(['0']);
   });
+
+  // Round 92 §1 #4: a 16 handle glyph at +13 (y+6), the pill at +36, on rows 4 in from the panel.
+  it('puts the group handle glyph at +13 and the pill at +36', () => {
+    expect(declared('[data-blok-database-panel-page="group"] [data-blok-database-panel-list-item]', 'padding-inline-start')).toEqual(['var(--blok-space-2)']);
+    expect(declared('[data-blok-database-panel-page="group"] [data-blok-database-panel-handle] svg', 'width')).toEqual(['16px']);
+    expect(declared('[data-blok-database-panel-page="group"] [data-blok-database-group-visibility-row]', 'padding-inline-start')).toEqual(['var(--blok-space-1-5)']);
+  });
+
+  // Round 8c (motion-r8c-hidegroup.json): the handle is rgb(142,139,134), the pin's ink.
+  it('inks the group handle like the pin', () => {
+    expect(declared('[data-blok-database-panel-page="group"] [data-blok-database-panel-handle]', 'color')).toEqual(['var(--blok-database-table-header-icon)']);
+  });
+
+  it('keeps a fixed row\'s handle as an unseen spacer', () => {
+    expect(declared('[data-blok-database-panel-handle][data-fixed]', 'visibility')).toEqual(['hidden']);
+  });
 });

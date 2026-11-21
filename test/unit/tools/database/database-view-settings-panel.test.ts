@@ -2141,6 +2141,47 @@ describe('view settings panel', () => {
       .toBe(true);
   });
 
+  // notion-motion.md Round 92 §1 #4 (r92-n-grp-drag-down.raw): each group row has a drag handle, hidden rows too. Shown
+  // and hidden rows reorder in their own lists, and a move names both new neighbours.
+  it('moves a group by its handle, naming the groups it lands between', () => {
+    const h = harness({ type: 'board', groupBy: 'stage', hiddenGroups: [{ id: 'o3' }] });
+    const move = vi.fn();
+
+    h.ctx.groups = () => ['o1', 'o2', 'o3', 'none'].map((key) => ({ key, label: key, count: 0 }));
+    h.ctx.moveGroup = { enabled: () => true, move };
+    h.open('group');
+    const lists = (): string[][] => [...document.querySelectorAll('[data-blok-testid="database-group-list"]')]
+      .map((list) => [...list.querySelectorAll('[data-item-id]')].map((item) => item.getAttribute('data-item-id') ?? ''));
+    const alt = (key: string, arrow: string): void => {
+      document.querySelector(`[data-blok-testid="database-group-list-handle-${key}"]`)
+        ?.dispatchEvent(new KeyboardEvent('keydown', { key: arrow, altKey: true, bubbles: true }));
+    };
+
+    expect(lists()).toEqual([['o1', 'o2', 'none'], ['o3']]);
+    alt('o1', 'ArrowDown');
+    expect(move).toHaveBeenLastCalledWith('o1', 'none', 'o2');
+    alt('o2', 'ArrowDown');
+    expect(move).toHaveBeenLastCalledWith('o2', null, 'none');
+    alt('o2', 'ArrowUp');
+    expect(move).toHaveBeenLastCalledWith('o2', 'o1', null);
+  });
+
+  it('has no group handles when the groups cannot move or the view is locked', () => {
+    const h = harness({ type: 'board', groupBy: 'stage' });
+
+    h.ctx.moveGroup = { enabled: () => false, move: vi.fn() };
+    const panel = h.open('group');
+
+    expect(document.querySelector('[data-blok-testid^="database-group-list-handle-"]')).toBeNull();
+    panel.close();
+    h.ctx.moveGroup = { enabled: () => true, move: vi.fn() };
+    h.state.locked = true;
+    h.open('group');
+
+    expect(document.querySelector('[data-blok-testid^="database-group-list-handle-"]')).toBeNull();
+    expect(document.querySelectorAll('[data-blok-database-group-visibility-row]')).toHaveLength(2);
+  });
+
   // notion-motion.md Round 24 §1 (r24-grp.raw, r24-pinpz.raw): a board group row has a 24px "Pin group" button before
   // its eye. A click pins it and the button reads "Unpin group".
   it('pins a board group from its row and unpins it again', () => {

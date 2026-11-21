@@ -15063,6 +15063,30 @@ button[data-blok-database-table-group-count]:hover {
   height: 14px;
 }
 
+/* A row that keeps its place holds its handle's room so its name lines up. */
+[data-blok-database-panel-handle][data-fixed] {
+  visibility: hidden;
+}
+
+/* notion-motion.md Round 92 §1 #4: a group row's 16 handle glyph at +13 (y+6), its pill at +36. */
+[data-blok-database-panel-page="group"] [data-blok-database-panel-list-item] {
+  padding-inline-start: var(--blok-space-2);
+}
+
+/* Round 8c: the handle is rgb(142,139,134), the pin's ink. */
+[data-blok-database-panel-page="group"] [data-blok-database-panel-handle] {
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-panel-page="group"] [data-blok-database-panel-handle] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-panel-page="group"] [data-blok-database-group-visibility-row] {
+  padding-inline-start: var(--blok-space-1-5);
+}
+
 /* notion-motion.md Round 20 §4: a 12x22 handle on the card's left edge (x - 8), shown on hover.
    Its top is unmeasured: level with the card's header. */
 [data-blok-database-color-rules] [data-blok-database-panel-list-item] {

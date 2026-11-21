@@ -7570,6 +7570,16 @@ export class DatabaseTool implements BlockTool {
         previewForm: () => this.openFormPreview(this.activeViewId),
       } : {}),
       groups: (sub) => this.groupEntries(sub),
+      // notion-motion.md Round 92 §1 #4: the Group page moves a group as a board column drop does.
+      ...(context === undefined ? {
+        moveGroup: {
+          enabled: () => this.groupsMovable(),
+          move: (key: string, beforeKey: string | null, afterKey: string | null) => {
+            this.handleGroupDrop({ optionId: key, beforeOptionId: beforeKey, afterOptionId: afterKey });
+            this.rerenderView({ keepDrawer: true });
+          },
+        },
+      } : {}),
       rerender: () => context === undefined ? this.rerenderView({ keepDrawer: true }) : context.redraw(),
       // The source draws the view, so it holds the layout rows, the export and the row page layout.
       layoutItems: () => data().layoutItems(),
@@ -7705,6 +7715,22 @@ export class DatabaseTool implements BlockTool {
     const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === groupBy);
 
     return property !== undefined && this.computedValues.valueProperty(property).type === 'checkbox' ? property.name : undefined;
+  }
+
+  /**
+   * A drop would show: the view groups by options of its own data, in their saved order (manual, or a Status in its
+   * workflow order), as a board column drag needs. A Status grouped by its groups has no options to move.
+   */
+  private groupsMovable(): boolean {
+    const view = this.shownView();
+    const property = view?.groupBy === undefined ? undefined : this.model.getProperty(view.groupBy);
+
+    if (view === undefined || property === undefined || !this.isOptionGroup(property.id) || this.readOnly || this.structureLocked() || this.activeSource() !== this) return false;
+    const sort = view.groupSettings?.sort ?? defaultGroupSort(property.type);
+
+    if (property.type === 'status') return view.groupByStatus !== 'group' && (sort === 'manual' || sort === 'ascending');
+
+    return sort === 'manual';
   }
 
   private groupEntries(sub: boolean): ViewGroupEntry[] {

@@ -577,10 +577,11 @@ export const panelInput = (options: {
 /**
  * A list whose rows reorder by dragging their ⋮⋮ handle, or with Alt+Arrow
  * keys on the handle. `onMove(id, beforeId)` gets `null` for "to the end".
+ * A `fixed` row keeps its place: its handle is an inert, unseen spacer, but others move past it.
  */
 export const panelReorderList = (options: {
   testId: string;
-  items: Array<{ id: string; element: HTMLElement }>;
+  items: Array<{ id: string; element: HTMLElement; fixed?: boolean }>;
   handleLabel: string;
   onMove: (id: string, beforeId: string | null) => void;
 }): HTMLElement => {
@@ -600,7 +601,7 @@ export const panelReorderList = (options: {
     options.onMove(id, rest[to] ?? null);
   };
 
-  for (const { id, element } of options.items) {
+  for (const { id, element, fixed } of options.items) {
     const row = document.createElement('div');
     const handle = document.createElement('button');
 
@@ -609,15 +610,21 @@ export const panelReorderList = (options: {
     handle.type = 'button';
     handle.setAttribute('data-blok-database-panel-handle', '');
     handle.setAttribute('data-blok-testid', `${options.testId}-handle-${id}`);
-    handle.setAttribute('aria-label', options.handleLabel);
     handle.innerHTML = IconMenu;
-    handle.addEventListener('keydown', (event) => {
-      if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
-      event.preventDefault();
-      event.stopPropagation();
-      moveBy(id, event.key === 'ArrowUp' ? -1 : 1);
-    });
-    handle.addEventListener('pointerdown', (event) => startReorderDrag(event, list, id, options.onMove));
+    if (fixed === true) {
+      handle.disabled = true;
+      handle.setAttribute('data-fixed', '');
+      handle.setAttribute('aria-hidden', 'true');
+    } else {
+      handle.setAttribute('aria-label', options.handleLabel);
+      handle.addEventListener('keydown', (event) => {
+        if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
+        event.preventDefault();
+        event.stopPropagation();
+        moveBy(id, event.key === 'ArrowUp' ? -1 : 1);
+      });
+      handle.addEventListener('pointerdown', (event) => startReorderDrag(event, list, id, options.onMove));
+    }
     row.append(handle, element);
     list.appendChild(row);
   }

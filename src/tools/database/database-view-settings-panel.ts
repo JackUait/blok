@@ -72,6 +72,7 @@ import {
   withPropertyOrder,
   withPropertyVisibility,
 } from './view-settings';
+import { NO_VALUE_GROUP_KEY } from './database-model';
 import type { ViewChanges } from './database-model';
 import type {
   ColorRule,
@@ -148,6 +149,11 @@ export interface ViewSettingsContext {
   manageInCalendar?: { label: string; onClick: () => void };
   /** The groups of the view's grouping (`sub` for the board's sub-grouping). */
   groups: (sub: boolean) => ViewGroupEntry[];
+  /**
+   * Moves a group of the view's grouping as a board column drop does: `afterKey` and `beforeKey` are its new
+   * neighbours. `enabled` is false where a drop would not show (a sorted grouping, no option groups).
+   */
+  moveGroup?: { enabled: () => boolean; move: (key: string, beforeKey: string | null, afterKey: string | null) => void };
   /** People the host lists, for person filters. */
   people?: () => Array<{ id: string; name: string }>;
   /** Rows a relation can point at, for relation filters. */
@@ -2958,26 +2964,45 @@ export class ViewSettingsPages {
           ...withGroupFlags(this.ctx.view(), groups.map((g) => stateKey(g.key)), { hidden: !allHidden }),
         })));
         header.append(panelLabel(this.t('groupGroups')), hideAll);
-        rows.push(
-          panelSeparator(),
-          header,
-          // notion-motion.md Round 82 (r82-n-a2-hidden-eye.raw): hidden groups are listed last. The saved order stays.
-          ...[...groups.filter((g) => !hidden(g.key)), ...groups.filter((g) => hidden(g.key))].map((group) => {
-            const row = this.groupVisibilityRow(group, hidden(group.key), disabled, refreshAfter(() => this.ctx.updateView({
-              ...withGroupFlags(this.ctx.view(), [stateKey(group.key)], { hidden: !hidden(group.key) }),
-            })), view.type === 'board' && !sub ? {
-              pinned: isGroupPinned(this.ctx.view(), group.key),
-              onToggle: refreshAfter(() => this.ctx.updateView({
-                ...withGroupFlags(this.ctx.view(), [group.key], { pinned: !isGroupPinned(this.ctx.view(), group.key) }),
-              })),
-            } : undefined);
+        rows.push(panelSeparator(), header);
+        const groupRow = (group: ViewGroupEntry): HTMLElement => {
+          const row = this.groupVisibilityRow(group, hidden(group.key), disabled, refreshAfter(() => this.ctx.updateView({
+            ...withGroupFlags(this.ctx.view(), [stateKey(group.key)], { hidden: !hidden(group.key) }),
+          })), view.type === 'board' && !sub ? {
+            pinned: isGroupPinned(this.ctx.view(), group.key),
+            onToggle: refreshAfter(() => this.ctx.updateView({
+              ...withGroupFlags(this.ctx.view(), [group.key], { pinned: !isGroupPinned(this.ctx.view(), group.key) }),
+            })),
+          } : undefined);
 
-            // Round 82: Status group names keep 14/400, the rest are 14/500 (database.css).
-            row.toggleAttribute('data-status', property.type === 'status');
+          // Round 82: Status group names keep 14/400, the rest are 14/500 (database.css).
+          row.toggleAttribute('data-status', property.type === 'status');
 
-            return row;
-          }),
-        );
+          return row;
+        };
+        // notion-motion.md Round 82 (r82-n-a2-hidden-eye.raw): hidden groups are listed last. The saved order stays.
+        const sections = [groups.filter((g) => !hidden(g.key)), groups.filter((g) => hidden(g.key))].filter((section) => section.length > 0);
+        const mover = sub || disabled ? undefined : this.ctx.moveGroup;
+
+        if (mover === undefined || !mover.enabled()) {
+          rows.push(...sections.flat().map(groupRow));
+        } else {
+          // Round 92 §1 #4: every row has a handle, hidden ones too (Round 23, r23-grp.raw). Shown and hidden rows
+          // are two lists: their neighbours across the split are not neighbours in the saved order.
+          rows.push(...sections.map((section) => panelReorderList({
+            testId: 'database-group-list',
+            handleLabel: this.t('settingsDragToReorder'),
+            // A board cannot move its no-value column either.
+            items: section.map((group) => ({ id: group.key, element: groupRow(group), fixed: group.key === NO_VALUE_GROUP_KEY })),
+            onMove: (key, beforeKey) => {
+              const rest = section.map((group) => group.key).filter((other) => other !== key);
+              const after = beforeKey === null ? rest.at(-1) : rest[rest.indexOf(beforeKey) - 1];
+
+              mover.move(key, beforeKey, after ?? null);
+              panel.refresh();
+            },
+          })));
+        }
         if (view.type !== 'board' || sub) {
           rows.push(panelSeparator(), panelRow({
             label: this.t('groupRemove'),

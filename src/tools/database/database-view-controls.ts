@@ -85,6 +85,8 @@ export interface ViewControlsHost {
   /** "Manage in Calendar": only when the host gave `config.calendar`. */
   manageInCalendar?: { label: string; onClick: () => void };
   groups: (sub: boolean) => ViewGroupEntry[];
+  /** Moves a group from View settings › Group, as a board column drop does. */
+  moveGroup?: ViewSettingsContext['moveGroup'];
   /** Redraws the active view after a personal edit or a search. */
   rerender: () => void;
   /** The active gallery or calendar view's layout rows. */
@@ -979,6 +981,7 @@ export class DatabaseViewControls {
       copyViewLink: () => this.host.copyViewLink(),
       ...(this.host.manageInCalendar !== undefined ? { manageInCalendar: this.host.manageInCalendar } : {}),
       groups: (sub) => this.host.groups(sub),
+      ...(this.host.moveGroup !== undefined ? { moveGroup: this.host.moveGroup } : {}),
       people: () => this.host.people?.() ?? [],
       ...(this.host.relatedRows !== undefined ? { relatedRows: this.host.relatedRows } : {}),
       ...(this.host.thisPageDatabase !== undefined ? { thisPageDatabase: this.host.thisPageDatabase } : {}),

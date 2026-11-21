@@ -7671,6 +7671,32 @@ describe('DatabaseTool — board sub-group lanes', () => {
     tool.destroy();
   });
 
+  // notion-motion.md Round 96 §1 #3 (r96-n-subgroup-only-drop.raw): a drop that only changes the lane leaves focus on body.
+  it.each([
+    ['unsorted', {}],
+    ['sorted', sorted],
+  ] as const)('an %s drop into another lane of the same column leaves focus on body', (_label, view) => {
+    const { tool, element } = mount(view);
+    const card = element.querySelector<HTMLElement>('[data-blok-database-card][data-row-id="row-1"]');
+
+    card?.focus();
+    drop(tool, { rowId: 'row-1', toOptionId: 'opt-todo', toSubGroup: 'team-b', beforeRowId: null, afterRowId: 'row-2' });
+
+    expect(document.body).toHaveFocus();
+
+    tool.destroy();
+  });
+
+  it('a drop in its own column and lane focuses the card', () => {
+    const { tool, element } = mount();
+
+    drop(tool, { rowId: 'row-1', toOptionId: 'opt-todo', toSubGroup: 'team-a', beforeRowId: null, afterRowId: null });
+
+    expect(element.querySelector('[data-blok-database-card][data-row-id="row-1"]')).toHaveFocus();
+
+    tool.destroy();
+  });
+
   it('a sorted drop into another column and lane writes both values without asking', () => {
     const children = rows();
     const { tool } = mount(sorted, children);

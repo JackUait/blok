@@ -11698,9 +11698,14 @@ export class DatabaseTool implements BlockTool {
     const sameGroup = fromRow !== undefined
       && this.model.groupKeysOf(groupByPropId, { statusBy: viewConfig?.groupByStatus, settings: viewConfig?.groupSettings })(fromRow).includes(toOptionId);
     const subGroupBy = viewConfig?.subGroupBy;
-    const subChange: Record<string, PropertyValue> = subGroupBy !== undefined && subGroupBy !== groupByPropId && result.toSubGroup !== undefined
-      ? { [subGroupBy]: this.droppedSubGroupValue(subGroupBy, rowId, result.toSubGroup) }
+    const toSubGroup = subGroupBy !== undefined && subGroupBy !== groupByPropId ? result.toSubGroup : undefined;
+    const subChange: Record<string, PropertyValue> = subGroupBy !== undefined && toSubGroup !== undefined
+      ? { [subGroupBy]: this.droppedSubGroupValue(subGroupBy, rowId, toSubGroup) }
       : {};
+    // notion-motion.md Round 96 §1 #3: a drop into another lane of the same column leaves body too.
+    const sameLane = subGroupBy === undefined || toSubGroup === undefined || (fromRow !== undefined
+      && this.model.groupKeysOf(subGroupBy, { settings: viewConfig?.subGroupSettings ?? {} })(fromRow).includes(toSubGroup));
+    const focusCard = sameGroup && sameLane;
 
     // notion-motion.md Round 13: a sorted board never asks and never writes a place.
     // The card takes the new group's value and lands where the sort puts it, so a
@@ -11713,7 +11718,7 @@ export class DatabaseTool implements BlockTool {
       }
       this.writeRowValues(rowId, sortedChanges);
       this.landRow(rowId);
-      if (sameGroup) this.focusLandedItem(rowId);
+      if (focusCard) this.focusLandedItem(rowId);
 
       return;
     }
@@ -11729,7 +11734,7 @@ export class DatabaseTool implements BlockTool {
     });
     this.rerenderView();
     this.landRow(rowId);
-    if (sameGroup) this.focusLandedItem(rowId);
+    if (focusCard) this.focusLandedItem(rowId);
   }
 
   /** The sorts this person sees: their own (D4) or the saved ones. */

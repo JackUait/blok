@@ -3330,6 +3330,13 @@ button[data-blok-database-board-lane-count]:hover {
   outline: none;
 }
 
+/* notion-motion.md Round 99 #6: right under the title, the tabs 16 under it (12 + the tab bar's 4).
+   The -8 cancels the title's 8px margin in page-title.css. A header in a TitleConfig.holder elsewhere does not match. */
+[data-blok-database-page] > [data-blok-database-description] { margin-block-end: var(--blok-space-3); }
+[data-blok-page-header][data-blok-page-full-database] ~ [data-blok-redactor] [data-blok-database-page] > [data-blok-database-description] {
+  margin-block-start: calc(-1 * var(--blok-space-2));
+}
+
 /* Notion's long title is one line with an ellipsis (notion-motion.md, Round 7, Round 8b).
    :not([hidden]) keeps a title that fullPage or Hide title hid hidden: these displays would show it. */
 [data-blok-database-title-row] > [data-blok-database-title]:not([hidden]) {

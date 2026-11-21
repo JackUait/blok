@@ -81,5 +81,23 @@ describe('page title css', () => {
       expect(title).toMatch(/padding-block: 0/);
       expect(title).toMatch(/margin-block-end: var\(--blok-space-2\)/);
     });
+
+    // notion-motion.md Round 99 #9: Notion's title text starts at the tab box x.
+    it('puts the title text in line with the tabs', () => {
+      expect(body('[data-blok-page-header][data-blok-page-full-database] [data-blok-page-title]')).toMatch(/padding-inline: 0/);
+    });
+
+    // notion-motion.md Round 99 #6: the description sits right under the title, the tabs 16 under it.
+    it('puts the description right under the title and the tabs 16 under it', () => {
+      const database = readFileSync('src/styles/database.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
+      const selector = '[data-blok-page-header][data-blok-page-full-database] ~ [data-blok-redactor] [data-blok-database-page] > [data-blok-database-description]';
+      const at = database.indexOf(` ${selector} {`);
+
+      expect(at, selector).toBeGreaterThan(-1);
+      const rule = database.slice(at, database.indexOf('}', at));
+
+      expect(rule).toMatch(/margin-block-start: calc\(-1 \* var\(--blok-space-2\)\)/);
+      expect(database).toMatch(/ \[data-blok-database-page\] > \[data-blok-database-description\] \{ margin-block-end: var\(--blok-space-3\); \}/);
+    });
   });
 });

@@ -7370,6 +7370,14 @@ button[data-blok-database-board-lane-count]:hover {
   outline: none;
 }
 
+[data-blok-database-page] > [data-blok-database-description] {
+  margin-block-end: var(--blok-space-3);
+}
+
+[data-blok-page-header][data-blok-page-full-database] ~ [data-blok-redactor] [data-blok-database-page] > [data-blok-database-description] {
+  margin-block-start: calc(-1 * var(--blok-space-2));
+}
+
 [data-blok-database-title-row] > [data-blok-database-title]:not([hidden]) {
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -31471,6 +31479,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-page-header][data-blok-page-full-database] [data-blok-page-title] {
   padding-block: 0;
+  padding-inline: 0;
   margin-block-end: var(--blok-space-2);
 }
 

@@ -147,10 +147,13 @@
 }
 
 /* Over a full-page database: 32px with no block padding, tabs 12 under it (the tab bar's own 4px + 8).
-   Set on the header so the narrow tiers below still win. notion-motion.md Round 86, row 27/73. */
+   Set on the header so the narrow tiers below still win. notion-motion.md Round 86, row 27/73.
+   No inline padding: the text starts at the tabs' x (Round 99 #9). database.css cancels the 8px
+   under the title when a description shows. */
 [data-blok-page-header][data-blok-page-full-database] { --blok-page-title-size: 32px; }
 [data-blok-page-header][data-blok-page-full-database] [data-blok-page-title] {
   padding-block: 0;
+  padding-inline: 0;
   margin-block-end: var(--blok-space-2);
 }
 

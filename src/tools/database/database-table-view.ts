@@ -2375,8 +2375,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       ...(placement === undefined ? { kind: 'row' } : { kind: 'card', coverFlipOffset: placement.coverFlipOffset }),
     });
     if (placement !== undefined) {
-      // notion-motion.md Round 103 §1 #5: Escape removes the right-click menu at once, as the ⋮⋮ menu's kind does.
-      if (this.menu !== null) this.menu.escapeClosesAtOnce = true;
+      // notion-motion.md Round 103 §1 #5, Round 104 §1 #1: Escape, a click away and an item click all remove it at once.
+      if (this.menu !== null) this.menu.closesAtOnce = true;
       this.menu?.on(PopoverEvent.Closed, () => placement.anchor.remove());
     }
     // Round 70 §2: Notion focuses the right-clicked cell once the menu closes, Escape too. A row that opened

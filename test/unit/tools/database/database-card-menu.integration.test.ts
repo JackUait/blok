@@ -597,13 +597,31 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       const hideOnEscape = PopoverAbstract.prototype.hideOnEscape;
 
       vi.spyOn(PopoverAbstract.prototype, 'hideOnEscape').mockImplementation(function (this: PopoverAbstract) {
-        atOnce.push(this.escapeClosesAtOnce);
+        atOnce.push(this.closesAtOnce);
         hideOnEscape.call(this);
       });
       rightClickNotes(el);
       (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
 
       expect(atOnce).toEqual([true]);
+    });
+
+    // notion-motion.md Round 104 §1 #1: a click on an item or away from the menu removes it at once too.
+    it('every close of the right-click row menu is instant, an item click included', () => {
+      const { el } = buildTool(focusRow(), {}, tableData(FOCUS_SCHEMA, { type: 'table' }));
+      const atOnce: boolean[] = [];
+      const hide = PopoverAbstract.prototype.hide;
+
+      vi.spyOn(PopoverAbstract.prototype, 'hide').mockImplementation(function (this: PopoverAbstract) {
+        atOnce.push(this.closesAtOnce);
+        hide.call(this);
+      });
+      rightClickNotes(el);
+      itemByTitle('tools.database.tableDuplicate').click();
+
+      expect(atOnce.length).toBeGreaterThan(0);
+      expect(atOnce.every(Boolean)).toBe(true);
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
     });
 
     it('Escape on the row menu keeps the row selected and focuses the right-clicked cell', async () => {

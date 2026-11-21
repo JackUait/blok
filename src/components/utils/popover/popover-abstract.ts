@@ -307,6 +307,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   /** Opt-in, with animateClose: an Escape close skips the close motion; other closes keep it. */
   public escapeClosesAtOnce = false;
 
+  /** Opt-in, with animateClose: every close skips the close motion. */
+  public closesAtOnce = false;
+
   /** True only inside {@link hideOnEscape}. */
   private hidingOnEscape = false;
 
@@ -335,7 +338,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     const mountTarget = this.nodes.popover;
     const alreadyClosing = this.closing !== null;
     const isPromoted = mountTarget !== null && supportsPopoverAPI() && isPromotedToTopLayer(mountTarget);
-    const animates = isPromoted && !alreadyClosing && this.params.animateClose === true && !this.hidingOnEscape && !prefersReducedMotion();
+    const animates = isPromoted && !alreadyClosing && this.params.animateClose === true && !this.closesAtOnce && !this.hidingOnEscape && !prefersReducedMotion();
 
     if (animates) {
       // Hide now, so the UA's own close steps run at once; the attribute and

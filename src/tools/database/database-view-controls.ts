@@ -364,8 +364,11 @@ export class DatabaseViewControls {
       this.hideSearch();
       if (!this.searchButton.hidden) this.searchButton.focus();
     });
-    this.searchInput.addEventListener('blur', () => {
-      if (this.query === '') this.hideSearch();
+    this.searchInput.addEventListener('blur', (event) => {
+      // The folded tabs' pill only shows while the search is open: closing it would pull the pill from under the click.
+      const toPill = event.relatedTarget instanceof Element && event.relatedTarget.closest('[data-blok-database-tab-compact]') !== null;
+
+      if (this.query === '' && !toPill) this.hideSearch();
     });
     this.shareFormButton = button('database-toolbar-share-form', this.t('formShare'), { text: this.t('formShare') });
     this.shareFormButton.setAttribute('data-blok-database-toolbar-share-form', '');
@@ -558,7 +561,16 @@ export class DatabaseViewControls {
 
   /** Shows ⤢ only where it can open. Touches the toolbar alone: a filter bar redraw is a block change. */
   syncFullPage(): void {
-    this.fullPageLink.hidden = this.host.openFullPage?.() === undefined;
+    // notion-motion.md Round 99 §1 #8: an open search beside the tabs hides ⤢. Read only in the view bar.
+    const searching = this.searchShown() && this.toolbar.parentElement?.hasAttribute('data-blok-database-view-bar') === true;
+
+    this.fullPageLink.hidden = searching || this.host.openFullPage?.() === undefined;
+  }
+
+  /** The mark the tab bar's fold reads (database-tab-bar.ts refold), and ⤢. */
+  private syncSearching(): void {
+    this.toolbar.toggleAttribute('data-blok-database-searching', this.searchShown());
+    this.syncFullPage();
   }
 
   /** Syncs the toolbar and filter bar to the active view, and the open panel. */
@@ -1193,6 +1205,7 @@ export class DatabaseViewControls {
       this.searchInput.after(this.searchClear);
       this.searchInput.focus();
       this.syncMinimize();
+      this.syncSearching();
 
       return;
     }
@@ -1200,6 +1213,7 @@ export class DatabaseViewControls {
     this.searchButton.after(this.searchInput, this.searchClear);
     this.searchInput.focus();
     this.syncMinimize();
+    this.syncSearching();
   }
 
   /** Open and not on its way out. */
@@ -1223,6 +1237,7 @@ export class DatabaseViewControls {
       this.finishSearchClose();
     }
     this.syncMinimize();
+    this.syncSearching();
   }
 
   private readonly finishSearchClose = (): void => {

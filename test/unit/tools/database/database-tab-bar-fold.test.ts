@@ -233,6 +233,63 @@ describe('DatabaseTabBar — the view bar folds like Notion (notion-spec-2 §26.
 
     expect(mounted.viewBar.hasAttribute('data-blok-database-fold-new')).toBe(false);
   });
+  // notion-motion.md Round 99 §1 #8 (r99-n-search-open.raw): with search open, two tabs that fit fold into one "Board" pill.
+  // The pill is the "Table ⌄" fold Notion also shows while searching a gallery (Round 24) and with the side peek open (Round 31).
+  describe('while the toolbar search is open', () => {
+    const twoViews = (): DatabaseViewConfig[] => [view('v1', 'Table', 'a0'), view('v2', 'Board', 'a1')];
+
+    it('folds two tabs that fit into one pill naming the current view', () => {
+      const mounted = mount(twoViews(), 'v2');
+
+      mounted.toolbar.setAttribute('data-blok-database-searching', '');
+      layOut(mounted, 1000);
+      fire();
+
+      expect(shownTabs(mounted.el)).toEqual([]);
+      expect(mounted.el.querySelector('[data-blok-database-tab-compact]')?.textContent).toContain('Board');
+      mounted.tabBar.destroy();
+    });
+
+    // notion-motion.md:4360: four tabs while searching showed "Table ⌄", not "N more…".
+    it('takes the pill over "N more…"', () => {
+      const mounted = mount([...threeViews(), view('v4', 'Gallery', 'a3')]);
+
+      mounted.toolbar.setAttribute('data-blok-database-searching', '');
+      layOut(mounted, 543);
+      fire();
+
+      expect(mounted.el.querySelector('[data-blok-database-tab-more]')).toBeNull();
+      expect(mounted.el.querySelector('[data-blok-database-tab-compact]')).not.toBeNull();
+      mounted.tabBar.destroy();
+    });
+
+    it('gives the tabs back once the search closes', () => {
+      const mounted = mount(twoViews());
+
+      mounted.toolbar.setAttribute('data-blok-database-searching', '');
+      layOut(mounted, 1000);
+      fire();
+      mounted.toolbar.removeAttribute('data-blok-database-searching');
+      fire();
+
+      expect(shownTabs(mounted.el)).toEqual(['v1', 'v2']);
+      expect(mounted.el.querySelector('[data-blok-database-tab-compact]')).toBeNull();
+      mounted.tabBar.destroy();
+    });
+
+    it('leaves a single tab as it is', () => {
+      const mounted = mount([view('v1', 'Table', 'a0')]);
+
+      mounted.toolbar.setAttribute('data-blok-database-searching', '');
+      layOut(mounted, 1000);
+      fire();
+
+      expect(shownTabs(mounted.el)).toEqual(['v1']);
+      expect(mounted.el.querySelector('[data-blok-database-tab-compact]')).toBeNull();
+      mounted.tabBar.destroy();
+    });
+  });
+
   describe('the pill\'s views list by keyboard', () => {
     const openList = (): { mounted: Mounted; input: HTMLInputElement } => {
       const mounted = mount();

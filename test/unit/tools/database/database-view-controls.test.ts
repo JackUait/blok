@@ -1048,6 +1048,79 @@ describe('DatabaseViewControls', () => {
     controls.destroy();
   });
 
+  // notion-motion.md Round 99 §1 #8 (r99-n-search-open.raw): with search open beside the tabs, Notion folds the tabs and hides ⤢.
+  describe('search open in the view bar', () => {
+    const inViewBar = (controls: DatabaseViewControls): { viewBar: HTMLElement; pill: HTMLElement } => {
+      const viewBar = document.createElement('div');
+      const tabBar = document.createElement('div');
+      const pill = document.createElement('div');
+
+      viewBar.setAttribute('data-blok-database-view-bar', '');
+      tabBar.setAttribute('data-blok-database-tab-bar', '');
+      pill.setAttribute('data-blok-database-tab-compact', '');
+      pill.tabIndex = 0;
+      tabBar.append(pill);
+      viewBar.append(tabBar, controls.toolbar);
+      document.body.prepend(viewBar);
+
+      return { viewBar, pill };
+    };
+    const openFullPage = (): (() => void) => () => undefined;
+
+    it('marks the toolbar while the search is open, so the tabs fold, and clears it on close', () => {
+      const { controls } = setup({ levers: { openFullPage } });
+
+      inViewBar(controls);
+      click('database-toolbar-search');
+
+      expect(controls.toolbar.hasAttribute('data-blok-database-searching')).toBe(true);
+      q('database-search-input')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(controls.toolbar.hasAttribute('data-blok-database-searching')).toBe(false);
+      controls.destroy();
+    });
+
+    it('hides ⤢ while the search is open and shows it again on close', () => {
+      const { controls } = setup({ levers: { openFullPage } });
+
+      inViewBar(controls);
+      click('database-toolbar-search');
+      const input = q('database-search-input') as HTMLInputElement;
+
+      input.value = 'a';
+      input.dispatchEvent(new Event('input'));
+      controls.refresh();
+
+      expect(q('database-toolbar-full-page')?.hidden).toBe(true);
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(q('database-toolbar-full-page')?.hidden).toBe(false);
+      controls.destroy();
+    });
+
+    // One view puts the toolbar in the title row: Notion's ⤢ there with search open is unread.
+    it('keeps ⤢ in a title row', () => {
+      const { controls } = setup({ levers: { openFullPage } });
+
+      click('database-toolbar-search');
+
+      expect(q('database-toolbar-full-page')?.hidden).toBe(false);
+      controls.destroy();
+    });
+
+    it('stays open when an empty search hands the focus to the folded pill', () => {
+      const { controls } = setup({ levers: { openFullPage } });
+      const { pill } = inViewBar(controls);
+
+      click('database-toolbar-search');
+      pill.focus();
+
+      expect(q('database-search-input')?.isConnected).toBe(true);
+      expect(controls.toolbar.hasAttribute('data-blok-database-searching')).toBe(true);
+      controls.destroy();
+    });
+  });
+
   // notion-motion.md:826: a brand-new title-only database shows no 🔍.
   it('keeps search back on a title-only database', () => {
     setup({ schema: () => schema.slice(0, 1) });

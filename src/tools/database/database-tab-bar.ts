@@ -371,7 +371,9 @@ export class DatabaseTabBar {
       toolbar: { full, noIcons },
     });
 
-    const fit = fold.tabs;
+    // notion-motion.md Round 99 §1 #8: an open search folds two or more tabs into the pill, room or not.
+    const searching = tabs.length >= 2 && toolbar?.hasAttribute('data-blok-database-searching') === true;
+    const fit = searching ? 'compact' : fold.tabs;
 
     viewBar?.toggleAttribute('data-blok-database-fold-icons', !fold.icons);
     viewBar?.toggleAttribute('data-blok-database-fold-new', !fold.newButton);

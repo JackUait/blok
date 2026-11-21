@@ -12983,9 +12983,9 @@ button[data-blok-database-table-group-count]:hover {
 
 /* notion-motion.md Round 100 §1 #7, Round 102 §1 #6: with the search open, » shows while the pointer or a keyboard focus
    is on the controls, at once, and leaves 200ms after. It keeps its room, so it never refolds the bar under the pointer.
-   Hidden, it stays focusable, so Shift+Tab can reach it. Read only in the view bar: a title row keeps it shown.
+   Hidden, it stays focusable, so Shift+Tab can reach it. Round 103 §1 #2: a one-view title row the same.
    Round 102 §1 #1, #2: with a sort or filters the same, in both rows. */
-[data-blok-database-view-bar] > [data-blok-database-view-toolbar]:not(:hover):not(:has(> :not([data-blok-database-search-input]):focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only=""],
+:is([data-blok-database-view-bar], [data-blok-database-title-row]) > [data-blok-database-view-toolbar]:not(:hover):not(:has(> :not([data-blok-database-search-input]):focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only=""],
 :is([data-blok-database-view-bar], [data-blok-database-title-row]) > [data-blok-database-view-toolbar]:not(:hover):not(:has(> :focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="bar"] {
   opacity: 0;
   pointer-events: none;

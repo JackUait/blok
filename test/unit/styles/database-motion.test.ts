@@ -428,8 +428,9 @@ describe('minimized database toolbar', () => {
   // notion-motion.md Round 100 §1 #7, Round 102 §1 #6 (r102-n-search-open-minimize-motion.raw): with the search open, » keeps
   // its room. It shows at once and leaves ~200ms after the pointer, and a keyboard focus on a control shows it too.
   // Hidden, it stays focusable, so Shift+Tab from Filter can land on it (database-toolbar-minimize.spec.ts).
+  // Round 103 §1 #2 (r103-n-titlerow-search-zone.raw): a one-view title row the same.
   it('hides a » kept for the search until the pointer or a keyboard focus is on the controls, 200ms after they leave', () => {
-    const rule = body(database, `[data-blok-database-view-bar] > ${TOOLBAR}:not(:hover):not(:has(> :not([data-blok-database-search-input]):focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only=""]`);
+    const rule = body(database, `:is([data-blok-database-view-bar], [data-blok-database-title-row]) > ${TOOLBAR}:not(:hover):not(:has(> :not([data-blok-database-search-input]):focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only=""]`);
 
     expect(rule).not.toContain('visibility');
     expect(rule).toContain('opacity: 0');

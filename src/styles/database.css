@@ -12736,8 +12736,8 @@ button[data-blok-database-table-group-count]:hover {
   margin-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
-/* The search field and its × sit flush on their neighbours (notion-motion.md Round 101 §1 #8). */
-[data-blok-database-view-toolbar] > :not([data-blok-database-toolbar-icon], [data-blok-database-new], [data-blok-database-search-input], [data-blok-database-search-clear]) {
+/* The search field and its × sit flush on their neighbours (notion-motion.md Round 101 §1 #8), and so does "No date (N)" (Round 102 §1 #9). */
+[data-blok-database-view-toolbar] > :not([data-blok-database-toolbar-icon], [data-blok-database-new], [data-blok-database-search-input], [data-blok-database-search-clear], [data-blok-database-no-date-button]) {
   margin-inline: var(--blok-border-width-hairline);
 }
 

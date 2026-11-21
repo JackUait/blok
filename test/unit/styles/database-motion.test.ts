@@ -327,6 +327,15 @@ describe('database toolbar search', () => {
     expect(SPACED).toContain('[data-blok-database-search-clear]');
   });
 
+  // notion-motion.md Round 102 §1 #9 (r102-n-struct-calendar.raw): » 846.3 + 28 = "No date (2)" 874.3, and its end 959.6 meets Filter 959.7.
+  // r61-n-glance-map.raw: "No place (3)" ends 987.6 and the next icon box starts 987.7.
+  it('sets "No date (N)" against its neighbours, with no 1px gap', () => {
+    const SPACED = rules(database).filter((rule) => rule.body.includes('margin-inline: var(--blok-border-width-hairline)'))
+      .flatMap((rule) => rule.selectors).find((selector) => selector.startsWith('[data-blok-database-view-toolbar] > :not('));
+
+    expect(SPACED).toContain('[data-blok-database-no-date-button]');
+  });
+
   // notion-motion.md Round 101 §1 #5 (r101-n-kb-search-type.raw, r101-n-search-query.png): "Clear Input" is 24×24 and round,
   // its icon box 20; the drawn disc (15 in Notion, 16 here) and the 6px × keep Blok's look.
   it('draws the × as a round 24px button with a 20px icon and a 16px disc', () => {

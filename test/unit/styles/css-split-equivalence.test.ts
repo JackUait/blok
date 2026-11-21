@@ -2007,6 +2007,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // the toolbar fills its 40px row. +435: a hidden » stays focusable, so Shift+Tab reaches it.
     // +279: with a chip bar » keeps its room, so the tab fold leaves space for it.
     const DATABASE_R275_BYTES = 388 + 435 + 279;
+    // Lane r276: "No date (N)" sits flush on its neighbours.
+    const DATABASE_R276_BYTES = 83;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2704,6 +2706,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R274_BYTES
       + DATABASE_R274_BYTES
       + DATABASE_R275_BYTES
+      + DATABASE_R276_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

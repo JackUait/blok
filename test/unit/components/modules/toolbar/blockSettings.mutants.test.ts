@@ -589,7 +589,7 @@ describe('BlockSettings — mutation coverage', () => {
 
       expect(params.searchable).toBe(true);
       expect(params.autoFocusFirstItem).toBe(false);
-      expect(params.minWidth).toBe('280px');
+      expect(params.minWidth).toBe('264px');
       expect(params.viewportMargin).toBe(8);
       expect(params.messages).toStrictEqual({
         back: 'a11y.back',
@@ -1857,6 +1857,53 @@ describe('BlockSettings — mutation coverage', () => {
 
   describe('last edited footer', () => {
     const timestamp = Date.UTC(2026, 8, 5, 12, 0);
+    const now = new Date(2026, 10, 18, 15, 0);
+    const timeOf = (date: Date): string => new Intl.DateTimeFormat('en', { timeStyle: 'short' }).format(date);
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(now);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('says "today" for an edit made on the current day', async () => {
+      const edited = new Date(2026, 10, 18, 9, 30);
+      const footer = await footerOf(createBlockStub({ lastEditedAt: edited.getTime() }));
+
+      expect(footer.lastElementChild?.textContent).toBe(`today, ${timeOf(edited)}`);
+    });
+
+    it('says "yesterday" for an edit made the day before, even less than 24 hours ago', async () => {
+      const edited = new Date(2026, 10, 17, 23, 30);
+      const footer = await footerOf(createBlockStub({ lastEditedAt: edited.getTime() }));
+
+      expect(footer.lastElementChild?.textContent).toBe(`yesterday, ${timeOf(edited)}`);
+    });
+
+    it('names the day in the reader\'s language', async () => {
+      blok.I18n.getLocale.mockReturnValue('de');
+
+      const footer = await footerOf(createBlockStub({ lastEditedAt: new Date(2026, 10, 18, 9, 30).getTime() }));
+
+      expect(footer.lastElementChild?.textContent).toMatch(/^heute, /);
+    });
+
+    it('shows a short date without the year for an older edit this year', async () => {
+      const edited = new Date(2026, 10, 16, 9, 30);
+      const footer = await footerOf(createBlockStub({ lastEditedAt: edited.getTime() }));
+
+      expect(footer.lastElementChild?.textContent).toBe(`Nov 16, ${timeOf(edited)}`);
+    });
+
+    it('adds the year for an edit made in another year', async () => {
+      const edited = new Date(2025, 11, 31, 9, 30);
+      const footer = await footerOf(createBlockStub({ lastEditedAt: edited.getTime() }));
+
+      expect(footer.lastElementChild?.textContent).toBe(`Dec 31, 2025, ${timeOf(edited)}`);
+    });
 
     const footerOf = async (block: BlockStub): Promise<HTMLElement> => {
       getConvertibleToolsForBlockMock.mockResolvedValue([]);
@@ -1878,8 +1925,7 @@ describe('BlockSettings — mutation coverage', () => {
       const date = new Date(timestamp);
       const expectedDate = new Intl.DateTimeFormat('en', {
         day: 'numeric',
-        month: 'long',
-        year: 'numeric',
+        month: 'short',
       }).format(date);
       const expectedTime = new Intl.DateTimeFormat('en', { timeStyle: 'short' }).format(date);
 
@@ -1893,14 +1939,16 @@ describe('BlockSettings — mutation coverage', () => {
     it('drops an abbreviation suffix but keeps a meaningful trailing character', async () => {
       blok.I18n.getLocale.mockReturnValue('ru');
 
-      const russian = await footerOf(createBlockStub({ lastEditedAt: timestamp }));
+      // Another year, so the year and its "г." suffix are in play.
+      const otherYear = Date.UTC(2024, 3, 10, 12, 0);
+      const russian = await footerOf(createBlockStub({ lastEditedAt: otherYear }));
 
       expect(russian.lastElementChild?.textContent).not.toContain('г.');
 
       settings.close();
       blok.I18n.getLocale.mockReturnValue('ja');
 
-      const japanese = await footerOf(createBlockStub({ lastEditedAt: timestamp }));
+      const japanese = await footerOf(createBlockStub({ lastEditedAt: otherYear }));
 
       // 日 is part of the date, not an abbreviation dot — it must survive.
       expect(japanese.lastElementChild?.textContent).toContain('日');
@@ -1911,7 +1959,7 @@ describe('BlockSettings — mutation coverage', () => {
       const footer = await footerOf(createBlockStub({ createdAt: created }));
       const expectedDate = new Intl.DateTimeFormat('en', {
         day: 'numeric',
-        month: 'long',
+        month: 'short',
         year: 'numeric',
       }).format(new Date(created));
 

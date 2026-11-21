@@ -10,7 +10,6 @@ import type {
 } from '../../../types';
 import { describeList } from '../../shared/tool-descriptions/list';
 import type { MoveEvent } from '../../../types/tools/hook-events';
-import type { MenuConfig } from '../../../types/tools/menu-config';
 import { setupPlaceholder } from '../../components/utils/placeholder';
 import { INDEX_MOVE_NEIGHBOURS, REPARENT_IN_PLACE, type IndexMoveNeighbours } from '../../components/utils/index-move-neighbours';
 
@@ -19,7 +18,6 @@ import {
   saveListItem,
   setListItemData,
   mergeListItemData,
-  renderListSettings,
 } from './block-operations';
 import { PLACEHOLDER_KEY, TOOL_NAME } from './constants';
 import { getContentOffset } from './content-offset';
@@ -43,8 +41,8 @@ import { ListMarkerCalculator } from './marker-calculator';
 import { OrderedMarkerManager } from './ordered-marker-manager';
 import { isPasteEventHTMLElement, detectStyleFromPastedContent, extractPastedContent, extractDepthFromPastedContent, extractStartFromPastedContent } from './paste-handler';
 import { getListSanitizeConfig, getListPasteConfig, getListConversionConfig } from './static-configs';
-import { STYLE_CONFIGS, getToolboxConfig } from './style-config';
-import type { ListItemStyle, ListItemConfig, StyleConfig, ListItemData } from './types';
+import { getToolboxConfig } from './style-config';
+import type { ListItemStyle, ListItemConfig, ListItemData } from './types';
 import { overrideStatic } from '../../components/utils/override-static';
 
 /** A moved() event that may carry the neighbours of an index move core no longer makes. */
@@ -143,14 +141,6 @@ export class ListItem implements BlockTool {
 
   private normalizeData(data: ListItemData | Record<string, never>): ListItemData {
     return normalizeListItemData(data, this._settings);
-  }
-
-  private get availableStyles(): StyleConfig[] {
-    const configuredStyles = this._settings.styles;
-    if (!configuredStyles || configuredStyles.length === 0) {
-      return STYLE_CONFIGS;
-    }
-    return STYLE_CONFIGS.filter(s => configuredStyles.includes(s.style));
   }
 
   private get itemColor(): string | undefined {
@@ -678,23 +668,6 @@ export class ListItem implements BlockTool {
 
   private getContentElement(): HTMLElement | null {
     return helpersGetContentElement(this._element, this._data.style);
-  }
-
-  public renderSettings(): MenuConfig {
-    return renderListSettings(this.availableStyles, this._data.style, this.api.i18n.t, (style) => this.setStyle(style));
-  }
-
-  private setStyle(style: ListItemStyle): void {
-    const previousStyle = this._data.style;
-    this._data.style = style;
-    this.rerender();
-
-    if (previousStyle !== style) {
-      // Before the sync: an item leaving ordered still renumbers the rest.
-      this.markerManager?.scheduleUpdateAll();
-      this.syncMarkerManager();
-      this.markerManager?.scheduleUpdateAll();
-    }
   }
 
   private rerender(): void {

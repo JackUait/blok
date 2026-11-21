@@ -108,8 +108,8 @@ describe('mountCardObject', () => {
     const { wrapper } = mount({ url: 'https://cdn/backup.bin', fileName: 'backup.bin' });
     const head = (): string | null => wrapper.querySelector('[data-role="file-object-punch-head"]')?.textContent ?? null;
 
-    expect(head()).toBe('BACKUP · 0000 0001 0002 0003 0004 0005 0006');
-    await vi.waitFor(() => expect(head()).toBe('BACKUP · 0003 0609 0C0F 1215 181B 1E21 2427'));
+    expect(head()).toBe('Backup · 0000 0001 0002 0003 0004 0005 0006');
+    await vi.waitFor(() => expect(head()).toBe('Backup · 0003 0609 0C0F 1215 181B 1E21 2427'));
     expect(wrapper.querySelectorAll('[data-role="file-object"]')).toHaveLength(1);
   });
 

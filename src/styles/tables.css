@@ -492,8 +492,10 @@
   border: 1px solid var(--blok-border-primary);
   border-radius: var(--blok-radius-field);
 
+  /* Notion's 2px focus ring, as on every field (field.css). */
   &:has(input:focus) {
-    border-color: var(--blok-popover-border);
+    border-color: var(--blok-focus-ring);
+    box-shadow: inset 0 0 0 1px var(--blok-focus-ring);
   }
 }
 

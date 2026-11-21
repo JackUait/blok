@@ -237,6 +237,36 @@ test.describe('gallery', () => {
     expect(small.cover).toBeCloseTo(123.75, 1);
   });
 
+  // notion-motion.md Round 86 §1 #4 (r86-n-gallery-4/5.raw): after full rows "+ New page" is a 40 tall strip 16 under
+  // the last card; beside a card it fills the empty cell at card height.
+  test('"+ New page" is a 40px strip after full rows and card-sized in a row with cards', async ({ page }) => {
+    const seed = (n: number): RowSeed[] => Array.from({ length: n }, (_, i) => ({ id: `g${i}`, properties: { 'p-title': `Card ${i}` } }));
+    const measure = async (n: number): Promise<{ card: DOMRect; tile: DOMRect }> => {
+      await mount(page, blocks({ type: 'gallery', cardSize: 'large' }, seed(n)));
+      await page.locator('[data-blok-database-gallery-grid]').evaluate((grid) => {
+        grid.style.setProperty('width', '692px');
+      });
+
+      return page.locator('[data-blok-database-gallery-grid]').evaluate((grid) => {
+        const cards = grid.querySelectorAll('[data-blok-database-gallery-card]');
+        const tile = grid.querySelector('[data-blok-database-gallery-new]');
+
+        return { card: cards[cards.length - 1].getBoundingClientRect().toJSON() as DOMRect, tile: (tile as Element).getBoundingClientRect().toJSON() as DOMRect };
+      });
+    };
+
+    const full = await measure(4);
+
+    expect(full.tile.height).toBe(40);
+    expect(full.tile.width).toBe(338);
+    expect(full.tile.top - full.card.bottom).toBe(16);
+
+    const partial = await measure(3);
+
+    expect(partial.tile.top).toBe(partial.card.top);
+    expect(partial.tile.height).toBe(partial.card.height);
+  });
+
   test('"+ New" in the trailing card adds a row', async ({ page }) => {
     await mount(page, blocks({ type: 'gallery' }));
 
@@ -846,6 +876,25 @@ test.describe('calendar', () => {
     await expect(drawer(page)).toBeVisible();
   });
 
+  // notion-motion.md Round 96 §1 #2 (r96-n-cal-event-tab.raw): Tab from Next Month lands on the first event, no day cell first.
+  test('Tab from Next month visits each event, then leaves the grid; Space opens the focused event', async ({ page }) => {
+    await mount(page, blocks({ type: 'calendar' }));
+    const grid = page.locator('[data-blok-database-calendar-grid]');
+
+    await page.locator('[data-blok-database-calendar-next]').focus();
+    await page.keyboard.press('Tab');
+    await expect(event(page, 'r1')).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(event(page, 'r2')).toBeFocused();
+    await page.keyboard.press('Tab');
+    expect(await grid.evaluate((el) => el.contains(document.activeElement))).toBe(false);
+
+    await page.keyboard.press('Shift+Tab');
+    await expect(event(page, 'r2')).toBeFocused();
+    await page.keyboard.press('Space');
+    await expect(drawer(page)).toBeVisible();
+  });
+
   test('next, previous and Today navigate, and the range survives a reload for this person', async ({ page }) => {
     await mount(page, blocks({ type: 'calendar' }));
 
@@ -858,6 +907,33 @@ test.describe('calendar', () => {
 
     await page.locator('[data-blok-database-calendar-today]').click();
     await expect(day(page, '2026-10-09')).toHaveAttribute('data-today', '');
+  });
+
+  test('next and Today keep focus after the redraw, with a ring only from the keyboard', async ({ page }) => {
+    await mount(page, blocks({ type: 'calendar' }));
+    const ringOn = (selector: string): Promise<boolean> => page.locator(selector).evaluate((el) => el === document.activeElement && el.matches(':focus-visible'));
+    const next = '[data-blok-database-calendar-next]';
+    const today = '[data-blok-database-calendar-today]';
+
+    await page.locator(next).click();
+    await expect(day(page, '2026-11-15')).toHaveCount(1);
+    await expect(page.locator(next)).toBeFocused();
+    expect(await ringOn(next)).toBe(false);
+
+    await page.locator(today).click();
+    await expect(day(page, '2026-10-09')).toHaveCount(1);
+    await expect(page.locator(today)).toBeFocused();
+    expect(await ringOn(today)).toBe(false);
+
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await expect(page.locator(today)).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(page.locator(next)).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(day(page, '2026-11-15')).toHaveCount(1);
+    await expect(page.locator(next)).toBeFocused();
+    expect(await ringOn(next)).toBe(true);
   });
 
   test.describe('selection (research/22 §1)', () => {

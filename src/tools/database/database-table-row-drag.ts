@@ -72,7 +72,8 @@ export class DatabaseTableRowDrag {
     document.addEventListener('pointermove', this.handleMove);
     document.addEventListener('pointerup', this.handleUp);
     document.addEventListener('pointercancel', this.handleCancel);
-    document.addEventListener('keydown', this.handleKey, true);
+    // Window capture runs before Blok's own keydown capture on document, so its Escape never enters navigation mode.
+    window.addEventListener('keydown', this.handleKey, true);
     this.onPress?.(rowEl.getAttribute('data-row-id') ?? '');
   };
 
@@ -222,7 +223,7 @@ export class DatabaseTableRowDrag {
     document.removeEventListener('pointermove', this.handleMove);
     document.removeEventListener('pointerup', this.handleUp);
     document.removeEventListener('pointercancel', this.handleCancel);
-    document.removeEventListener('keydown', this.handleKey, true);
+    window.removeEventListener('keydown', this.handleKey, true);
     this.autoScroll?.destroy();
     this.autoScroll = null;
     this.press?.rowEl.removeAttribute('data-dragging');

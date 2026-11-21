@@ -302,15 +302,17 @@ test.describe('dependencies', () => {
     if (from === null || to === null) throw new Error('no layout');
     await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
     await page.mouse.down();
-    // The bar's start: its far end can sit past the scroller's edge.
-    await page.mouse.move(to.x + 16, to.y + to.height / 2, { steps: 8 });
+    // The bar's start, past its 2px of start resize zone: the bar runs on past the scroller's
+    // edge, and its 16th pixel sits right on that edge.
+    await page.mouse.move(to.x + 8, to.y + to.height / 2, { steps: 8 });
     await page.mouse.up();
 
     await expect.poll(async () => (await savedRow(page, 'c')).properties).toMatchObject({ 'p-blocked': [{ id: 'b' }] });
     await expect(page.locator('[data-blok-database-timeline-arrow][data-from="b"][data-to="c"]')).toHaveCount(1);
   });
 
-  // tlhover.png (Gamma): a 2px line from the bar's end into an 8px ring with a 2px stroke, ring 5px past the bar.
+  // tlhover.png (Gamma): a 2px line from the bar's end into an 8px ring with a 2px stroke.
+  // notion-motion.md Round 84b §5: the ring starts 6 past the bar, its centre 10 past.
   test('a hovered bar shows Notion\'s "–o" connector at its end', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-10-09T12:00:00'));
     await mount(page, blocks());
@@ -334,8 +336,8 @@ test.describe('dependencies', () => {
     });
 
     expect(drawn.ring).toEqual(['8px', '8px', '2px', 'rgb(173, 169, 163)', 'none']);
-    expect(drawn.ringStart).toBeCloseTo(5, 0);
-    expect(drawn.line).toEqual(['6px', '2px', 'rgb(173, 169, 163)', 'none']);
+    expect(drawn.ringStart).toBeCloseTo(6, 0);
+    expect(drawn.line).toEqual(['7px', '2px', 'rgb(173, 169, 163)', 'none']);
     expect(drawn.lineStart).toBeCloseTo(-1, 0);
     expect(drawn.own).toEqual(['0px', 'rgba(0, 0, 0, 0)']);
   });
@@ -463,7 +465,8 @@ test.describe('linked view, research 20', () => {
     expect(((await savedRow(page, 'db-1')).schema as Array<{ type: string; databaseLocked?: boolean }>).find((p) => p.type === 'title')?.databaseLocked).toBeUndefined();
   });
 
-  test('"Show data source title" off hides the "↗ Tasks" title, keeps the add-view "+", and saves on the view', async ({ page }) => {
+  // notion-motion.md Round 97 §1 #5: one setting for the linked block, saved on the block.
+  test('"Show data source title" off hides the "↗ Tasks" title, keeps the add-view "+", and saves on the block', async ({ page }) => {
     await mount(page, [...source(), linkedBlock()]);
     const link = page.getByRole('link', { name: 'Tasks' });
 
@@ -479,7 +482,8 @@ test.describe('linked view, research 20', () => {
 
     await expect(link).toBeHidden();
     await expect(page.locator('[data-blok-database-add-view]').nth(1)).toBeAttached();
-    await expect.poll(async () => ((await savedRow(page, 'linked-1')).views as Array<{ showDataSourceTitle?: boolean }>)[0].showDataSourceTitle).toBe(false);
+    await expect.poll(async () => (await savedRow(page, 'linked-1')).hideDataSourceTitles).toBe(true);
+    expect(((await savedRow(page, 'linked-1')).views as Array<{ showDataSourceTitle?: boolean }>)[0].showDataSourceTitle).toBeUndefined();
     // The source's own title stays.
     await expect(page.locator('[data-blok-database-title][contenteditable="true"]')).toBeVisible();
   });

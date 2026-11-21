@@ -152,7 +152,7 @@ describe('Flipper', () => {
 
     flipper.handleExternalKeydown(createKeyboardEvent('ArrowDown'));
 
-    expect(pick).toHaveBeenCalledWith('down', 1, 6);
+    expect(pick).toHaveBeenCalledWith('down', 1, 6, items);
     expect(items[4]).toHaveAttribute('data-blok-focused', 'true');
     expect(onFlipSpy).toHaveBeenCalledTimes(1);
 

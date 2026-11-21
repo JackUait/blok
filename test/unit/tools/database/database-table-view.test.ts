@@ -922,7 +922,7 @@ describe('DatabaseTableView', () => {
       expect(handlers.commitCell).toHaveBeenCalledWith('r2', 'p-amount', 42);
     });
 
-    // notion-motion.md Round 57 §1: Shift+Tab out of a Text editor leaves no cell selected, changed or not.
+    // notion-motion.md Round 57 §1: Shift+Tab out of a Text editor with the caret past 0 leaves no cell selected.
     it.each([
       ['unchanged', 'short'],
       ['changed', 'typed'],
@@ -938,6 +938,42 @@ describe('DatabaseTableView', () => {
       expect(anchorCell(root)).toBeNull();
       expect(editor()).toBeNull();
       expect(document.body).toHaveFocus();
+    });
+
+    // notion-motion.md Round 74 §1: with the caret at offset 0 (13/13), Shift+Tab selects the cell to the left.
+    it.each([
+      ['an empty field', 'r3'],
+      ['the caret moved to the start', 'r1'],
+    ])('Shift+Tab in an unchanged Text cell editor with %s selects the cell to the left', (_case, rowId) => {
+      const { root, handlers } = mount();
+
+      cell(root, rowId, 'p-notes').click();
+      editorField().setSelectionRange(0, 0);
+      press(editorField(), 'Tab', { shiftKey: true });
+
+      expect(selectedCells(root)).toEqual([`${rowId}/p-title`]);
+      expect(editor()).toBeNull();
+      expect(handlers.commitCell).not.toHaveBeenCalled();
+      expect(grid(root)).toHaveFocus();
+    });
+
+    // notion-motion.md Round 75 §2: a change does not matter; caret at 0 (7/7) or a field that opened empty (1/1) selects left.
+    it.each([
+      ['a changed value with the caret moved to 0', 'r1', 'zshort', 0],
+      ['a field that opened empty, typed into', 'r3', 'z', 1],
+    ])('Shift+Tab in a Text cell editor with %s saves and selects the cell to the left', (_case, rowId, value, caret) => {
+      const { root, handlers } = mount();
+
+      cell(root, rowId, 'p-notes').click();
+      editorField().value = value;
+      editorField().dispatchEvent(new Event('input', { bubbles: true }));
+      editorField().setSelectionRange(caret, caret);
+      press(editorField(), 'Tab', { shiftKey: true });
+
+      expect(selectedCells(root)).toEqual([`${rowId}/p-title`]);
+      expect(handlers.commitCell).toHaveBeenCalledWith(rowId, 'p-notes', value);
+      expect(editor()).toBeNull();
+      expect(grid(root)).toHaveFocus();
     });
 
     // feel/findings-table T13: Notion's bar shows the first 4 properties; the rest wait under "…".
@@ -1342,6 +1378,137 @@ describe('DatabaseTableView', () => {
 
       press(grid(root), 'Escape');
       expect([...root.querySelectorAll('[data-blok-database-table-row][aria-selected="true"]')].map((el) => el.getAttribute('data-row-id'))).toEqual(['r1', 'r2']);
+    });
+
+    // notion-motion.md Round 71 §6: Cmd+Shift+Down on a selected cell runs the range to the last row.
+    it.each([{ metaKey: true }, { ctrlKey: true }])('Cmd+Shift+Down runs the range from the selected cell to the last row (%o)', (mod) => {
+      const { root } = mount({ rows: [row('r1', 'Alpha'), row('r2', 'Beta'), row('r3', 'Gamma'), row('r4', 'Delta')] });
+
+      selectCell(root, 'r1', 'p-notes');
+      press(grid(root), 'ArrowDown', { shiftKey: true, ...mod });
+
+      expect(selectedCells(root).sort()).toEqual(['r1/p-notes', 'r2/p-notes', 'r3/p-notes', 'r4/p-notes']);
+      expect(anchorCell(root)).toBe('r1/p-notes');
+    });
+
+    // notion-motion.md Round 72 §3: every Cmd arrow runs to the edge of the table.
+    describe('Cmd+arrows on a selected cell', () => {
+      const rows = [row('r1', 'Alpha'), row('r2', 'Beta'), row('r3', 'Gamma'), row('r4', 'Delta')];
+
+      it.each([
+        ['ArrowUp', 'r3', 'p-amount', 'r1/p-amount'],
+        ['ArrowDown', 'r2', 'p-amount', 'r4/p-amount'],
+        ['ArrowLeft', 'r2', 'p-amount', 'r2/p-title'],
+        ['ArrowRight', 'r2', 'p-notes', 'r2/p-done'],
+      ])('Cmd+%s moves the selected cell to the edge', (key, rowId, propertyId, expected) => {
+        const { root } = mount({ rows });
+
+        selectCell(root, rowId, propertyId);
+        press(grid(root), key, { metaKey: true });
+
+        expect(selectedCells(root)).toEqual([expected]);
+        expect(anchorCell(root)).toBe(expected);
+      });
+
+      it.each([
+        ['ArrowUp', 'r3', 'p-notes', ['r1/p-notes', 'r2/p-notes', 'r3/p-notes']],
+        ['ArrowLeft', 'r2', 'p-amount', ['r2/p-amount', 'r2/p-notes', 'r2/p-title']],
+        ['ArrowRight', 'r2', 'p-notes', ['r2/p-amount', 'r2/p-done', 'r2/p-notes', 'r2/p-stage']],
+      ])('Cmd+Shift+%s runs the range to the edge and keeps the anchor', (key, rowId, propertyId, expected) => {
+        const { root } = mount({ rows });
+
+        selectCell(root, rowId, propertyId);
+        press(grid(root), key, { metaKey: true, shiftKey: true });
+
+        expect(selectedCells(root).sort()).toEqual(expected);
+        expect(anchorCell(root)).toBe(`${rowId}/${propertyId}`);
+      });
+
+      it('Ctrl+Right moves to the last column as Cmd+Right does', () => {
+        const { root } = mount({ rows });
+
+        selectCell(root, 'r2', 'p-notes');
+        press(grid(root), 'ArrowRight', { ctrlKey: true });
+
+        expect(selectedCells(root)).toEqual(['r2/p-done']);
+      });
+
+      // notion-motion.md Round 73 §1: Notion smooth-scrolls the scroller all the way to its end.
+      describe('scrolling', () => {
+        const scrollerOf = (root: HTMLElement): HTMLElement => {
+          const scroller = root.querySelector<HTMLElement>('[data-blok-database-table-scroller]');
+
+          if (scroller === null) {
+            throw new Error('no scroller');
+          }
+          Object.defineProperty(scroller, 'scrollWidth', { configurable: true, value: 2288 });
+          Object.defineProperty(scroller, 'clientWidth', { configurable: true, value: 1242 });
+          scroller.scrollLeft = 300;
+          scroller.scrollTo = vi.fn() as typeof scroller.scrollTo;
+
+          return scroller;
+        };
+
+        afterEach(() => {
+          vi.unstubAllGlobals();
+        });
+
+        it.each([
+          ['Cmd+Right', 'ArrowRight', { metaKey: true }, 1046],
+          ['Cmd+Shift+Right', 'ArrowRight', { metaKey: true, shiftKey: true }, 1046],
+          ['Cmd+Left', 'ArrowLeft', { metaKey: true }, 0],
+          ['Cmd+Shift+Left', 'ArrowLeft', { metaKey: true, shiftKey: true }, 0],
+        ])('%s smooth-scrolls the table to its edge, not just to the cell', (_label, key, mod, left) => {
+          const { root } = mount({ rows });
+          const scroller = scrollerOf(root);
+          const nearest = vi.fn();
+
+          cell(root, 'r2', 'p-done').scrollIntoView = nearest;
+          cell(root, 'r2', 'p-title').scrollIntoView = nearest;
+          selectCell(root, 'r2', 'p-notes');
+          press(grid(root), key, mod);
+
+          expect(scroller.scrollTo).toHaveBeenCalledWith({ left, behavior: 'smooth' });
+          expect(nearest).not.toHaveBeenCalled();
+        });
+
+        it('Cmd+Right jumps to the end under reduced motion', () => {
+          vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce'), addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+          const { root } = mount({ rows });
+          const scroller = scrollerOf(root);
+
+          selectCell(root, 'r2', 'p-notes');
+          press(grid(root), 'ArrowRight', { metaKey: true });
+
+          expect(scroller.scrollTo).toHaveBeenCalledWith({ left: 1046, behavior: 'instant' });
+        });
+
+        it('a plain Right arrow still scrolls only as far as the next cell', () => {
+          const { root } = mount({ rows });
+          const scroller = scrollerOf(root);
+          const nearest = vi.fn();
+
+          cell(root, 'r2', 'p-amount').scrollIntoView = nearest;
+          selectCell(root, 'r2', 'p-notes');
+          press(grid(root), 'ArrowRight');
+
+          expect(nearest).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+          expect(scroller.scrollTo).not.toHaveBeenCalled();
+        });
+
+        it('Cmd+Down still scrolls only as far as the last row', () => {
+          const { root } = mount({ rows });
+          const scroller = scrollerOf(root);
+          const nearest = vi.fn();
+
+          cell(root, 'r4', 'p-notes').scrollIntoView = nearest;
+          selectCell(root, 'r2', 'p-notes');
+          press(grid(root), 'ArrowDown', { metaKey: true });
+
+          expect(nearest).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+          expect(scroller.scrollTo).not.toHaveBeenCalled();
+        });
+      });
     });
 
     // notion-motion.md Round 30 §4: Shift+click on another cell selects that row; it does not extend a range.
@@ -2543,6 +2710,19 @@ describe('DatabaseTableView', () => {
       const items = calculationItems({ type: 'number' }, undefined, { t: (key: string) => key }, vi.fn()) as Array<{ title?: string; children?: { width?: string } }>;
 
       expect(items.find((item) => item.title === 'tools.database.calcCount')?.children?.width).toBe('250px');
+    });
+
+    // notion-motion.md Round 64 §5 (r64-n-calc.raw): with Sum set, only Sum is marked; "More options" shows just its chevron.
+    it('marks the current calculation, not the group that holds it', () => {
+      const items = calculationItems({ type: 'number' }, 'sum', { t: (key: string) => key }, vi.fn()) as Array<{
+        title?: string;
+        isActive?: boolean;
+        children?: { items?: Array<{ title?: string; isActive?: boolean }> };
+      }>;
+      const more = items.find((item) => item.title === 'tools.database.calcMoreOptions');
+
+      expect(items.map((item) => item.isActive === true)).toEqual([false, false, false, false]);
+      expect(more?.children?.items?.find((item) => item.title === 'tools.database.calcSum')?.isActive).toBe(true);
     });
 
     // notion-motion.md Round 11 "Read-only database": no "Calculate" node exists in a locked table's footer.

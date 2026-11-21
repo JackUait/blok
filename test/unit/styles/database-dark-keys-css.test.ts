@@ -77,6 +77,16 @@ describe('property menu name field (findings K04)', () => {
     expect(tokenValues('--blok-database-name-field-ring')).toEqual(['transparent', 'rgba(255, 255, 235, 0.1)', 'rgba(255, 255, 235, 0.1)']);
   });
 
+  // notion-motion.md Round 73 §2 (r73-n-hdrmenu.raw): the header menu's field at rest. Dark keeps K04's values.
+  it('rests on Notion\'s light fill rgba(66,35,3,0.03) and 1px ring rgba(28,19,1,0.11) in the header menu', () => {
+    const rest = ruleBody(field);
+
+    expect(rest).toContain('background-color: var(--blok-database-property-menu-name-bg)');
+    expect(rest).toContain('border-color: var(--blok-database-property-menu-name-ring)');
+    expect(tokenValues('--blok-database-property-menu-name-bg')).toEqual(['rgba(66, 35, 3, 0.03)', 'var(--blok-database-name-field-bg)', 'var(--blok-database-name-field-bg)']);
+    expect(tokenValues('--blok-database-property-menu-name-ring')).toEqual(['rgba(28, 19, 1, 0.11)', 'var(--blok-database-name-field-ring)', 'var(--blok-database-name-field-ring)']);
+  });
+
   it('is no longer reset to a bare input', () => {
     expect(ruleBody('[data-blok-database-property-menu-name-input]')).not.toContain('background: transparent');
   });

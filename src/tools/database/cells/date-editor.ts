@@ -98,6 +98,8 @@ const createSwitch = (attribute: string, label: string, checked: boolean, onTogg
   return button;
 };
 
+const SWITCH_ATTRIBUTES = ['data-blok-database-date-end-toggle', 'data-blok-database-date-time-toggle'];
+
 const zoneMenus = { count: 0 };
 
 interface ZoneEntry {
@@ -159,11 +161,11 @@ const zoneEntry = (id: string, zone: string, at: Date): ZoneEntry => {
 /** Gap between the picker and its submenus. */
 const MENU_GAP = 4;
 /**
- * research/35 §20: the time zone menu overlaps the picker's edge by 4px and
- * sits 12px above the window bottom. Where it goes for a trigger above that
- * line was not measured: it stays level with the row.
+ * research/35 §20 (time zone) and notion-motion.md Round 83 §1 (Date format, Time format): the side menus
+ * overlap the picker's edge by 4px and sit 12px above the window bottom. Where the time zone menu goes for
+ * a trigger above that line was not measured: it stays level with the row.
  */
-const ZONE_MENU_PLACE = { gap: -4, bottom: 12 };
+const SIDE_MENU_PLACE = { gap: -4, bottom: 12 };
 /**
  * notion-motion.md Round 55 §4: the Remind menu overlaps the picker's edge by 4px.
  * Which side it takes was read only once (left, with no room on the right), so
@@ -269,6 +271,8 @@ class DateEditor {
       content: this.root,
       // research/22 §4: Notion's picker is 248 wide.
       minWidth: '248px',
+      // notion-motion.md Round 68 §4: at a right-click point, above it when it fits there and not below.
+      point: this.ctx.atPoint === true,
       onEscape: () => {
         if (this.menu !== null) {
           this.closeMenu(true);
@@ -415,10 +419,15 @@ class DateEditor {
     const focusedDay = this.root.contains(document.activeElement)
       ? document.activeElement?.getAttribute('data-blok-database-date-day')
       : null;
+    // notion-motion.md Round 83 §1: a clicked switch keeps the focus across the redraw.
+    const focusedSwitch = SWITCH_ATTRIBUTES.find((attribute) => this.root.contains(document.activeElement) && document.activeElement?.hasAttribute(attribute));
 
     this.root.replaceChildren(this.renderFields(), this.calendar.header(), this.calendar.grid(), this.renderOptions());
     if (focusedDay !== null && focusedDay !== undefined) {
       this.calendar.focusDay();
+    }
+    if (focusedSwitch !== undefined) {
+      this.root.querySelector<HTMLElement>(`[${focusedSwitch}]`)?.focus();
     }
   }
 
@@ -543,7 +552,7 @@ class DateEditor {
     const clear = document.createElement('button');
 
     options.setAttribute('data-blok-database-date-options', '');
-    options.appendChild(createSwitch('data-blok-database-date-end-toggle', this.t('tools.database.dateEndDate'), this.rangeOn, () => {
+    options.appendChild(createSwitch(SWITCH_ATTRIBUTES[0], this.t('tools.database.dateEndDate'), this.rangeOn, () => {
       this.rangeOn = !this.rangeOn;
       if (this.rangeOn) {
         // research/30 B2: an empty cell gets today → today at once. A bulk picker writes nothing: Notion's
@@ -561,7 +570,7 @@ class DateEditor {
     if (this.ctx.onDateDisplayChange !== undefined) {
       options.appendChild(this.renderDateFormatRow());
     }
-    options.appendChild(createSwitch('data-blok-database-date-time-toggle', this.t('tools.database.dateIncludeTime'), this.timeOn, () => {
+    options.appendChild(createSwitch(SWITCH_ATTRIBUTES[1], this.t('tools.database.dateIncludeTime'), this.timeOn, () => {
       this.timeOn = !this.timeOn;
       if (this.timeOn) {
         const today = toIsoDay(new Date());
@@ -754,7 +763,7 @@ class DateEditor {
     this.menu = { element: menu, kind };
     row.setAttribute('aria-expanded', 'true');
     promoteToTopLayer(menu);
-    this.placeMenu(row, menu, remind ? REMIND_MENU_PLACE : undefined);
+    this.placeMenu(row, menu, remind ? REMIND_MENU_PLACE : SIDE_MENU_PLACE);
     const current = menu.querySelector<HTMLElement>('[aria-checked="true"]') ?? menu.querySelector<HTMLElement>('[role="menuitemradio"]');
 
     current?.setAttribute('tabindex', '0');
@@ -907,12 +916,12 @@ class DateEditor {
     this.menu = { element: menu, kind: 'timeZone' };
     row.setAttribute('aria-expanded', 'true');
     promoteToTopLayer(menu);
-    this.placeMenu(row, menu, ZONE_MENU_PLACE);
+    this.placeMenu(row, menu, SIDE_MENU_PLACE);
     search.focus();
   }
 
   /** Beside the picker on its end side, else its start side, else kept inside the window; level with the row, kept `place.bottom` above the window bottom. */
-  private placeMenu(row: HTMLElement, menu: HTMLElement, place: { gap: number; bottom: number; fitGap?: number } = { gap: MENU_GAP, bottom: MENU_GAP }): void {
+  private placeMenu(row: HTMLElement, menu: HTMLElement, place: { gap: number; bottom: number; fitGap?: number }): void {
     const box = this.root.getBoundingClientRect();
     const rowBox = row.getBoundingClientRect();
     const width = menu.offsetWidth;

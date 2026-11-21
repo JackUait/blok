@@ -8,7 +8,7 @@ import type { SanitizerConfig } from '../../../types/configs';
 import { Module } from '../__module';
 import type { Block } from '../block';
 import { DATA_ATTR } from '../constants';
-import { KEYBOARD_OWNER_SELECT_ALL } from '../constants/data-attributes';
+import { KEYBOARD_OWNER_EDGE_EVENT, KEYBOARD_OWNER_SELECT_ALL } from '../constants/data-attributes';
 import { Dom as $ } from '../dom';
 import { blocksToMarkdown, type MarkdownPageOptions } from '../../markdown/blocks-to-markdown';
 import { safeHref } from '../utils/sanitize-url';
@@ -447,6 +447,35 @@ export class BlockSelection extends Module {
     this.listeners.on(document, 'keydown', (event: Event) => {
       this.handleReadOnlyCommandA(event as KeyboardEvent);
     });
+
+    this.listeners.on(this.Blok.UI.nodes.redactor, KEYBOARD_OWNER_EDGE_EVENT, (event: Event) => {
+      this.handleOwnerEdge(event);
+    });
+  }
+
+  /**
+   * A keyboard owner at its edge hands the arrow back: select the block next to
+   * the owner's block. Cancelling the event tells the owner the move happened.
+   * @param event - the owner's edge event
+   */
+  private handleOwnerEdge(event: Event): void {
+    const { BlockManager } = this.Blok;
+    const detail: unknown = event instanceof CustomEvent ? event.detail : undefined;
+    const direction = typeof detail === 'object' && detail !== null && 'direction' in detail ? detail.direction : undefined;
+    const block = event.target instanceof Node ? BlockManager.getBlockByChildNode(event.target) : undefined;
+
+    if (block === undefined || (direction !== 'next' && direction !== 'previous')) {
+      return;
+    }
+    const step = direction === 'next' ? 1 : -1;
+    const index = this.navigableIndexFrom(BlockManager.blocks.indexOf(block) + step, step);
+
+    if (index < 0 || index >= BlockManager.blocks.length) {
+      return;
+    }
+    event.preventDefault();
+    this._navigationModeEnabled = true;
+    this.setNavigationFocus(index);
   }
 
   /**

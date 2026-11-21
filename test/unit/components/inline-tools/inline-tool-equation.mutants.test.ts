@@ -422,8 +422,9 @@ describe('the popover markup', () => {
     it('paints the wrapper, the input and the preview with the exact class list and markers', () => {
       const { wrapper, input, preview } = build();
 
-      expect(wrapper.className).toBe('relative flex items-center gap-2 w-[300px] h-9 pl-3 pr-(--blok-space-0-75) rounded-(--blok-radius-field) [--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-field)-var(--blok-border-width-hairline)-var(--blok-space-0-75)))] border border-transparent bg-item-hover-bg transition-[background-color,border-color] duration-150 ease-out focus-within:bg-popover-bg focus-within:border-search-input-focus-border');
+      expect(wrapper.className).toBe('relative flex items-center gap-2 w-[300px] h-9 pl-3 pr-(--blok-space-0-75) rounded-(--blok-radius-field) [--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-field)-var(--blok-border-width-hairline)-var(--blok-space-0-75)))]');
       expect(wrapper.getAttribute('data-blok-equation-tool')).toBe('');
+      expect(wrapper.getAttribute('data-blok-field')).toBe('text');
       // `input.type` reads back as 'text' even when the IDL is set to '', so the
       // content attribute is the only witness that 'text' was actually written.
       expect(input.getAttribute('type')).toBe('text');

@@ -102,6 +102,21 @@ test.describe('filter popover geometry', () => {
     expect(popover.y - (chip.y + chip.height)).toBeCloseTo(4, 1);
   });
 
+  // notion-motion.md Round 88 §1 #3, Round 89 §1 #7 (r89-n-chipid.raw): Number and ID rule popups are 220×75.
+  for (const [type, operator] of [['number', 'equals'], ['uniqueId', 'equals']] as const) {
+    test(`a ${type} rule from a chip is 220×75`, async ({ page }) => {
+      const [database, ...rest] = blocks({ filters: [{ id: 'f1', propertyId: 'p-v', operator, value: null }] });
+      const data = database.data as { schema: unknown[] };
+
+      await mount(page, [{ ...database, data: { ...data, schema: [...data.schema, { id: 'p-v', name: 'V', type, position: 'a2' }] } }, ...rest]);
+      await page.getByTestId('database-filter-pill-f1').click();
+      const popover = await settledBox(page.getByTestId('database-filter-popover'));
+
+      expect(popover.width).toBeCloseTo(220, 1);
+      expect(popover.height).toBeCloseTo(75, 1);
+    });
+  }
+
   test('advanced rules put every property button at +76 and the value 16 before the ⋯', async ({ page }) => {
     await mount(page, blocks({ filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'f1', ...RULE }, { id: 'f2', ...RULE }] } }));
     await page.getByTestId('database-advanced-pill').click();
@@ -152,5 +167,44 @@ test.describe('filter popover geometry', () => {
     // The room past 170 goes half to the value, half to the gap before the ⋯.
     expect(more.x - (value.x + value.width) - 16).toBeCloseTo(value.width - 170, 1);
     expect(more.x).toBeCloseTo(groupMore.x, 1);
+  });
+
+  // notion-motion.md Round 83 §5 (r83-n-af-group-box.raw, r83-n-af-one.raw): a 1px ring on the group,
+  // a 20px plus at +8 on "Add filter rule", its text at +36.
+  test('rings a group 1px and draws Add filter rule\'s plus at 20px', async ({ page }) => {
+    await mount(page, blocks({ filterTree: { id: 'root', conjunction: 'and', filterRules: [
+      { id: 'f1', ...RULE },
+      { id: 'g1', conjunction: 'or', filterRules: [{ id: 'f3', ...RULE }] },
+    ] } }));
+    await page.getByTestId('database-advanced-pill').click();
+    await settledBox(page.getByTestId('database-advanced-filter'));
+    const group = page.getByTestId('database-filter-group-g1');
+    const add = page.getByTestId('database-filter-add-rule-root');
+    const addBox = await boxOf(add);
+    const plus = await add.evaluate((el) => {
+      const r = el.querySelector('svg')?.getBoundingClientRect();
+
+      return { x: r?.x ?? Number.NaN, width: r?.width ?? Number.NaN };
+    });
+    const label = await boxOf(add.locator('[data-blok-database-panel-label]'));
+
+    expect(await group.evaluate((el) => getComputedStyle(el).boxShadow)).toBe('rgba(42, 28, 0, 0.07) 0px 0px 0px 1px');
+    expect(plus.width).toBeCloseTo(20, 1);
+    expect(plus.x - addBox.x).toBeCloseTo(8, 1);
+    expect(label.x - addBox.x).toBeCloseTo(36, 1);
+  });
+
+  // notion-motion.md Round 83 §5 (r83-n-af-one.raw): after "Add advanced filter" focus stays on the toolbar Filter button.
+  test('keeps focus on the toolbar Filter button, with the advanced filter open', async ({ page }) => {
+    await mount(page, blocks({ filters: [] }));
+    await page.getByTestId('database-toolbar-filter').click();
+    await page.getByTestId('database-filter-picker-advanced').click();
+
+    // The picker's close motion is cut short here, so settledBox's wait on animations would reject.
+    await expect(page.getByTestId('database-advanced-filter')).toBeVisible();
+    await expect(page.getByTestId('database-toolbar-filter')).toBeFocused();
+    // Once the picker's close motion ends, the advanced filter is still open.
+    await page.evaluate(() => Promise.allSettled(document.getAnimations().map((animation) => animation.finished)));
+    await expect(page.getByTestId('database-advanced-filter')).toBeVisible();
   });
 });

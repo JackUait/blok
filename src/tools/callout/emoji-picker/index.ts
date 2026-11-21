@@ -76,7 +76,18 @@ interface EmojiPickerOptions {
   pickOnly?: boolean;
   /** The dialog's name. Defaults to "Edit icon". */
   label?: string;
+  /**
+   * Focus stays in the search field: the arrow keys move a highlight over the
+   * grid and Enter picks it, as Notion's database icon pickers (notion-motion.md
+   * Round 67 §1, Round 68 §3). Off in inline mode, whose caller owns the keys.
+   */
+  filterKeys?: boolean;
+  /** A fixed box in px, still clamped to the viewport. The grid takes the height left over. */
+  size?: { width: number; height: number };
 }
+
+/** Gives each picker its own highlight id. */
+const highlightIds = { next: 0 };
 
 const UNCAPPED_RESULTS = Number.POSITIVE_INFINITY;
 
@@ -196,6 +207,15 @@ export class EmojiPicker {
   private _removeButton: HTMLButtonElement | null = null;
   private readonly _pickOnly: boolean;
   private readonly _label: string | undefined;
+  private readonly _filterKeys: boolean;
+  private readonly _highlightId = `blok-emoji-picker-${++highlightIds.next}-active`;
+  private _highlighted: HTMLButtonElement | null = null;
+  /** The stage names the highlight only after a key moved it, so it opens on the current icon. */
+  private _stageOnHighlight = false;
+  /** The box height from the size option, used when an open names none. */
+  private _height: number | undefined;
+  /** Where the last pointer move was: a scroll under a still pointer replays one. */
+  private _pointerAt = '';
   private _localeData: EmojiLocaleData | null = null;
   private _localeLoad: Promise<void> | null = null;
   private _hasKeywords = false;
@@ -270,6 +290,7 @@ export class EmojiPicker {
     this._centred = options.centred === true;
     this._pickOnly = options.pickOnly ?? false;
     this._label = options.label;
+    this._filterKeys = options.filterKeys === true && !this._inline;
     this._element = this.buildElement();
 
     const body = this._element.querySelector<HTMLElement>('[data-emoji-picker-body]');
@@ -283,6 +304,20 @@ export class EmojiPicker {
     this._body = body;
     this._nav = nav;
     this._announcer = announcer;
+
+    if (this._filterKeys) {
+      this._element.setAttribute('data-emoji-picker-filter-keys', '');
+      body.addEventListener('pointermove', (event) => this.highlightUnderPointer(event));
+    }
+
+    if (options.size !== undefined) {
+      this._height = options.size.height;
+      this._element.style.width = `${options.size.width}px`;
+      this._element.style.maxWidth = 'calc(100vw - 16px)';
+      this._element.style.height = `${options.size.height}px`;
+      // Inline, to beat the fixed body heights in emoji-picker.css (navless one too).
+      Object.assign(body.style, { flex: '1 1 0', height: 'auto', maxHeight: 'none' });
+    }
 
     this._onDocumentKeydown = (e: KeyboardEvent): void => {
       if (e.key !== 'Escape' || !this._open) {
@@ -328,12 +363,13 @@ export class EmojiPicker {
    * @param anchorRect - overrides `anchor`'s own bounding rect for positioning
    * (inline mode: the anchor is the block's contentEditable, but the true
    * anchor point is the ":" character's rect inside it)
-   * @param handlers - replaces the constructor's callbacks, for a picker shared by several blocks
+   * @param handlers - replaces the constructor's callbacks, for a picker shared by several blocks;
+   *   `height` overrides the size option's height for this open
    */
   public async open(
     anchor: HTMLElement,
     anchorRect?: DOMRect,
-    handlers?: Pick<EmojiPickerOptions, 'onSelect' | 'onRemove'> & { current?: string; removable?: boolean }
+    handlers?: Pick<EmojiPickerOptions, 'onSelect' | 'onRemove'> & { current?: string; removable?: boolean; height?: number }
   ): Promise<void> {
     const active = document.activeElement;
 
@@ -343,6 +379,9 @@ export class EmojiPicker {
     }
 
     this._current = handlers?.current ?? '';
+    const height = handlers?.height ?? this._height;
+
+    if (height !== undefined) this._element.style.height = `${height}px`;
     if (this._removeButton !== null) this._removeButton.hidden = handlers?.removable === false;
 
     // Focus inside the picker means it is being reopened for another anchor:
@@ -406,6 +445,8 @@ export class EmojiPicker {
     } else {
       this.renderEmojiGrid(this._allEmojis);
     }
+
+    this.resetHighlight();
 
     if (!this._inline) {
       // Inline mode must not block pointer/scroll on the rest of the page —
@@ -814,7 +855,7 @@ export class EmojiPicker {
       if (focused !== null && body.contains(focused)) {
         this.showOnStage(focused);
       } else {
-        this.showStageIdle();
+        this.showStageOnHighlightOrIdle();
       }
     });
     body.addEventListener('focusin', (event) => {
@@ -826,7 +867,7 @@ export class EmojiPicker {
     });
     body.addEventListener('focusout', (event) => {
       if (emojiAt(event.relatedTarget) === null) {
-        this.showStageIdle();
+        this.showStageOnHighlightOrIdle();
       }
     });
 
@@ -891,6 +932,14 @@ export class EmojiPicker {
     );
   }
 
+  private showStageOnHighlightOrIdle(): void {
+    if (this._stageOnHighlight && this._highlighted !== null) {
+      this.showOnStage(this._highlighted);
+    } else {
+      this.showStageIdle();
+    }
+  }
+
   private showOnStage(button: HTMLElement): void {
     const emoji = this.emojiByNative(button.getAttribute('data-emoji-native') ?? '');
     const section = button.closest('[data-emoji-section]')?.querySelector('[data-emoji-section-title] > span');
@@ -941,6 +990,12 @@ export class EmojiPicker {
       return;
     }
 
+    if (this._filterKeys && event.target === this._filterInput) {
+      this.handleFilterKeydown(event);
+
+      return;
+    }
+
     if (event.target === this._filterInput && event.key === 'ArrowDown') {
       if (this._emojiButtons.length > 0) {
         event.preventDefault();
@@ -984,6 +1039,133 @@ export class EmojiPicker {
     }
 
     this.focusEmoji(Math.max(0, Math.min(this._emojiButtons.length - 1, index + step)));
+  }
+
+  /** Arrows move the highlight, Enter picks it. Modified arrows stay the field's, to select text. */
+  private handleFilterKeydown(event: KeyboardEvent): void {
+    const current = this._highlighted;
+
+    if (current === null) {
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      current.click();
+
+      return;
+    }
+
+    const key = logicalArrow(event.key, getElementDirection(this._element)) ?? event.key;
+    const sideways = key === 'forward' || key === 'backward';
+
+    if (!sideways && key !== 'ArrowUp' && key !== 'ArrowDown') {
+      return;
+    }
+
+    if (event.shiftKey || event.altKey || event.metaKey || event.ctrlKey) {
+      return;
+    }
+
+    event.preventDefault();
+    const next = sideways
+      ? this._emojiButtons[this._emojiButtons.indexOf(current) + (key === 'forward' ? 1 : -1)]
+      : this.verticalNeighbour(current, key === 'ArrowDown' ? 1 : -1);
+
+    if (next === undefined) {
+      return;
+    }
+
+    this.setHighlight(next);
+    this._stageOnHighlight = true;
+    this.showOnStage(next);
+  }
+
+  /**
+   * The cell a row below or above, in the same column. Rows run on across
+   * sections: Notion's ↓ from Recent's first cell lands on People's first.
+   * A shorter row takes its last cell.
+   */
+  private verticalNeighbour(button: HTMLButtonElement, direction: 1 | -1): HTMLButtonElement | undefined {
+    const grid = button.parentElement;
+    const grids = [...this._body.querySelectorAll<HTMLElement>('[data-emoji-grid]')];
+
+    if (grid === null) {
+      return undefined;
+    }
+
+    const cells = [...grid.children];
+    const tracks = getComputedStyle(grid).gridTemplateColumns;
+    const columns = tracks && tracks !== 'none' ? tracks.split(' ').length : 10;
+    const index = cells.indexOf(button);
+    const column = index % columns;
+    const target = index + direction * columns;
+
+    if (target >= 0 && target < cells.length) {
+      return cells[target] as HTMLButtonElement;
+    }
+
+    const rowStart = index - column;
+    const lastRowStart = Math.floor((cells.length - 1) / columns) * columns;
+
+    if (direction === 1 && rowStart < lastRowStart) {
+      return cells.at(-1) as HTMLButtonElement;
+    }
+
+    const other = grids[grids.indexOf(grid) + direction];
+
+    if (other === undefined || other.children.length === 0) {
+      return undefined;
+    }
+
+    const otherCells = [...other.children];
+    const start = direction === 1 ? 0 : Math.floor((otherCells.length - 1) / columns) * columns;
+
+    return otherCells[Math.min(start + column, otherCells.length - 1)] as HTMLButtonElement;
+  }
+
+  /** The pointer moves the one highlight, as Notion's (notion-motion.md Round 69 §3). */
+  private highlightUnderPointer(event: PointerEvent): void {
+    const at = `${event.clientX},${event.clientY}`;
+    const moved = at !== this._pointerAt;
+    const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-emoji-native]') : null;
+
+    this._pointerAt = at;
+    if (!moved || button === null || button === this._highlighted) {
+      return;
+    }
+    this.setHighlight(button, false);
+    this._stageOnHighlight = true;
+  }
+
+  private setHighlight(button: HTMLButtonElement | null, scroll = true): void {
+    if (this._highlighted !== null) {
+      this._highlighted.removeAttribute('data-emoji-highlighted');
+      this._highlighted.removeAttribute('id');
+    }
+
+    this._highlighted = button;
+
+    if (button === null) {
+      this._filterInput.removeAttribute('aria-activedescendant');
+
+      return;
+    }
+
+    button.setAttribute('data-emoji-highlighted', '');
+    button.setAttribute('id', this._highlightId);
+    this._filterInput.setAttribute('aria-activedescendant', this._highlightId);
+    if (scroll) button.scrollIntoView?.({ block: 'nearest', behavior: 'instant' });
+  }
+
+  /** Back to the first cell after every render: a reopen reuses the old buttons. */
+  private resetHighlight(): void {
+    if (!this._filterKeys) {
+      return;
+    }
+
+    this._stageOnHighlight = false;
+    this.setHighlight(this._emojiButtons[0] ?? null);
   }
 
   private focusEmoji(index: number): void {
@@ -1737,6 +1919,7 @@ export class EmojiPicker {
       this.setNavHidden(false);
       this.setFlat(false);
       this.renderEmojiGrid(this._allEmojis);
+      this.resetHighlight();
 
       return;
     }
@@ -1761,6 +1944,8 @@ export class EmojiPicker {
       this._hasFullGrid = false;
       this.renderResults(results);
     }
+
+    this.resetHighlight();
 
     // A short list changes the menu's height, which moves a menu that sits above the caret.
     if (this._inline && this._open && this._anchorEl !== null) {
@@ -1943,7 +2128,7 @@ export class EmojiPicker {
 
     heading.setAttribute('data-emoji-section-title', '');
     heading.className = [
-      'text-[11px] font-semibold uppercase tracking-wider px-2 pt-3 pb-1.5',
+      'text-[11px] font-semibold px-2 pt-3 pb-1.5',
       'text-neutral-400/80 theme-dark:text-neutral-500/80',
       'sticky top-0 bg-white theme-dark:bg-neutral-900 z-10',
     ].join(' ');
@@ -2061,7 +2246,8 @@ export class EmojiPicker {
       btn.className = [
         'aspect-square flex items-center justify-center',
         'text-[1.25rem] leading-none cursor-pointer',
-        'hover:bg-neutral-100 theme-dark:hover:bg-neutral-800',
+        // A filterKeys picker's one fill follows the pointer (highlightUnderPointer).
+        this._filterKeys ? '' : 'hover:bg-neutral-100 theme-dark:hover:bg-neutral-800',
         'transition-transform duration-75',
       ].join(' ');
       btn.addEventListener('click', () => {

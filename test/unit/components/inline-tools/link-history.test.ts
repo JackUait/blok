@@ -27,12 +27,19 @@ describe('link history', () => {
     recordRecentLink('https://b.com');
     recordRecentLink('https://c.com');
     recordRecentLink('https://d.com');
+    recordRecentLink('https://e.com');
 
     expect(getRecentLinks().map((entry) => entry.url)).toEqual([
+      'https://e.com',
       'https://d.com',
       'https://c.com',
-      'https://b.com',
     ]);
+  });
+
+  it('reads no more than three links from storage an older version wrote', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(['a', 'b', 'c', 'd'].map((name) => ({ url: `https://${name}.com` }))));
+
+    expect(getRecentLinks().map((entry) => entry.url)).toEqual(['https://a.com', 'https://b.com', 'https://c.com']);
   });
 
   it('moves a re-added link to the top without duplicating it', () => {
@@ -49,16 +56,31 @@ describe('link history', () => {
     recordRecentLink('https://b.com');
     recordRecentLink('https://a.com');
 
-    expect(getRecentLinks()[0]).toEqual({ url: 'https://a.com', title: 'A site' });
+    expect(getRecentLinks()[0]).toEqual({ url: 'https://a.com', title: 'A site', checked: true });
   });
 
-  it('stores the title and favicon for a recorded link', () => {
+  it('stores the title for a recorded link', () => {
     recordRecentLink('https://a.com');
-    updateRecentLinkMeta('https://a.com', { title: 'A site', favicon: 'https://a.com/icon.png' });
+    updateRecentLinkMeta('https://a.com', { title: 'A site' });
 
     expect(getRecentLinks()).toEqual([
-      { url: 'https://a.com', title: 'A site', favicon: 'https://a.com/icon.png' },
+      { url: 'https://a.com', title: 'A site', checked: true },
     ]);
+  });
+
+  it('remembers that a link was looked up, even when the page had nothing to give', () => {
+    recordRecentLink('https://a.com');
+    updateRecentLinkMeta('https://a.com', {});
+
+    expect(getRecentLinks()).toEqual([{ url: 'https://a.com', checked: true }]);
+  });
+
+  it('keeps the looked-up mark when the same link is added again', () => {
+    recordRecentLink('https://a.com');
+    updateRecentLinkMeta('https://a.com', { title: 'A' });
+    recordRecentLink('https://a.com/');
+
+    expect(getRecentLinks()).toEqual([{ url: 'https://a.com/', title: 'A', checked: true }]);
   });
 
   it('ignores metadata for a link that already left the history', () => {
@@ -66,6 +88,7 @@ describe('link history', () => {
     recordRecentLink('https://b.com');
     recordRecentLink('https://c.com');
     recordRecentLink('https://d.com');
+    recordRecentLink('https://e.com');
     updateRecentLinkMeta('https://a.com', { title: 'A site' });
 
     expect(getRecentLinks().map((entry) => entry.url)).not.toContain('https://a.com');
@@ -75,17 +98,17 @@ describe('link history', () => {
     recordRecentLink('https://a.com');
     updateRecentLinkMeta('https://a.com', { title: '   ' });
 
-    expect(getRecentLinks()).toEqual([{ url: 'https://a.com' }]);
+    expect(getRecentLinks()).toEqual([{ url: 'https://a.com', checked: true }]);
   });
 
   it('treats www, http(s) and a trailing slash as the same link, keeping what it knew', () => {
     recordRecentLink('https://youtube.com');
-    updateRecentLinkMeta('https://youtube.com', { title: 'YouTube', favicon: 'https://youtube.com/favicon.ico' });
+    updateRecentLinkMeta('https://youtube.com', { title: 'YouTube' });
     recordRecentLink('https://b.com');
     recordRecentLink('http://www.youtube.com/');
 
     expect(getRecentLinks()).toEqual([
-      { url: 'http://www.youtube.com/', title: 'YouTube', favicon: 'https://youtube.com/favicon.ico' },
+      { url: 'http://www.youtube.com/', title: 'YouTube', checked: true },
       { url: 'https://b.com' },
     ]);
   });
@@ -96,6 +119,14 @@ describe('link history', () => {
     recordRecentLink('https://a.com/docs#intro');
 
     expect(getRecentLinks()).toHaveLength(3);
+  });
+
+  it('drops a site icon stored by an older version', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([
+      { url: 'https://a.com', title: 'A', favicon: 'https://a.com/icon.png' },
+    ]));
+
+    expect(getRecentLinks()).toEqual([{ url: 'https://a.com', title: 'A' }]);
   });
 
   it('shows duplicates already in storage once, newest first', () => {

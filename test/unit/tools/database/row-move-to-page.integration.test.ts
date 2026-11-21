@@ -552,6 +552,28 @@ describe('row menu › Move to › Workspace tree', () => {
     expect(page.children).not.toHaveBeenCalledWith('w-home');
   });
 
+  // notion-motion.md Round 68 §5: Shift+Tab on a chevron focuses its own row; nothing expands.
+  it('moves focus from a chevron to its own row on Shift+Tab, keeping the picker open', async () => {
+    const page = host({ children: children() });
+
+    await boot(page);
+    await openPicker();
+    const chevron = chevronOf('Notes');
+
+    chevron.focus();
+    const tab = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
+
+    chevron.dispatchEvent(tab);
+    await quiet();
+
+    const notes = treeRows().find((row) => row.querySelector('.truncate')?.textContent === 'Notes');
+
+    expect(notes).toHaveFocus();
+    expect(tab.defaultPrevented).toBe(true);
+    expect(treeTitles()).toEqual(['Home', 'Notes']);
+    expect(page.children).not.toHaveBeenCalledWith('w-notes');
+  });
+
   it('opens a row\'s children under it, one level deeper, and closes them again, without picking', async () => {
     const page = host({ children: children() });
 

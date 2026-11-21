@@ -141,12 +141,14 @@ export const calculationItems = (
     name: `database-calc-${fn}`,
     title: i18n.t(CALCULATION_LABEL_KEYS[fn]),
     isActive: current === fn,
+    // notion-motion.md Round 81 §1: a pick closes every menu. The column header menu outlives the redraw, so it must be told.
+    closeOnActivate: true,
     onActivate: () => onPick(fn),
   });
   const group = (titleKey: string, fns: readonly CalculationFn[], lead: PopoverItemParams[] = []): PopoverItemParams => ({
     type: PopoverItemType.Default,
     title: i18n.t(titleKey),
-    isActive: current !== undefined && fns.includes(current),
+    // notion-motion.md Round 64 §5: the group stays unmarked; only the picked calculation inside it is.
     children: { items: [...lead, ...fns.map(leaf)], width: CALC_LIST_WIDTH },
   });
   const checkbox = property.type === 'checkbox';
@@ -169,6 +171,7 @@ export const calculationItems = (
       name: 'database-calc-none',
       title: i18n.t('tools.database.calcNone'),
       isActive: current === undefined,
+      closeOnActivate: true,
       onActivate: () => onPick(null),
     },
     group('tools.database.calcCount', checkbox ? CHECKBOX_COUNT_FNS : COUNT_FNS, capToggle),
@@ -213,14 +216,17 @@ export interface OpenMenuOptions {
    * a card menu is the same row menu, opened over its "•••"; a handle menu is the card menu, opened beside its handle.
    * A calc menu is the footer value's: header rows, 200 wide, no gap under its button.
    * A selection menu is the card menu of picked cards, opened under its anchor with no gap.
+   * A lock menu is the Locked button's: header rows, Notion's tighter padding and 20px icons.
    */
-  kind?: 'header' | 'row' | 'card' | 'handle' | 'calc' | 'selection';
+  kind?: 'header' | 'row' | 'card' | 'handle' | 'calc' | 'selection' | 'lock';
   /** Where the menu opens instead of the anchor's box; `positionContext` moves it with the page. */
   at?: { position: DOMRect; positionContext: HTMLElement };
   /** The least gap to the window's edges, instead of the kind's own. */
   viewportMargin?: number;
   /** The gap to the anchor, instead of the kind's own. */
   offset?: number;
+  /** The least width, instead of the kind's own. */
+  minWidth?: string;
   /** The menu's end edge on the anchor's end edge. */
   alignEnd?: boolean;
   /** A card menu that does not fit below opens above, its bottom this far over the anchor's top, when it fits there. */
@@ -236,6 +242,7 @@ const MENU_CLASS = {
   handle: DATABASE_HANDLE_MENU_CLASS,
   calc: `${DATABASE_HEADER_MENU_CLASS} ${DATABASE_CALC_MENU_CLASS}`,
   selection: DATABASE_CARD_MENU_CLASS,
+  lock: `${DATABASE_HEADER_MENU_CLASS} blok-database-lock-menu`,
 } as const;
 
 /** Notion's handle menu is 265 wide; the side is picked before the menu is measured. */
@@ -271,7 +278,7 @@ export const openMenu = (
     trigger: anchor,
     items,
     width: 'auto' as const,
-    minWidth: (options.kind === undefined ? undefined : MENU_MIN_WIDTH[options.kind]) ?? '220px',
+    minWidth: options.minWidth ?? (options.kind === undefined ? undefined : MENU_MIN_WIDTH[options.kind]) ?? '220px',
     // A card's menu opens over its "•••", shifted to stay in the window (feel findings B15, 09-notion-card-menu.png).
     // Round 35: a tall card menu stops 12px above the window bottom.
     ...(options.kind === 'card' ? { cover: true, viewportMargin: 12 } : {}),
@@ -286,8 +293,13 @@ export const openMenu = (
   const popover = new PopoverDesktop(at === undefined ? params : { ...params, position: at.position, positionContext: at.positionContext });
 
   // notion-motion.md Round 12: Escape closes one layer of a calculation menu at a time.
-  if (options.kind === 'calc') {
+  // Round 86 §1 #1: the row handle menu's submenu too.
+  if (options.kind === 'calc' || options.kind === 'row' || options.kind === 'handle') {
     popover.escapeClosesSubmenuFirst = true;
+  }
+  // notion-motion.md Round 85c §1: Escape removes the row handle menu at once; other closes still fade.
+  if (options.kind === 'row' || options.kind === 'handle') {
+    popover.escapeClosesAtOnce = true;
   }
   popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
   popover.alignEnd = options.alignEnd === true;
@@ -368,7 +380,8 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
       item('database-header-filter', 'tools.database.tableFilter', ctx.onFilter, IconFilter),
       // notion-live-7/80-menu-text.png: Sort shows a "›"; it opens the two sort choices.
       { ...item('database-header-sort', 'tools.database.tableSort', ctx.onSort, IconSort), chevron: true },
-      ...(groupable ? [item('database-header-group', 'tools.database.tableGroup', ctx.onGroup, IconGroup)] : []),
+      // notion-motion.md Round 93 §1 #1: Group opens nothing, so the row closes the menu itself.
+      ...(groupable ? [{ ...item('database-header-group', 'tools.database.tableGroup', ctx.onGroup, IconGroup), closeOnActivate: true }] : []),
       calculate,
     ]
     : [];
@@ -401,10 +414,14 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
     items.push(item('database-header-hide', 'tools.database.tableHide', ctx.onHide, IconEyeSlash));
   }
   // Notion offers no wrap toggle on a checkbox or a button column. Round 29 §2: each state has its own glyph.
+  // Round 94 §1 #5: a click closes the menu.
   if (property.type !== 'checkbox' && property.type !== 'button') {
-    items.push(ctx.wrapped
-      ? item('database-header-unwrap', 'tools.database.tableUnwrap', () => ctx.onWrap(false), IconArrowRightLine)
-      : item('database-header-wrap', 'tools.database.tableWrap', () => ctx.onWrap(true), IconUTurnLeft));
+    items.push({
+      ...(ctx.wrapped
+        ? item('database-header-unwrap', 'tools.database.tableUnwrap', () => ctx.onWrap(false), IconArrowRightLine)
+        : item('database-header-wrap', 'tools.database.tableWrap', () => ctx.onWrap(true), IconUTurnLeft)),
+      closeOnActivate: true,
+    });
   }
   items.push(
     item('database-header-insert-left', 'tools.database.tableInsertLeft', () => ctx.onInsert('left'), IconColumnInsertLeft),

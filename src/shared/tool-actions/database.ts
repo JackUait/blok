@@ -567,9 +567,11 @@ const updateView: ToolActionImpl<{ viewId: string; changes: Record<string, unkno
     const picked = (key: 'groupBy' | 'subGroupBy'): PropertyDefinition | undefined => schema?.find(property => property.id === changes[key]);
     const groupBy = picked('groupBy');
     const subGroupBy = picked('subGroupBy');
+    const groupChange = groupBy === undefined ? {} : groupByChange(view, groupBy);
+    // Read hiddenGroups after the group change, so both re-picks clear their own kind.
     const grouping = {
-      ...(groupBy === undefined ? {} : groupByChange(view, groupBy)),
-      ...(subGroupBy === undefined ? {} : subGroupByChange(view, subGroupBy)),
+      ...groupChange,
+      ...(subGroupBy === undefined ? {} : subGroupByChange({ ...view, ...groupChange }, subGroupBy)),
     };
     const next = jsonCopy(view);
 

@@ -1865,6 +1865,122 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R164_BYTES = 699;
     // Lane r165: Round 67 §1 Duplicate submenu (275x65, 28px rows, opacity fade) and the Move to Trash row (no Del, neutral hover). Net database.css growth against origin/main.
     const DATABASE_R165_BYTES = 1904;
+    // Lane r167: Round 68 §1 the "Locked" text button (24px, r4, 20px glyph, 0.02s hover fill) and the blue Re-lock. Net database.css growth against origin/main.
+    const DATABASE_R167_BYTES = 934;
+    // Lane r172: Round 69 §4 the row checkbox's r3 and the gutter "+" at 20. Net database.css growth against origin/main.
+    const DATABASE_R172_BYTES = 258;
+    // Lane r171: Round 69 §1 the Unlock menu (rows padded 0 8, 20px icons, no gap under the last row). Net database.css growth against origin/main.
+    const DATABASE_R171_BYTES = 512;
+    // Lane r173: Round 70 §3 gallery "New page" glyph 15 and gap 6, the timeline draft row's hidden edge, 4px under the last row. Net database.css growth against origin/main.
+    const DATABASE_R173_BYTES = 653;
+    // Lane r174: Round 70 §2 the Unlock menu's lighter keyboard fill (light, and dark kept) and the header checkbox at r3. Net database.css growth against origin/main.
+    const DATABASE_R174_BYTES = 633;
+    // Lane r176: Round 71 §2 and §5 the side peek starts its own width away and slides out empty on the way to a full page. Net database.css growth against origin/main.
+    const DATABASE_R176_BYTES = 195;
+    // Lane r177: Round 71 §3 the timeline draft's hidden "←" chip, the dependency dot's 200ms fade and pointer, primary-ink "New page". Net database.css growth against origin/main.
+    const DATABASE_R177_BYTES = 527;
+    // Lane r181: Round 72 §2 the dependency dot shows at once; §5 the feed byline 2px lower and a 16px "More actions" glyph. Net database.css growth against origin/main.
+    const DATABASE_R181_BYTES = 468;
+    // Lane r182: Round 73 §2 the peek mode menu's 8px separator and no gap under its last row (160 tall). Net database.css growth against origin/main.
+    const DATABASE_R182_BYTES = 352;
+    // Lane r183: Round 74 §4 the colour rule card 11px lower and a rollup's "any" at 400, §5 a text form answer's text 9px 10px in. Net database.css growth against origin/main.
+    const DATABASE_R183_BYTES = 726;
+    // Lane r184: Round 74 §3 the "N more…" menu's entrance, spacing, row offsets and checkmark; §2 the full-page icon row zone. Net database.css growth against origin/main.
+    const DATABASE_R184_BYTES = 1812;
+    // Lane r186: Round 75 §2 the "N more…" menu closes with its open in reverse, §3 the dark "+ New page" tile ring; Round 72 §2 B the timeline with no lanes ends 108 under "+ New". Net database.css growth against origin/main.
+    const DATABASE_R186_BYTES = 875;
+    // Lane r187: Round 75 §2 the form builder's date picker field, editable option rows with "Add option", and the checkbox row. Net database.css growth against origin/main.
+    const DATABASE_R187_BYTES = 2433;
+    // Lane r191: Round 76 §6 a grouped timeline's 32px group header and the view 12 under the last group's "+ New". Net database.css growth against origin/main.
+    const DATABASE_R191_BYTES = 498;
+    // Lane r189: Round 76 §7 the dark calendar day "+" fill, §6 the timeline panel's 32px room with no dated row, §5 the timeline header fades. Net database.css growth against origin/main.
+    const DATABASE_R189_BYTES = 1922;
+    // Lane r190: Round 76 §3 the form builder's 15px option marks, option row hover with drag handle and Delete option, checkbox label field and dropdown hint field. Net database.css growth against origin/main.
+    const DATABASE_R190_BYTES = 3398;
+    // Lane r192: Round 77 §4 the form option glyph sizes and inks, the option drag slide, the dark mark fill and a respondent's checkbox label. Net database.css growth against origin/main.
+    const DATABASE_R192_BYTES = 1256;
+    // Lane r194: Round 78 §1 the undated timeline panel keeps its Calculate row, so r189's 32px room goes. Net database.css change against origin/main (a shrink).
+    const DATABASE_R194_BYTES = -227;
+    // Lane r195: Round 78 §3 a respondent's checkbox takes the builder's 18px box and 15px mark with a darker ring; §2 the Delete option confirm's 600 title. Net database.css growth against origin/main.
+    const DATABASE_R195_BYTES = 821;
+    // Lane r197: Round 79 §3 a respondent's checkbox keeps its mark with no label and when checked; §5 the timeline's 28px nav glyphs, the calendar's left line under the weekday row and the form header's 2 and 4px insets. Net database.css growth against origin/main.
+    const DATABASE_R197_BYTES = 1973;
+    // Lane r198: Round 80 the respondent's filled check, the database ink on panel checkmarks, the Month chevron's icon ink and the No date panel's insets. Net database.css growth against origin/main.
+    const DATABASE_R198_BYTES = 1064;
+    // Lane r199: backlog items Notion measured earlier (R64, R66, R73, R75): the header menu name field at rest, the peek header rules 8 from each button, the colour rule trash 4px further in. Net database.css growth against origin/main.
+    const DATABASE_R199_BYTES = 927;
+    // Lane r202: Round 81 small look items (grouped list header, card menu search, No date pitch, gallery tools, Calculate chevrons, Month chevron, menu icon ink). Net database.css growth against origin/main.
+    const DATABASE_R202_BYTES = 4524;
+    // Lane r205: Round 82 small look items (card menu chevrons, board card tools, header menu outline, grouped list header). Net database.css growth against origin/main.
+    const DATABASE_R205_BYTES = 1620;
+    // Lane r204: Round 82 Group page, every group eye in the strong grey and group names at 500 (Status at 400). Net database.css growth against origin/main.
+    const DATABASE_R204_BYTES = 135;
+    // Lane r208: the row page comment composer (Round 83 §7): input 560, tools shown with focus. Net database.css growth against origin/main.
+    const DATABASE_R208_BYTES = 1824;
+    // Lane r206: Round 83 date fields 36 apart, the time zone search 12 in, the advanced filter's "Where" in 14px dark ink. Net database.css growth against origin/main.
+    const DATABASE_R206_BYTES = 381;
+    // Lane r207: Round 83 Number format's "Filter formats…" field at 14px. Net database.css growth against origin/main.
+    const DATABASE_R207_BYTES = 240;
+    // Lane r210: Round 84b time zone list 48 down, headings spaced like Notion's sections. Net database.css growth against origin/main.
+    const DATABASE_R210_BYTES = 741;
+    // Lane r211: Round 84b grouped list Status pill at 400, its header spacing, full page title gap, timeline link dot. Net database.css growth against origin/main.
+    const DATABASE_R211_BYTES = 442;
+    // Lane r209: Round 84b §3 a 14x14 checkbox before each checkbox group name on the Group page. Net database.css growth against origin/main.
+    const DATABASE_R209_BYTES = 321;
+    // Lane r214: Round 66 §4 Favorite and full page top bar buttons at radius 6, Round 81 §1 rule ink. Net database.css growth against origin/main.
+    const DATABASE_R214_BYTES = 281;
+    // Lane r213: Round 83 §5 advanced filter group ring and the 20px Add filter rule plus. Net database.css growth against origin/main.
+    const DATABASE_R213_BYTES = 388;
+    // Lane r215: Round 85c §2 checkbox group headers on the board and list (no pill, the box 3px in). Net database.css growth against origin/main.
+    const DATABASE_R215_BYTES = 510;
+    // Lane r218: Round 53 §8a "No place" 70vh cap and Round 72 §5 feed byline/title boxes. Net database.css growth against origin/main.
+    const DATABASE_R218_BYTES = 621;
+    // Lane r217: Round 64 §6 1px more between list groups, Round 52 §1 default cursor while a list row drags. Net database.css growth against origin/main.
+    const DATABASE_R217_BYTES = 408;
+    // Lane r212: Round 84b §1 a long value in the fixed 300 Edit property flyout is cut with an ellipsis. Net database.css growth against origin/main.
+    const DATABASE_R212_BYTES = 712;
+    // Lane r220: Round 86 §1 the row menu's submenu fades out with no scale, Date format fades and scales in. Net database.css growth against origin/main.
+    const DATABASE_R220_BYTES = 833;
+    // Lane r224: Round 47 A3 the mid-drag timeline pill runs 4px past each end; Round 52 / 65 §4 Select type rows at + 12, no scale. Net database.css growth against origin/main.
+    const DATABASE_R224_BYTES = 746;
+    // Lane r223: Round 83 §7 pointer over a row page property's name cell, Round 72 §4 empty panel sliding out over a full page. Net database.css growth against origin/main.
+    const DATABASE_R223_BYTES = 705;
+    // Lane r226: Round 87 §1 #3, #4 Time format and Timezone open motion, #5 Edit property value rows, #10 today circle. Net database.css growth against origin/main.
+    const DATABASE_R226_BYTES = 2477;
+    // Lane r229: R59 §8 toolbar Search and Settings glyphs at 18px, R83 §5 filter ⋯ note. Net database.css growth against origin/main.
+    const DATABASE_R229_BYTES = 408;
+    // Lane r228: Round 47 §B7 wrapped table rows at 21 per line + 15. Net database.css growth against origin/main.
+    const DATABASE_R228_BYTES = 130;
+    // Lane r231: Round 88 §1 #7 Select type opens at once and its slot fades, #8 Select type row boxes and steps, #5 Quarter date pill. Net database.css growth against origin/main.
+    const DATABASE_R231_BYTES = 1412;
+    // Lane r232: Round 88 §1 #1 Date format open motion, #3 Number rule value row, #4 Filters page header. Net database.css growth against origin/main.
+    const DATABASE_R232_BYTES = 1207;
+    // Lane r235: Round 89 §1 #3 Quarter "+ New" ghost crosshair. Net database.css growth against origin/main.
+    const DATABASE_R235_BYTES = 206;
+    // Lane r236: Round 89 §1 #5 Select type existing-property tiles, R88 §1 #8 new-question glyph 20, #8 Layout tiles. Net database.css growth against origin/main.
+    const DATABASE_R236_BYTES = 767;
+    // Lane r239: Round 90 §1 #8 Layout tile ring, #9 #13 Select type row insets, #10 dark tiles, §3 Layout tile hover. Net database.css growth against origin/main.
+    const DATABASE_R239_BYTES = 886;
+    // Lane r238: Round 90 §1 #3 ghost crosshair at every zoom (a shrink), #4/#6 split date pill. Net database.css growth against origin/main.
+    const DATABASE_R238_BYTES = 191;
+    // Lane r241: Round 52 §4 active chip hover/open fill, "+ Filter" offset, sort rule slide. Net database.css growth against origin/main.
+    const DATABASE_R241_BYTES = 1285;
+    // Lane r250: Round 92 §1 #7 Show as divider inset, Bar tile track, dark tile labels. Net database.css growth against origin/main.
+    const DATABASE_R250_BYTES = 819;
+    // Lane r248: Round 92 §1 #3 #4 property and group list slide, group drag handles. Net database.css growth against origin/main.
+    const DATABASE_R248_BYTES = 1445;
+    // Lane r253: Round 93 §1 #5 Change type list height and fade. Net database.css growth against origin/main.
+    const DATABASE_R253_BYTES = 496;
+    // Lane r256: Round 94 §1 #6 no ring round the Edit property list after a submenu Escape. Net database.css growth against origin/main.
+    const DATABASE_R256_BYTES = 408;
+    // Lane r260: Round 95 §1 #8 the list row's keyboard ring sits outside the row. Net database.css growth against origin/main.
+    const DATABASE_R260_BYTES = 1098;
+    // Lane r262: Round 96 §1 #4 #5 the list row's focus fill and dark ring blue. Net database.css growth against origin/main.
+    const DATABASE_R262_BYTES = 219;
+    // Lane r257: Round 94 §1 #7 a hidden title row, §2 the selection bar at the database top. Net database.css growth against origin/main.
+    const DATABASE_R257_BYTES = 660;
+    // Lane r264: Round 97 §1 #4 the one-view selection bar at the database top, 8px left of the title. Net database.css growth against origin/main.
+    const DATABASE_R264_BYTES = 161;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -1911,8 +2027,18 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const PRESENCE_INK_FACES_BYTES = 4_973;
     // table-of-contents.css: the block is never the browser's scroll anchor (measured table-of-contents.css growth).
     const TOC_NO_SCROLL_ANCHOR_BYTES = 459;
+    // popover-animation.css + colors.css: the block menu's quiet look and its four tokens (measured growth of both files).
+    const BLOCK_MENU_QUIET_BYTES = 4_325;
+    // link-picker.css + colors.css + slash-search.css: the link field's shelf, heading outline, three tokens, and the declared-scroller rules (measured growth).
+    const LINK_PICKER_SHELF_BYTES = 5_841;
+    // field.css + database.css + tables.css + embed.css: Notion's 2px blue focus ring on every boxed field (measured net growth).
+    const FIELD_FOCUS_RING_BYTES = 1_297;
     // file.css: the object on a file card — pages, editor tab, filmstrip, record, folder, punch card (measured file.css growth).
     const FILE_CARD_OBJECT_BYTES = 27_626;
+    // emoji-picker.css: the database icon pickers' keyboard highlight (measured emoji-picker.css growth).
+    const EMOJI_FILTER_KEYS_HIGHLIGHT_BYTES = 190;
+    // emoji-picker.css: no hover fill on a filterKeys picker's cells, whose one highlight follows the pointer (measured growth).
+    const EMOJI_FILTER_KEYS_HOVER_BYTES = 39;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -2481,6 +2607,64 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R162_BYTES
       + DATABASE_R164_BYTES
       + DATABASE_R165_BYTES
+      + DATABASE_R167_BYTES
+      + DATABASE_R172_BYTES
+      + DATABASE_R171_BYTES
+      + DATABASE_R173_BYTES
+      + DATABASE_R174_BYTES
+      + DATABASE_R176_BYTES
+      + DATABASE_R177_BYTES
+      + DATABASE_R181_BYTES
+      + DATABASE_R182_BYTES
+      + DATABASE_R183_BYTES
+      + DATABASE_R184_BYTES
+      + DATABASE_R186_BYTES
+      + DATABASE_R187_BYTES
+      + DATABASE_R191_BYTES
+      + DATABASE_R189_BYTES
+      + DATABASE_R190_BYTES
+      + DATABASE_R192_BYTES
+      + DATABASE_R194_BYTES
+      + DATABASE_R195_BYTES
+      + DATABASE_R197_BYTES
+      + DATABASE_R198_BYTES
+      + DATABASE_R199_BYTES
+      + DATABASE_R202_BYTES
+      + DATABASE_R205_BYTES
+      + DATABASE_R204_BYTES
+      + DATABASE_R208_BYTES
+      + DATABASE_R206_BYTES
+      + DATABASE_R207_BYTES
+      + DATABASE_R210_BYTES
+      + DATABASE_R211_BYTES
+      + DATABASE_R209_BYTES
+      + DATABASE_R214_BYTES
+      + DATABASE_R213_BYTES
+      + DATABASE_R215_BYTES
+      + DATABASE_R218_BYTES
+      + DATABASE_R217_BYTES
+      + DATABASE_R212_BYTES
+      + DATABASE_R220_BYTES
+      + DATABASE_R224_BYTES
+      + DATABASE_R223_BYTES
+      + DATABASE_R226_BYTES
+      + DATABASE_R229_BYTES
+      + DATABASE_R228_BYTES
+      + DATABASE_R231_BYTES
+      + DATABASE_R232_BYTES
+      + DATABASE_R235_BYTES
+      + DATABASE_R236_BYTES
+      + DATABASE_R239_BYTES
+      + DATABASE_R238_BYTES
+      + DATABASE_R241_BYTES
+      + DATABASE_R250_BYTES
+      + DATABASE_R248_BYTES
+      + DATABASE_R253_BYTES
+      + DATABASE_R256_BYTES
+      + DATABASE_R260_BYTES
+      + DATABASE_R262_BYTES
+      + DATABASE_R257_BYTES
+      + DATABASE_R264_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES
@@ -2497,7 +2681,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + VIDEO_TIER_GLIDE_BYTES
       + VIDEO_HANDLE_CLEARANCE_BYTES
       + PRESENCE_INK_FACES_BYTES
-      + TOC_NO_SCROLL_ANCHOR_BYTES;
+      + TOC_NO_SCROLL_ANCHOR_BYTES
+      + EMOJI_FILTER_KEYS_HIGHLIGHT_BYTES
+      + EMOJI_FILTER_KEYS_HOVER_BYTES
+      + BLOCK_MENU_QUIET_BYTES
+      + LINK_PICKER_SHELF_BYTES
+      + FIELD_FOCUS_RING_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

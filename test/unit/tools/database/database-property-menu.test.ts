@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { PropertyDefinition, PropertyType } from '../../../../src/tools/database/types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
 import { propertyTypeMeta } from '../../../../src/tools/database/database-property-types';
-import { IconChangeType, IconCheck, IconInfo, IconPageLayout, IconPencil, IconPreview, IconReplace, IconSliders, IconSort } from '../../../../src/components/icons';
+import { IconAlarm, IconChangeType, IconCheck, IconClock, IconInfo, IconPageLayout, IconPencil, IconPreview, IconReplace, IconSliders, IconSort } from '../../../../src/components/icons';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 
 interface CapturedItem {
@@ -66,6 +66,8 @@ vi.mock('../../../../src/components/utils/popover', () => ({
     toggleItemHiddenByName(name: string, isHidden: boolean): void {
       this.record.hidden[name] = isHidden;
     }
+
+    setArrowTarget(): void {}
 
     focusItemByName(name: string): boolean {
       this.record.focused.push(name);
@@ -1223,10 +1225,11 @@ describe('DatabasePropertyMenu', () => {
     });
 
     // research/27 §7: the header's Edit property submenu is 300 wide; the all-views note no longer sets it.
-    it('opens the header Edit property submenu at least 300 wide', () => {
+    // notion-motion.md Round 84b §1: a long Number format label leaves it 300 wide.
+    it('opens the header Edit property submenu 300 wide, whatever its rows hold', () => {
       const { menu } = headerMenu(prop('number'));
 
-      expect(byName(lastItems(), 'editProperty').children?.minWidth).toBe('300px');
+      expect(byName(lastItems(), 'editProperty').children?.width).toBe('300px');
       menu.destroy();
     });
 
@@ -1486,7 +1489,7 @@ describe('DatabasePropertyMenu', () => {
   });
 
   describe('Edit property for a date', () => {
-    it('sets the date format, time format and time zone', () => {
+    it('sets the date format', () => {
       const cb = open(prop('date', { date: { timeFormat: '24_hour' } }));
       const items = byName(lastItems(), 'editProperty').children?.items ?? [];
       const formats = byName(items, 'dateFormat').children?.items ?? [];
@@ -1496,11 +1499,56 @@ describe('DatabasePropertyMenu', () => {
       ]);
       byName(formats, 'dateFormat-relative').onActivate?.(byName(formats, 'dateFormat-relative'));
       expect(cb.onUpdate).toHaveBeenCalledWith('p', { date: { timeFormat: '24_hour', dateFormat: 'relative' } });
+    });
 
+    it('sets the time zone of a Created time property', () => {
+      const cb = open(prop('createdTime', { date: { timeFormat: '24_hour' } }));
+      const items = byName(lastItems(), 'editProperty').children?.items ?? [];
       const zones = byName(items, 'timeZone').children?.items ?? [];
 
       byName(zones, 'timeZone-Asia/Tokyo').onActivate?.(byName(zones, 'timeZone-Asia/Tokyo'));
       expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { date: { timeFormat: '24_hour', timeZone: 'Asia/Tokyo' } });
+    });
+
+    // notion-motion.md Round 89 §1 #6 (r89-n-dateflyout-time.raw): no Timezone row, even with a timed row.
+    // The cell editor's Timezone row sets the same setting.
+    it('has no Timezone row', () => {
+      open(prop('date'));
+
+      expect((byName(lastItems(), 'editProperty').children?.items ?? []).map((item) => item.name))
+        .toEqual(['dateFormat', 'timeFormat', 'dateNotifications']);
+    });
+
+    // Created time and Last edited time always hold a time; their flyouts are unmeasured.
+    it.each<PropertyType>(['createdTime', 'lastEditedTime'])('keeps the Timezone row on %s', (type) => {
+      open(prop(type));
+
+      expect((byName(lastItems(), 'editProperty').children?.items ?? []).some((item) => item.name === 'timeZone')).toBe(true);
+    });
+
+    // notion-motion.md Round 87 §1 #2 (r87-n-dateflyout.raw): Time format has a clock, Notifications an alarm.
+    it('marks Time format with a clock and Notifications with an alarm', () => {
+      open(prop('date'));
+      const items = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+      expect(byName(items, 'timeFormat').icon).toBe(IconClock);
+      expect(byName(items, 'dateNotifications').icon).toBe(IconAlarm);
+    });
+
+    // database.css scales this list from .96 about its top right (notion-motion.md Round 87 §1 #3).
+    it('opens Time format as a panel list with the Time format class', () => {
+      open(prop('date'));
+      const items = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+      expect(byName(items, 'timeFormat').children?.class?.split(' ')).toEqual(['blok-database-panel-list', 'blok-database-time-format-list']);
+    });
+
+    // database.css scales this list from .96 about its top right (notion-motion.md Round 88 §1 #1).
+    it('opens Date format as a panel list with the Date format class', () => {
+      open(prop('date'));
+      const items = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+      expect(byName(items, 'dateFormat').children?.class?.split(' ')).toEqual(['blok-database-panel-list', 'blok-database-date-format-list']);
     });
 
     // research/37 §2: an untouched Date property shows "Full date" and "12 hour".
@@ -1966,6 +2014,19 @@ describe('row page property menu', () => {
     expect(byName(set.items, 'numberFormat').valueLabel).toBe('tools.database.numberFormat.euro');
     expect(byName(set.items, 'decimals').valueLabel).toBe('2');
     set.menu.destroy();
+  });
+
+  // notion-motion.md Round 84b §1 (r84-n-numfmt-labels.raw): the row reads "Australian dollar"; the list keeps "(AUD)".
+  it('the Number format row names a currency without its ISO code, the list keeps it', () => {
+    const labels: Record<string, string> = { 'tools.database.numberFormat.australian_dollar': 'Australian dollar (AUD)' };
+    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => labels[key] ?? key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+    menu.openRowPage(prop('number', { number: { format: 'australian_dollar' } }), document.createElement('div'), { edit: true });
+    const format = byName(lastItems(), 'numberFormat');
+
+    expect(format.valueLabel).toBe('Australian dollar');
+    expect(byName(format.children?.items ?? [], 'format-australian_dollar').title).toBe('Australian dollar (AUD)');
+    menu.destroy();
   });
 
   it('draws Show as as three tiles, the current one checked', () => {

@@ -13,6 +13,8 @@ export interface ColumnControlsOptions {
 export class DatabaseColumnControls {
   private options: ColumnControlsOptions;
   private readonly i18n: I18n;
+  /** The pill whose rename a key started: focus goes back to it when the rename ends. */
+  private keyPill: HTMLElement | null = null;
 
   constructor(options: ColumnControlsOptions) {
     this.options = options;
@@ -24,6 +26,20 @@ export class DatabaseColumnControls {
     if (titleEl === null) return;
 
     titleEl.style.cursor = 'text';
+
+    const pill = headerEl.querySelector<HTMLElement>('[data-blok-database-column-pill]');
+
+    // notion-motion.md Round 97 §1 #1: the pill is a Tab stop. A rename re-runs this, so the key listener goes on once.
+    if (pill !== null && pill.tabIndex < 0) {
+      pill.tabIndex = 0;
+      pill.setAttribute('role', 'button');
+      pill.addEventListener('keydown', (e) => {
+        if (e.target !== pill || (e.key !== 'Enter' && e.key !== ' ')) return;
+        e.preventDefault();
+        pill.querySelector<HTMLElement>('[data-blok-database-column-title]')?.click();
+        this.keyPill = pill;
+      });
+    }
 
     titleEl.addEventListener('click', (e: MouseEvent) => {
       e.stopPropagation(); // prevent column drag from starting
@@ -56,6 +72,7 @@ export class DatabaseColumnControls {
         onCommit: (newLabel) => {
           // re-attach click listener on restored div
           this.makePillTitleEditable(headerEl, optionId);
+          this.refocusKeyPill();
           // Fire commit only when the final resolved label actually changed
           if (newLabel !== originalLabel) {
             this.options.onRenameCommit?.(optionId, newLabel);
@@ -64,9 +81,19 @@ export class DatabaseColumnControls {
         },
         onCancel: () => {
           this.makePillTitleEditable(headerEl, optionId);
+          this.refocusKeyPill();
         },
       });
     });
+  }
+
+  /** The rename hands focus to the restored title; a blur that Tab caused keeps its new focus. */
+  private refocusKeyPill(): void {
+    const pill = this.keyPill;
+    const active = document.activeElement;
+
+    this.keyPill = null;
+    if (pill?.isConnected === true && (active === null || active === document.body || pill.contains(active))) pill.focus();
   }
 
   destroy(): void { /* no global listeners */ }

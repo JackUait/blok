@@ -285,7 +285,7 @@ const ChangelogContent: React.FC<ChangelogContentProps> = ({ inline = false }) =
   return (
     <>
       <div className={headerClass}>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-bold tracking-wide text-primary uppercase">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-bold text-primary">
           <span className="size-3.5 [&>svg]:size-full" aria-hidden="true">
             <Icons.clock />
           </span>
@@ -332,7 +332,7 @@ const ChangelogContent: React.FC<ChangelogContentProps> = ({ inline = false }) =
                       v{release.version}
                     </span>
                   )}
-                  <Badge variant="outline" className="uppercase">
+                  <Badge variant="outline">
                     {translateOr(
                       `changelog.releaseType.${release.releaseType}`,
                       release.releaseType,
@@ -358,7 +358,7 @@ const ChangelogContent: React.FC<ChangelogContentProps> = ({ inline = false }) =
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
                             <Badge
                               variant={badgeVariantFor(change.category)}
-                              className="uppercase [&>span]:size-3"
+                              className="[&>span]:size-3"
                             >
                               <span className="[&>svg]:size-full" aria-hidden="true">
                                 <IconFor name={change.category as keyof typeof Icons} />

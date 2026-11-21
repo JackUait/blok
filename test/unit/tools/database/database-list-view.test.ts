@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, onTestFinished } from 'vitest';
 import { DatabaseListView } from '../../../../src/tools/database/database-list-view';
+import { KEYBOARD_OWNER_EDGE_EVENT } from '../../../../src/components/constants/data-attributes';
 import type { DatabaseRow, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
@@ -757,6 +758,41 @@ describe('DatabaseListView', () => {
       expect(lassoRows).toHaveBeenLastCalledWith(['r1', 'r2']);
     });
 
+    // r87-measure notes: ↓ on the last picked row block-selects the next page block, and the row pick goes.
+    it('↓ on the last row hands the key to Blok; the pick clears only when Blok moved', () => {
+      const lassoRows = vi.fn();
+      const list = mount({ lassoRows });
+      const edges: string[] = [];
+      let moves = true;
+
+      list.addEventListener(KEYBOARD_OWNER_EDGE_EVENT, (event) => {
+        edges.push(event instanceof CustomEvent ? String(event.detail.direction) : '');
+        if (moves) event.preventDefault();
+      });
+
+      rowEl(list, 'r1').focus();
+      press(rowEl(list, 'r1'), { key: 'ArrowDown' });
+      expect(edges).toEqual([]);
+      expect(lassoRows).toHaveBeenLastCalledWith(['r2']);
+
+      const handed = press(rowEl(list, 'r2'), { key: 'ArrowDown' });
+
+      expect(edges).toEqual(['next']);
+      expect(lassoRows).toHaveBeenLastCalledWith([]);
+      expect(handed.defaultPrevented).toBe(true);
+
+      moves = false;
+      lassoRows.mockClear();
+      const kept = press(rowEl(list, 'r2'), { key: 'ArrowDown' });
+
+      expect(lassoRows).not.toHaveBeenCalled();
+      expect(kept.defaultPrevented).toBe(true);
+
+      press(rowEl(list, 'r2'), { key: 'ArrowDown', shiftKey: true });
+      press(rowEl(list, 'r1'), { key: 'ArrowUp' });
+      expect(edges).toEqual(['next', 'next']);
+    });
+
     it('Escape while editing a title selects that row', () => {
       const lassoRows = vi.fn();
       const view = new DatabaseListView({
@@ -799,6 +835,17 @@ describe('DatabaseListView', () => {
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
       expect(onTitleEdit).toHaveBeenCalledWith('r2', 'Renamed');
+    });
+
+    // notion-motion.md Round 52 §1: the Edit pill puts the caret at the end (4/4), nothing selected.
+    it('the Edit pill opens the title with the caret at its end', () => {
+      const list = mount();
+
+      rowEl(list, 'r2').querySelector<HTMLElement>('[data-blok-database-list-row-edit]')?.click();
+      const input = list.querySelector<HTMLInputElement>('[data-blok-database-list-title-input]');
+
+      expect(input).toHaveFocus();
+      expect([input?.selectionStart, input?.selectionEnd]).toEqual([3, 3]);
     });
   });
 

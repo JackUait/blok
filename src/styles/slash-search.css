@@ -80,6 +80,13 @@ span[data-blok-slash-search] {
 [data-blok-popover-items]::-webkit-scrollbar {
   display: none; /* Chromium / WebKit: hide the native scrollbar */
 }
+/* A scroller an item declares gets the same treatment: the thumb tracks it. */
+[data-blok-popover-scroller] {
+  scrollbar-width: none;
+}
+[data-blok-popover-scroller]::-webkit-scrollbar {
+  display: none;
+}
 /* Physical right, like the thumb's own `right`. */
 [data-blok-popover-items]:has(~ [data-blok-popover-scrollbar]:not([hidden])) {
   padding-right: var(--blok-space-1);

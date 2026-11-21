@@ -135,7 +135,8 @@ for (const surface of ['settings', 'inline'] as const) {
         const searchHeight = width < 651 ? 0 : await menu.getByTestId('popover-search-field')
           .evaluate(element => element instanceof HTMLElement ? element.offsetHeight : Infinity);
 
-        expect.soft(searchHeight).toBeLessThanOrEqual(28);
+        // The block menu's own search line is 30px; the inline toolbar's is the shared 28.
+        expect.soft(searchHeight).toBeLessThanOrEqual(surface === 'settings' ? 30 : 28);
 
         const box = await menu.boundingBox();
 

@@ -29,7 +29,7 @@ export const PresetSection: React.FC<PresetSectionProps> = ({ section }) => {
       </div>
 
       <div className="mt-6 rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <p className="text-sm font-bold uppercase tracking-wide text-foreground">{t('presets.reHosting')}</p>
+        <p className="text-sm font-bold text-foreground">{t('presets.reHosting')}</p>
         <div className="mt-2">
           <Prose text={section.uploadByUrlNote} className="text-sm text-muted-foreground" />
         </div>
@@ -37,7 +37,7 @@ export const PresetSection: React.FC<PresetSectionProps> = ({ section }) => {
 
       {!section.productionReady && section.productionNote && (
         <div className="mt-6 rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
-          <p className="text-sm font-bold uppercase tracking-wide text-destructive">
+          <p className="text-sm font-bold text-destructive">
             {t('presets.notForProduction')}
           </p>
           <div className="mt-2">
@@ -48,7 +48,7 @@ export const PresetSection: React.FC<PresetSectionProps> = ({ section }) => {
 
       {section.configOptions.length > 0 && (
         <div className="mt-6">
-          <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">
+          <h3 className="mb-3 text-sm font-bold text-foreground">
             {t('tools.configuration')}
           </h3>
           <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -95,7 +95,7 @@ export const PresetSection: React.FC<PresetSectionProps> = ({ section }) => {
       )}
 
       <div className="mt-6">
-        <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">
+        <h3 className="mb-3 text-sm font-bold text-foreground">
           {t('presets.storageSetup')}
         </h3>
         <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
@@ -108,7 +108,7 @@ export const PresetSection: React.FC<PresetSectionProps> = ({ section }) => {
       </div>
 
       <div className="mt-6">
-        <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">
+        <h3 className="mb-3 text-sm font-bold text-foreground">
           {t('tools.usageExample')}
         </h3>
         <CodeBlock code={section.usageExample} language="typescript" />

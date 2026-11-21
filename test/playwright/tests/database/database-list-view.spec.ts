@@ -177,6 +177,36 @@ test.describe('list view', () => {
 });
 
 // notion-motion.md Round 25 §6: "Directly edit page name".
+test.describe('list arrow past the last row', () => {
+  // r87-measure notes: Notion block-selects the next page block, focus on BODY, and the row pick goes.
+  test('↓ on the last picked row selects the next page block, not a row block', async ({ page }) => {
+    await mount(page, [...blocks({ type: 'list', name: 'List' }), { id: 'p-after', type: 'paragraph', data: { text: 'After' } }]);
+    await row(page, 'r1').focus();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await expect(row(page, 'r3')).toHaveAttribute('data-blok-database-row-selected', '');
+
+    await page.keyboard.press('ArrowDown');
+
+    await expect(page.locator('[data-blok-id="p-after"]')).toHaveAttribute('data-blok-selected', 'true');
+    await expect(page.locator('[data-blok-selected="true"]')).toHaveCount(1);
+    await expect(page.locator('[data-blok-database-row-selected]')).toHaveCount(0);
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+  });
+
+  test('with no block after the database, the last row keeps its pick', async ({ page }) => {
+    await mount(page, blocks({ type: 'list', name: 'List' }));
+    await row(page, 'r1').focus();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+
+    await expect(row(page, 'r3')).toHaveAttribute('data-blok-database-row-selected', '');
+    await expect(row(page, 'r3')).toBeFocused();
+    await expect(page.locator('[data-blok-selected="true"]')).toHaveCount(0);
+  });
+});
+
 test.describe('list "Directly edit page name"', () => {
   test('off, a title click opens the row', async ({ page }) => {
     await mount(page, blocks({ type: 'list', name: 'List' }));
@@ -216,6 +246,44 @@ test.describe('list view accessibility and focus', () => {
     await expect(slot(page, 'r1', 'p-stage')).toHaveAccessibleName('Stage: Idea');
     await expectNoA11yViolations(page, { include: '[data-blok-database-list]', label: 'database list view' });
   });
+
+  // notion-motion.md Round 95 §1 #8: the keyboard ring sits 6px outside the row; no ancestor may cut it.
+  for (const width of ['692px', '1100px']) {
+    test(`a keyboard-focused row's outside ring is not clipped at ${width}`, async ({ page }) => {
+      await mount(page, blocks({ type: 'list', name: 'List' }));
+      await page.evaluate((w) => {
+        const holder = document.getElementById('blok');
+
+        if (holder !== null) holder.style.maxWidth = w;
+      }, width);
+      await page.keyboard.press('Shift');
+      await row(page, 'r1').focus();
+
+      const cut = await row(page, 'r1').evaluate((el) => {
+        const ring = 6;
+        const box = el.getBoundingClientRect();
+        const found: string[] = [];
+
+        for (let node = el.parentElement; node !== null; node = node.parentElement) {
+          const style = getComputedStyle(node);
+
+          if (style.overflowX === 'visible' && style.overflowY === 'visible') continue;
+          const margin = style.overflowX === 'clip' && style.overflowY === 'clip' ? parseFloat(style.overflowClipMargin) || 0 : 0;
+          const clip = node.getBoundingClientRect();
+
+          if (box.left - ring < clip.left - margin || box.right + ring > clip.right + margin
+            || box.top - ring < clip.top - margin || box.bottom + ring > clip.bottom + margin) {
+            found.push([...node.attributes].map((attr) => attr.name).join(' '));
+          }
+        }
+
+        return found;
+      });
+
+      expect(cut).toEqual([]);
+      await expect(row(page, 'r1')).toHaveCSS('box-shadow', /0px 0px 0px 6px/);
+    });
+  }
 
   test('an editor closed by a click elsewhere leaves focus where the click put it', async ({ page }) => {
     await mount(page, blocks({ type: 'list', name: 'List' }, [{ id: 'p1', type: 'paragraph', data: { text: 'Outside' } }]));

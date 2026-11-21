@@ -134,10 +134,11 @@ describe('database table view styles', () => {
     expect(exactRule('[data-blok-database-table-grid][data-column-dragging] [data-blok-database-table-column-header]')).toContain('transform 200ms ease');
   });
 
-  // side-by-side-v1.md: Notion's gutter "+" is 14x14 (rowhover.png); at 16px Blok drew it 9x10.
-  it('draws the table and list gutter "+" at 24px, so it reads Notion\'s 14px', () => {
-    expect(ruleBody('[data-blok-database-table-row-add] svg')).toMatch(/width: 24px;\s*height: 24px/);
-    expect(ruleBody('[data-blok-database-list-row-add] svg')).toMatch(/width: 24px;\s*height: 24px/);
+  // notion-motion.md Round 69 §4: Notion's "+" svg is 20. In rowhover.png its ink is 12x12 strong, 14x14 with the
+  // soft edge; Blok's 12-unit plus inks that at 20 (at 24 it inked 14x14 / 16x16).
+  it('draws the table and list gutter "+" at 20px, Notion\'s size and ink', () => {
+    expect(ruleBody('[data-blok-database-table-row-add] svg')).toMatch(/width: 20px;\s*height: 20px/);
+    expect(ruleBody('[data-blok-database-list-row-add] svg')).toMatch(/width: 20px;\s*height: 20px/);
   });
 
   // Notion's ⠿ inks 8x16 (rowhover.png, listhover.png); IconRowGrip draws that at 20px, one unit per pixel.
@@ -191,6 +192,17 @@ describe('database table view styles', () => {
       expect(ruleBody(`${BOX}:hover`)).toContain('background-color: var(--blok-database-checkbox-hover-bg)');
     });
 
+    // notion-motion.md Round 69 §4: Notion's row checkbox is r3. Round 70 §2: the header box too.
+    it('rounds the row and header checkboxes 3px, the checkbox radius role', () => {
+      const radii = (selector: string): Array<string | undefined> => Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g))
+        .filter((match) => (match[1] ?? '').split(',').map((part) => part.trim()).includes(selector))
+        .flatMap((match) => Array.from((match[2] ?? '').matchAll(/border-radius:\s*([^;]+);/g), (decl) => decl[1]));
+
+      expect(radii(BOX)).toEqual(['var(--blok-radius-checkbox)']);
+      expect(colors).toMatch(/--blok-radius-checkbox:\s*0\.1875rem;/);
+      expect(radii('[data-blok-database-table-select-all]')).toEqual(['var(--blok-radius-checkbox)']);
+    });
+
     it('keeps a checked box, and the header box while some rows are picked, fully shown', () => {
       const shown = ruleBody(`${BOX}[aria-checked="true"]`);
 
@@ -224,11 +236,11 @@ describe('database table view styles', () => {
   });
 
   // notion-spec-2 §24.7 (open-light.txt): gap 6, 0.5px tracking, a 15.25 wide icon slot, so the box is 68.6 wide.
-  it('spaces the OPEN button as Notion: 6px gap, 0.5px letter-spacing, 15.25px icon slot', () => {
+  it('spaces the Open button: 6px gap, normal case with no extra letter-spacing, 15.25px icon slot', () => {
     const open = ruleBody('[data-blok-database-table-open]');
 
     expect(open).toContain('gap: var(--blok-space-1-5)');
-    expect(open).toMatch(/letter-spacing:\s*0\.5px/);
+    expect(open).not.toMatch(/letter-spacing|text-transform/);
     expect(ruleBody('[data-blok-database-table-open] > span[aria-hidden="true"]')).toMatch(/width:\s*15\.25px/);
   });
 

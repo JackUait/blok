@@ -72,4 +72,9 @@ describe('Forms question translations', () => {
 
     expect(actual).toEqual(FORM_MESSAGES);
   });
+
+  // notion-motion.md Round 77 §4 "Date placeholder": U+2019, not a straight quote.
+  it('reads the builder answer placeholder with a curly apostrophe', () => {
+    expect(loadMessages('en')['tools.database.formAnswerPlaceholder']).toBe('Respondent\u2019s answer');
+  });
 });

@@ -85,6 +85,36 @@ describe('list rows (research/07)', () => {
     expect(ruleBody(database, '[data-blok-database-list-row]:focus')).toBe('');
   });
 
+  // notion-motion.md Round 96 §1 #4: the ring comes with the row's hover fill (0.06 light, 0.055 dark).
+  it('fills a keyboard-focused row with its hover fill', () => {
+    const row = ruleBody(database, ':where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row]:focus-visible');
+
+    expect(row).toContain('background-color: var(--blok-database-add-hover-bg)');
+  });
+
+  // notion-motion.md Round 96 §1 #5: Notion's dark ring is its light blue 35,131,226 (4.5:1 on rgb(25,25,25)).
+  it('rings a dark row with Notion\'s blue, leaving the shared focus ring alone', () => {
+    const row = ruleBody(database, ':where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row]:focus-visible');
+
+    expect(row).toContain('0 0 0 4px var(--blok-database-list-row-ring, var(--blok-focus-ring))');
+    expect(ruleBody(database, ':where([data-blok-theme="dark"] [data-blok-interface])')).toContain('--blok-database-list-row-ring: rgb(35, 131, 226)');
+    expect(database).toMatch(/prefers-color-scheme: dark[^@]*--blok-database-list-row-ring: rgb\(35, 131, 226\)/);
+    expect(ruleBody(database, ':where([data-blok-interface])')).not.toContain('--blok-database-list-row-ring:');
+  });
+
+  // notion-motion.md Round 95 §1 #8: the row's ring sits outside it: a 2px gap, a 2px blue line, then a faint 2px halo.
+  it('rings a keyboard-focused row outside its edge, as Notion does', () => {
+    const row = ruleBody(database, ':where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row]:focus-visible');
+    const light = ruleBody(database, ':where([data-blok-interface])');
+
+    expect(row).toContain('box-shadow: 0 0 0 2px var(--blok-database-list-row-ring-gap), 0 0 0 4px var(--blok-database-list-row-ring, var(--blok-focus-ring)), 0 0 0 6px var(--blok-database-list-row-ring-halo)');
+    expect(light).toContain('--blok-database-list-row-ring-gap: rgb(248, 248, 247)');
+    expect(light).toContain('--blok-database-list-row-ring-halo: rgba(255, 255, 255, 0.25)');
+    expect(ruleBody(database, ':where([data-blok-theme="dark"] [data-blok-interface])')).toContain('--blok-database-list-row-ring-gap:');
+    expect(ruleBody(database, ':where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row-property][data-editable]:focus-visible'))
+      .toContain('inset 0 0 0 2px var(--blok-focus-ring)');
+  });
+
   // findings-listgallery L19: only the row fills on hover; a property has no fill of its own.
   it('gives a hovered property no fill of its own', () => {
     expect(ruleBody(database, '[data-blok-database-list-row-property][data-editable]:hover')).toBe('');
@@ -324,6 +354,17 @@ describe('grouped list (findings-listgallery L08, L10)', () => {
     expect(ruleBody(database, '[data-blok-database-list-group]')).toContain('margin-bottom: calc(var(--blok-space-6) + var(--blok-space-1))');
     expect(ruleBody(database, '[data-blok-database-list-rows]')).not.toContain('padding-inline-start');
   });
+
+  // notion-motion.md Round 52 §1 Drag: the cursor is `default` over the list while a row drags.
+  it('shows the default cursor over the list while a row drags', () => {
+    expect(ruleBody(database, '[data-blok-database-list][data-blok-database-list-row-dragging] *')).toContain('cursor: default');
+  });
+
+  // notion-motion.md Round 64 §6 Row 3: "+ New page" bottom to the next group's label is 31.5 (Blok 30.5).
+  it('puts one more pixel between groups, and none after the last', () => {
+    expect(ruleBody(database, '[data-blok-database-list-group] + [data-blok-database-list-group]')).toContain('margin-top: var(--blok-space-0-25)');
+    expect(ruleBody(database, '[data-blok-database-list-group]')).toContain('margin-bottom: calc(var(--blok-space-6) + var(--blok-space-1))');
+  });
 });
 
 // notion-motion.md Round 45 §1 List grouped (r45-n-listg-txt.raw, r45-n-listg-svg.raw).
@@ -546,6 +587,11 @@ describe('conditional color page (notion-motion.md Round 20 §4, r20-cc-intro.ra
     expect(ruleBody(database, '[data-blok-database-color-rule-delete] svg')).toContain('width: 16px');
   });
 
+  // notion-motion.md Round 75 §1 (r75-n-ccfocus.raw): the trash ends 25 in from the 290 panel's right, 4 more than the card's own inset.
+  it('keeps the trash 4px in from the rule card\'s end', () => {
+    expect(ruleBody(database, '[data-blok-database-color-rule-delete]')).toContain('margin-inline-end: var(--blok-space-1)');
+  });
+
   it('draws the value as a 30-tall field with a 1px ring', () => {
     const field = ruleBody(database, '[data-blok-database-color-rule-field]');
 
@@ -565,6 +611,12 @@ describe('conditional color page (notion-motion.md Round 20 §4, r20-cc-intro.ra
     expect(ruleBody(database, '[data-blok-database-color-rule-header][data-blok-database-color-rule-plain-date]')).toContain('padding-block-start: var(--blok-space-1)');
     // Notion's name is lighter than the operator (400 rgb(161, 158, 153)); Blok keeps its AA step of that ink.
     expect(ruleBody(database, '[data-blok-database-color-rule-name]')).toContain('color: var(--blok-database-ink-tertiary)');
+  });
+
+  // notion-motion.md Round 74 §4 (r74-n-rollup-rule.raw): the card starts 49 under Back, not 38; "any" is 400, "=" stays 500.
+  it('drops the first rule card 11px lower and draws a rollup\'s "any" at 400', () => {
+    expect(ruleBody(database, '[data-blok-database-color-rules]')).toContain('padding: calc(var(--blok-space-1) + var(--blok-space-2-75)) var(--blok-space-3) var(--blok-space-3)');
+    expect(ruleBody(database, '[data-blok-database-color-rule-quantifier] [data-blok-database-chip-operator-label]')).toContain('font-weight: 400');
   });
 
   // notion-motion.md Round 21 §1 (r21-cc-num-field.raw): a 232x28 box, padding 3px 6px; Number's "=" before the input.
@@ -592,5 +644,35 @@ describe('conditional color page (notion-motion.md Round 20 §4, r20-cc-intro.ra
 describe('list "+ New page" in line with the row titles (Round 32)', () => {
   it('starts the plus 1px into the row, so the text lines up with the titles', () => {
     expect(ruleBody(database, '[data-blok-database-list] > [data-blok-database-add-row] > span[aria-hidden="true"]')).toContain('margin-inline-start: var(--blok-space-0-25)');
+  });
+});
+
+// notion-motion.md Round 81 §2 "Grouped list header" (r81-n-glist.raw).
+describe('grouped list header (Round 81)', () => {
+  it('inks the "…" and "+" glyphs rgb(142, 139, 134), the block control grey', () => {
+    expect(ruleBody(database, '[data-blok-database-list-group-actions] button')).toContain('color: var(--blok-block-control)');
+  });
+
+  it('sets the group label in weight 500', () => {
+    expect(ruleBody(database, '[data-blok-database-list-group-label]')).toContain('font-weight: 500');
+  });
+});
+
+// notion-motion.md Round 84b §5 (r84-n-list-pill.raw): grouped by Status, the pill text is 14/400; R81's 500 was a Select pill.
+describe('grouped list Status pill (Round 84b)', () => {
+  it('sets a Status group pill in weight 400', () => {
+    expect(ruleBody(database, '[data-blok-database-list-group-label] [data-status-group]')).toContain('font-weight: 400');
+  });
+});
+
+// notion-motion.md Round 81 §2 / Round 84b §5 (r81-n-glist.raw, r84-n-list-pill.raw): Notion's pill starts 3 after
+// the 24px caret (x 566), and its "…" starts 6 after the pill's end (609.6 − 603.6).
+describe('grouped list header (Round 82, Round 84b)', () => {
+  it('starts the pill 3px after the caret', () => {
+    expect(ruleBody(database, '[data-blok-database-list-group-header]')).toContain('gap: var(--blok-space-0-75)');
+  });
+
+  it('starts the "…" and "+" 6px after the pill', () => {
+    expect(ruleBody(database, '[data-blok-database-list-group-actions]')).toContain('margin-inline-start: var(--blok-space-0-75)');
   });
 });

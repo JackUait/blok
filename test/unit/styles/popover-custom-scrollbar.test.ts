@@ -102,6 +102,11 @@ describe('Popover custom scrollbar (identical on all platforms)', () => {
       expect(ruleBody('[data-blok-popover-items]::-webkit-scrollbar')).toMatch(/display\s*:\s*none/);
     });
 
+    it('hides the native scrollbar of a scroller an item declares, in every engine', () => {
+      expect(ruleBody('[data-blok-popover-scroller]')).toMatch(/scrollbar-width\s*:\s*none/);
+      expect(ruleBody('[data-blok-popover-scroller]::-webkit-scrollbar')).toMatch(/display\s*:\s*none/);
+    });
+
     it('does NOT depend on the native scrollbar-gutter (it is engine-inconsistent)', () => {
       expect(ruleBody('[data-blok-popover-items]')).not.toMatch(/scrollbar-gutter/);
     });

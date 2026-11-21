@@ -752,13 +752,36 @@ describe('cell editor CSS', () => {
     });
 
     // Notion's "DEFAULT" sits right before the chevron, 12/16.8 weight 500. Its gray fails AA, so the ink stays secondary.
-    it('puts the DEFAULT tag before the chevron', () => {
+    it('puts the Default tag before the chevron', () => {
       expect(declared('[data-blok-database-option-default]', 'margin-inline-start')).toEqual(['auto']);
       expect(declared('[data-blok-database-option-default]', 'font-weight')).toEqual(['500']);
       expect(declared('[data-blok-database-option-default]', 'line-height')).toEqual(['16.8px']);
-      expect(declared('[data-blok-database-option-default]', 'text-transform')).toEqual(['uppercase']);
+      expect(declared('[data-blok-database-option-default]', 'text-transform')).toEqual([]);
       expect(declared('[data-blok-database-option-default]', 'align-self')).toEqual(['center']);
       expect(declared('[data-blok-database-option-default]', 'color')).toEqual(['var(--blok-database-ink-secondary)']);
+    });
+  });
+
+  // notion-motion.md Round 87 §1 #5 (r87-n-numfmt-long.raw): a value row pads 8 at its end, the value starts 16 after
+  // the label and a 16 chevron sits 6 after it, so the value ends 30 from the row edge.
+  describe('Edit property value rows', () => {
+    const FLYOUT = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] > [data-blok-popover-container]";
+
+    it('pads the row end 8', () => {
+      expect(declared(`${FLYOUT} [data-blok-popover-item]:has(> [data-blok-popover-item-value])`, 'padding-inline-end')).toEqual(['var(--blok-space-2)']);
+    });
+
+    it('starts the value 16 after the label', () => {
+      expect(declared(`${FLYOUT} [data-blok-popover-item-value]`, 'padding-inline-start')).toEqual(['var(--blok-space-4)']);
+    });
+
+    it('draws a 16 chevron 6 after the value, flush with the row end', () => {
+      const CHEVRON = `${FLYOUT} [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right]`;
+
+      expect(declared(CHEVRON, 'width')).toEqual(['16px']);
+      expect(declared(CHEVRON, 'margin-inline')).toEqual(['var(--blok-space-1-5) 0']);
+      expect(declared(`${CHEVRON} svg`, 'width')).toEqual(['16px']);
+      expect(declared(`${CHEVRON} svg`, 'height')).toEqual(['16px']);
     });
   });
 
@@ -794,6 +817,14 @@ describe('cell editor CSS', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-peek-mode-menu'] > [data-blok-popover-container]", 'transform-origin')).toEqual(['top center']);
   });
 
+  // notion-motion.md Round 73 §2 (r66-n-headers.raw): New tab at y 125, Edit view default at 162, the menu ends 4 under it: 160 tall.
+  it('gives the peek mode menu an 8px separator and no gap under its last row', () => {
+    const MODE = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-peek-mode-menu']";
+
+    expect(declared(`${MODE} [data-blok-popover-item-separator]`, 'padding-block')).toEqual(['var(--blok-space-0-75) var(--blok-space-1)']);
+    expect(declared(`${MODE} [data-blok-popover-item]:last-child`, 'margin-block-end')).toEqual(['0']);
+  });
+
   // notion-motion.md Round 62 §1: the Move to picker scales 0.96 → 1 from its centre.
   it('scales the Move to picker from its centre', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] > [data-blok-popover-container]", 'transform-origin')).toEqual(['center']);
@@ -812,7 +843,7 @@ describe('cell editor CSS', () => {
       expect(declared(`${MOVE} [role='option']`, 'min-height')).toEqual(['28px']);
       expect(declared(`${MOVE} [role='option']`, 'padding')).toEqual(['var(--blok-space-1-25) var(--blok-space-2) var(--blok-space-1-25) var(--blok-space-2-25)']);
       expect(declared(`${MOVE} [role='option']`, 'gap')).toEqual(['var(--blok-space-2-25)']);
-      expect(declared(`${MOVE} [role='option'] > div > *`, 'line-height')).toEqual(['16.8px']);
+      expect(declared(`${MOVE} [role='option'] > div > :is([data-blok-page-picker-line], [data-blok-testid='page-picker-option-path'])`, 'line-height')).toEqual(['16.8px']);
       expect(declared(`${MOVE} [data-blok-testid='page-picker-option-icon']`, 'width')).toEqual(['18px']);
       expect(declared(`${MOVE} [data-blok-testid='page-picker-option-icon']`, 'height')).toEqual(['18px']);
     });
@@ -840,7 +871,7 @@ describe('cell editor CSS', () => {
         expect(declared(TREE_ROW, 'padding-block')).toEqual(['0']);
         expect(declared(TREE_ROW, 'gap')).toEqual(['0']);
         expect(declared(TREE_ROW, 'align-items')).toEqual(['center']);
-        expect(declared(`${TREE_ROW} > div > *`, 'line-height')).toEqual(['21px']);
+        expect(declared(`${TREE_ROW} > div > :is([data-blok-page-picker-line], [data-blok-testid='page-picker-option-path'])`, 'line-height')).toEqual(['21px']);
       });
 
       it('puts the 20 chevron, then the 16 icon 3px after it, then the title 7px after that', () => {
@@ -1030,8 +1061,9 @@ describe('cell editor CSS', () => {
   describe('docked panel glyphs', () => {
     const OWN = '[data-blok-database-panel][data-docked]:not([data-blok-database-creation-panel]) [data-blok-database-panel-icon]';
 
-    it('paint View settings glyphs 20px in primary ink, and leave the creation panel alone', () => {
-      expect(declared(OWN, 'color')).toEqual(['var(--blok-database-ink)']);
+    // notion-motion.md Round 81 §2 (r81-n-tb-view_settings.raw): the glyphs paint rgb(56, 56, 54); dark 230 (r81-n-ca-view_settings-dark.raw).
+    it('paint View settings glyphs 20px in the strong glyph grey, and leave the creation panel alone', () => {
+      expect(declared(OWN, 'color')).toEqual(['var(--blok-database-peek-glyph-strong)']);
       expect(declared(`${OWN} svg`, 'width')).toEqual(['20px']);
       expect(declared('[data-blok-database-panel][data-docked] [data-blok-database-panel-icon]', 'color')).toEqual([]);
     });
@@ -1128,6 +1160,16 @@ describe('cell editor CSS', () => {
       expect(declared('[data-blok-database-chip-name]', 'font-weight')).toEqual(['500']);
       expect(declared('[data-blok-database-filter-pill]:not([data-active]) [data-blok-database-chip-name]', 'font-weight')).toEqual(['400']);
       expect(declared('[data-blok-database-filter-pill]', 'font-weight')).toEqual(['400']);
+    });
+  });
+
+  // notion-motion.md Round 88 §1 #4 (r88-n-setnum-kids.raw): the Filters page's rule at y+46, Add filter 1px under it, 111 tall.
+  describe('view settings Filters page', () => {
+    const PAGE = '[data-blok-database-panel][data-docked][data-blok-database-panel-page="filters"]';
+
+    it('drops the first rule to y+46 and Add filter 1px under the rules', () => {
+      expect(declared(`${PAGE} > [data-blok-database-panel-header] + [data-blok-database-panel-list]`, 'margin-block-start')).toEqual(['var(--blok-space-1-75)']);
+      expect(declared(`${PAGE} > [data-blok-database-panel-list] + [data-blok-database-panel-row]`, 'margin-block-start')).toEqual(['var(--blok-space-0-25)']);
     });
   });
 

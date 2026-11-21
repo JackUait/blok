@@ -6,11 +6,14 @@ import type { DatabaseViewRenderer } from './database-view-renderer';
 import { filesOf, readPropertyValue } from './property-values';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { createGroupPill, renderCellValue } from './cells';
+import { checkboxGroupName } from './database-group-checkbox';
+import { NO_VALUE_GROUP_KEY } from './database-model';
 import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
 import { IconDotsHorizontal, IconExpandDiagonal, IconPeekCenter, IconPeekSide, IconPencilLine, IconPlayerPlay, IconPlus, IconRowGrip } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { onHover } from '../../components/utils/tooltip';
+import { KEYBOARD_OWNER_EDGE_EVENT } from '../../components/constants/data-attributes';
 import { propertyHint } from './property-hint';
 import { PROPERTY_TYPE_META } from './database-property-types';
 import { syncCommentBadge } from './database-comment-badge';
@@ -54,6 +57,8 @@ interface DatabaseListViewOptions {
   directTitleEdit?: boolean;
   /** The view's Open pages in: names the button that opens the row. Default side. */
   openPagesIn?: OpenPagesIn;
+  /** The group property's name when the groups are checkbox states: each header shows a box and this name. */
+  checkboxGroup?: string;
 }
 
 /** notion-motion.md Round 26 §4: the open button's label and icon per Open pages in. */
@@ -89,7 +94,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
   private readonly showPageIcon: boolean;
   private readonly onToggleCollapse: ((optionId: string, collapsed: boolean) => void) | undefined;
   private readonly settings: Pick<DatabaseListViewOptions,
-    'cellContext' | 'commentBadges' | 'locale' | 'onPropertyEdit' | 'onNewBelow' | 'onTitleEdit' | 'onOpenRow' | 'total' | 'getTotal' | 'onLoadMore' | 'lassoRows' | 'directTitleEdit' | 'openPagesIn'>;
+    'cellContext' | 'commentBadges' | 'locale' | 'onPropertyEdit' | 'onNewBelow' | 'onTitleEdit' | 'onOpenRow' | 'total' | 'getTotal' | 'onLoadMore' | 'lassoRows' | 'directTitleEdit' | 'openPagesIn' | 'checkboxGroup'>;
   private wrapper: HTMLDivElement | null = null;
   /** Where a Shift+Arrow selection started (findings-listgallery L20). */
   private selectionAnchor: HTMLElement | null = null;
@@ -357,6 +362,10 @@ export class DatabaseListView implements DatabaseViewRenderer {
         return;
       }
       this.editTitle(rowEl.getAttribute('data-row-id') ?? '');
+      // notion-motion.md Round 52 §1: the pill puts the caret at the end; other paths are unmeasured.
+      const input = rowEl.querySelector<HTMLInputElement>('[data-blok-database-list-title-input]');
+
+      input?.setSelectionRange(input.value.length, input.value.length);
 
       return;
     }
@@ -413,6 +422,8 @@ export class DatabaseListView implements DatabaseViewRenderer {
       if (next !== undefined) {
         this.focusRow(next);
         this.selectByKey(rows, next, event.shiftKey ? this.selectionAnchor ?? rowEl : next);
+      } else if (event.key === 'ArrowDown' && !event.shiftKey) {
+        this.handDownToBlok(rowEl);
       }
 
       return true;
@@ -426,6 +437,17 @@ export class DatabaseListView implements DatabaseViewRenderer {
     }
 
     return false;
+  }
+
+  /** r87-measure notes: past the last row Blok block-selects the next page block, and the row pick goes. */
+  private handDownToBlok(rowEl: HTMLElement): void {
+    const edge = new CustomEvent(KEYBOARD_OWNER_EDGE_EVENT, { bubbles: true, cancelable: true, detail: { direction: 'next' } });
+
+    // Not cancelled: no block follows, so the row keeps its pick.
+    if (!rowEl.dispatchEvent(edge)) {
+      this.selectionAnchor = null;
+      this.settings.lassoRows?.([]);
+    }
   }
 
   /** Arrows select the row they reach; Shift+Arrow selects from the anchor to it. The tint is the gray selection. */
@@ -620,11 +642,12 @@ export class DatabaseListView implements DatabaseViewRenderer {
       return createGroupPill(option, property);
     }
     const title = document.createElement('span');
+    const checkbox = this.settings.checkboxGroup !== undefined && option.id !== NO_VALUE_GROUP_KEY;
 
     title.setAttribute('data-blok-database-list-group-title', '');
-    title.textContent = option.label;
+    title.textContent = checkbox ? this.settings.checkboxGroup ?? '' : option.label;
 
-    return title;
+    return checkbox ? checkboxGroupName(option.id === 'true', title, option.label) : title;
   }
 
   /**
@@ -900,6 +923,28 @@ export const pointerAnchor = (rowEl: HTMLElement, event: Pick<MouseEvent, 'clien
 
   point.style.left = `${event.clientX - origin.left}px`;
   point.style.top = `${event.clientY - origin.top}px`;
+
+  return point;
+};
+
+/**
+ * Edit property › from a right-click: the types Notion opens alone at the click point, by view
+ * (notion-motion.md Round 67 §3, Round 68 §4, Round 69 §2). A checkbox opens nothing: it toggles. The rest keep the row page or the cell.
+ */
+const POINT_EDIT_TYPES: Record<'calendar' | 'board' | 'table', readonly PropertyDefinition['type'][]> = {
+  calendar: ['text', 'number', 'select', 'date', 'checkbox'],
+  board: ['text', 'number', 'select', 'date', 'checkbox'],
+  table: ['text', 'number', 'select', 'date'],
+};
+
+export const editsAtPoint = (view: keyof typeof POINT_EDIT_TYPES, type: PropertyDefinition['type'] | undefined): boolean =>
+  type !== undefined && POINT_EDIT_TYPES[view].includes(type);
+
+/** Edit property ›'s anchor: 1px left of the click (notion-motion.md Round 67 §3, Round 68 §4). The caller removes it. */
+export const editPointAnchor = (rowEl: HTMLElement, event: Pick<MouseEvent, 'clientX' | 'clientY'>): HTMLElement => {
+  const point = pointerAnchor(rowEl, { clientX: event.clientX - 1, clientY: event.clientY });
+
+  point.setAttribute('data-blok-database-edit-point', '');
 
   return point;
 };

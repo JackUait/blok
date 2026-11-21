@@ -1,6 +1,7 @@
-import { IconCalendar, IconChangeType, IconCheck, IconHelp, IconCopy, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconPencilLine, IconPreview, IconReplace, IconSliders, IconSort, IconTrash, IconPageLayout, IconWand } from '../../components/icons';
+import { IconAlarm, IconCalendar, IconChangeType, IconCheck, IconClock, IconHelp, IconCopy, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconPencilLine, IconPreview, IconReplace, IconSliders, IconSort, IconTrash, IconPageLayout, IconWand } from '../../components/icons';
 import { nameTakenError } from './database-name-taken-error';
 import { PopoverDesktop } from '../../components/utils/popover';
+import type { ArrowTarget } from '../../components/flipper';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import type { PopoverItemParams } from '../../../types/utils/popover/popover-item';
@@ -195,6 +196,24 @@ const ROW_PAGE_MENU_CLASS = `${DATABASE_HEADER_MENU_CLASS} blok-database-row-pag
 /** The row page's Edit property panel: Notion pads it 8px, its menus 4 (notion-spec-2 §1). */
 const PROPERTY_PANEL_CLASS = `${ROW_PAGE_MENU_CLASS} blok-database-property-panel`;
 
+/**
+ * research/27 §7, research/36 §3.2: Notion's second ArrowDown from the name field lights the first row.
+ * The icon and ⓘ buttons beside the field stay Tab stops; Up/Down pass over them.
+ * The scan mirrors DomIterator's wrap and its disabled/hidden skip.
+ */
+const skipNameRowButtons: ArrowTarget = (arrow, index, count, items) => {
+  if (arrow !== 'up' && arrow !== 'down') return undefined;
+  const step = arrow === 'down' ? 1 : -1;
+  const fromEdge = step === 1 ? -1 : 0;
+  const start = index === -1 ? fromEdge : index;
+  const candidates = Array.from({ length: count }, (_, scanned) => (((start + step * (scanned + 1)) % count) + count) % count)
+    .filter((at) => !items[at].hasAttribute(DATA_ATTR.disabled) && items[at].closest('[hidden]') === null);
+
+  if (!items[candidates[0]]?.matches('[data-blok-database-property-menu-name] > button')) return undefined;
+
+  return candidates.find((at) => !items[at].matches('[data-blok-database-property-menu-name] > button'));
+};
+
 /** notion-spec-2 §16.1: Number format, Decimal places and Calculate open on a click only, under their row. */
 const CLICK_ONLY_UNDER = { clickOnly: true, placement: 'under' } as const;
 /** notion-spec-2 §16.1, §17.7: lists off the panel pad 4px, not the panel's 8. */
@@ -214,6 +233,10 @@ interface RowPageExtras { onComment?: () => void; edit?: boolean }
 
 /** notion-spec-2 §17: every other Edit property row with a value opens a 250 wide list the same way. */
 const VALUE_LIST = { clickOnly: true, placement: 'under', width: '250px', class: PANEL_LIST_CLASS } as const;
+/** database.css: Time format scales in from its top right (notion-motion.md Round 87 §1 #3). */
+const TIME_FORMAT_LIST_CLASS = `${PANEL_LIST_CLASS} blok-database-time-format-list`;
+/** database.css: Date format scales in from its top right (notion-motion.md Round 88 §1 #1). */
+const DATE_FORMAT_LIST_CLASS = `${PANEL_LIST_CLASS} blok-database-date-format-list`;
 /** notion-spec-2 §17: a ✓ on the current choice. isActive keeps aria-checked; the panel list class drops its fill. */
 const checkedIf = (current: boolean): { isActive: boolean; trailingIcon?: string } => ({ isActive: current, ...(current ? { trailingIcon: IconCheck } : {}) });
 /** The column menu's Change type list; database.css gives its glyphs Notion's ink. */
@@ -222,6 +245,8 @@ const CHANGE_TYPE_LIST_CLASS = 'blok-database-change-type';
 const TARGET_LIST = { clickOnly: true, placement: 'under', width: '280px', class: PANEL_LIST_CLASS } as const;
 /** notion-spec-2 §17.2: Target property's own search field size, in database.css. */
 const TARGET_SEARCH_LIST_CLASS = `${PANEL_LIST_CLASS} blok-database-target-list`;
+/** notion-motion.md Round 83 §4: Number format's "Filter formats…" field sits like Target property's, at 14px. */
+const FORMAT_SEARCH_LIST_CLASS = `${TARGET_SEARCH_LIST_CLASS} blok-database-format-list`;
 
 /** The Calculate menu's groups (notion-spec-2 §14.4, §15.2). */
 const CALCULATE_GROUPS: ReadonlyArray<readonly [string, readonly RollupFunction[]]> = [
@@ -431,7 +456,10 @@ export class DatabasePropertyMenu {
       // The old field goes away without a blur: save its name first, as leaving it would.
       input?.dispatchEvent(new Event('change'));
       redraw(patch, input?.value);
-      if (row !== null) this.popover?.focusItemByName(row);
+      if (row === null) return;
+      this.popover?.focusItemByName(row);
+      // The redraw dropped DOM focus to <body>; Notion keeps it in the flyout, so arrows go on from the row.
+      this.popover?.getElement().querySelector(`[data-blok-item-name="${row}"]`)?.closest<HTMLElement>('[data-blok-popover-items]')?.focus({ preventScroll: true });
     };
   }
 
@@ -649,6 +677,7 @@ export class DatabasePropertyMenu {
 
     // research/27 §7: Escape closes the Edit property submenu only; a second Escape closes the menu.
     popover.escapeClosesSubmenuFirst = true;
+    popover.setArrowTarget(skipNameRowButtons);
     // notion-motion.md Round 10: Notion mounts the Edit property flyout about 130ms after the row lights.
     popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
     this.popover = popover;
@@ -918,7 +947,7 @@ export class DatabasePropertyMenu {
           // The submenu's rows mount right after onOpen.
           // notion-spec-2 §25.6: the submenu's top is the row's top; a divider follows Sort.
           // database.css: the class fades it with no scale (notion-motion.md Round 10).
-          children: { items: ruleAfterSort(this.editItems(property, update)), align: 'start', minWidth: '300px', class: 'blok-database-edit-property', onOpen: () => queueMicrotask(() => this.bindRowHints()) },
+          children: { items: ruleAfterSort(this.editItems(property, update)), align: 'start', width: '300px', class: 'blok-database-edit-property', onOpen: () => queueMicrotask(() => this.bindRowHints()) },
         };
       case 'showFullUrl': {
         // notion-spec-2 §19.21: a click on the row toggles it. The row's icon was not measured: Blok draws URL's type icon.
@@ -1424,7 +1453,17 @@ export class DatabasePropertyMenu {
       ...(property.type === 'status'
         ? { onSetDefault: (defaultOptionId: string) => update({ status: { groups: status?.groups ?? [], ...status, defaultOptionId } }) }
         : {}),
-      hold: () => this.popover?.holdOpen() ?? ((): void => undefined),
+      hold: () => {
+        const release = this.popover?.holdOpen();
+
+        // notion-motion.md Round 81 §1: after an option's Delete confirm focus is on the menu, its cursor on Edit property.
+        return (refocus) => {
+          release?.(refocus === true ? 'editProperty' : undefined);
+          if (refocus === true) {
+            this.popover?.getElement().querySelector('[data-blok-item-name="editProperty"]')?.closest<HTMLElement>('[data-blok-popover-items]')?.focus();
+          }
+        };
+      },
       onHostClose: (close) => this.overClosers.add(close),
     });
 
@@ -1492,6 +1531,7 @@ export class DatabasePropertyMenu {
         icon: IconCalendar,
         children: {
           ...VALUE_LIST,
+          class: DATE_FORMAT_LIST_CLASS,
           items: DATE_FORMATS.map((format) => ({
             name: `dateFormat-${format}`,
             title: this.t(`tools.database.dateFormat.${format}`),
@@ -1505,8 +1545,10 @@ export class DatabasePropertyMenu {
         name: 'timeFormat',
         title: this.t('tools.database.timeFormat'),
         valueLabel: this.t(`tools.database.timeFormat.${shownTimeFormat}`),
+        icon: IconClock,
         children: {
           ...VALUE_LIST,
+          class: TIME_FORMAT_LIST_CLASS,
           items: TIME_FORMATS.map((format) => ({
             name: `timeFormat-${format}`,
             title: this.t(`tools.database.timeFormat.${format}`),
@@ -1516,7 +1558,9 @@ export class DatabasePropertyMenu {
           })),
         },
       },
-      {
+      // notion-motion.md Round 89 §1 #6: Notion's Date flyout has no Timezone row, even with a timed row. The date
+      // cell editor's Timezone row sets the same setting.
+      ...(property.type === 'date' ? [] : [{
         name: 'timeZone',
         title: this.t('tools.database.timeZone'),
         children: {
@@ -1538,7 +1582,7 @@ export class DatabasePropertyMenu {
             })),
           ],
         },
-      },
+      }]),
       // notion-spec-2 §17.4: Created time and Last edited time have no Notifications row.
       ...(property.type === 'date' ? [this.notificationsItem(date, update)] : []),
     ];
@@ -1555,6 +1599,7 @@ export class DatabasePropertyMenu {
       name: 'dateNotifications',
       title: this.t('tools.database.dateNotifications'),
       valueLabel: reminderLabel(t, chosen, false, hourCycle),
+      icon: IconAlarm,
       children: {
         ...VALUE_LIST,
         items: choices.map((choice) => ({
@@ -1583,12 +1628,14 @@ export class DatabasePropertyMenu {
       {
         name: 'numberFormat',
         title: this.t('tools.database.numberFormat'),
-        valueLabel: this.t(`tools.database.numberFormat.${number.format ?? 'number'}`),
+        // Notion's row drops the list's " (AUD)"; every locale's currency label ends in one.
+        valueLabel: this.t(`tools.database.numberFormat.${number.format ?? 'number'}`).replace(/ \([A-Z]{3}\)$/, ''),
         children: {
           ...CLICK_ONLY_UNDER,
-          class: PANEL_LIST_CLASS,
+          class: FORMAT_SEARCH_LIST_CLASS,
           width: '192px',
           searchable: true,
+          searchPlaceholder: this.t('tools.database.filterFormats'),
           items: NUMBER_FORMATS.map((format) => ({
             name: `format-${format}`,
             title: this.t(`tools.database.numberFormat.${format}`),

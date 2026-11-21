@@ -209,17 +209,30 @@ test('Turn into stays on screen on a phone', async ({ page }) => {
   expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(390);
 });
 
-test('the color panel opens under the A cell', async ({ page }) => {
+test('the color panel drops from the A cell, over the tools under it', async ({ page }) => {
   await mount(page, 1280);
   await selectParagraph(page);
   await settle(page);
   const marker = toolbar(page).locator('[data-blok-item-name="marker"]');
   const aCell = await rectOf(marker);
+  const cardBox = await rectOf(card(page));
 
   await marker.click();
-  const panel = await rectOf(page.getByTestId('marker-picker'));
+  const panel = page.getByTestId('marker-picker');
 
-  expect(panel.y).toBeGreaterThanOrEqual(aCell.y + aCell.height - 1);
+  await expect(panel).toBeVisible();
+  const menu = await rectOf(page.locator('[data-blok-nested="true"]').getByTestId('popover-container').filter({ has: panel }));
+
+  expect(menu.y).toBeCloseTo(aCell.y + aCell.height + 4, 0);
+  expect(menu.x).toBeCloseTo(aCell.x, 0);
+  expect(menu.y).toBeLessThan(cardBox.y + cardBox.height);
+
+  // It is painted over the card: a point on the card's last row hits the panel.
+  const covered = await page.evaluate(({ x, y }) => {
+    return document.elementFromPoint(x, y)?.closest('[data-blok-nested="true"]') !== null;
+  }, { x: aCell.x + aCell.width / 2, y: cardBox.y + cardBox.height - 4 });
+
+  expect(covered).toBe(true);
 });
 
 // `inlineToolbar` picks WHICH tools appear, never where: the card renders them in

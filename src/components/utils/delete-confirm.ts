@@ -23,6 +23,13 @@ export const isAskingBeforeDelete = (Blok: Pick<BlokModules, 'BlockManager'>): b
 export const deleteAsker = (roots: Block[]): Block | undefined => roots.find((root) => root.asksBeforeDelete);
 
 /**
+ * A selection root is locked (BlockTool.isLocked). The remove keys then do
+ * nothing and the selection stays (notion-motion.md Round 68 §1).
+ * @param roots - the selection roots
+ */
+export const holdsLockedRoot = (roots: Block[]): boolean => roots.some((root) => root.toolLocked);
+
+/**
  * The selection holds a block whose tool asks before it goes. Typing or
  * pasting over it then must not replace it: only a delete may remove it,
  * and a delete asks (notion-motion.md Round 67 §2).

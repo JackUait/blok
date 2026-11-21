@@ -1,4 +1,4 @@
-import { IconDotsHorizontal, IconMenu, IconPlus } from '../icons';
+import { IconCheck, IconDotsHorizontal, IconMenu, IconPlus } from '../icons';
 import { DATA_ATTR } from '../constants/data-attributes';
 import { syncPortalDirection } from './portal-direction';
 import { SearchInput, SearchInputEvent } from './popover/components/search-input';
@@ -18,7 +18,7 @@ export interface OverflowListRow {
 export interface OverflowListOptions {
   /** The "N more…" button; the list hangs below it. */
   anchor: HTMLElement;
-  /** Attribute prefix: `<prefix>-dropdown`, `-item`, `-name`, `-handle`, `-menu`, `-separator`, `-new`, `-empty`. */
+  /** Attribute prefix: `<prefix>-dropdown`, `-item`, `-name`, `-check`, `-handle`, `-menu`, `-separator`, `-new`, `-empty`. */
   prefix: string;
   /** The row attribute that carries its id. */
   idAttribute: string;
@@ -81,6 +81,10 @@ export const tabsThatFit = (widths: readonly number[], current: number, budget: 
  * view tabs and the tabs block.
  */
 const listIds = { next: 0 };
+/** Past the 200ms close, for a fade that never settles. */
+const CLOSE_FALLBACK_MS = 300;
+/** Per prefix, the remover of a list still fading out. Owners make a new list per open, so this cannot live on the instance. */
+const fading = new Map<string, () => void>();
 
 export class OverflowList {
   private readonly options: OverflowListOptions;
@@ -109,6 +113,8 @@ export class OverflowList {
   public open(): void {
     const { anchor, prefix, rows, labels } = this.options;
     const dropdown = document.createElement('div');
+
+    fading.get(prefix)?.();
 
     dropdown.setAttribute('data-blok-popover', '');
     dropdown.setAttribute(`${prefix}-dropdown`, '');
@@ -162,7 +168,8 @@ export class OverflowList {
       const placeTop = this.options.placeTop;
 
       if (placeTop !== undefined) {
-        dropdown.style.setProperty('top', `${placeTop(anchor.getBoundingClientRect(), dropdown.getBoundingClientRect().height)}px`);
+        // The opening scale shrinks the box; offsetHeight is the layout height (0 in jsdom).
+        dropdown.style.setProperty('top', `${placeTop(anchor.getBoundingClientRect(), dropdown.offsetHeight || dropdown.getBoundingClientRect().height)}px`);
       }
     };
 
@@ -197,10 +204,41 @@ export class OverflowList {
     window.removeEventListener('keydown', this.handleKeyDown, true);
     document.removeEventListener('pointerdown', this.handleOutsidePointerDown, true);
     document.removeEventListener('mousedown', this.handleOutsideMouseDown);
-    removeFromTopLayer(this.element);
-    this.element.remove();
+    const element = this.element;
+
     this.element = null;
+    this.fadeOut(element);
     this.options.onClose?.();
+  }
+
+  /** notion-motion.md Round 75 §2: the open in reverse, then the list leaves. */
+  private fadeOut(element: HTMLElement): void {
+    const { prefix } = this.options;
+
+    // Closed for every purpose but paint while it fades.
+    element.setAttribute('data-blok-closing', '');
+    element.setAttribute('inert', '');
+    if (document.activeElement instanceof HTMLElement && element.contains(document.activeElement)) document.activeElement.blur();
+    // No running animation (jsdom, reduced motion): nothing to wait for.
+    const animations = element.getAnimations?.() ?? [];
+
+    if (animations.length === 0) {
+      removeFromTopLayer(element);
+      element.remove();
+
+      return;
+    }
+    const remove = (): void => {
+      window.clearTimeout(timer);
+      removeFromTopLayer(element);
+      element.remove();
+      if (fading.get(prefix) === remove) fading.delete(prefix);
+    };
+    // A cancelled animation never settles.
+    const timer = window.setTimeout(remove, CLOSE_FALLBACK_MS);
+
+    fading.set(prefix, remove);
+    void Promise.all(animations.map((animation) => animation.finished)).then(remove, remove);
   }
 
   private readonly handleOutsidePointerDown = (): void => {
@@ -336,6 +374,14 @@ export class OverflowList {
       item.append(handle);
     }
     item.append(iconSpan, nameSpan);
+    if (row.active) {
+      const check = document.createElement('span');
+
+      check.setAttribute(`${prefix}-check`, '');
+      check.setAttribute('aria-hidden', 'true');
+      check.innerHTML = IconCheck;
+      item.append(check);
+    }
     if (!readOnly && onMenu !== undefined) {
       const menu = this.rowButton(`${prefix}-menu`, IconDotsHorizontal, labels.menu);
 

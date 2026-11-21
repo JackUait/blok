@@ -331,6 +331,17 @@ describe('date cell editor', () => {
       expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-02/2026-10-12');
     });
 
+    // notion-motion.md Round 83 §1 (r83-n-date-enddate.raw, r83-n-date-time.raw): focus stays on the clicked switch.
+    it.each(['data-blok-database-date-end-toggle', 'data-blok-database-date-time-toggle'])('keeps focus on the %s switch after a click', (attribute) => {
+      openDate('2026-10-09');
+      const toggle = q(`[${attribute}]`);
+
+      toggle.focus();
+      toggle.click();
+
+      expect(q(`[${attribute}]`)).toHaveFocus();
+    });
+
     it('turning End date off keeps only the start', () => {
       const ctx = openDate('2026-10-09/2026-10-12');
 
@@ -999,7 +1010,7 @@ describe('date cell editor', () => {
 
       expect(rowNames()).toEqual(['end-toggle', 'dateFormat', 'time-toggle', 'timeFormat', 'timeZone', 'remind', 'clear']);
       expect(text(setting('timeFormat'))).toBe('Time format12 hour');
-      expect(text(setting('timeZone'))).toBe('Time zoneYour time zone');
+      expect(text(setting('timeZone'))).toBe('TimezoneYour time zone');
     });
 
     it('turning Include time on shows the time rows', () => {
@@ -1104,6 +1115,27 @@ describe('date cell editor', () => {
       expect(document.querySelector<HTMLElement>('[data-blok-database-date-remind-menu]')?.style.left).toBe('772px');
     });
 
+    // notion-motion.md Round 83 §1 (r83-n-date-format.raw, r83-n-date-timefmt.raw): with the picker at 1118, the
+    // 180 wide menus sit at 942..1122, over its edge by 4. Date format (181 tall, row at 541) ends at 705, 12 above a
+    // 717 window; Time format (94 tall) stays level with its row at 541.
+    it.each([
+      ['dateFormat', 181, 524],
+      ['timeFormat', 94, 541],
+    ] as const)('opens the %s menu over the picker edge by 4px, 12px above the window bottom', (kind, height, top) => {
+      vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
+      vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+      vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(180);
+      vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(height);
+      openRows('2026-10-09T14:00');
+      vi.spyOn(document.querySelector<HTMLElement>('[data-blok-database-date-editor]') ?? document.body, 'getBoundingClientRect').mockReturnValue(new DOMRect(1118, 111, 248, 594));
+      vi.spyOn(setting(kind), 'getBoundingClientRect').mockReturnValue(new DOMRect(1122, 541, 240, 28));
+      setting(kind).click();
+      const menu = document.querySelector<HTMLElement>(`[data-blok-database-date-setting-menu="${kind}"]`);
+
+      expect(menu?.style.left).toBe('942px');
+      expect(menu?.style.top).toBe(`${top}px`);
+    });
+
     // notion-motion.md Round 57 §8: a 152 tall Remind menu for a row at 599 sits at 553..705, 12px above a 717 window.
     it('keeps the Remind menu 12px above the window bottom', () => {
       vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
@@ -1188,7 +1220,7 @@ describe('date cell editor', () => {
         setting('timeZone').click();
         zoneRow('local')?.click();
         expect(ctx.onDateDisplayChange).toHaveBeenLastCalledWith({ timeZone: null });
-        expect(text(setting('timeZone'))).toBe('Time zoneYour time zone');
+        expect(text(setting('timeZone'))).toBe('TimezoneYour time zone');
       });
 
       it('a stored zone that is the browser zone checks the pinned current row', () => {

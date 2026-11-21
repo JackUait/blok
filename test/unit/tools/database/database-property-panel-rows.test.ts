@@ -61,6 +61,8 @@ vi.mock('../../../../src/components/utils/popover', () => ({
 
     activateItemByName(): void {}
 
+    setArrowTarget(): void {}
+
     focusItemByName(): boolean {
       return true;
     }

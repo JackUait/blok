@@ -266,14 +266,14 @@ describe('buildCardObject', () => {
 
       expect(top.getAttribute('data-shape')).toBe('punch');
       expect(q(stage, 'file-object-holes')?.children).toHaveLength(300);
-      expect(q(stage, 'file-object-punch-head')?.textContent).toMatch(/^BACKUP 2026-11 · /);
+      expect(q(stage, 'file-object-punch-head')?.textContent).toMatch(/^Backup 2026-11 · /);
     });
 
     it('prints the first bytes of the file in the header once they are known', () => {
       const bytes = Uint8Array.from({ length: 64 }, (_, i) => i * 3);
       const { stage } = build({ kind: 'generic', title: 'Backup', bytes });
 
-      expect(q(stage, 'file-object-punch-head')?.textContent).toBe('BACKUP · 0003 0609 0C0F 1215 181B 1E21 2427');
+      expect(q(stage, 'file-object-punch-head')?.textContent).toBe('Backup · 0003 0609 0C0F 1215 181B 1E21 2427');
     });
 
     it('punches a different card for different bytes', () => {

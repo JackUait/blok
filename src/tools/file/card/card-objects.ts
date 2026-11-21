@@ -338,7 +338,7 @@ function buildGeneric(content: Extract<CardContent, { kind: 'generic' }>): Omit<
     ? hexPair(bytes[index * 2], bytes[index * 2 + 1])
     : String(index).padStart(4, '0')));
   const head = make('span', 'blok-file-punch-head', 'file-object-punch-head');
-  head.textContent = `${content.title.toUpperCase()} · ${groups.join(' ')}`;
+  head.textContent = `${content.title} · ${groups.join(' ')}`;
 
   const holes = make('span', 'blok-file-holes', 'file-object-holes');
   Array.from({ length: PUNCH_ROWS * PUNCH_COLUMNS }, (_, index) => {

@@ -8,7 +8,8 @@ const LIMIT = 3;
 export interface RecentLink {
   url: string;
   title?: string;
-  favicon?: string;
+  /** The lookup has answered for this link, with or without a title. */
+  checked?: boolean;
 }
 
 /**
@@ -59,7 +60,7 @@ const toRecentLink = (value: unknown): RecentLink | null => {
     return null;
   }
 
-  const { url, title, favicon } = value as Record<string, unknown>;
+  const { url, title, checked } = value as Record<string, unknown>;
 
   if (typeof url !== 'string') {
     return null;
@@ -70,12 +71,13 @@ const toRecentLink = (value: unknown): RecentLink | null => {
   return {
     url,
     ...(cleaned !== '' ? { title: cleaned } : {}),
-    ...(typeof favicon === 'string' ? { favicon } : {}),
+    ...(checked === true ? { checked } : {}),
   };
 };
 
 /**
- * Newest first. Corrupt or unavailable storage reads as empty.
+ * Newest first, never more than the limit: storage written by an older
+ * version may hold more. Corrupt or unavailable storage reads as empty.
  */
 export function getRecentLinks(): RecentLink[] {
   try {
@@ -87,7 +89,9 @@ export function getRecentLinks(): RecentLink[] {
 
     const entries = parsed.map(toRecentLink).filter((entry): entry is RecentLink => entry !== null);
 
-    return entries.filter((entry, index) => entries.findIndex((other) => linkKey(other.url) === linkKey(entry.url)) === index);
+    return entries
+      .filter((entry, index) => entries.findIndex((other) => linkKey(other.url) === linkKey(entry.url)) === index)
+      .slice(0, LIMIT);
   } catch {
     return [];
   }
@@ -115,12 +119,12 @@ export function recordRecentLink(url: string): void {
 }
 
 /**
- * Attach the page title/favicon once the lookup answers. A link that has
+ * Attach the page title once the lookup answers. A link that has
  * already been pushed out of the history is not brought back.
  * @param url - the recorded href
  * @param meta - what the unfurl endpoint returned
  */
-export function updateRecentLinkMeta(url: string, meta: { title?: string; favicon?: string }): void {
+export function updateRecentLinkMeta(url: string, meta: { title?: string }): void {
   const entries = getRecentLinks();
 
   if (!entries.some((entry) => entry.url === url)) {
@@ -132,6 +136,6 @@ export function updateRecentLinkMeta(url: string, meta: { title?: string; favico
   write(entries.map((entry) => entry.url !== url ? entry : {
     ...entry,
     ...(title ? { title } : {}),
-    ...(meta.favicon ? { favicon: meta.favicon } : {}),
+    checked: true,
   }));
 }

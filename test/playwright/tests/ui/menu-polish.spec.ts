@@ -10,7 +10,13 @@ test.beforeAll(ensureBlokBundleBuilt);
 const openSettings = async (page: Page): Promise<void> => {
   await page.getByRole('heading', { name: 'A little more clarity', exact: true }).click();
   await page.getByTestId('settings-toggler').click();
-  await expect(page.getByTestId('block-tunes-popover').getByTestId('popover-container').first()).toBeVisible();
+  const container = page.getByTestId('block-tunes-popover').getByTestId('popover-container').first();
+
+  await expect(container).toBeVisible();
+  // A scan during the opening fade reads every colour blended with the page behind.
+  await container.evaluate(async menu => {
+    await Promise.allSettled(menu.getAnimations().map(animation => animation.finished));
+  });
 };
 
 test.beforeEach(async ({ page }) => {

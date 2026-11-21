@@ -315,10 +315,19 @@ describe('database row page layout css', () => {
 
     expect(tile).toContain('background-color: transparent');
     expect(tile).toContain('box-shadow: 0 0 0 1px var(--blok-database-card-ring)');
-    expect(tile).toContain('color: var(--blok-database-builder-tile-text)');
+    expect(tile).toContain('color: var(--blok-database-show-as-tile-text)');
     expect(picked).toContain('box-shadow: 0 0 0 2px var(--blok-database-card-border-active)');
     expect(picked).toContain('color: var(--blok-database-builder-tile-text-active)');
     expect(picked).not.toMatch(/background|accent|blue|focus-ring|#2383e2|toggle-on/i);
+  });
+
+  // notion-motion.md Round 92 §1 #7: dark unpicked labels are 173, the secondary ink. Light keeps the Structure
+  // label ink: Notion's light 125 fails AA at 12px.
+  it('inks the unpicked Show as labels with the secondary ink in dark only', () => {
+    const raw = readFileSync(resolve(__dirname, '../../../src/styles/database.css'), 'utf8');
+
+    expect(raw.match(/--blok-database-show-as-tile-text: var\(--blok-database-builder-tile-text\);/g)).toHaveLength(1);
+    expect(raw.match(/--blok-database-show-as-tile-text: var\(--blok-database-ink-secondary\);/g)).toHaveLength(2);
   });
 
   // notion-spec-2 §2: 72x48 tiles 8px apart, a 48x20 glyph 4px over a 12/12 label, "42" 16/24 500.
@@ -574,14 +583,18 @@ describe('database row page layout css', () => {
     expect(ruleBody('[data-blok-database-peek-actions] svg')).toContain('width: 22px');
   });
 
-  // notion-motion.md Round 65 §3 and Round 66 §4: every header button of the side and center peeks is radius 6.
-  it('rounds the side and center peeks\' header buttons to 6', () => {
+  // notion-motion.md Round 65 §3 and Round 66 §4: every header button of the side and center peeks, the Favorite star
+  // among them, and the page top bar's Copy link, Favorite and Actions are radius 6.
+  it('rounds the peeks\' and the full page\'s header buttons to 6', () => {
     const side = ['drawer-close', 'peek-expand', 'peek-mode', 'peek-prev', 'peek-next', 'peek-copy-link', 'peek-actions']
       .map((name) => `[data-peek-mode="side"] [data-blok-database-${name}]`);
     const center = ['peek-expand', 'peek-mode', 'peek-prev', 'peek-next', 'peek-copy-link', 'peek-actions']
       .map((name) => `[data-peek-mode="center"] [data-blok-database-${name}]`);
+    const star = ['side', 'center'].map((mode) => `[data-peek-mode="${mode}"] [data-blok-database-peek-favorite]`);
+    const full = ['peek-copy-link', 'peek-favorite', 'peek-actions']
+      .map((name) => `[data-peek-mode="full"] [data-blok-database-${name}]`);
 
-    expect(ruleBody([...side, ...center].join(', '))).toContain('border-radius: var(--blok-radius-control)');
+    expect(ruleBody([...side, ...center, ...star, ...full].join(', '))).toContain('border-radius: var(--blok-radius-control)');
   });
 
   // notion-motion.md Round 44 §5: the center peek's ⤢ is 11 x 11 of ink; Keyline's at 22px is 11.3.

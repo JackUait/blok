@@ -133,6 +133,11 @@
   /* The one keyboard focus ring. Every :focus-visible ring reads it (focus-ring-token.test.ts). */
   --blok-focus-ring: #2383e2;
   --blok-item-hover-bg: rgba(55, 53, 47, 0.08);
+  /* Block menu: soft label, solid gray icons and hints. The gray stays above the 4.5:1 floor on the popover. */
+  --blok-block-menu-label: #37352f;
+  --blok-block-menu-icon: #6f6e69;
+  --blok-block-menu-hint: #6f6e69;
+  --blok-block-menu-field-bg: rgba(55, 53, 47, 0.045);
   --blok-skeleton-bar: rgba(55, 53, 47, 0.07);
   --blok-skeleton-sheen: rgba(255, 255, 255, 0.65);
   /* Ask AI live preview: the violet tail on the newest words, and the slot shimmer. */
@@ -578,6 +583,11 @@
   --blok-video-menu-icon: rgba(255, 255, 255, 0.9);
   --blok-video-menu-row-active: color-mix(in srgb, var(--blok-video-accent) 14%, transparent);
   --blok-video-theater-scrim: rgba(0, 0, 0, 0.8);
+  /* Link picker: titles, and the labels, site names and signs around them.
+     0.7 is the lightest the second ink goes: under it, small text on the
+     card drops below 4.5:1. */
+  --blok-link-picker-ink: #37352f;
+  --blok-link-picker-ink-secondary: rgba(55, 53, 47, 0.7);
   --blok-video-theater-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6);
   --blok-video-scrim-strong: rgba(0, 0, 0, 0.6);
   --blok-video-scrim-mid: rgba(0, 0, 0, 0.2);
@@ -645,6 +655,10 @@
     --blok-item-focus-shadow: rgba(255, 255, 255, 0.055);
     --blok-focus-ring: #4c9fff;
     --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
+    --blok-block-menu-label: #d6d4cf;
+    --blok-block-menu-icon: #b4b3b0;
+    --blok-block-menu-hint: #9a9893;
+    --blok-block-menu-field-bg: rgba(255, 255, 255, 0.04);
     --blok-skeleton-bar: rgba(255, 255, 255, 0.06);
     --blok-skeleton-sheen: rgba(255, 255, 255, 0.09);
     --blok-ai-tail: #a08bff;
@@ -667,6 +681,8 @@
     --blok-search-input-border: rgba(255, 255, 255, 0.2);
     --blok-search-input-focus-border: rgba(35, 131, 226, 0.5);
     --blok-link-input-border: #37352f;
+    --blok-link-picker-ink: #e2e0dc;
+    --blok-link-picker-ink-secondary: #a39e98;
     --blok-popover-icon-bg: rgba(255, 255, 255, 0.08);
     --blok-popover-icon-active-bg: rgba(255, 255, 255, 0.08);
 
@@ -852,6 +868,10 @@
   --blok-item-focus-shadow: rgba(255, 255, 255, 0.055);
   --blok-focus-ring: #4c9fff;
   --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
+  --blok-block-menu-label: #d6d4cf;
+  --blok-block-menu-icon: #b4b3b0;
+  --blok-block-menu-hint: #9a9893;
+  --blok-block-menu-field-bg: rgba(255, 255, 255, 0.04);
   --blok-skeleton-bar: rgba(255, 255, 255, 0.06);
   --blok-skeleton-sheen: rgba(255, 255, 255, 0.09);
   --blok-ai-tail: #a08bff;
@@ -874,6 +894,8 @@
   --blok-search-input-border: rgba(255, 255, 255, 0.2);
   --blok-search-input-focus-border: rgba(35, 131, 226, 0.5);
   --blok-link-input-border: #37352f;
+  --blok-link-picker-ink: #e2e0dc;
+  --blok-link-picker-ink-secondary: #a39e98;
   --blok-popover-icon-bg: rgba(255, 255, 255, 0.08);
   --blok-popover-icon-active-bg: rgba(255, 255, 255, 0.08);
 

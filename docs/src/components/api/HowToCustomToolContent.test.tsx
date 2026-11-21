@@ -188,7 +188,7 @@ describe('HowToCustomToolContent', () => {
       // Prose typographically binds short words with a non-breaking space, so a
       // phrase is matched on its words rather than on its exact spacing.
       const code = (container.textContent ?? '').replace(/\u00A0/g, ' ');
-      expect(code).toContain('DIRECT children of the nested slot');
+      expect(code).toContain('direct children of the nested slot');
       expect(code).toContain('tool root');
     });
   });

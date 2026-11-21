@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { groupLabel } from '../../../../src/tools/database/database-group-labels';
+import { groupKeysFor } from '../../../../src/tools/database/group-keys';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
 
 const i18n = { t: (key: string, vars?: Record<string, string | number>) => (vars === undefined ? key : `${key}:${JSON.stringify(vars)}`) };
@@ -13,6 +14,45 @@ describe('groupLabel', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  // notion-motion.md Round 84b §3 (r84-n-grp-month.raw): Date by Month reads "Oct 2026".
+  it('names a month group with the short month name in the editor locale', () => {
+    const date: PropertyDefinition = { id: 'p-due', name: 'Due', type: 'date', position: 'a0' };
+
+    expect(groupLabel(date, 'month:2026-10', { ...i18n, getLocale: () => 'en-US' }, { dateBy: 'month' })).toBe('Oct 2026');
+    expect(groupLabel(date, 'month:2026-10', { ...i18n, getLocale: () => 'de' }, { dateBy: 'month' }))
+      .toBe(new Intl.DateTimeFormat('de', { month: 'short', year: 'numeric' }).format(new Date(2026, 9, 1)));
+  });
+
+  // notion-motion.md Round 85c §2 (r85c-n-dateby.raw): Date by Week reads "Oct 11\u2009\u2013\u200917 2026", no comma.
+  it('names a week group by its day range and year in the editor locale', () => {
+    const date: PropertyDefinition = { id: 'p-due', name: 'Due', type: 'date', position: 'a0' };
+    expect(groupLabel(date, 'week:2026-10-11', { ...i18n, getLocale: () => 'en-US' }, { dateBy: 'week' })).toBe('Oct 11\u2009\u2013\u200917 2026');
+    // The week's end is six calendar days on, across a month. Other locales keep Intl's own shape.
+    expect(groupLabel(date, 'week:2026-11-29', { ...i18n, getLocale: () => 'en-US' }, { dateBy: 'week' })).toBe('Nov 29\u2009\u2013\u2009Dec 5 2026');
+    expect(groupLabel(date, 'week:2026-10-11', { ...i18n, getLocale: () => 'de' }, { dateBy: 'week' }))
+      .toBe(new Intl.DateTimeFormat('de', { month: 'short', day: 'numeric', year: 'numeric' }).formatRange(new Date(2026, 9, 11), new Date(2026, 9, 17)));
+  });
+
+  // Chromium's Intl pads the range dash with plain spaces; Notion's label has thin ones (r85c-n-dateby.raw bytes).
+  it('pads the week range dash with thin spaces whatever spaces Intl gives', () => {
+    const date: PropertyDefinition = { id: 'p-due', name: 'Due', type: 'date', position: 'a0' };
+    const real = Intl.DateTimeFormat.prototype.formatRangeToParts;
+
+    vi.spyOn(Intl.DateTimeFormat.prototype, 'formatRangeToParts').mockImplementation(function (this: Intl.DateTimeFormat, start, end) {
+      return real.call(this, start, end).map((part) => ({ ...part, value: part.value.replace(/\u2009/g, ' ') }));
+    });
+
+    expect(groupLabel(date, 'week:2026-10-11', { ...i18n, getLocale: () => 'en-US' }, { dateBy: 'week' })).toBe('Oct 11\u2009\u2013\u200917 2026');
+  });
+
+  // r84-n-grp-Date.raw: Date by Relative named a date past the last 30 days "Oct 2026" too.
+  it('names a relative date past the last 30 days by its short month', () => {
+    const date: PropertyDefinition = { id: 'p-due', name: 'Due', type: 'date', position: 'a0' };
+    const [key] = groupKeysFor(date, '2026-10-15', {}, new Date(2026, 10, 20, 12));
+
+    expect(groupLabel(date, key, { ...i18n, getLocale: () => 'en-US' })).toBe('Oct 2026');
   });
 
   // research/22 §7: Notion names number buckets "0 to 100", "900 to 1000".

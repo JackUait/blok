@@ -155,6 +155,27 @@ describe('DatabaseCardDrawer shell', () => {
       drawer.destroy();
     });
 
+    // notion-motion.md Round 68 §3: 408x390, centred under the icon, focus kept in Filter.
+    it('opens the page icon picker at Notion\'s size, centred under the icon', async () => {
+      vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
+      const drawer = new DatabaseCardDrawer(createOptions({ i18n: i18n(), onIconChange: vi.fn() }));
+
+      drawer.open(ROW, 'side');
+      const anchor = q('[data-blok-database-drawer-icon], [data-blok-database-drawer-add-icon]');
+
+      if (anchor === null) throw new Error('no icon anchor');
+      anchor.getBoundingClientRect = (): DOMRect => new DOMRect(840, 80, 36, 36);
+      drawer.editIcon();
+      const picker = q('[data-blok-emoji-picker]');
+
+      expect(picker?.style.width).toBe('408px');
+      expect(picker?.style.height).toBe('390px');
+      // jsdom lays the picker out 0 wide, so centred puts its left edge on the icon's centre (840 + 18).
+      await vi.waitFor(() => expect(picker?.style.left).toBe('858px'));
+      expect(q('[data-blok-emoji-picker] input')?.getAttribute('aria-activedescendant')).not.toBeNull();
+      drawer.destroy();
+    });
+
     it('stays in the top layer while the side peek slides out', () => {
       const drawer = new DatabaseCardDrawer(createOptions());
 
@@ -231,7 +252,7 @@ describe('DatabaseCardDrawer shell', () => {
     });
   });
 
-  // notion-motion.md "Peek: click outside, and Open in full page": ⤡ first runs the peek's close slide, then the full page shows.
+  // notion-motion.md Round 72 §4: Notion paints the full page at once, under its empty panel sliding out.
   describe('open in full page from a side peek', () => {
     const openSide = (): { drawer: DatabaseCardDrawer; panel: () => HTMLElement | null } => {
       vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
@@ -246,62 +267,151 @@ describe('DatabaseCardDrawer shell', () => {
       return { drawer, panel: () => document.querySelector<HTMLElement>('[data-blok-database-drawer]') };
     };
 
-    it('slides the peek out first, then shows the full page', () => {
+    const shell = (): HTMLElement | null => q('[data-blok-database-drawer-shell]');
+
+    const slideEnd = (el: HTMLElement | null, propertyName = 'transform'): void => {
+      el?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName }));
+    };
+
+    it('shows the full page at once, under an empty panel that slides out', () => {
       const { drawer, panel } = openSide();
 
       q('[data-blok-database-peek-expand]')?.click();
-
-      expect(panel()?.getAttribute('data-peek-mode')).toBe('side');
-      expect(panel()?.hasAttribute('data-open')).toBe(false);
-
-      panel()?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
       expect(panel()?.getAttribute('data-peek-mode')).toBe('full');
-      expect(panel()?.hasAttribute('data-open')).toBe(true);
+      expect(shell()).not.toBeNull();
+      expect(shell()?.childElementCount).toBe(0);
+      expect(shell()?.getAttribute('aria-hidden')).toBe('true');
+      expect(shell()?.hasAttribute('data-open')).toBe(false);
+
+      slideEnd(shell());
+
+      expect(shell()).toBeNull();
+      expect(panel()?.getAttribute('data-peek-mode')).toBe('full');
       drawer.destroy();
     });
 
-    it('waits for the panel\'s own slide, not a fade inside it', () => {
-      const { drawer, panel } = openSide();
+    it('slides the empty panel out from the peek\'s place, with the peek\'s look', () => {
+      const css = readFileSync(resolve(__dirname, '../../../../src/styles/database.css'), 'utf8');
+      const rule = (selector: string): string => {
+        const at = css.indexOf(`${selector} {`);
+
+        return at === -1 ? '' : css.slice(at, css.indexOf('}', at));
+      };
+      const base = rule('[data-blok-database-drawer-shell]');
+
+      expect(base).toContain('transform: translateX(100%)');
+      expect(base).toContain('transition: transform 200ms ease');
+      expect(base).toContain('background-color: var(--blok-database-peek-bg)');
+      expect(base).toContain('box-shadow: var(--blok-database-peek-shadow)');
+      expect(rule('[dir="rtl"] [data-blok-database-drawer-shell]')).toContain('transform: translateX(-100%)');
+      expect(rule('[data-blok-database-drawer-shell][data-open]')).toContain('transform: none');
+      // The full page hides the wrapper's other children; the empty panel is its sibling.
+      expect(css).toContain('[data-blok-database-full-page] > :not([data-blok-database-drawer], [data-blok-database-drawer-shell]) {');
+    });
+
+    // notion-motion.md Round 71 §5: Notion's full page has the caret at the end of the H1 (5 of 5).
+    it('puts the caret at the end of the title at once', () => {
+      const { drawer } = openSide();
+      const title = q<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
+      const expand = q('[data-blok-database-peek-expand]');
+
+      title?.setSelectionRange(1, 1);
+      expand?.focus();
+      expand?.click();
+
+      expect(title).toHaveFocus();
+      expect(title?.selectionStart).toBe('Card'.length);
+      expect(title?.selectionEnd).toBe('Card'.length);
+      drawer.destroy();
+    });
+
+    it('puts the caret at the end of the title under reduced motion too', () => {
+      vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce'), media: query }));
+      const { drawer } = openSide();
+      const title = q<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
+      const expand = q('[data-blok-database-peek-expand]');
+
+      title?.setSelectionRange(1, 1);
+      expand?.focus();
+      expand?.click();
+
+      expect(title).toHaveFocus();
+      expect(title?.selectionStart).toBe('Card'.length);
+      drawer.destroy();
+      vi.unstubAllGlobals();
+    });
+
+    // notion-motion.md Round 72 §4: from a centre peek too, the full page opens with the caret at the end of the title.
+    it('puts the caret at the end of the title when the full page opens from a centre peek', () => {
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      drawer.open(ROW, 'center');
+      const title = q<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
+      const expand = q('[data-blok-database-peek-expand]');
+
+      title?.setSelectionRange(1, 1);
+      expand?.focus();
+      expand?.click();
+
+      expect(document.querySelector('[data-blok-database-drawer]')?.getAttribute('data-peek-mode')).toBe('full');
+      expect(shell()).toBeNull();
+      expect(title).toHaveFocus();
+      expect(title?.selectionStart).toBe('Card'.length);
+      expect(title?.selectionEnd).toBe('Card'.length);
+      drawer.destroy();
+    });
+
+    it('keeps the empty panel until its own slide ends, not a fade', () => {
+      const { drawer } = openSide();
 
       q('[data-blok-database-peek-expand]')?.click();
-      q('[data-blok-database-peek-next]')?.dispatchEvent(new Event('transitionend', { bubbles: true }));
+      slideEnd(shell(), 'opacity');
 
-      expect(panel()?.getAttribute('data-peek-mode')).toBe('side');
+      expect(shell()).not.toBeNull();
       drawer.destroy();
     });
 
-    it('shows the full page at once under reduced motion', () => {
+    it('slides no empty panel under reduced motion', () => {
       vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce'), media: query }));
       const { drawer, panel } = openSide();
 
       q('[data-blok-database-peek-expand]')?.click();
 
       expect(panel()?.getAttribute('data-peek-mode')).toBe('full');
+      expect(shell()).toBeNull();
       drawer.destroy();
       vi.unstubAllGlobals();
     });
 
-    it('stays closed when Escape closes it during the slide', () => {
-      const { drawer, panel } = openSide();
+    it('drops the empty panel when Escape closes the full page during the slide', () => {
+      const { drawer } = openSide();
 
       q('[data-blok-database-peek-expand]')?.click();
       drawer.close();
-      panel()?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
       expect(drawer.isOpen).toBe(false);
       expect(document.querySelector('[data-blok-database-drawer][data-peek-mode="full"]')).toBeNull();
+      expect(shell()).toBeNull();
       drawer.destroy();
     });
 
-    it('slides back in as a side peek when another row opens during the slide', () => {
+    it('drops the empty panel when the drawer is destroyed during the slide', () => {
+      const { drawer } = openSide();
+
+      q('[data-blok-database-peek-expand]')?.click();
+      drawer.destroy();
+
+      expect(shell()).toBeNull();
+    });
+
+    it('opens another row as a full page during the slide', () => {
       const { drawer, panel } = openSide();
 
       q('[data-blok-database-peek-expand]')?.click();
       drawer.open({ ...ROW, id: 'other' });
-      panel()?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
-      expect(panel()?.getAttribute('data-peek-mode')).toBe('side');
+      expect(panel()?.getAttribute('data-peek-mode')).toBe('full');
       expect(panel()?.hasAttribute('data-open')).toBe(true);
       drawer.destroy();
     });

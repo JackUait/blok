@@ -62,7 +62,7 @@ export const OnThisPage: React.FC<{ section: ApiSection }> = ({ section }) => {
       aria-label={t('api.onThisPage')}
       data-blok-testid="on-this-page"
     >
-      <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-muted-foreground"><Typo>{t('api.onThisPage')}</Typo></h4>
+      <h4 className="mb-3 text-xs font-bold text-muted-foreground"><Typo>{t('api.onThisPage')}</Typo></h4>
       <ul className="flex flex-col gap-1 border-l border-border">
         {items.map((it) => (
           <li key={it.id}>
@@ -132,7 +132,7 @@ export const OnThisPageDropdown: React.FC<{ section: ApiSection }> = ({ section 
         data-blok-testid="on-this-page-dropdown-trigger"
       >
         <span className="flex min-w-0 flex-col">
-          <span className="text-xs font-bold uppercase tracking-wide text-primary">
+          <span className="text-xs font-bold text-primary">
             <Typo>{t('api.onThisPage')}</Typo>
           </span>
           <span className="truncate font-mono text-sm font-semibold text-foreground">

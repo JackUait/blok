@@ -23,7 +23,7 @@ describe("marks section", () => {
     const description = section!.description ?? "";
     expect(description).toContain("findParentTag");
     expect(description).toContain("boundary nodes");
-    expect(description).toContain("WHOLE range");
+    expect(description).toContain("whole range");
     // The behaviors that make range-awareness worth having must be stated.
     expect(description).toContain("split");
     expect(description).toContain("boundaries");
@@ -36,7 +36,7 @@ describe("marks section", () => {
     const description = section!.description ?? "";
     expect(description).toContain("MarkSpec");
     expect(description).toContain("identity");
-    expect(description).toContain("EXCLUDED");
+    expect(description).toContain("excluded");
     expect(description).toContain("colour picker");
     expect(description).toContain("family");
     expect(description).toContain("compose");

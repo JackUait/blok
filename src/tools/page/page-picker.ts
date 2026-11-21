@@ -828,6 +828,7 @@ export class PagePicker {
     const title = document.createElement('span');
 
     line.className = 'flex items-center gap-1.5 min-w-0 leading-5';
+    line.setAttribute('data-blok-page-picker-line', '');
     title.className = 'truncate';
     title.textContent = result.title || this.fallback;
     line.append(title);
@@ -884,13 +885,14 @@ export class PagePicker {
       // notion-motion.md Round 65 §3: focus goes to the chevron. The row is drawn anew, so focus its new chevron.
       this.chevronOf(key)?.focus({ preventScroll: true });
     });
-    // notion-motion.md Round 67 §4: Tab moves to the next row, the picker stays open. Shift+Tab and the last row: unmeasured.
+    // notion-motion.md Round 67 §4 and Round 68 §5: Tab moves to the next row, Shift+Tab to the chevron's own row; the picker stays open.
+    // Tab on the last row goes to Notion's workspace footer, which Blok does not have, so it falls through.
     chevron.addEventListener('keydown', (event) => {
-      if (event.key !== 'Tab' || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
+      if (event.key !== 'Tab' || event.altKey || event.ctrlKey || event.metaKey) {
         return;
       }
       const index = this.entries.findIndex((entry) => entry.key === key);
-      const next = index === -1 ? undefined : this.entries[index + 1]?.element;
+      const next = index === -1 ? undefined : this.entries[event.shiftKey ? index : index + 1]?.element;
 
       if (next === undefined) {
         return;
@@ -981,6 +983,7 @@ export class PagePicker {
     const line = document.createElement('span');
 
     line.className = 'truncate leading-5';
+    line.setAttribute('data-blok-page-picker-line', '');
     label.split(QUERY_MARK).forEach((part, index) => {
       if (index > 0) {
         const strong = document.createElement('strong');

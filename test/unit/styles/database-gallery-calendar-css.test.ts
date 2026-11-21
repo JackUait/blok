@@ -29,6 +29,7 @@ const TOKENS = [
   '--blok-database-gallery-card-hover-bg',
   '--blok-database-gallery-preview-bg',
   '--blok-database-gallery-preview-border',
+  '--blok-database-gallery-new-ring',
   '--blok-database-gallery-preview-text',
   '--blok-database-gallery-title-text',
   '--blok-database-gallery-muted-text',
@@ -40,6 +41,7 @@ const TOKENS = [
   '--blok-database-calendar-event-bg',
   '--blok-database-calendar-event-shadow',
   '--blok-database-calendar-event-hover-bg',
+  '--blok-database-calendar-add-bg',
   '--blok-database-calendar-today-text',
 ];
 
@@ -68,16 +70,11 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-gallery-card]')).not.toContain('padding-block-end');
   });
 
-  // A row stretches to its tallest item (L12), so the "+ New page" tile takes the card's preview height.
-  it('sizes the "+ New page" tile like a card of the same size', () => {
-    expect(ruleBody('[data-blok-database-gallery-new]::before')).toContain('padding-block-start: var(--blok-database-gallery-new-height, calc(56.25% + 38.5px))');
-    expect(ruleBody('[data-blok-database-gallery][data-card-size="medium"]')).toContain('--blok-database-gallery-new-height: calc(146.25px + 38.5px)');
-  });
-
-  // notion-motion.md Round 24 §4 Gallery (r24-gal-empty.png): with no cards the tile is 338×40, not card height.
-  it('draws the "+ New page" tile 40px tall when its grid has no cards', () => {
-    expect(ruleBody('[data-blok-database-gallery-grid][data-empty] > [data-blok-database-gallery-new]')).toContain('block-size: 40px');
-    expect(ruleBody('[data-blok-database-gallery-grid][data-empty] > [data-blok-database-gallery-new]::before')).toContain('content: none');
+  // notion-motion.md Round 86 §1 #4, Round 24 §4: alone on its row the tile is 40 tall; a row with cards stretches it (L12).
+  it('sizes the "+ New page" tile 40px tall and lets its row stretch it', () => {
+    expect(ruleBody('[data-blok-database-gallery-new]')).toContain('min-block-size: 40px');
+    expect(css).not.toContain('[data-blok-database-gallery-new]::before');
+    expect(css).not.toContain('--blok-database-gallery-new-height');
   });
 
   // notion-motion.md Round 24 §4 Gallery: the "+ New page" tile's hover fill comes in over 20ms ease-in.
@@ -104,12 +101,32 @@ describe('database gallery and calendar styles', () => {
   });
 
   // findings-listgallery L14: the "+ New page" tile is a card-size tile with the card ring, 15px gray.
-  it('draws the "+ New page" tile at card height with the card ring', () => {
+  it('draws the "+ New page" tile with the card ring', () => {
     const tile = ruleBody('[data-blok-database-gallery-new]');
 
-    expect(tile).toContain('box-shadow: 0 0 0 1px var(--blok-database-gallery-preview-border)');
+    expect(tile).toContain('box-shadow: 0 0 0 1px var(--blok-database-gallery-new-ring)');
     expect(tile).toContain('font-size: 15px');
     expect(tile).not.toContain('min-height: 80px');
+  });
+
+  // notion-motion.md Round 75 §3: the tile ring is rgba(42,28,0,0.07) in light (the cover line) and rgba(255,255,235,0.1) in dark, where the cover line has none.
+  it('rings the "+ New page" tile in dark too', () => {
+    const values = Array.from(css.matchAll(/--blok-database-gallery-new-ring:\s*([^;]+);/g), (match) => match[1].trim());
+
+    expect(values).toEqual(['var(--blok-database-gallery-preview-border)', 'rgba(255, 255, 235, 0.1)', 'rgba(255, 255, 235, 0.1)']);
+  });
+
+  // notion-motion.md Round 70 §3 "Gallery New page tile": glyph 15×15, words 6px after it.
+  it('draws the "+ New page" glyph 15px with a 6px gap before the words', () => {
+    expect(ruleBody('[data-blok-database-gallery-new] svg')).toContain('inline-size: 15px');
+    expect(ruleBody('[data-blok-database-gallery-new] svg')).toContain('block-size: 15px');
+    expect(ruleBody('[data-blok-database-gallery-new]')).toContain('gap: var(--blok-space-1-5)');
+  });
+
+  // notion-motion.md Round 81 §2 (r81-n-gallery-newpage.raw): Notion's centred group starts -6 and its glyph -1,
+  // so the glyph and words sit 3.5 left of the tile's centre.
+  it('shifts the "+ New page" glyph and words 3.5px left of centre', () => {
+    expect(ruleBody('[data-blok-database-gallery-new] > span[aria-hidden="true"]')).toContain('margin-inline-start: calc(-1 * var(--blok-space-1-75))');
   });
 
   it('crops images unless Fit image is on', () => {
@@ -131,6 +148,15 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-calendar-event]')).toMatch(/min-block-size:\s*28px/);
     expect(ruleBody('[data-blok-database-calendar-event-title]')).toMatch(/font-weight:\s*600/);
     expect(ruleBody('[data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number]')).toContain('var(--blok-database-today)');
+  });
+
+  // notion-motion.md Round 87 §1 #10 (r87-n-week-light.raw): today's circle is 24 with no padding, so a two-digit day stays 24 wide.
+  // The min 24 lets a wider label ("20日") grow. Today on a 1st (a "Nov 1" label) is unmeasured and keeps its padded pill.
+  it('draws today\'s circle at least 24, with no padding on a day number', () => {
+    const today = '[data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number]';
+
+    expect(ruleBody(today)).toMatch(/min-inline-size:\s*24px/);
+    expect(ruleBody(`${today}:not([data-month-start])`)).toMatch(/padding-inline:\s*0/);
   });
 
   // notion-motion.md Round 25 §5: wrapped, every card is 40 tall (46 slot) and its title is two 17px lines at most.
@@ -256,7 +282,7 @@ describe('database gallery and calendar styles', () => {
     expect(add).toMatch(/inset-inline-start:\s*6px/);
     expect(add).toMatch(/inline-size:\s*24px/);
     expect(add).toMatch(/block-size:\s*24px/);
-    expect(add).toMatch(/background-color:\s*var\(--blok-database-calendar-event-bg\)/);
+    expect(add).toMatch(/background-color:\s*var\(--blok-database-calendar-add-bg\)/);
     expect(add).toMatch(/box-shadow:\s*var\(--blok-database-popover-shadow\)/);
     expect(ruleBody('[data-blok-database-calendar-add] svg')).toMatch(/inline-size:\s*20px/);
 
@@ -442,6 +468,8 @@ describe('gallery and calendar in dark (research/21 §1g, §1h)', () => {
     ['--blok-database-calendar-event-bg', 'rgb(47, 47, 47)'],
     ['--blok-database-calendar-event-shadow', 'rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px'],
     ['--blok-database-calendar-event-hover-bg', 'rgb(55, 55, 55)'],
+    // notion-motion.md Round 76 §7 (r76-b-calendar-dayplus.raw): Notion's dark day "+" is rgb(37, 37, 37), darker than an event.
+    ['--blok-database-calendar-add-bg', 'rgb(37, 37, 37)'],
   ])('%s is %s in both dark blocks', (token, value) => {
     expect(darkValues(token)).toEqual([value, value]);
   });
@@ -471,6 +499,13 @@ describe('calendar day digits and weekday row (Round 32)', () => {
 
     expect(body).toContain('min-height: 25px');
     expect(body).toContain('margin-block-start: var(--blok-space-0-5)');
+  });
+
+  // notion-motion.md Round 79 §5 "Calendar": the left line starts at the grid top (y 374), under the weekday row's line.
+  it('runs the left line down the weeks only, with the weekday row kept on their columns', () => {
+    expect(ruleBody('[data-blok-database-calendar-grid]')).not.toContain('border-inline-start');
+    expect(ruleBody('[data-blok-database-calendar-week]')).toContain('border-inline-start: 1px solid var(--blok-database-calendar-border)');
+    expect(ruleBody('[data-blok-database-calendar-weekdays]')).toContain('margin-inline-start: var(--blok-border-width-hairline)');
   });
 
   it('sizes a day number to its text, and only today to a 24px circle 4px in', () => {
@@ -538,6 +573,50 @@ describe('Round 45 gallery, calendar and settings panel', () => {
   it('sets layout tile labels at 11px and the "Card layout" label at 500', () => {
     expect(ruleBody('[data-blok-database-layout-tile]')).toMatch(/font-size:\s*11px/);
     expect(ruleBody('[data-blok-database-card-layout-label]')).toMatch(/font-weight:\s*500/);
+  });
+
+  // notion-motion.md Round 89 §1 #8 (r89-n-layout.raw, r89-n-layout-boxes.raw): tiles 56.5 tall, pad 6, glyph at +10,
+  // label text at +35.5, top-aligned, r6, a 1px inset ring; the first tile 54 below the page top.
+  it('draws Layout tiles like Notion\'s: top-aligned, pad 6, r6, an inset ring', () => {
+    const tile = ruleBody('[data-blok-database-layout-tile]');
+
+    expect(tile).toMatch(/justify-content:\s*flex-start/);
+    expect(tile).toMatch(/block-size:\s*56\.5px/);
+    expect(tile).toMatch(/padding:\s*var\(--blok-space-1-5\)/);
+    expect(tile).toMatch(/line-height:\s*16\.5px/);
+    expect(tile).toMatch(/border-radius:\s*var\(--blok-radius-control\)/);
+    expect(tile).toMatch(/border:\s*none/);
+    expect(tile).toMatch(/box-shadow:\s*var\(--blok-database-layout-tile-ring\) 0 0 0 1px inset/);
+    expect(ruleBody('[data-blok-database-layout-tile-glyph]')).toMatch(/margin-block-start:\s*var\(--blok-space-1\)/);
+    expect(ruleBody('[data-blok-database-layout-tiles]')).toMatch(/margin-block-start:\s*var\(--blok-space-2-75\)/);
+  });
+
+  // Round 90 §1 #8: light ring rgb(230,229,227) (r89-n-layout.raw); dark rgb(56,56,54) already matched Blok's ring.
+  it('rings Layout tiles with Notion\'s light ring and keeps the dark one', () => {
+    const values = [...css.matchAll(/--blok-database-layout-tile-ring:\s*([^;]+);/g)].map((m) => m[1].trim());
+
+    expect(values).toEqual(['rgb(230, 229, 227)', 'rgba(255, 255, 243, 0.082)', 'rgba(255, 255, 243, 0.082)']);
+  });
+
+  // Round 90 §2 (r90-n-dark-layout.raw): label text at + 35.5, Blok + 35. §3: hover is `background 0.02s ease-in`.
+  it('sets the Layout label half a pixel lower and fades the hover fill in 0.02s', () => {
+    expect(ruleBody('[data-blok-database-layout-tile]')).toMatch(/transition:\s*background 0\.02s ease-in/);
+    expect(ruleBody('[data-blok-database-layout-tile-glyph] + span')).toMatch(/top:\s*0\.5px/);
+  });
+});
+
+// notion-motion.md Round 81 §2 "Gallery card tools" (r81-n-gallery-cardtools.raw): Notion's buttons are r0 in an r4 group
+// that clips them. Blok rounds only the group's outer corners, so a focus ring is not clipped.
+describe('gallery card tools (Round 81)', () => {
+  const TOOLS = '[data-blok-database-gallery-card] [data-blok-database-card-actions]';
+
+  it('squares the inner corners of the two tool buttons', () => {
+    expect(ruleBody(`${TOOLS} > button`)).toMatch(/border-radius:\s*0/);
+  });
+
+  it('keeps the group\'s 4px radius on its outer corners', () => {
+    expect(ruleBody(`${TOOLS} > button:first-child`)).toMatch(/border-start-start-radius:\s*inherit;\s*border-end-start-radius:\s*inherit/);
+    expect(ruleBody(`${TOOLS} > button:last-child`)).toMatch(/border-start-end-radius:\s*inherit;\s*border-end-end-radius:\s*inherit/);
   });
 });
 

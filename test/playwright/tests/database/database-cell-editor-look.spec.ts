@@ -286,7 +286,7 @@ test.describe('date picker rows', () => {
     const { box: before } = await open(page, 'p-due');
 
     await page.locator('[data-blok-database-date-time-toggle]').click();
-    expect(await rows(page)).toEqual(['End date', 'Date formatFull date', 'Include time', 'Time format12 hour', 'Time zoneYour time zone', 'RemindNone', 'Clear']);
+    expect(await rows(page)).toEqual(['End date', 'Date formatFull date', 'Include time', 'Time format12 hour', 'TimezoneYour time zone', 'RemindNone', 'Clear']);
     const after = await measure(page);
     const clear = await page.locator('[data-blok-database-date-clear]').boundingBox();
 
@@ -305,12 +305,29 @@ test.describe('date picker submenus', () => {
   const picker = (page: Page): Locator => page.locator('[data-blok-database-date-editor]');
   const zoneMenu = (page: Page): Locator => page.locator('[data-blok-database-date-setting-menu="timeZone"]');
   const zoneSearch = (page: Page): Locator => zoneMenu(page).locator('[data-blok-database-date-zone-search]');
+  // The submenus scale in from .96, so geometry is only final once the transition ends.
+  const settled = (menu: Locator): Promise<unknown> => menu.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   const openZones = async (page: Page): Promise<void> => {
     await open(page, 'p-due');
     await page.locator('[data-blok-database-date-time-toggle]').click();
     await page.locator('[data-blok-database-date-setting="timeZone"]').click();
     await expect(zoneMenu(page)).toBeVisible();
+    await settled(zoneMenu(page));
   };
+
+  // notion-motion.md Round 83 §1: Escape closes the submenu and the row it came from shows the keyboard ring.
+  test('Escape on Date format puts focus on its row, with the keyboard ring', async ({ page }) => {
+    await open(page, 'p-due');
+    const row = page.locator('[data-blok-database-date-setting="dateFormat"]');
+
+    await row.click();
+    await expect(page.getByRole('menuitemradio', { name: 'Full date' })).toBeFocused();
+    await page.keyboard.press('Escape');
+
+    await expect(page.locator('[data-blok-database-date-setting-menu]')).toHaveCount(0);
+    await expect(row).toBeFocused();
+    expect(await row.evaluate((el) => el.matches(':focus-visible') && getComputedStyle(el).outlineStyle !== 'none')).toBe(true);
+  });
 
   test('Time format lists Hidden, 12 hour, 24 hour, in that order', async ({ page }) => {
     await open(page, 'p-due');
@@ -324,6 +341,7 @@ test.describe('date picker submenus', () => {
     await open(page, 'p-due');
     await page.locator('[data-blok-database-date-setting="dateFormat"]').click();
     await page.mouse.move(0, 0);
+    await settled(page.locator('[data-blok-database-date-setting-menu="dateFormat"]'));
     const checked = page.getByRole('menuitemradio', { name: 'Full date' });
     const other = page.getByRole('menuitemradio', { name: 'Short date' });
     const look = await checked.evaluate((row) => {
@@ -391,6 +409,27 @@ test.describe('date picker submenus', () => {
     expect(Math.abs((menuBox?.height ?? 0) - 595)).toBeLessThanOrEqual(1);
     // research/35 §20: 12px above the window bottom.
     expect(innerHeight - ((menuBox?.y ?? 0) + (menuBox?.height ?? 0))).toBe(12);
+  });
+
+  // notion-motion.md Round 84b §1 (r84-n-tz-geo.raw), offsets from the menu's top: list +48 to the bottom,
+  // heading text +58.3 and +141.1, rows +81.9 and +164.8.
+  test('Time zone: the list and its headings sit where Notion\'s do', async ({ page }) => {
+    await openZones(page);
+    const geo = await zoneMenu(page).evaluate((menu) => {
+      const top = menu.getBoundingClientRect().top;
+      const list = menu.querySelector('[data-blok-database-date-zone-list]');
+      const text = [...menu.querySelectorAll('[data-blok-database-date-zone-heading]')].map((h) => h.getBoundingClientRect().top + parseFloat(getComputedStyle(h).paddingTop) - top);
+      const rows = [...menu.querySelectorAll('[data-blok-database-date-setting-option]')].slice(0, 2).map((r) => r.getBoundingClientRect().top - top);
+
+      return { list: (list?.getBoundingClientRect().top ?? 0) - top, listEnd: menu.getBoundingClientRect().bottom - (list?.getBoundingClientRect().bottom ?? 0), text, rows };
+    });
+
+    expect(geo.list).toBe(48);
+    expect(geo.listEnd).toBe(0);
+    expect(Math.abs(geo.text[0] - 58.3)).toBeLessThanOrEqual(0.1);
+    expect(Math.abs(geo.text[1] - 141.1)).toBeLessThanOrEqual(0.1);
+    expect(Math.abs(geo.rows[0] - 81.9)).toBeLessThanOrEqual(0.1);
+    expect(Math.abs(geo.rows[1] - 164.8)).toBeLessThanOrEqual(0.1);
   });
 
   for (const [scheme, ink] of [['light', { city: 'rgb(44, 44, 43)', muted: 'rgb(114, 111, 106)' }], ['dark', { city: 'rgb(240, 239, 237)', muted: 'rgb(173, 169, 163)' }]] as const) {

@@ -6,6 +6,8 @@ import type { DateDisplayChange } from './cells/date-format';
 import { CELLS_MIME, cellText, gridToClipboard, parseClipboard, parseTypedCells, typedCells, typedValue, valueFromText } from './database-table-clipboard';
 import { isReadOnlyType, readPropertyValue } from './property-values';
 import { isPlaceValue, placeText } from './tier3-values';
+import { prefersReducedMotion } from '../../components/utils/reduced-motion';
+import { isEscapeConsumed } from '../../components/utils/consumed-escape';
 
 /** One cell write of a paste or fill. */
 export interface CellChange {
@@ -44,6 +46,8 @@ export interface TableState {
   freshRowId?: string;
   /** The grid had focus, so the redraw gives it back. */
   focused: boolean;
+  /** The cell that had focus itself, not the grid: the redraw focuses it again. */
+  focusedCell?: CellRef;
   /** Row a drag just dropped. The redraw it asks for reads and clears it. */
   droppedRowId?: string;
 }
@@ -184,6 +188,9 @@ export class DatabaseTableGrid {
 
   /** The key being handled while an editor closes: tells Enter and Escape from an outside press. */
   private keyInFlight: string | null = null;
+  /** The caret sat at offset 0 when keyInFlight was pressed. */
+  private caretAtStartInFlight = false;
+  private editorOpenedEmpty = false;
   /** The new row whose title was just committed; commit clears freshRowId before the editor closes. */
   private committedFreshRowId: string | undefined;
 
@@ -205,6 +212,8 @@ export class DatabaseTableGrid {
     this.root.addEventListener('pointerdown', this.handleRangeStart);
     this.root.addEventListener('focusin', this.handleFocus);
     this.root.addEventListener('focusout', this.handleFocus);
+    // Bubble phase: Blok's capture pass closes a popover or leaves navigation mode first.
+    document.addEventListener('keydown', this.handleBodyEscape);
   }
 
   destroy(): void {
@@ -220,6 +229,7 @@ export class DatabaseTableGrid {
     this.root.removeEventListener('focusin', this.handleFocus);
     this.root.removeEventListener('focusout', this.handleFocus);
     window.removeEventListener('keydown', this.recordKey, true);
+    document.removeEventListener('keydown', this.handleBodyEscape);
     this.editor?.close();
   }
 
@@ -239,8 +249,21 @@ export class DatabaseTableGrid {
       return;
     }
     if (this.state.focused && this.state.selection !== null) {
-      this.root.focus({ preventScroll: true });
+      const cell = this.state.focusedCell === undefined ? null : this.cellEl(this.state.focusedCell);
+
+      (cell ?? this.root).focus({ preventScroll: true });
     }
+  }
+
+  /**
+   * Focuses a cell and keeps the selection; a redraw that already replaced this grid focuses it in the new one.
+   * `holdEscape`: the next Escape leaves the selection as it is (notion-motion.md Round 67 §4, after the Move to picker).
+   */
+  focusCell(ref: CellRef, options: { holdEscape?: boolean } = {}): void {
+    this.state.focused = true;
+    this.state.focusedCell = ref;
+    this.cellEl(ref)?.focus({ preventScroll: true });
+    this.escapeHold = options.holdEscape === true ? this.state.selection : null;
   }
 
   get isEditing(): boolean {
@@ -276,13 +299,16 @@ export class DatabaseTableGrid {
   }
 
   /** Open a cell's editor; `initialText` replaces its value. */
-  openEditor(ref: CellRef, initialText?: string): void {
+  /** `point`: a zero-size anchor the editor opens at instead of over the cell; removed when it closes. */
+  openEditor(ref: CellRef, initialText?: string, point?: HTMLElement): void {
     const property = this.columns.find((p) => p.id === ref.propertyId);
-    const anchor = this.cellEl(ref);
+    const anchor = point ?? this.cellEl(ref);
     const row = this.rows.get(ref.rowId);
 
     // notion-spec-2 §19.6: an ID cell, like every value no one types, opens nothing.
     if (this.readOnly || property === undefined || anchor === null || row === undefined || isReadOnlyType(property.type)) {
+      point?.remove();
+
       return;
     }
     this.editor?.close();
@@ -291,13 +317,16 @@ export class DatabaseTableGrid {
     window.addEventListener('keydown', this.recordKey, true);
 
     const reminder = row.reminders?.[property.id]?.remind;
+    const shown = initialText ?? readPropertyValue(row, property);
+
+    this.editorOpenedEmpty = shown === undefined || shown === null || shown === '';
     const closed = { done: false, committed: false };
     const onDateDisplayChange = property.type === 'date' ? this.callbacks.dateDisplayChanger?.(property.id) : undefined;
     const handle = openCellEditor(property, readPropertyValue(row, property), anchor, {
       ...this.cellContext,
       i18n: this.i18n,
       readOnly: false,
-      coverCell: true,
+      ...(point === undefined ? { coverCell: true } : { atPoint: true }),
       tabCloses: true,
       options: property.config?.options ?? [],
       ...(reminder !== undefined ? { reminder } : {}),
@@ -316,6 +345,7 @@ export class DatabaseTableGrid {
       },
       onClose: () => {
         closed.done = true;
+        point?.remove();
         this.editorClosed(ref, closed.committed);
       },
     });
@@ -323,6 +353,7 @@ export class DatabaseTableGrid {
     this.editor = handle.isOpen ? handle : null;
     // No editor opened and none closed (no people source, a type this client lacks): nothing will call onClose.
     if (!handle.isOpen && !closed.done) {
+      point?.remove();
       this.state.editing = false;
       window.removeEventListener('keydown', this.recordKey, true);
     }
@@ -362,6 +393,8 @@ export class DatabaseTableGrid {
 
   private editorClosed(ref: CellRef, committed: boolean): void {
     const key = this.keyInFlight;
+    const caretAtStart = this.caretAtStartInFlight;
+    const openedEmpty = this.editorOpenedEmpty;
 
     this.editor = null;
     this.state.editing = false;
@@ -398,9 +431,10 @@ export class DatabaseTableGrid {
     const step = key === null ? undefined : tabStep[key];
     const down = key === 'Enter' && !fresh ? this.offset(ref, 1, 0) : ref;
     const target = step === undefined ? down : this.offset(ref, 0, step);
-    // notion-motion.md Round 57 §1, Text editors only: Tab after a change and every Shift+Tab leave no cell selected.
+    // notion-motion.md Round 57 §1, Text editors only: Tab after a change and Shift+Tab leave no cell selected.
+    // Round 74/75: Shift+Tab with the caret at 0, or out of a field that opened empty, selects the left cell, changed or not.
     const text = this.columns.find((p) => p.id === ref.propertyId)?.type === 'text';
-    const deselect = text && (key === 'Shift+Tab' || (key === 'Tab' && committed));
+    const deselect = text && ((key === 'Shift+Tab' && !caretAtStart && !openedEmpty) || (key === 'Tab' && committed));
 
     this.state.selection = deselect ? null : { kind: 'cell', anchor: target, focus: target };
     this.paint();
@@ -435,14 +469,23 @@ export class DatabaseTableGrid {
   }
 
   private readonly recordKey = (event: KeyboardEvent): void => {
+    const field = event.target;
+
     this.keyInFlight = event.key === 'Tab' && event.shiftKey ? 'Shift+Tab' : event.key;
+    this.caretAtStartInFlight = (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) && field.selectionStart === 0 && field.selectionEnd === 0;
     setTimeout(() => {
       this.keyInFlight = null;
     }, 0);
   };
 
   private readonly handleFocus = (): void => {
-    this.state.focused = this.root.contains(document.activeElement);
+    const active = document.activeElement;
+    const cell = active instanceof HTMLElement && active.getAttribute('role') === 'gridcell' ? active : null;
+    const rowId = cell?.closest('[data-blok-database-table-row]')?.getAttribute('data-row-id');
+    const propertyId = cell?.getAttribute('data-property-id');
+
+    this.state.focused = this.root.contains(active);
+    this.state.focusedCell = rowId === null || rowId === undefined || propertyId === null || propertyId === undefined ? undefined : { rowId, propertyId };
     if (!this.state.focused) this.escapeHold = null;
   };
 
@@ -555,16 +598,6 @@ export class DatabaseTableGrid {
     const span = rows.slice(Math.min(a, b), Math.max(a, b) + 1);
 
     this.selectRows(rows.filter((id) => current.includes(id) || span.includes(id)));
-  }
-
-  /**
-   * Gives the grid focus, so keys act on its selected cell. `holdEscape`: the next Escape
-   * leaves that selection as it is (notion-motion.md Round 67 §4, after the Move to picker).
-   */
-  focus(options: { holdEscape?: boolean } = {}): void {
-    this.root.focus({ preventScroll: true });
-    this.state.focused = true;
-    this.escapeHold = options.holdEscape === true ? this.state.selection : null;
   }
 
   selectRows(rowIds: string[]): void {
@@ -1089,6 +1122,13 @@ export class DatabaseTableGrid {
     this.cellKey(event, selection);
   };
 
+  /** notion-motion.md Round 63 §1: after a row drop focus is on body, and Escape still clears the rows. */
+  private readonly handleBodyEscape = (event: KeyboardEvent): void => {
+    if (event.key !== 'Escape' || event.target !== document.body || event.defaultPrevented || isEscapeConsumed(event)) return;
+    if (this.state.selection?.kind !== 'rows' || this.isEditing || this.state.busy) return;
+    this.escape(event);
+  };
+
   private escape(event: KeyboardEvent): void {
     const selection = this.state.selection;
 
@@ -1119,8 +1159,10 @@ export class DatabaseTableGrid {
 
     if (step !== undefined) {
       event.preventDefault();
-      const [dr, rawDc] = step;
-      const dc = rtl ? -rawDc : rawDc;
+      // notion-motion.md Round 72 §3: every Cmd arrow, with or without Shift, runs to the edge; offset() clamps.
+      const reach = event.metaKey || event.ctrlKey ? Math.max(this.rowIds().length, this.columnIds().length) : 1;
+      const dr = step[0] * reach;
+      const dc = (rtl ? -step[1] : step[1]) * reach;
 
       if (event.shiftKey) {
         this.state.selection = { ...selection, focus: this.offset(selection.focus, dr, dc) };
@@ -1130,7 +1172,18 @@ export class DatabaseTableGrid {
         this.state.selection = { kind: 'cell', anchor: next, focus: next };
       }
       this.paint();
-      this.cellEl(this.state.selection.kind === 'cell' ? this.state.selection.focus : selection.anchor)?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+      const target = this.cellEl(this.state.selection.kind === 'cell' ? this.state.selection.focus : selection.anchor);
+      const scroller = target?.closest<HTMLElement>('[data-blok-database-table-scroller]');
+
+      // notion-motion.md Round 73 §1: a Cmd step across columns scrolls the whole way, with the browser's own smooth scroll.
+      if (reach > 1 && dc !== 0 && scroller) {
+        const end = Math.max(0, scroller.scrollWidth - scroller.clientWidth) * (rtl ? -1 : 1);
+
+        scroller.scrollTo({ left: dc > 0 ? end : 0, behavior: prefersReducedMotion() ? 'instant' : 'smooth' });
+
+        return;
+      }
+      target?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
 
       return;
     }

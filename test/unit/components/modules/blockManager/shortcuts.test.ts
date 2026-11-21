@@ -335,6 +335,50 @@ describe('BlockShortcuts', () => {
       });
     });
 
+    // notion-motion.md Round 70 §2: a focused table row checkbox moves nothing.
+    it('a move key from a tool\'s own keyboard-owner subtree moves nothing when no block is selected', () => {
+      const owner = document.createElement('div');
+      const checkbox = document.createElement('span');
+
+      owner.setAttribute('data-blok-keyboard-owner', '');
+      owner.appendChild(checkbox);
+      wrapper.appendChild(owner);
+      shortcuts.register();
+
+      return new Promise<void>(resolve => {
+        setTimeout(() => {
+          for (const key of ['ArrowDown', 'ArrowUp']) {
+            const event = new KeyboardEvent('keydown', { code: key, key, metaKey: true, shiftKey: true, ctrlKey: true, bubbles: true });
+
+            checkbox.dispatchEvent(event);
+          }
+
+          expect(handlers.onMoveDown).not.toHaveBeenCalled();
+          expect(handlers.onMoveUp).not.toHaveBeenCalled();
+          resolve();
+        }, ASYNC_TIMEOUT);
+      });
+    });
+
+    it('a move key from a keyboard-owner subtree still moves a selected block', () => {
+      const owner = document.createElement('div');
+      const selectedBlock = document.createElement('div');
+
+      owner.setAttribute('data-blok-keyboard-owner', '');
+      selectedBlock.setAttribute('data-blok-selected', 'true');
+      wrapper.append(owner, selectedBlock);
+      shortcuts.register();
+
+      return new Promise<void>(resolve => {
+        setTimeout(() => {
+          owner.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowDown', key: 'ArrowDown', metaKey: true, shiftKey: true, ctrlKey: true, bubbles: true }));
+
+          expect(handlers.onMoveDown).toHaveBeenCalledWith();
+          resolve();
+        }, ASYNC_TIMEOUT);
+      });
+    });
+
     it('calls onMoveDown handler when CMD+SHIFT+DOWN is triggered within wrapper', () => {
       shortcuts.register();
 

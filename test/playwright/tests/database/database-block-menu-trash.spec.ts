@@ -118,3 +118,31 @@ test('Cancel keeps the database', async ({ page }) => {
   await expect(page.getByRole('alertdialog')).toHaveCount(0);
   await expect(page.locator('[data-blok-database-title]')).toHaveText('Tasks');
 });
+
+// notion-motion.md Round 70 §2: Notion's rebuilt menu is in place at full size; Blok's faded and scaled in over 120ms.
+test('locking from the open menu swaps it in place, with no entrance', async ({ page }) => {
+  await openMenu(page);
+  await settle(page);
+
+  const firstFrame = await page.evaluate(() => new Promise<{ animations: number; opacity: string; transform: string }>((resolve) => {
+    const lock = document.querySelector<HTMLElement>('[data-blok-testid="block-tunes-popover"] [data-blok-item-name="database-lock"]');
+    const tick = (): void => {
+      const menu = document.querySelector('[data-blok-testid="block-tunes-popover"]');
+      const container = menu?.querySelector<HTMLElement>('[data-blok-popover-container]');
+
+      if (container === null || container === undefined || menu?.querySelector('[data-blok-item-name="database-lock"]') !== null) {
+        requestAnimationFrame(tick);
+
+        return;
+      }
+      const style = getComputedStyle(container);
+
+      resolve({ animations: container.getAnimations().length, opacity: style.opacity, transform: style.transform });
+    };
+
+    lock?.click();
+    requestAnimationFrame(tick);
+  }));
+
+  expect(firstFrame).toEqual({ animations: 0, opacity: '1', transform: 'none' });
+});

@@ -175,6 +175,52 @@ describe('the database block menu in core', () => {
     expect(rows.every((row) => row.querySelector('[data-blok-testid="popover-item-secondary-title"]') !== null)).toBe(true);
   });
 
+  // notion-motion.md Round 68 §5: a pointer-opened submenu shows "Duplicate with content" filled and focused at once.
+  it('Duplicate opened by the pointer fills and focuses "Duplicate with content"', async () => {
+    const instance = await boot(setUpDatabase());
+    const rows = await openMenu(instance, 'db');
+    const trigger = rows.find((row) => row.getAttribute('data-blok-item-name') === 'duplicate');
+
+    trigger?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    trigger?.click();
+    const [withContent, withoutContent] = await vi.waitFor(() => {
+      const found = [...document.querySelectorAll<HTMLElement>('[data-blok-item-name^="duplicate-with"]')];
+
+      if (found.length === 0) throw new Error('no Duplicate submenu');
+
+      return found;
+    });
+
+    await vi.waitFor(() => expect(withContent.getAttribute('data-blok-focused')).toBe('true'));
+    expect(withoutContent.hasAttribute('data-blok-focused')).toBe(false);
+
+    (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+    const copy = await vi.waitFor(() => {
+      const found = instance.moduleInstances.BlockManager.blocks.find((candidate) => candidate.name === 'database' && candidate.id !== 'db');
+
+      if (found === undefined) throw new Error('no copy yet');
+
+      return found;
+    });
+
+    expect(copy.contentIds).toHaveLength(3);
+  });
+
+  it('the filled Duplicate submenu still closes when the pointer moves to another row', async () => {
+    const instance = await boot(setUpDatabase());
+    const rows = await openMenu(instance, 'db');
+    const trigger = rows.find((row) => row.getAttribute('data-blok-item-name') === 'duplicate');
+    const other = rows.find((row) => row.getAttribute('data-blok-item-name') === 'copy-link');
+
+    trigger?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    trigger?.click();
+    await vi.waitFor(() => expect(document.querySelector('[data-blok-item-name="duplicate-with-content"]')?.getAttribute('data-blok-focused')).toBe('true'));
+
+    other?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 37, clientY: 41 }));
+
+    await vi.waitFor(() => expect(document.querySelector('[data-blok-item-name="duplicate-with-content"]')).toBeNull(), { timeout: 2000 });
+  });
+
   it('Duplicate without content copies views, columns, filter and sort but no rows, and selects the copy', async () => {
     const instance = await boot(setUpDatabase());
     const before = (await instance.moduleInstances.Saver.save())?.blocks.map((saved) => saved.id) ?? [];
@@ -268,6 +314,45 @@ describe('the database block menu in core', () => {
     expect(await copyTitle('Tasks (2)')).toBe('Tasks (3)');
   });
 
+  /** The first database block that is not `id`, once it exists. */
+  const copyOf = (instance: Core, id: string): Promise<NonNullable<ReturnType<Core['moduleInstances']['BlockManager']['getBlockById']>>> => vi.waitFor(() => {
+    const found = instance.moduleInstances.BlockManager.blocks.find((candidate) => candidate.name === 'database' && candidate.id !== id);
+
+    if (found === undefined) throw new Error('no copy yet');
+
+    return found;
+  });
+
+  /** notion-motion.md Round 68 §5: ⌘D names the copy as the menu's Duplicate does. */
+  it('Cmd+D titles the copy " (n + 1)", like Notion', async () => {
+    const blocks = setUpDatabase();
+
+    blocks[0] = { ...blocks[0], data: { ...blocks[0].data, title: 'Tasks (1)' } };
+    const instance = await boot(blocks);
+
+    instance.moduleInstances.BlockSelection.selectBlock(block(instance, 'db'));
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', code: 'KeyD', metaKey: true, bubbles: true, cancelable: true }));
+
+    expect((await (await copyOf(instance, 'db')).save())?.data.title).toBe('Tasks (2)');
+  });
+
+  /** notion-motion.md Round 68 §5: an Alt-drag copy follows the same rule. */
+  it('an Alt-drag copy is titled " (1)" too', async () => {
+    const instance = await boot(setUpDatabase());
+    const target = block(instance, 'p');
+    const handle = document.createElement('div');
+
+    block(instance, 'db').holder.appendChild(handle);
+    instance.moduleInstances.DragManager.setupDragHandle(handle, block(instance, 'db'));
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => target.holder });
+    vi.spyOn(target.holder, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 200, 300, 50));
+    handle.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 10, clientY: 10, bubbles: true }));
+    target.holder.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 240, altKey: true, bubbles: true }));
+    target.holder.dispatchEvent(new MouseEvent('mouseup', { clientX: 20, clientY: 240, altKey: true, bubbles: true }));
+
+    expect((await (await copyOf(instance, 'db')).save())?.data.title).toBe('Tasks (1)');
+  });
+
   it('a linked view\'s Duplicate has no submenu, as in Notion', async () => {
     const instance = await boot([...setUpDatabase(), { id: 'linked', type: 'database', data: { title: '', source: { databaseId: 'db' }, views: [], activeViewId: '' } }]);
     const rows = await openMenu(instance, 'linked');
@@ -297,6 +382,46 @@ describe('the database block menu in core', () => {
 
     expect(event.defaultPrevented).toBe(true);
     expect(copy.contentIds).toEqual(copy.contentIds.filter((id) => instance.moduleInstances.BlockManager.getBlockById(id)?.preservedData.template === true));
+  });
+
+  /** notion-motion.md Round 69 §2: ⌘⇧D names the copy " (1)" too. */
+  it('Cmd+Shift+D titles the copy " (1)", like Notion', async () => {
+    const instance = await boot(setUpDatabase());
+
+    instance.moduleInstances.BlockSelection.selectBlock(block(instance, 'db'));
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'D', code: 'KeyD', metaKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+
+    expect((await (await copyOf(instance, 'db')).save())?.data.title).toBe('Tasks (1)');
+  });
+
+  // Notion's ⌘⇧D on a database with no rows is unread: it still has views and columns to copy.
+  it('Cmd+Shift+D copies a database with no rows, with its views, and selects the copy', async () => {
+    const instance = await boot(databaseBlocks('db', []));
+
+    instance.moduleInstances.BlockSelection.selectBlock(block(instance, 'db'));
+    const event = new KeyboardEvent('keydown', { key: 'D', code: 'KeyD', metaKey: true, shiftKey: true, bubbles: true, cancelable: true });
+
+    document.body.dispatchEvent(event);
+    const copy = await copyOf(instance, 'db');
+    const saved = await copy.save();
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(saved?.data.title).toBe('db (1)');
+    expect(saved?.data.views).toHaveLength(1);
+    await vi.waitFor(() => expect(copy.selected).toBe(true));
+  });
+
+  // Notion's ⌘⇧D on a linked view is unread. It has no rows of its own, so it copies whole, as its Duplicate does.
+  it('Cmd+Shift+D copies a linked view', async () => {
+    const instance = await boot([...setUpDatabase(), { id: 'linked', type: 'database', data: { title: '', source: { databaseId: 'db' }, views: [], activeViewId: '' } }]);
+
+    instance.moduleInstances.BlockSelection.selectBlock(block(instance, 'linked'));
+    const event = new KeyboardEvent('keydown', { key: 'D', code: 'KeyD', metaKey: true, shiftKey: true, bubbles: true, cancelable: true });
+
+    document.body.dispatchEvent(event);
+
+    await vi.waitFor(() => expect(instance.moduleInstances.BlockManager.blocks.filter((candidate) => candidate.name === 'database')).toHaveLength(3));
+    expect(event.defaultPrevented).toBe(true);
   });
 
   it('Cmd+Shift+D also works when the selection holds the database\'s rows with it', async () => {
@@ -381,6 +506,117 @@ describe('the database block menu in core', () => {
     const order = names(await openMenu(instance, 'db'));
 
     expect(order).toEqual(expect.arrayContaining(['database-edit-icon', 'database-lock', 'database-rename', 'duplicate', 'move-to', 'delete']));
+  });
+
+  // notion-motion.md Round 68 §1: Notion rebuilds the open menu at once when it is locked from there.
+  describe('locking from the open menu', () => {
+    const currentRows = (): string[] => names([...document.querySelectorAll<HTMLElement>('[data-blok-testid="block-tunes-popover"] > [data-blok-popover-container] > [data-blok-popover-items] > :is([data-blok-item-name], [data-blok-popover-item-separator])')]);
+    const lockedOnly = ['database-edit-icon', 'database-lock', 'database-rename', 'database-merge-csv', 'duplicate', 'move-to', 'delete'];
+
+    it('a click on Lock database rebuilds the menu as the locked one', async () => {
+      const instance = await boot([...databaseBlocks('db', ['r1']), ...databaseBlocks('other', ['o1'])]);
+      const rows = await openMenu(instance, 'db');
+
+      rows.find((row) => row.getAttribute('data-blok-item-name') === 'database-lock')?.click();
+
+      await vi.waitFor(() => expect(currentRows()).not.toContain('database-lock'));
+      lockedOnly.forEach((name) => expect(currentRows()).not.toContain(name));
+      expect(currentRows()).toEqual(expect.arrayContaining(['database-open-as-page', 'copy-link']));
+      expect(instance.moduleInstances.BlockSettings.opened).toBe(true);
+      expect(block(instance, 'db').selected).toBe(true);
+    });
+
+    // notion-motion.md Round 69 §1: after the rebuild focus is on the page and the first row is filled.
+    it('the rebuilt menu has focus on the page and its first row filled, and keys still work', async () => {
+      const instance = await boot([...databaseBlocks('db', ['r1']), ...databaseBlocks('other', ['o1'])]);
+      const rows = await openMenu(instance, 'db');
+
+      rows.find((row) => row.getAttribute('data-blok-item-name') === 'database-lock')?.click();
+      await vi.waitFor(() => expect(currentRows()).not.toContain('database-lock'));
+      await quiet();
+
+      const items = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-blok-testid="block-tunes-popover"] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-item-name]')];
+      const filled = (): string[] => items().filter((row) => row.getAttribute('data-blok-focused') === 'true').map((row) => row.getAttribute('data-blok-item-name') ?? '?');
+
+      expect(document.body).toHaveFocus();
+      expect(filled()).toEqual([items()[0].getAttribute('data-blok-item-name')]);
+      expect(instance.moduleInstances.BlockSettings.opened).toBe(true);
+      expect(block(instance, 'db').selected).toBe(true);
+
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      expect(filled()).toEqual([items()[1].getAttribute('data-blok-item-name')]);
+
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+      await quiet();
+      expect(instance.moduleInstances.BlockManager.getBlockById('db')).toBeDefined();
+    });
+
+    // notion-motion.md Round 70 §2: Notion rebuilds in place; Blok's menu blinked out and grew back.
+    it('the old menu stays up until the rebuilt one replaces it', async () => {
+      const instance = await boot([...databaseBlocks('db', ['r1']), ...databaseBlocks('other', ['o1'])]);
+      const rows = await openMenu(instance, 'db');
+      const counts: number[] = [];
+      const observer = new MutationObserver(() => {
+        counts.push(document.querySelectorAll('[data-blok-testid="block-tunes-popover"]').length);
+      });
+
+      observer.observe(document.body, { childList: true, subtree: true });
+      rows.find((row) => row.getAttribute('data-blok-item-name') === 'database-lock')?.click();
+      await vi.waitFor(() => expect(currentRows()).not.toContain('database-lock'));
+      await quiet();
+      observer.disconnect();
+
+      expect(counts).not.toContain(0);
+      expect(document.querySelectorAll('[data-blok-testid="block-tunes-popover"]')).toHaveLength(1);
+    });
+
+    it('Enter on Lock database rebuilds it too, and the menu stays open', async () => {
+      const instance = await boot([...databaseBlocks('db', ['r1']), ...databaseBlocks('other', ['o1'])]);
+      await openMenu(instance, 'db');
+      const popover = Reflect.get(instance.moduleInstances.BlockSettings, 'popover') as { focusItemByName(name: string): boolean };
+
+      expect(popover.focusItemByName('database-lock')).toBe(true);
+      document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+      await vi.waitFor(() => expect(currentRows()).not.toContain('database-lock'));
+      await quiet();
+      expect(instance.moduleInstances.BlockSettings.opened).toBe(true);
+      expect(currentRows()).toEqual(expect.arrayContaining(['database-open-as-page', 'copy-link']));
+      expect(block(instance, 'db').selected).toBe(true);
+    });
+  });
+
+  // notion-motion.md Round 70 §2: Notion moves nothing; Blok moved the whole unlocked database.
+  it.each(['Down', 'Up'] as const)('Cmd+Shift+%s on a focused row checkbox leaves the database in place', async (direction) => {
+    const instance = await boot([{ id: 'p0', type: 'paragraph', data: { text: 'before' } }, ...databaseBlocks('db', ['r1']), { id: 'p', type: 'paragraph', data: { text: 'after' } }]);
+    const topLevel = (): string[] => instance.moduleInstances.BlockManager.blocks.filter((candidate) => candidate.parentId === null).map((candidate) => candidate.id);
+    const checkbox = block(instance, 'db').holder.querySelector<HTMLElement>('[data-blok-database-table-row-checkbox]');
+
+    if (checkbox === null) throw new Error('no row checkbox');
+    checkbox.click();
+    checkbox.focus();
+    instance.moduleInstances.BlockManager.currentBlock = block(instance, 'db');
+    checkbox.dispatchEvent(new KeyboardEvent('keydown', { key: `Arrow${direction}`, code: `Arrow${direction}`, metaKey: true, ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(topLevel()).toEqual(['p0', 'db', 'p']);
+    expect(checkbox.getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('Backspace and Cmd+D on a selected locked database do nothing', async () => {
+    const locked = databaseBlocks('db', ['r1']);
+
+    locked[0].data = { ...locked[0].data, schema: [{ ...schema[0], databaseLocked: true }] };
+    const instance = await boot(locked);
+
+    instance.moduleInstances.BlockSelection.selectBlock(block(instance, 'db'));
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', code: 'KeyD', metaKey: true, bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(document.querySelector('[role="dialog"], [role="alertdialog"]')).toBeNull();
+    expect(instance.moduleInstances.BlockManager.blocks.filter((candidate) => candidate.name === 'database')).toHaveLength(1);
+    expect(block(instance, 'db').selected).toBe(true);
   });
 
   // notion-motion.md Round 67 §2: Notion keeps the database selected while its trash dialog is open.

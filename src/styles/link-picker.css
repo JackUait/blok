@@ -1,0 +1,198 @@
+/* ─── Inline link field: recent links, pages, heading outline ──────────────
+   Markup comes from inline-tool-link.ts. */
+
+/* Registered so the fades can grow and shrink instead of snapping. */
+@property --_blok-link-fade-top {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --_blok-link-fade-bottom {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0;
+}
+
+/* The card's own ink: softer than the editor's text. */
+[data-link-field] {
+  --blok-text-primary: var(--blok-link-picker-ink);
+  --blok-gray-text: var(--blok-link-picker-ink-secondary);
+
+  color: var(--blok-text-primary);
+}
+
+/* Opened from the toolbar's link button, the card is a nested popover with
+   4px gutters, and 4px more on the right while its scrollbar is there. Level
+   them to 8px all round, like the card Cmd+K opens. Physical sides, like the
+   scrollbar's own padding. */
+[data-blok-nested] [data-link-field] {
+  padding-top: var(--blok-space-1);
+  padding-left: var(--blok-space-1);
+}
+
+[data-blok-nested] [data-link-options] {
+  padding-bottom: var(--blok-space-1);
+}
+
+/* The typed row, or the error in its place, is the card's last thing while a
+   link is being added. A margin, so the 46px row keeps its height. */
+[data-blok-nested] [data-link-field]:not([data-link-editing]) > :is([data-link-suggestion], [data-blok-link-tool-error]) {
+  margin-bottom: var(--blok-space-1);
+}
+
+@media (min-width: 651px) {
+  [data-blok-nested] [data-blok-popover-items]:not(:has(~ [data-blok-popover-scrollbar]:not([hidden]))) [data-link-field] {
+    width: 324px;
+    padding-right: var(--blok-space-1);
+  }
+}
+
+/* The rows under the field start and end where the field does. */
+[data-link-field] > input[data-blok-field] {
+  height: 32px;
+  border-radius: var(--blok-radius-control);
+
+  &::placeholder {
+    color: var(--blok-gray-text);
+  }
+
+  @media (max-width: 650px) {
+    height: 36px;
+  }
+}
+
+/* The sign is IconLink drawn 12px wide: 20px would outweigh the title. */
+[data-link-recent-icon] > svg {
+  flex: none;
+  width: 24.4px;
+  max-width: none;
+  height: 24.4px;
+  max-height: none;
+}
+
+[data-link-recent-icon] > svg path {
+  stroke-width: 1.05;
+}
+
+[data-link-recent-meta] {
+  font-family: var(--blok-font-mono, ui-monospace, monospace);
+  font-size: 10.5px;
+}
+
+/* A page's emoji or picture is half grey until its row is aimed at. An
+   emoji takes the alpha of its text color, so that color must be solid. */
+[data-link-page-icon]:not(:has(svg)) {
+  color: var(--blok-text-primary);
+  filter: grayscale(0.5);
+  opacity: 0.8;
+  transition: filter 150ms, opacity 150ms;
+}
+
+[data-link-page-row][aria-selected='true'] > [data-link-page-icon] {
+  filter: none;
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  [data-link-page-row]:hover > [data-link-page-icon] {
+    filter: none;
+    opacity: 1;
+  }
+}
+
+/* The field stays put: only the lists under it scroll. The popover's own
+   scroller would carry the field away with them. */
+[data-blok-popover-items]:has(> [data-blok-popover-item-html] > [data-link-field]) {
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+}
+
+[data-blok-popover-item-html]:has(> [data-link-field]),
+[data-link-field] {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Scrolls up and down only: a sideways swipe must not rubber-band the list.
+   An edge with more rows behind it fades out. */
+/* Only the list gives way when the card runs out of room. */
+[data-link-field] > :not([data-link-options]) {
+  flex-shrink: 0;
+}
+
+[data-link-options] {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overscroll-behavior-x: none;
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--_blok-link-fade-top), #000 calc(100% - var(--_blok-link-fade-bottom)), transparent);
+  transition: --_blok-link-fade-top 160ms, --_blok-link-fade-bottom 160ms;
+}
+
+[data-link-options][data-link-more-up] {
+  --_blok-link-fade-top: 20px;
+}
+
+[data-link-options][data-link-more-down] {
+  --_blok-link-fade-bottom: 28px;
+}
+
+/* Headings: an outline, stepped in on guide lines. */
+[data-link-heading-row] {
+  position: relative;
+  align-items: center;
+  height: 32px;
+  padding-block: 0;
+  padding-inline-start: calc(var(--blok-space-1) + var(--_blok-link-heading-depth, 0) * var(--blok-space-4));
+}
+
+[data-link-heading-row]:not([data-link-heading-depth='0'])::before,
+[data-link-heading-row][data-link-heading-depth='2']::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  inset-inline-start: 15px;
+  width: 1px;
+  background: color-mix(in srgb, var(--blok-text-primary) 10%, transparent);
+  content: '';
+}
+
+[data-link-heading-row][data-link-heading-depth='2']::after {
+  inset-inline-start: 31px;
+}
+
+[data-link-heading-depth='0'] [data-link-heading-title] {
+  font-weight: 650;
+}
+
+[data-link-heading-depth='2'] [data-link-heading-title] {
+  color: var(--blok-gray-text);
+  font-size: 13px;
+}
+
+[data-link-heading-tag] {
+  flex: none;
+  color: var(--blok-gray-text);
+  font-family: var(--blok-font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  line-height: 16px;
+}
+
+[data-link-heading-tag]::before {
+  content: attr(data-link-heading-tag);
+}
+
+[data-link-heading-row][aria-selected='true'] > [data-link-heading-tag] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-link-options],
+  [data-link-page-icon] {
+    transition: none;
+  }
+}

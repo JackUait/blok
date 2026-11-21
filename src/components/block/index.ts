@@ -610,6 +610,11 @@ export class Block extends EventsDispatcher<BlockEvents> {
     }
   }
 
+  /** Whether the tool has content to leave out (BlockTool.contentBlockIds), even when it has none now. */
+  public get hasContentBlocks(): boolean {
+    return isFunction((this.toolInstance as unknown as Record<string, unknown>).contentBlockIds);
+  }
+
   /** The blocks under this one that "Duplicate without content" leaves out; [] when none or the call throws. */
   public contentBlockIds(): string[] {
     const method = (this.toolInstance as unknown as Record<string, unknown>).contentBlockIds;

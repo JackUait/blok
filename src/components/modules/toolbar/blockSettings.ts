@@ -176,6 +176,18 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   /** Blocks the open menu acts on. */
   private menuBlocks: Block[] = [];
 
+  /** Opens the open menu again, with the same block and anchor. */
+  private reopenMenu: () => void = () => undefined;
+
+  /** The next open puts the cursor on its first row and leaves focus on the page, not in its search. */
+  private cursorOnFirstRow = false;
+
+  /** Set by a rebuild: close() keeps the old menu painted, and the next open swaps it with no entrance. */
+  private rebuildInPlace = false;
+
+  /** The old menu a rebuild keeps up until the new one shows. */
+  private retainedPopover: PopoverDesktop | PopoverMobile | null = null;
+
   /** True during an Escape press, so its close keeps the block selected (Notion U109). */
   private escapePressed = false;
 
@@ -231,11 +243,20 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     anchor?: HTMLElement | DOMRect,
     options?: ToolbarBlockSettingsOptions
   ): Promise<void> {
+    // Read first: an early return below must not leave it set for a later open.
+    const cursorOnFirstRow = this.cursorOnFirstRow;
+    const inPlace = this.rebuildInPlace;
+
+    this.cursorOnFirstRow = false;
+    this.rebuildInPlace = false;
+
     /**
      * readOnly: { hideControls: true } — no block settings popover at all
      * (covers keyboard shortcut paths; the settings toggler is already gone)
      */
     if (this.Blok.ReadOnly.isControlsHidden) {
+      this.dropRetainedPopover();
+
       return;
     }
 
@@ -265,8 +286,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       : (targetBlock ?? this.Blok.BlockManager.currentBlock);
 
     if (block === undefined) {
+      this.dropRetainedPopover();
+
       return;
     }
+
+    this.reopenMenu = () => void this.open(block, anchor, options);
 
     /**
      * Set isOpening flag BEFORE async operations to prevent toolbar from moving
@@ -355,7 +380,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         autoFocusFirstItem: false,
         // A floor, not a fixed width: a long translation plus its shortcut
         // would otherwise be pushed past the menu edge.
-        minWidth: block.tool?.blockMenu?.minWidth ?? '280px',
+        minWidth: block.tool?.blockMenu?.minWidth ?? '264px',
         ...(block.tool?.blockMenu?.class === undefined ? {} : { class: block.tool.blockMenu.class }),
         /**
          * A cursor/holder-anchored menu (context menu, Shift+F10) opens AT the
@@ -437,14 +462,52 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
        * the trigger. Measure + place the popover while the toolbar is still
        * in its pre-open state, then announce the state change.
        */
-      this.popover.show();
+      // Same task as show(): no frame paints without a menu.
+      this.dropRetainedPopover();
+      this.presentMenu(this.popover, inPlace);
+      if (cursorOnFirstRow) {
+        // Queued after show()'s own microtask, which focuses the search.
+        const popover = this.popover;
+
+        queueMicrotask(() => this.putCursorOnFirstRow(popover));
+      }
       this.attachFlipperKeydownListener(block);
 
       /** Tell to subscribers that block settings is opened */
       this.eventsDispatcher.emit(this.events.opened);
     } catch {
       this.isOpening = false;
+      this.dropRetainedPopover();
     }
+  }
+
+  /**
+   * Shows the menu. In place, it skips the entrance fade and scale: Notion's
+   * rebuilt menu is at full size from its first frame (notion-motion.md Round 70 §2).
+   * @param popover - the menu to show
+   * @param inPlace - true when it replaces a menu that was already up
+   */
+  private presentMenu(popover: PopoverDesktop | PopoverMobile, inPlace: boolean): void {
+    const container = inPlace ? popover.getElement().querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`) : null;
+
+    container?.style.setProperty('transition', 'none');
+    popover.show();
+    if (container !== null) {
+      // Style must settle in the open state before the transition comes back, or it plays.
+      container.getBoundingClientRect();
+      container.style.removeProperty('transition');
+    }
+  }
+
+  private dropRetainedPopover(): void {
+    const retained = this.retainedPopover;
+
+    if (retained === null) {
+      return;
+    }
+    this.retainedPopover = null;
+    retained.destroy();
+    retained.getElement().remove();
   }
 
   /**
@@ -522,8 +585,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     if (this.popover) {
       this.popover.off(PopoverEvent.Closed, this.onPopoverClose);
-      this.popover.destroy();
-      this.popover.getElement().remove();
+      if (this.rebuildInPlace) {
+        this.retainedPopover = this.popover;
+      } else {
+        this.popover.destroy();
+        this.popover.getElement().remove();
+      }
       this.popover = null;
     }
   };
@@ -892,6 +959,10 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         title: this.Blok.I18n.t('blockSettings.duplicate'),
         name: 'duplicate',
         children: {
+          // Notion fills the first row even on a hover open. A microtask: the submenu shows after onOpen.
+          onOpen: () => queueMicrotask(() => {
+            if (this.popover instanceof PopoverDesktop) this.popover.focusItemByName('duplicate-with-content');
+          }),
           items: [
             {
               title: this.Blok.I18n.t('blockSettings.duplicateWithContent'),
@@ -1229,11 +1300,23 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     const timestamp = block.lastEditedAt ?? block.createdAt;
     const date = new Date(Number.isFinite(timestamp) ? timestamp : Date.now());
 
-    const dateParts = new Intl.DateTimeFormat(locale, {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    }).formatToParts(date);
+    const now = new Date();
+    // Calendar days, not 24-hour spans: 23:30 last night is "yesterday".
+    const daysAgo = Math.round(
+      (new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+        - new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()) / 86_400_000
+    );
+    // "today" / "yesterday" in the reader's language; never trimmed below.
+    const nearDay = daysAgo === 0 || daysAgo === 1
+      ? new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(-daysAgo, 'day')
+      : null;
+    const dateParts = nearDay !== null
+      ? []
+      : new Intl.DateTimeFormat(locale, {
+        day: 'numeric',
+        month: 'short',
+        ...(date.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' as const }),
+      }).formatToParts(date);
 
     /**
      * Strip trailing literal parts that are abbreviations (contain a period),
@@ -1246,7 +1329,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       dateParts.pop();
     }
 
-    const dateStr = dateParts.map(p => p.value).join('');
+    const dateStr = nearDay ?? dateParts.map(p => p.value).join('');
     const timeStr = new Intl.DateTimeFormat(locale, { timeStyle: 'short' }).format(date);
 
     dateEl.textContent = `${dateStr}, ${timeStr}`;
@@ -1299,8 +1382,16 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           // The press cleared the block selection and left no cursor in the menu.
           // Notion keeps the block selected and moves focus to the switch (U161).
           onActivate: (item: PopoverItemParams, event?: PointerEvent): void => {
+            const lockedBefore = blocks.length === 1 && blocks[0].toolLocked;
+
             toggle(item, event);
             blocks.filter((block) => block.holder.isConnected).forEach((block) => this.Blok.BlockSelection.selectBlock(block));
+            // A lock changes which rows the menu has: Notion rebuilds it at once (notion-motion.md Round 68 §1).
+            if (blocks.length === 1 && blocks[0].toolLocked !== lockedBefore) {
+              this.rebuildSoon();
+
+              return;
+            }
             if (this.popover instanceof PopoverDesktop) {
               this.popover.focusItemByName(tune.name);
             }
@@ -1322,6 +1413,48 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         },
       };
     });
+  }
+
+  /**
+   * Rebuilds the open menu a task later: the popover still refreshes the
+   * pressed row after its handler returns, and the key that pressed it is
+   * still on its way.
+   */
+  private rebuildSoon(): void {
+    const popover = this.popover;
+    const reopen = this.reopenMenu;
+
+    window.setTimeout(() => {
+      if (this.popover !== popover || popover === null) {
+        return;
+      }
+      this.rebuildInPlace = true;
+      this.close();
+      // notion-motion.md Round 69 §1: Notion's rebuilt menu has focus on the page and its first row filled.
+      this.cursorOnFirstRow = true;
+      reopen();
+    }, 0);
+  }
+
+  /**
+   * Leaves the search and puts the keyboard cursor on the menu's first row.
+   * @param popover - the menu this was asked for; a later one is left alone
+   */
+  private putCursorOnFirstRow(popover: PopoverDesktop | PopoverMobile): void {
+    if (this.popover !== popover || !(popover instanceof PopoverDesktop)) {
+      return;
+    }
+    const element = popover.getElement();
+    const active = document.activeElement;
+
+    if (active instanceof HTMLElement && element.contains(active)) {
+      active.blur();
+    }
+    const first = element.querySelector(`[${DATA_ATTR.popoverItems}] > [${DATA_ATTR.itemName}]:not([${DATA_ATTR.hidden}])`)?.getAttribute(DATA_ATTR.itemName);
+
+    if (first !== null && first !== undefined) {
+      popover.focusItemByName(first);
+    }
   }
 
   /**

@@ -160,7 +160,7 @@ describe('alt hint and pill width', () => {
     expect(body).toContain('background: var(--blok-overlay-surface)');
     expect(body).toContain('color: var(--blok-overlay-fg-strong)');
     expect(findRuleBody('[data-blok-tool="image"] .blok-image-alt-pill__text')).toContain('color: var(--blok-overlay-fg)');
-    expect(findRuleBody('[data-blok-tool="image"] .blok-image-alt-pill__label')).toContain('text-transform: uppercase');
+    expect(findRuleBody('[data-blok-tool="image"] .blok-image-alt-pill__label')).not.toMatch(/text-transform|letter-spacing/);
     expect(css).not.toContain('blok-image-alt-pill__mark');
     expect(css).not.toContain('blok-image-alt-pill__help');
   });

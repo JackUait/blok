@@ -184,7 +184,7 @@ const editor = new Blok({
     type: 'block',
     title: 'List',
     description:
-      'Bulleted, numbered, and to-do (checklist) lists with unlimited nesting. Each list item is a separate block. The toolbox shows three entries by default, one for each style. You can convert items between styles from the block settings menu.',
+      'Bulleted, numbered, and to-do (checklist) lists with unlimited nesting. Each list item is a separate block. The toolbox shows three entries by default, one for each style. You can convert items between styles with "Turn into" in the block menu.',
     importExample: `import { List } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -197,7 +197,7 @@ const editor = new Blok({
         option: 'styles',
         type: 'ListStyle[]',
         default: '["unordered","ordered","checklist"]',
-        description: 'Restrict which styles are available in the block settings conversion menu.',
+        description: 'Restrict which list styles "Turn into" offers.',
       },
       {
         option: 'toolboxStyles',
@@ -461,7 +461,7 @@ const editor = new Blok({
                                        // PropertyDefinition plus deletedAt (epoch ms) and deletedBy (person id).
                                        // Absent until the first delete on databases made before it existed
 }
-// Rows are NOT stored here — they are child database-row blocks.`,
+// Rows are not stored here — they are child database-row blocks.`,
     saveDataExample: `{
   "id": "db001",
   "type": "database",
@@ -1185,7 +1185,7 @@ const editor = new Blok({
         type: '(query: string) => Promise<readonly PageSearchResult[]>',
         default: 'undefined',
         description:
-          'Offers accessible pages for inline `@` and `[[` references. Filter results by the current user before returning them; Blok does not own global search.\n\nThe `@` menu opens as soon as "@" is typed and asks with an empty query. Answer it with recent pages. While a search runs, the menu shows a spinner and placeholder rows.\n\nThe Link to page section lists the results. Each row shows the icon, the title and `path`, the titles of the pages above it. `status: \'draft\'` shows a Draft mark. Six rows show first, then a "more results" row expands the list.\n\nWith `resolve`, Blok checks each result and uses its title, icon, path and status. Nothing found shows only when no section has items.',
+          'Offers accessible pages for inline `@` and `[[` references. Filter results by the current user before returning them; Blok does not own global search.\n\nThe `@` menu opens as soon as "@" is typed and asks with an empty query. Answer it with recent pages. While a search runs, the menu shows a spinner and placeholder rows.\n\nThe Link field uses it too. With `href` also set, the field lists these pages in a Pages section. It asks with an empty query when it opens, and with the typed text after a short pause. Picking a page links the selected text to `href(pageId)` as an ordinary link, and the text stays as written.\n\nThe Link to page section lists the results. Each row shows the icon, the title and `path`, the titles of the pages above it. `status: \'draft\'` shows a Draft mark. Six rows show first, then a "more results" row expands the list.\n\nWith `resolve`, Blok checks each result and uses its title, icon, path and status. Nothing found shows only when no section has items.',
       },
       {
         option: 'children',
@@ -1747,7 +1747,7 @@ const editor = new Blok({
     type: 'inline',
     title: 'Marker',
     description:
-      'Applies text colour or background colour to selected text. It uses `<mark style="color:...">` or `<mark style="background-color:...">`.\n\nClick the toolbar button to open the colour panel. It lists recently used colours first, then the Text color and Background sections. Each section has a Default swatch and nine presets. The Default swatch removes that colour.\n\nEvery colour is normalised to a CSS custom property (`var(--blok-color-<name>-<text|bg>)`), so themes can restyle it.\n\nThe picker offers only the nine presets. Any other CSS colour applied programmatically is snapped to the perceptually nearest preset. There is no distance threshold.\n\nThree kinds of value pass through untouched.\n\n- A value already written as `var(...)`.\n- A value the colour parser cannot read, such as the CSS named colour `rebeccapurple`.\n- The default page background colours.\n\nRaw colours can sit on `<mark>` elements, for example when pasted from another editor. On load they are rewritten to the nearest preset var. So arbitrary hex values are not preserved.\n\nCmd/Ctrl+Shift+H does not open the picker. It re-applies the last colour picked in this session straight to the selection. On first use that is a yellow highlight (`var(--blok-color-yellow-bg)`). It does nothing when the selection is collapsed.',
+      'Applies text colour or background colour to selected text. It uses `<mark style="color:...">` or `<mark style="background-color:...">`.\n\nClick the toolbar button to open the colour panel. It lists up to eight recently used colours first, then two columns of named colours, Text color and Background color. Each column has a Default row and nine presets. The Default row removes that colour. A colour you pick joins the recently used row the next time the panel opens.\n\nEvery colour is normalised to a CSS custom property (`var(--blok-color-<name>-<text|bg>)`), so themes can restyle it.\n\nThe picker offers only the nine presets. Any other CSS colour applied programmatically is snapped to the perceptually nearest preset. There is no distance threshold.\n\nThree kinds of value pass through untouched.\n\n- A value already written as `var(...)`.\n- A value the colour parser cannot read, such as the CSS named colour `rebeccapurple`.\n- The default page background colours.\n\nRaw colours can sit on `<mark>` elements, for example when pasted from another editor. On load they are rewritten to the nearest preset var. So arbitrary hex values are not preserved.\n\nCmd/Ctrl+Shift+H does not open the picker. It re-applies the last colour picked in this session straight to the selection. On first use that is a yellow highlight (`var(--blok-color-yellow-bg)`). It does nothing when the selection is collapsed.',
     importExample: `import { Marker } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `// A colour mark on a run of the block's text field. A preset is saved by name.

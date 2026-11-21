@@ -43,6 +43,18 @@ export const isSameBlockData = (data1: BlockToolData, data2: BlockToolData): boo
 };
 
 /**
+ * Whether a tool's `styles` config (the list's) lets a block turn into this variant.
+ * @param tool - target tool
+ * @param data - the toolbox entry's data
+ */
+const isStyleAllowed = (tool: BlockToolAdapter, data: BlockToolData | undefined): boolean => {
+  const styles: unknown = tool.settings?.styles;
+  const style: unknown = data?.style;
+
+  return !Array.isArray(styles) || styles.length === 0 || typeof style !== 'string' || styles.includes(style);
+};
+
+/**
  * Returns list of tools you can convert specified block to
  * @param block - block to get conversion items for
  * @param allBlockTools - all block tools available in the blok
@@ -101,7 +113,7 @@ export const getConvertibleToolsForBlock = async (
       /**
        * Skip items that don't pass 'toolbox' property or do not have an icon
        */
-      if (isEmpty(toolboxItem) || toolboxItem.icon === undefined) {
+      if (isEmpty(toolboxItem) || toolboxItem.icon === undefined || !isStyleAllowed(tool, toolboxItem.data)) {
         return [];
       }
 
@@ -255,7 +267,7 @@ export const getConvertibleToolsForBlocks = async (blocks: BlockAPI[], allBlockT
       /**
        * Skip items that don't pass 'toolbox' property or do not have an icon
        */
-      if (isEmpty(toolboxItem) || toolboxItem.icon === undefined) {
+      if (isEmpty(toolboxItem) || toolboxItem.icon === undefined || !isStyleAllowed(tool, toolboxItem.data)) {
         return false;
       }
 

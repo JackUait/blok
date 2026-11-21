@@ -142,7 +142,7 @@ const PreviewRows: React.FC<{ rows: PreviewRow[] }> = ({ rows }) => (
   <div className="flex flex-col border-t border-border">
     {rows.map((row) => (
       <div key={row.id} className="flex items-baseline gap-2.5 border-b border-border py-[7px]">
-        <span className="w-14 shrink-0 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground/70">
+        <span className="w-14 shrink-0 text-[10px] font-semibold text-muted-foreground/70">
           {row.label}
         </span>
         <span className={cn("min-w-0 truncate", row.code ? "font-mono text-[12px]" : "text-[12.5px]")}>

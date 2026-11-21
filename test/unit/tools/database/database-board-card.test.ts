@@ -378,11 +378,12 @@ describe('DatabaseBoardView card parity', () => {
   });
 
   describe('keyboard', () => {
-    it('makes one card tabbable and gives the cards their own keyboard', () => {
+    // notion-motion.md Round 97 §1 #1: every card is a Tab stop.
+    it('makes every card tabbable and gives the cards their own keyboard', () => {
       const board = mount();
       const cards = [...board.querySelectorAll<HTMLElement>('[data-blok-database-card]')];
 
-      expect(cards.map((c) => c.tabIndex)).toEqual([0, -1, -1]);
+      expect(cards.map((c) => c.tabIndex)).toEqual([0, 0, 0]);
       expect([...board.querySelectorAll('[data-blok-database-cards]')].every((list) => list.hasAttribute('data-blok-keyboard-owner'))).toBe(true);
       // Only the card lists: editor keys such as undo still work elsewhere on the board.
       expect(board.querySelector('[data-blok-database-board]')?.hasAttribute('data-blok-keyboard-owner')).toBe(false);
@@ -396,7 +397,7 @@ describe('DatabaseBoardView card parity', () => {
       expect(card(board, 'r2')).toHaveFocus();
       key(card(board, 'r2'), 'ArrowRight');
       expect(card(board, 'r3')).toHaveFocus();
-      expect(card(board, 'r3').tabIndex).toBe(0);
+      expect([...board.querySelectorAll<HTMLElement>('[data-blok-database-card]')].map((c) => c.tabIndex)).toEqual([0, 0, 0]);
       key(card(board, 'r3'), 'ArrowLeft');
       expect(card(board, 'r1')).toHaveFocus();
       key(card(board, 'r1'), 'ArrowUp');
@@ -410,6 +411,88 @@ describe('DatabaseBoardView card parity', () => {
       card(board, 'r1').focus();
       key(card(board, 'r1'), 'ArrowLeft');
       expect(card(board, 'r3')).toHaveFocus();
+    });
+
+    describe('Tab order (notion-motion.md Round 97 §1 #1)', () => {
+      const stop = (el: Element | null): string => {
+        if (!(el instanceof HTMLElement)) return 'none';
+        const row = el.closest('[data-row-id]')?.getAttribute('data-row-id');
+        const option = el.closest('[data-option-id]')?.getAttribute('data-option-id');
+
+        if (el.hasAttribute('data-blok-database-card')) return `card ${row}`;
+        if (el.hasAttribute('data-blok-database-edit-card')) return `edit ${row}`;
+        if (el.hasAttribute('data-blok-database-card-menu')) return `card menu ${row}`;
+        if (el.hasAttribute('data-blok-database-column-count')) return `count ${option}`;
+        if (el.hasAttribute('data-blok-database-column-menu')) return `group menu ${option}`;
+        if (el.hasAttribute('data-blok-database-column-new-page')) return `header new ${option}`;
+        if (el.hasAttribute('data-blok-database-add-card')) return `new page ${option}`;
+
+        return el.tagName;
+      };
+      const walk = (board: HTMLElement, start: HTMLElement, shift: boolean): { stops: string[]; leftAt: string } => {
+        const stops: string[] = [];
+
+        start.focus();
+        for (let i = 0; i < 30; i++) {
+          const from = document.activeElement;
+          const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: shift, bubbles: true, cancelable: true });
+
+          (from ?? board).dispatchEvent(event);
+          if (!event.defaultPrevented) return { stops, leftAt: stop(from) };
+          stops.push(stop(document.activeElement));
+        }
+
+        return { stops, leftAt: 'never' };
+      };
+      const header = (board: HTMLElement, option: string): HTMLElement => {
+        const el = board.querySelector<HTMLElement>(`[data-blok-database-column-count][data-option-id="${option}"]`);
+
+        if (el === null) throw new Error(`no count ${option}`);
+
+        return el;
+      };
+
+      it('puts every column header first, then each column\'s cards, card buttons and New page', () => {
+        const board = mount();
+
+        expect(walk(board, header(board, 'o1'), false)).toEqual({
+          stops: [
+            'group menu o1', 'header new o1', 'count o2', 'group menu o2', 'header new o2',
+            'card r1', 'edit r1', 'card menu r1', 'card r2', 'edit r2', 'card menu r2', 'new page o1',
+            'card r3', 'edit r3', 'card menu r3', 'new page o2',
+          ],
+          leftAt: 'new page o2',
+        });
+      });
+
+      it('walks the same stops back with Shift+Tab', () => {
+        const board = mount();
+        const last = board.querySelector<HTMLElement>('[data-blok-database-add-card][data-option-id="o2"]');
+
+        if (last === null) throw new Error('no New page');
+
+        expect(walk(board, last, true)).toEqual({
+          stops: [
+            'card menu r3', 'edit r3', 'card r3',
+            'new page o1', 'card menu r2', 'edit r2', 'card r2', 'card menu r1', 'edit r1', 'card r1',
+            'header new o2', 'group menu o2', 'count o2', 'header new o1', 'group menu o1', 'count o1',
+          ],
+          leftAt: 'count o1',
+        });
+      });
+
+      it('leaves Tab to the browser inside a field', () => {
+        const board = mount();
+        const input = document.createElement('input');
+
+        card(board, 'r1').appendChild(input);
+        input.focus();
+        const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+
+        input.dispatchEvent(event);
+
+        expect(event.defaultPrevented).toBe(false);
+      });
     });
 
     it('opens a card on Enter', () => {

@@ -60,9 +60,23 @@ let holder: HTMLDivElement | undefined;
 
 const make = async (type = 'table'): Promise<TestEditor> => {
   const blocks = doc();
-  const data = blocks[0].data as { views: Array<Record<string, unknown>> };
+  const data = blocks[0].data as { schema: Array<Record<string, unknown>>; views: Array<Record<string, unknown>> };
 
-  data.views[0] = { ...data.views[0], type, ...(type === 'board' ? { groupBy: 'x' } : {}) };
+  // 'board-one-group': every card in one Status column, so a drag reorders within it.
+  if (type === 'board-one-group') {
+    data.schema.push({ id: 's', name: 'Status', type: 'select', position: 'a2', config: { options: [{ id: 'o1', label: 'One', color: 'gray' }] } });
+    blocks.slice(1).forEach((block) => {
+      const rowData = block.data as { properties: Record<string, unknown> };
+
+      rowData.properties.s = 'o1';
+    });
+  }
+  data.views[0] = {
+    ...data.views[0],
+    type: type === 'board-one-group' ? 'board' : type,
+    ...(type === 'board' ? { groupBy: 'x' } : {}),
+    ...(type === 'board-one-group' ? { groupBy: 's' } : {}),
+  };
   editor = new Blok({
     holder,
     dataModel: 'hierarchical',
@@ -215,24 +229,129 @@ describe('row selection after undo', () => {
     expect(selectedRows()).toEqual(['r2']);
   });
 
-  it('keeps a row selection when it undoes a reorder', async () => {
-    const blok = await make();
-    const block = blok.blocks.getById('r1');
+  const dragToTop = async (id: string, click = true): Promise<void> => {
+    const rows = [...document.querySelectorAll<HTMLElement>('[data-blok-database-table-row]')];
 
-    if (block === null) throw new Error('no r1');
-    const saved = await block.save();
+    rows.forEach((el, index) => {
+      vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, index * 38, 800, 38));
+    });
+    const handle = row(id)?.querySelector<HTMLElement>('[data-blok-database-table-row-handle]');
 
-    await blok.blocks.update('r1', { ...(saved?.data as Record<string, unknown>), position: 'a3' });
+    if (handle === null || handle === undefined) throw new Error('no row drag handle');
+    handle.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: 10, clientY: rows.indexOf(row(id) as HTMLElement) * 38 + 19, bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 10, clientY: 5, bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    // The drop redraws the grid, so a click on this handle lands in detached DOM, past the document's swallow.
+    if (click) handle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await quiet();
-    await pickRow('r3');
-    expect(order()).toEqual(['r2', 'r3', 'r1']);
+  };
+
+  // notion-motion.md Round 63 §1: drag, Escape, undo selects the row it moves back; redo moves it and clears that pick.
+  it('selects a dragged row its undo moves back, and its redo clears that selection', async () => {
+    const blok = await make();
+
+    await dragToTop('r3');
+    expect(order()).toEqual(['r3', 'r1', 'r2']);
     expect(selectedRows()).toEqual(['r3']);
+    await pickRow('r3');
+    expect(selectedRows()).toEqual([]);
 
     blok.history.undo();
     await quiet();
 
     expect(selectedRows()).toEqual(['r3']);
     expect(order()).toEqual(['r1', 'r2', 'r3']);
+
+    blok.history.redo();
+    await quiet();
+
+    expect(selectedRows()).toEqual([]);
+    expect(order()).toEqual(['r3', 'r1', 'r2']);
+  });
+
+  const escapeOnBody = async (): Promise<void> => {
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await quiet();
+  };
+
+  // notion-motion.md Round 63 §1 (r63-n-undo.raw edit5): after the drop focus is on body, and Escape clears the row.
+  it('clears a dropped row on Escape with focus left on body', async () => {
+    await make();
+
+    await dragToTop('r3', false);
+    expect(selectedRows()).toEqual(['r3']);
+    expect(document.body).toHaveFocus();
+
+    await escapeOnBody();
+
+    expect(selectedRows()).toEqual([]);
+    expect(order()).toEqual(['r3', 'r1', 'r2']);
+  });
+
+  // r63-n-undo.raw edit5: after undo and redo the active element stays body.
+  it('leaves focus on body through the undo and redo of a drop', async () => {
+    const blok = await make();
+
+    await dragToTop('r3', false);
+    await escapeOnBody();
+
+    blok.history.undo();
+    await quiet();
+    expect(selectedRows()).toEqual(['r3']);
+    expect(document.body).toHaveFocus();
+
+    blok.history.redo();
+    await quiet();
+    expect(document.body).toHaveFocus();
+
+    blok.history.undo();
+    await quiet();
+    await escapeOnBody();
+    expect(selectedRows()).toEqual([]);
+  });
+
+  /** A paragraph above the database, focused with a collapsed caret in it. */
+  const caretInParagraph = async (blok: TestEditor): Promise<HTMLElement> => {
+    const block = blok.blocks.insert('paragraph', { text: 'Note' }, undefined, 0);
+
+    await quiet();
+    const text = block.holder.querySelector<HTMLElement>('[data-blok-tool="paragraph"]');
+
+    if (text === null) throw new Error('no paragraph text');
+    // jsdom neither reflects `contentEditable` nor implements `isContentEditable`.
+    text.setAttribute('contenteditable', 'true');
+    Object.defineProperty(text, 'isContentEditable', { configurable: true, get: () => true });
+    text.focus();
+    const range = document.createRange();
+
+    range.setStart(text, 0);
+    range.collapse(true);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(range);
+    expect(text).toHaveFocus();
+
+    return text;
+  };
+
+  const escapeOnFocus = async (): Promise<void> => {
+    (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await quiet();
+  };
+
+  // notion-motion.md Round 93 §1 #2 (r93-n-caret-tdrag.raw): the drop clears the caret, focus goes to body, and Escape clears the row.
+  it('takes the caret out of a paragraph on a table drop, so Escape clears the row', async () => {
+    const blok = await make();
+    const text = await caretInParagraph(blok);
+
+    await dragToTop('r3', false);
+
+    expect(text).not.toHaveFocus();
+    expect(window.getSelection()?.rangeCount).toBe(0);
+    expect(selectedRows()).toEqual(['r3']);
+
+    await escapeOnFocus();
+
+    expect(selectedRows()).toEqual([]);
   });
 
   it('drops the restored row from the selection when redo deletes it again', async () => {
@@ -417,6 +536,210 @@ describe('row selection after undo', () => {
     expect(calendarPicked()).toEqual(['r1']);
   });
 
+  // notion-motion.md Round 69 §2: Edit property › Checkbox flips the value and keeps the card selected through undo.
+  it('keeps the calendar event selected through an Edit property › Checkbox flip and its undo', async () => {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const blocks = doc();
+    const data = blocks[0].data as { schema: Array<Record<string, unknown>>; views: Array<Record<string, unknown>> };
+
+    data.schema.push({ id: 'd', name: 'Date', type: 'date', position: 'a2' }, { id: 'cb', name: 'Done', type: 'checkbox', position: 'a3' });
+    data.views[0] = { ...data.views[0], type: 'calendar' };
+    blocks.slice(1).forEach((block) => {
+      const rowData = block.data as { properties: Record<string, unknown> };
+
+      rowData.properties.d = today;
+    });
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
+      data: { blocks },
+    } as never) as unknown as TestEditor;
+    const blok = editor;
+
+    await blok.isReady;
+    await quiet();
+    const calendarPicked = (): string[] => [...document.querySelectorAll('[data-blok-database-calendar-event][data-blok-database-row-selected]')]
+      .map((el) => el.getAttribute('data-row-id') ?? '');
+    const done = async (): Promise<unknown> => ((await blok.blocks.getById('r1')?.save())?.data as { properties: Record<string, unknown> }).properties.cb;
+
+    document.querySelector('[data-blok-database-calendar-event][data-row-id="r1"]')
+      ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+    [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened] [data-blok-testid="popover-item-title"]')]
+      .find((node) => node.textContent === 'Edit property')?.closest<HTMLElement>('[data-blok-popover-item]')?.click();
+    document.querySelector<HTMLElement>('[data-blok-popover-item][data-blok-item-name="database-row-edit-property-cb"]')?.click();
+    await quiet();
+
+    expect(await done()).toBe(true);
+    expect(calendarPicked()).toEqual(['r1']);
+
+    blok.history.undo();
+    await quiet();
+
+    expect(await done()).not.toBe(true);
+    expect(calendarPicked()).toEqual(['r1']);
+  });
+
+  /** Drags `id` to the top of its list, gallery or board column; items stack 40 tall. */
+  const dragItemToTop = async (type: keyof typeof ITEM, id: string): Promise<void> => {
+    const items = [...document.querySelectorAll<HTMLElement>(ITEM[type])];
+
+    items.forEach((el, index) => {
+      vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, index * 40, 300, 40));
+    });
+    document.querySelectorAll<HTMLElement>('[data-blok-database-column]').forEach((el) => {
+      vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 300, 1000));
+    });
+    const item = document.querySelector<HTMLElement>(`${ITEM[type]}[data-row-id="${id}"]`);
+
+    if (item === null) throw new Error(`no ${type} item ${id}`);
+    const y = items.indexOf(item) * 40 + 20;
+
+    item.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: 10, clientY: y, bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 10, clientY: 5, bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 10, clientY: 5, bubbles: true }));
+    await quiet();
+  };
+  const shownOrder = (type: keyof typeof ITEM): string[] =>
+    [...document.querySelectorAll(ITEM[type])].map((el) => el.getAttribute('data-row-id') ?? '');
+  const itemOf = (type: keyof typeof ITEM, id: string): HTMLElement | null =>
+    document.querySelector<HTMLElement>(`${ITEM[type]}[data-row-id="${id}"]`);
+
+  // notion-motion.md Round 92 §1 #2: a List or Gallery drop selects the dropped item, its halo fading in; Escape clears it.
+  it.each(['list', 'gallery'] as const)('selects the dropped %s item, and Escape clears it', async (type) => {
+    await make(type);
+
+    await dragItemToTop(type, 'r3');
+
+    expect(picked(type)).toEqual(['r3']);
+    expect(itemOf(type, 'r3')?.hasAttribute('data-blok-database-row-landed')).toBe(true);
+    expect(shownOrder(type)).toEqual(['r3', 'r1', 'r2']);
+
+    await escapeOnBody();
+
+    expect(picked(type)).toEqual([]);
+  });
+
+  // notion-motion.md Round 94 §1 #3: a Board or List drop focuses the dropped item with no range; Escape on it clears it.
+  // Every board card stays a Tab stop (Round 97 §1 #1); a list keeps one.
+  it.each([
+    ['board', 'board-one-group', 3],
+    ['list', 'list', 1],
+  ] as const)('focuses the dropped %s item, and Escape on it clears the item', async (type, layout, tabStops) => {
+    const blok = await make(layout);
+
+    await caretInParagraph(blok);
+    await dragItemToTop(type, 'r3');
+
+    expect(itemOf(type, 'r3')).toHaveFocus();
+    expect(itemOf(type, 'r3')?.getAttribute('tabindex')).toBe('0');
+    expect([...document.querySelectorAll(`${ITEM[type]}[tabindex="0"]`)]).toHaveLength(tabStops);
+    expect(window.getSelection()?.rangeCount).toBe(0);
+
+    await escapeOnFocus();
+
+    expect(picked(type)).toEqual([]);
+  });
+
+  // notion-motion.md Round 95 §1 #5 (r95-n-gallery-drop-esc.raw): a gallery drop focuses the dropped card.
+  it('focuses the dropped gallery card', async () => {
+    const blok = await make('gallery');
+
+    await caretInParagraph(blok);
+    await dragItemToTop('gallery', 'r3');
+
+    expect(itemOf('gallery', 'r3')).toHaveFocus();
+    expect(window.getSelection()?.rangeCount).toBe(0);
+    expect([...document.querySelectorAll(`${ITEM.gallery}[tabindex="0"]`)]).toHaveLength(3);
+  });
+
+  // notion-motion.md Round 95 §1 #4: a drop into another board column leaves focus on body.
+  it('leaves focus on body after a board drop into another column', async () => {
+    const blok = await make('board');
+
+    itemOf('board', 'r3')?.focus();
+    await dragItemToTop('board', 'r3');
+
+    expect(((await blok.blocks.getById('r3')?.save())?.data as { properties: Record<string, unknown> }).properties.x).not.toBe('c');
+    expect(document.body).toHaveFocus();
+    expect(picked('board')).toEqual(['r3']);
+  });
+
+  // notion-motion.md Round 94 §1 #2 (r94-n-list-selbar.raw): a List drop shows no "N selected" bar, as Board and Calendar.
+  it('shows no selection bar after a list drop', async () => {
+    await make('list');
+
+    await dragItemToTop('list', 'r3');
+
+    expect(document.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
+    expect(picked('list')).toEqual(['r3']);
+  });
+
+  // notion-motion.md Round 93 §1 #2 (r93-n-caret-bdrag.raw): the drop clears the caret, so Escape clears the item.
+  it.each([
+    ['board', 'board-one-group'],
+    ['list', 'list'],
+    ['gallery', 'gallery'],
+  ] as const)('takes the caret out of a paragraph on a %s drop, so Escape clears the item', async (type, layout) => {
+    const blok = await make(layout);
+    const text = await caretInParagraph(blok);
+
+    await dragItemToTop(type, 'r3');
+
+    expect(text).not.toHaveFocus();
+    expect(window.getSelection()?.rangeCount).toBe(0);
+    expect(picked(type)).toEqual(['r3']);
+
+    await escapeOnFocus();
+
+    expect(picked(type)).toEqual([]);
+  });
+
+  // notion-motion.md Round 13: a sorted board drop takes its own early path.
+  it('takes the caret out of a paragraph on a sorted board drop', async () => {
+    const blok = await make('board-one-group');
+    const db = blok.blocks.getById('db');
+    const saved = await db?.save();
+    const data = saved?.data as { views: Array<Record<string, unknown>> };
+
+    data.views[0] = { ...data.views[0], sorts: [{ propertyId: 't', direction: 'asc' }] };
+    await blok.blocks.update('db', data);
+    await quiet();
+    const text = await caretInParagraph(blok);
+
+    await dragItemToTop('board', 'r3');
+
+    expect(text).not.toHaveFocus();
+    expect(window.getSelection()?.rangeCount).toBe(0);
+    expect(picked('board')).toEqual(['r3']);
+  });
+
+  // notion-motion.md Round 92 §1 #1–2: undo of a Board, List or Gallery reorder selects the moved item (fade in); redo clears it (fade out).
+  it.each(['board', 'list', 'gallery'] as const)('selects the %s item its reorder undo moves back, and its redo clears it', async (type) => {
+    const blok = await make(type === 'board' ? 'board-one-group' : type);
+
+    expect(shownOrder(type)).toEqual(['r1', 'r2', 'r3']);
+    await dragItemToTop(type, 'r3');
+    expect(shownOrder(type)).toEqual(['r3', 'r1', 'r2']);
+    await escapeOnBody();
+    expect(picked(type)).toEqual([]);
+
+    blok.history.undo();
+    await quiet();
+
+    expect(picked(type)).toEqual(['r3']);
+    expect(itemOf(type, 'r3')?.hasAttribute('data-blok-database-row-landed')).toBe(true);
+    expect(shownOrder(type)).toEqual(['r1', 'r2', 'r3']);
+
+    blok.history.redo();
+    await quiet();
+
+    expect(picked(type)).toEqual([]);
+    expect(itemOf(type, 'r3')?.hasAttribute('data-blok-database-row-leaving')).toBe(true);
+    expect(shownOrder(type)).toEqual(['r3', 'r1', 'r2']);
+  });
+
   it('selects nothing when undo brings a board card back', async () => {
     const blok = await make('board');
 
@@ -427,5 +750,157 @@ describe('row selection after undo', () => {
 
     expect(document.querySelector(`${ITEM.board}[data-row-id="r2"]`)).not.toBeNull();
     expect(picked('board')).toEqual([]);
+  });
+});
+
+describe('row selection after undo in a linked view', () => {
+  const linkedDoc = (): OutputBlockData[] => [
+    ...doc(),
+    {
+      id: 'lk',
+      type: 'database',
+      data: {
+        source: { databaseId: 'db' },
+        schema: [{ id: 'stub', name: 'Name', type: 'title', position: 'a0' }],
+        views: [{ id: 'lv', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'lv',
+      },
+    },
+  ];
+  const linkedPicked = (): string[] => [...document.querySelectorAll('[data-blok-id="lk"] [data-blok-database-table-row][aria-selected="true"]')]
+    .map((el) => el.getAttribute('data-row-id') ?? '');
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+  });
+
+  afterEach(() => {
+    editor?.destroy();
+    editor = undefined;
+    holder?.remove();
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  const makeLinked = async (): Promise<TestEditor> => {
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
+      data: { blocks: linkedDoc() },
+    } as never) as unknown as TestEditor;
+    await editor.isReady;
+    await quiet();
+
+    return editor;
+  };
+
+  it('selects no rows when undo brings its deleted source back', async () => {
+    const blok = await makeLinked();
+
+    await deleteRow(blok, 'db');
+    expect(document.querySelectorAll('[data-blok-id="lk"] [data-blok-database-table-row]')).toHaveLength(0);
+
+    blok.history.undo();
+    await quiet();
+
+    expect(document.querySelectorAll('[data-blok-id="lk"] [data-blok-database-table-row]')).toHaveLength(3);
+    expect(linkedPicked()).toEqual([]);
+  });
+
+  it('still selects a row whose own delete is undone', async () => {
+    const blok = await makeLinked();
+
+    await deleteRow(blok, 'r2');
+    blok.history.undo();
+    await quiet();
+
+    expect(linkedPicked()).toEqual(['r2']);
+  });
+});
+
+// notion-motion.md Round 93 §1 #3 (r93-n-v2-undo.raw): reorder in Table 2, visit Table, come back, one undo.
+describe('undo after visiting another view', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+  });
+
+  afterEach(() => {
+    editor?.destroy();
+    editor = undefined;
+    holder?.remove();
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  const makeTwoViews = async (): Promise<TestEditor> => {
+    const blocks = doc();
+    const data = blocks[0].data as { views: Array<Record<string, unknown>>; activeViewId: string };
+
+    data.views.push({ ...data.views[0], id: 'v2', name: 'Table 2', position: 'a1' });
+    data.activeViewId = 'v2';
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
+      data: { blocks },
+    } as never) as unknown as TestEditor;
+    await editor.isReady;
+    await quiet();
+
+    return editor;
+  };
+
+  // The press matters: a pointerdown is what opens a new undo step.
+  const clickTab = async (viewId: string): Promise<void> => {
+    const tab = document.querySelector<HTMLElement>(`[role="tab"][data-view-id="${viewId}"]`);
+
+    if (tab === null) throw new Error(`no tab ${viewId}`);
+    tab.dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true }));
+    tab.dispatchEvent(new PointerEvent('pointerup', { button: 0, bubbles: true }));
+    tab.click();
+    await quiet();
+  };
+
+  const activeTab = (): string | null => document.querySelector('[role="tab"][aria-selected="true"]')?.getAttribute('data-view-id') ?? null;
+
+  const dragToTop = async (id: string): Promise<void> => {
+    const rows = [...document.querySelectorAll<HTMLElement>('[data-blok-database-table-row]')];
+
+    rows.forEach((el, index) => {
+      vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, index * 38, 800, 38));
+    });
+    const handle = row(id)?.querySelector<HTMLElement>('[data-blok-database-table-row-handle]');
+
+    if (handle === null || handle === undefined) throw new Error('no row drag handle');
+    handle.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: 10, clientY: rows.indexOf(row(id) as HTMLElement) * 38 + 19, bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 10, clientY: 5, bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    await quiet();
+  };
+
+  it('undoes the reorder with one undo, stays on the view, and selects the moved row', async () => {
+    const blok = await makeTwoViews();
+
+    await dragToTop('r3');
+    expect(order()).toEqual(['r3', 'r1', 'r2']);
+
+    await clickTab('v');
+    await clickTab('v2');
+    expect(activeTab()).toBe('v2');
+    expect(order()).toEqual(['r3', 'r1', 'r2']);
+
+    blok.history.undo();
+    await quiet();
+
+    expect(order()).toEqual(['r1', 'r2', 'r3']);
+    expect(activeTab()).toBe('v2');
+    expect(selectedRows()).toEqual(['r3']);
   });
 });

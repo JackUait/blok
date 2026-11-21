@@ -232,7 +232,7 @@ const DemoIntro: React.FC = () => {
 
   return (
           <div className="mx-auto mb-10 max-w-2xl text-center">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-bold text-primary">
               <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
               <Typo>{t('demo.badge')}</Typo>
             </span>

@@ -19,7 +19,7 @@ const NotFoundPage = () => (
   <>
     <Nav links={NAV_LINKS} />
     <PageMain className="mx-auto flex max-w-3xl flex-col items-center px-6 pt-32 pb-24 text-center">
-      <p className="font-mono text-sm font-bold tracking-widest text-muted-foreground uppercase">
+      <p className="font-mono text-sm font-bold text-muted-foreground">
         404
       </p>
       <h1 className="mt-4 font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">

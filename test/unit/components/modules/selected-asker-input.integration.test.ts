@@ -258,6 +258,18 @@ describe('input over a selected block whose tool asks before it goes', () => {
       expect(selectedIds(instance)).toEqual(pasted === undefined ? ['missing'] : [pasted.id]);
     });
 
+    // notion-motion.md Round 68 §2: an empty text/plain paste changes nothing.
+    it.each([[['ask']], [['p1', 'ask']]])('an empty paste over %j adds no block and keeps the selection', async (selected) => {
+      const instance = await boot();
+
+      select(instance, ...selected);
+      paste('');
+      await settle();
+
+      expect(await texts(instance)).toEqual(['one', '<asking>', 'row', 'two']);
+      expect(selectedIds(instance)).toEqual(selected);
+    });
+
     it('is one undo step that leaves the block as it was', async () => {
       const instance = await boot();
 

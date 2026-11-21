@@ -24,6 +24,31 @@ const PERSON_LIKE: readonly PropertyType[] = ['person', 'createdBy', 'lastEdited
 export const defaultGroupSort = (type: PropertyType): GroupSort =>
   type === 'number' || type === 'checkbox' || type === 'status' || DATE_LIKE.includes(type) ? 'ascending' : 'manual';
 
+/**
+ * A Status board's options in the view's own manual order (notion-motion.md Round 94 §1 #1), each with its key
+ * as `position`. An option with no key (added after the order was saved) goes last (Round 95 §1 #2), in
+ * workflow order, with the last key, so it stays on the same side of the no-value group as that option.
+ */
+export const statusViewOrder = (workflow: SelectOption[], order: Record<string, string> | undefined): SelectOption[] => {
+  if (order === undefined || !workflow.some((option) => order[option.id] !== undefined)) return workflow;
+  const keyed = workflow
+    .flatMap((option) => (order[option.id] === undefined ? [] : [{ ...option, position: order[option.id] }]))
+    .sort((a, b) => (a.position < b.position ? -1 : 1));
+  const last = keyed[keyed.length - 1].position;
+
+  return [...keyed, ...workflow.filter((option) => order[option.id] === undefined).map((option) => ({ ...option, position: last }))];
+};
+
+/**
+ * A Status board's columns as its group sort draws them (notion-motion.md Round 95 §1 #1): only Manual reads the
+ * view's order; Ascending is the workflow, Descending the workflow reversed.
+ */
+export const statusSortedOptions = (workflow: SelectOption[], sort: GroupSort, order: Record<string, string> | undefined): SelectOption[] => {
+  if (sort === 'manual') return statusViewOrder(workflow, order);
+
+  return sort === 'descending' ? [...workflow].reverse() : workflow;
+};
+
 /** Notion's Range defaults: 0 to 1000, every 100 (research/22 §7). */
 export const DEFAULT_RANGE = { start: 0, end: 1000, size: 100 };
 
@@ -228,7 +253,8 @@ export const orderGroupKeys = (
   const compare = (a: string, b: string): number => {
     if (property.type === 'number' || property.type === 'uniqueId') return numberRank(a) - numberRank(b);
     if (DATE_LIKE.includes(property.type)) return dateRank(a, now).localeCompare(dateRank(b, now));
-    if (property.type === 'checkbox') return Number(a === 'true') - Number(b === 'true');
+    // Round 84b §3: Notion lists Checked first.
+    if (property.type === 'checkbox') return Number(b === 'true') - Number(a === 'true');
 
     return label(a).localeCompare(label(b));
   };

@@ -209,7 +209,6 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.filesLimitOne',
     // "Spotlight" is the Filipino/Taglish loanword for the dim-around effect.
     'tools.image.markupSpotlight',
-    'tools.link.emailAddress',
     'tools.code.autoDetected',
     // "Superscript"/"Subscript" are the established Filipino office terms
     // (Word's Filipino UI keeps the English labels).
@@ -635,7 +634,7 @@ const DATABASE_PROPERTY_COGNATE_RETENTIONS: Record<string, string[]> = {
   de: ['tools.database.propertyTypeStatus', 'tools.database.propertyTypePerson', 'tools.database.propertyTypeUniqueId', 'tools.database.showAs.ring', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
   es: ['tools.database.numberColor', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
   et: ['tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
-  fi: ['tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  fi: ['tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin', 'tools.database.numberFormat.nigerian_naira'],
   fil: ['tools.database.propertyTypeEmail', 'tools.database.statusDisplayAs.checkbox', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
   fr: ['tools.database.propertyTypeUniqueId', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
   hr: ['tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
@@ -644,7 +643,7 @@ const DATABASE_PROPERTY_COGNATE_RETENTIONS: Record<string, string[]> = {
   it: ['tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
   ja: ['tools.database.propertyTypeUniqueId'],
   ms: ['tools.database.propertyTypeStatus', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
-  nl: ['tools.database.propertyTypeStatus', 'tools.database.showAs.ring', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
+  nl: ['tools.database.propertyTypeStatus', 'tools.database.showAs.ring', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin', 'tools.database.numberFormat.vietnamese_dong'],
   no: ['tools.database.propertyTypeStatus', 'tools.database.propertyTypePerson', 'tools.database.propertyTypeUniqueId', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
   pl: ['tools.database.propertyTypeStatus', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
   pt: ['tools.database.propertyTypeStatus', 'tools.database.numberFormat.euro', 'tools.database.numberFormat.bitcoin'],
@@ -672,7 +671,7 @@ const DATABASE_VIEW_SETTINGS_COGNATE_RETENTIONS: Record<string, string[]> = {
   de: ['tools.database.colorOrange', 'tools.database.groupStatusOption'],
   fr: ['tools.database.settingsLoadLimitPages', 'tools.database.colorOrange'],
   id: ['tools.database.settingsFilter'],
-  nl: ['tools.database.groupDateWeek'],
+  nl: ['tools.database.groupDateWeek', 'tools.database.settingsFiltersTitle'],
   sv: ['tools.database.colorOrange'],
 };
 

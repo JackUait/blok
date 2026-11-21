@@ -218,7 +218,8 @@ for (const theme of THEMES) {
       await expect(question).toHaveCSS('box-shadow', theme.questionRing);
       await expect(question.getByRole('textbox', { name: 'Name', exact: true })).toHaveCSS('border-top-color', theme.answerBorder);
       await expect(question).toHaveCSS('border-top-left-radius', '12px');
-      await expect(question).toHaveCSS('padding-top', '12px');
+      // notion-motion.md Round 65 §4: the title sits 22 under the card top.
+      await expect(question).toHaveCSS('padding-top', '22px');
       await expect(chip).toHaveAccessibleName('Edit question');
       expect(await size(chip)).toEqual({ width: 24, height: 24 });
       expect(await chip.evaluate((el) => {

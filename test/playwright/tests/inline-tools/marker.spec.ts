@@ -958,101 +958,13 @@ test.describe('inline tool marker', () => {
 
   test.describe('tooltip does not block swatch clicks', () => {
     /**
-     * Regression: the swatch grid wraps into two rows per section, and every
-     * swatch shows a tooltip with placement "top". The tooltip bubble used to
-     * receive pointer events (hoverable-bubble design), so hovering a
-     * bottom-row swatch opened a tooltip directly over the row above, and a
-     * subsequent click on the covered swatch landed on the tooltip instead of
-     * the button — silently doing nothing. This is exactly how users became
-     * unable to change/remove an existing highlight color: the active color's
-     * tooltip covered the Default swatch above it.
+     * A hint once took pointer events, so a click aimed at a color under it
+     * did nothing. Only the recent tiles have hints now (a row carries its
+     * name). Hover each one and hit-test every color in the panel: the color
+     * must win, whatever floats over it.
      */
-    test('clicking a swatch covered by another swatch tooltip still applies', async ({ page }) => {
-      await createBlokWithBlocks(page, [
-        {
-          type: 'paragraph',
-          data: {
-            text: '<mark style="background-color: var(--blok-color-green-bg);">Highlighted text</mark>',
-          },
-        },
-      ]);
-
-      const paragraph = page.locator(PARAGRAPH_SELECTOR);
-
-      await selectText(paragraph, 'Highlighted text');
-      await openMarkerPicker(page);
-
-      // Hover the green background swatch (bottom row) — its tooltip renders
-      // above it, covering the Default background swatch in the row above.
-      const greenSwatch = page.locator('[data-blok-testid="marker-swatch-background-color-green"]');
-
-      await greenSwatch.hover();
-
-      const tooltip = page.getByTestId('tooltip');
-
-      await expect(tooltip).toHaveAttribute('data-state', 'open');
-
-      // Sanity-check the trap geometry: the tooltip bubble must overlap the
-      // Default swatch, otherwise this test is not exercising the regression.
-      const defaultSwatch = page.locator('[data-blok-testid="marker-swatch-background-color-default"]');
-      const defaultBox = await defaultSwatch.boundingBox();
-      const tooltipBox = await tooltip.boundingBox();
-
-      if (defaultBox === null || tooltipBox === null) {
-        throw new Error('Failed to measure swatch/tooltip geometry');
-      }
-
-      const intersection = {
-        left: Math.max(tooltipBox.x, defaultBox.x),
-        top: Math.max(tooltipBox.y, defaultBox.y),
-        right: Math.min(tooltipBox.x + tooltipBox.width, defaultBox.x + defaultBox.width),
-        bottom: Math.min(tooltipBox.y + tooltipBox.height, defaultBox.y + defaultBox.height),
-      };
-
-      expect(intersection.right).toBeGreaterThan(intersection.left);
-      expect(intersection.bottom).toBeGreaterThan(intersection.top);
-
-      // Move the pointer in one hop to a Default-swatch point that the
-      // tooltip bubble provably covers, and click ONCE with the raw mouse
-      // (locator.click would auto-retry around the obstruction and mask the
-      // bug). This is the real user gesture: aiming at the visible swatch,
-      // unaware an invisible-to-them bubble is in front of it.
-      await page.mouse.move(
-        (intersection.left + intersection.right) / 2,
-        (intersection.top + intersection.bottom) / 2
-      );
-      await page.mouse.down();
-      await page.mouse.up();
-
-      // The single click must reach the swatch and remove the highlight.
-      await page.waitForFunction(
-        ({ selector }) => {
-          const el = document.querySelector(selector);
-
-          return el !== null && el.querySelector('mark') === null;
-        },
-        { selector: PARAGRAPH_SELECTOR }
-      );
-
-      const html = await paragraph.innerHTML();
-
-      expect(html).not.toContain('<mark');
-      expect(html).toContain('Highlighted text');
-    });
-
-    /**
-     * Exhaustive sweep over EVERY swatch of BOTH picker tabs: with a tab
-     * active, hover each of its swatches (opening its tooltip) and hit-test
-     * every swatch center with elementFromPoint, requiring the swatch to win.
-     * Unlike the single-click regression above, this guard is agnostic to
-     * WHICH overlay does the shielding — it fails if the tooltip regresses,
-     * but also if any future floating UI (hover card, badge, new tooltip
-     * implementation) ever covers any color's swatch with a click-eating
-     * surface. This is the "never again, for any color, under any overlay"
-     * contract.
-     */
-    test('no swatch is click-shielded while any other swatch tooltip is open', async ({ page }) => {
-      // 20 hovers, each waiting out the 500ms hint delay.
+    test('no color is click-shielded while a recent tile hint is open', async ({ page }) => {
+      // 8 hovers, each waiting out the 500ms hint delay.
       test.setTimeout(45_000);
       await createBlokWithBlocks(page, [
         {
@@ -1062,84 +974,81 @@ test.describe('inline tool marker', () => {
           },
         },
       ]);
+      await page.evaluate(() => {
+        const names = ['gray', 'brown', 'orange', 'yellow'];
+
+        localStorage.setItem('blok-recent-colors', JSON.stringify([
+          ...names.map((name) => ({ name, field: 'text' })),
+          ...names.map((name) => ({ name, field: 'bg' })),
+        ]));
+      });
 
       const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
       await selectText(paragraph, 'Highlighted text');
       await openMarkerPicker(page);
 
-      // All 20 triggers: 2 tabs × (default + 9 color presets). Kept in
-      // sync with COLOR_PRESETS by the count assertion below.
-      const paletteTabs = [
-        { key: 'color', name: 'Text color' },
-        { key: 'background-color', name: 'Background' },
+      const colorNames = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
+      const recentIds = ['text', 'bg'].flatMap((field) => ['gray', 'brown', 'orange', 'yellow'].map((name) => `marker-swatch-recent-${field}-${name}`));
+      const allIds = [
+        ...recentIds,
+        ...['color', 'background-color'].flatMap((key) => colorNames.map((name) => `marker-swatch-${key}-${name}`)),
       ];
-      const swatchNames = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
 
-      // Guard the guard: if presets are ever added/renamed, fail loudly here
-      // instead of silently sweeping a stale list.
-      const renderedSwatchCount = await page.locator('[data-blok-testid^="marker-swatch-"]').count();
+      // Guard the guard: if presets are added or renamed, fail here instead of sweeping a stale list.
+      await expect(page.getByTestId('marker-picker').getByRole('button')).toHaveCount(allIds.length);
 
-      expect(renderedSwatchCount).toBe(paletteTabs.length * swatchNames.length);
+      const centers = await page.evaluate((ids) => {
+        return ids.map((id) => {
+          const swatch = document.querySelector(`[data-blok-testid="${id}"]`);
 
+          if (swatch === null) {
+            throw new Error(`Cannot measure center: ${id} was not found`);
+          }
+
+          const rect = swatch.getBoundingClientRect();
+
+          return {
+            id,
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2,
+          };
+        });
+      }, allIds);
       const tooltip = page.getByTestId('tooltip');
 
-      for (const paletteTab of paletteTabs) {
-        await expect(page.locator(`[data-blok-testid="marker-section-${paletteTab.key}"]`)).toBeVisible();
+      for (const hovered of centers.filter(({ id }) => recentIds.includes(id))) {
+        await page.mouse.move(hovered.x, hovered.y);
+        await expect(tooltip).toHaveAttribute('data-state', 'open');
 
-        const swatchTestIds = swatchNames.map((name) => `marker-swatch-${paletteTab.key}-${name}`);
-        const swatchCenters = await page.evaluate((ids) => {
-          return ids.map((id) => {
-            const swatch = document.querySelector(`[data-blok-testid="${id}"]`);
+        // Whatever element the browser would deliver a click to must be the
+        // color (or a part of it), never an overlay.
+        const shielded = await page.evaluate((points) => {
+          const offenders: string[] = [];
+
+          for (const point of points) {
+            const swatch = document.querySelector(`[data-blok-testid="${point.id}"]`);
 
             if (swatch === null) {
-              throw new Error(`Cannot measure swatch center: ${id} was not found`);
+              offenders.push(`${point.id}: not found`);
+              continue;
             }
 
-            const rect = swatch.getBoundingClientRect();
+            const hit = document.elementFromPoint(point.x, point.y);
 
-            return {
-              id,
-              x: rect.left + rect.width / 2,
-              y: rect.top + rect.height / 2,
-            };
-          });
-        }, swatchTestIds);
+            if (hit !== swatch && !swatch.contains(hit)) {
+              const hitDescription = hit === null
+                ? 'nothing'
+                : `<${hit.tagName.toLowerCase()} data-blok-testid="${hit.getAttribute('data-blok-testid') ?? ''}">`;
 
-        for (const hoveredSwatch of swatchCenters) {
-          await page.mouse.move(hoveredSwatch.x, hoveredSwatch.y);
-          await expect(tooltip).toHaveAttribute('data-state', 'open');
-
-          // Hit-test every precomputed swatch center in one page-side pass:
-          // whatever element the browser would actually deliver a click to must
-          // be the swatch (or a descendant of it) — never an overlay.
-          const shielded = await page.evaluate((centers) => {
-            const offenders: string[] = [];
-
-            for (const center of centers) {
-              const swatch = document.querySelector(`[data-blok-testid="${center.id}"]`);
-
-              if (swatch === null) {
-                offenders.push(`${center.id}: swatch not found`);
-                continue;
-              }
-
-              const hit = document.elementFromPoint(center.x, center.y);
-
-              if (hit !== swatch && !swatch.contains(hit)) {
-                const hitDescription = hit === null
-                  ? 'nothing'
-                  : `<${hit.tagName.toLowerCase()} data-blok-testid="${hit.getAttribute('data-blok-testid') ?? ''}">`;
-
-                offenders.push(`${center.id}: shielded by ${hitDescription}`);
-              }
+              offenders.push(`${point.id}: shielded by ${hitDescription}`);
             }
+          }
 
-            return offenders;
-          }, swatchCenters);
+          return offenders;
+        }, centers);
 
-          expect(shielded, `while hovering ${hoveredSwatch.id}`).toEqual([]);
-        }
+        expect(shielded, `while hovering ${hovered.id}`).toEqual([]);
       }
     });
   });

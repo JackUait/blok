@@ -180,8 +180,6 @@
   /* The space after the label is for the accessible name only: a flex row never draws a whitespace-only run. */
   margin-inline-end: var(--blok-space-1-5);
   font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 [data-blok-tool="image"] .blok-image-alt-pill__text {
   overflow: hidden;

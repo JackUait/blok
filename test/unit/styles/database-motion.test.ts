@@ -23,6 +23,10 @@ const reducedMotion = [ ...database.matchAll(/@media \(prefers-reduced-motion: r
 const body = (css: string, selector: string): string =>
   rules(css).filter((rule) => rule.selectors.includes(selector)).map((rule) => rule.body).join(';');
 
+/** The rule that wins for `selector`: the last one in the file that names it. */
+const lastBody = (css: string, selector: string): string =>
+  rules(css).filter((rule) => rule.selectors.includes(selector)).map((rule) => rule.body).pop() ?? '';
+
 const MENU = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu']";
 const MENU_CLOSED = `${MENU}:not([data-blok-popover-opened='true'])`;
 
@@ -44,15 +48,18 @@ describe('database menus', () => {
     expect(body(reducedMotion, `${MENU} [data-blok-popover-container]`)).toContain('transition: none');
     expect(body(reducedMotion, `${MENU_CLOSED} [data-blok-popover-container]`)).toContain('transform: none');
   });
+
+  // notion-motion.md Round 86 §1 #1 (r86-n-rowmenu-subesc1-mo.raw): "Open in" fades out over 200ms with no scale.
+  it('a row handle menu\'s submenu closes with a fade only', () => {
+    expect(lastBody(outsideReducedMotion, "[data-blok-popover-custom-class~='blok-database-handle-menu'] [data-blok-nested][data-state='closed'] > [data-blok-popover-container]"))
+      .toContain('transform: none');
+  });
 });
 
 /* Filter, Sort and every other panel or editor that sits in a CellPopover (notion-motion.md "Popovers"). */
 const EDITOR = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor']";
 const EDITOR_CLOSED = `${EDITOR}:not([data-blok-popover-opened='true'])`;
 
-/** The rule that wins for `selector`: the last one in the file that names it. */
-const lastBody = (css: string, selector: string): string =>
-  rules(css).filter((rule) => rule.selectors.includes(selector)).map((rule) => rule.body).pop() ?? '';
 
 describe('database panels (Filter, Sort, pickers)', () => {
   it('open and close like the database menus: 200ms ease, from and back to scale .96', () => {
@@ -186,20 +193,20 @@ describe('view tab drag', () => {
 });
 
 describe('side peek', () => {
-  it('takes the width the drawer sets, 756px by default, and slides in from a window width away over 200ms ease', () => {
+  it('takes the width the drawer sets, 756px by default, and slides in from its own width away over 200ms ease', () => {
     const drawer = body(outsideReducedMotion, '[data-blok-database-drawer]');
 
     // Round 14: 600 wide in a 900px window, two thirds of it.
     expect(drawer).toContain('width: min(var(--_blok-peek-width, 756px), calc(100vw * 2 / 3))');
-    // Notion starts at translateX(1512px) in a 1512px window (notion-motion.md "Side peek").
-    expect(drawer).toContain('transform: translateX(100vw)');
+    // notion-motion.md Round 71 §2: Notion rests at translateX(756px), the peek's own width, 3 of 3 fresh reloads.
+    expect(drawer).toContain('transform: translateX(100%)');
     expect(drawer).toContain('transition: transform 200ms ease');
     expect(drawer).not.toMatch(/transition: width/);
     expect(body(outsideReducedMotion, '[data-blok-database-drawer][data-open]')).toContain('transform: none');
   });
 
   it('slides in from the left in RTL', () => {
-    expect(body(outsideReducedMotion, '[dir="rtl"] [data-blok-database-drawer]')).toContain('transform: translateX(-100vw)');
+    expect(body(outsideReducedMotion, '[dir="rtl"] [data-blok-database-drawer]')).toContain('transform: translateX(-100%)');
   });
 
   it('narrows the page beside it over the same 200ms', () => {
@@ -304,6 +311,35 @@ describe('database toolbar search', () => {
   });
 });
 
+// notion-motion.md Round 68 §1 (r68-n-locked-btn.raw): "Locked" is a 24 tall text button, r4, padding 0 6, gap 4, a 20px glyph,
+// filled on hover by 0.02s ease-in. Text keeps Blok's AA ink; "Re-lock" takes Blok's AA link blue, not Notion's rgb(39,131,222).
+describe('database Locked button', () => {
+  const LOCK = '[data-blok-database-view-toolbar] > [data-blok-database-lock-badge]';
+
+  it('is a 24px text button with a 20px glyph, radius 4, padding 0 6 and gap 4', () => {
+    const rest = lastBody(database, LOCK);
+
+    expect(rest).toContain('height: 24px');
+    expect(rest).toContain('padding: 0 var(--blok-space-1-5)');
+    expect(rest).toContain('gap: var(--blok-space-1)');
+    expect(rest).toContain('border-radius: var(--blok-radius-control-sm)');
+    expect(rest).toContain('transition: background-color 0.02s ease-in');
+    expect(lastBody(database, `${LOCK} svg`)).toContain('width: 20px');
+    expect(lastBody(database, `${LOCK} svg`)).toContain('height: 20px');
+    expect(lastBody(database, `${LOCK} svg`)).toContain('color: var(--blok-database-table-header-icon)');
+  });
+
+  it('fills on hover and while its menu is open', () => {
+    expect(lastBody(database, `${LOCK}:hover`)).toContain('background-color: var(--blok-database-hover-bg)');
+    expect(lastBody(database, `${LOCK}[data-popover-open]`)).toContain('background-color: var(--blok-database-hover-bg)');
+  });
+
+  it('draws Re-lock, glyph and text, in the link blue', () => {
+    expect(lastBody(database, `${LOCK}[data-blok-database-relock]`)).toContain('color: var(--blok-link)');
+    expect(lastBody(database, `${LOCK}[data-blok-database-relock] svg`)).toContain('color: inherit');
+  });
+});
+
 // notion-motion.md Round 4 re-checks: a minimized toolbar keeps only « and settings; « shows on header hover and fades 200ms ease.
 describe('minimized database toolbar', () => {
   const TOOLBAR = '[data-blok-database-view-toolbar]';
@@ -363,5 +399,67 @@ describe('side peek properties: the label cell', () => {
     const HEAD = '[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head]';
 
     expect(body(outsideReducedMotion, HEAD)).toContain('transition: background-color 20ms ease-in');
+  });
+});
+
+// notion-motion.md Round 86 §1 #6 (r86-n-datefmt-open-mo.raw), Round 87 §1 #4 (r87-n-cell-timefmt-mo.raw, r87-n-cell-tz-mo.raw):
+// the date editor's Date format, Time format and Timezone menus fade in and scale from .96 about their centre, 200ms ease.
+// Remind open motion is unmeasured.
+describe.each(['dateFormat', 'timeFormat', 'timeZone'])('date editor %s menu', (kind) => {
+  const MENU_AT = `[data-blok-database-date-setting-menu="${kind}"][data-blok-top-layer][popover]`;
+  const startStyle = [ ...database.matchAll(/@starting-style \{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g) ].map((match) => match[1]).join(' ');
+
+  it('opens over 200ms ease from no ink and scale .96', () => {
+    expect(lastBody(outsideReducedMotion, MENU_AT)).toContain('transition: opacity 200ms ease, transform 200ms ease');
+    expect(body(startStyle, MENU_AT)).toContain('opacity: 0');
+    expect(body(startStyle, MENU_AT)).toContain('transform: scale(0.96)');
+  });
+
+  it('does not move under reduced motion', () => {
+    expect(body(reducedMotion, MENU_AT)).toContain('transition: none');
+  });
+});
+
+// notion-motion.md Round 87 §1 #3 (r87-n-timefmt-open-mo.raw): Edit property › Time format scales from .96 about its top right.
+// The other lists under Edit property are unmeasured, so they keep the core .98.
+describe('Edit property Time format list', () => {
+  const LIST = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list']";
+
+  it('opens from scale .96', () => {
+    expect(body(database, `${LIST}:not([data-blok-popover-opened='true']) > [data-blok-popover-container]`)).toContain('transform: scale(0.96)');
+  });
+
+  it('grows from its top right corner', () => {
+    expect(body(database, `${LIST} > [data-blok-popover-container]`)).toContain('transform-origin: top right');
+  });
+});
+
+// notion-motion.md Round 88 §1 #1 (r88-n-datefmt2-mo.raw): Edit property › Date format scales like Time format.
+describe('Edit property Date format list', () => {
+  const LIST = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-date-format-list']";
+
+  it('opens from scale .96', () => {
+    expect(body(database, `${LIST}:not([data-blok-popover-opened='true']) > [data-blok-popover-container]`)).toContain('transform: scale(0.96)');
+  });
+
+  it('grows from its top right corner', () => {
+    expect(body(database, `${LIST} > [data-blok-popover-container]`)).toContain('transform-origin: top right');
+  });
+});
+
+// notion-motion.md Round 93 §1 #5 (r93-n-changetype-mo.raw): the Change type list is at most 470 tall,
+// and it fades in about its centre with no scale.
+describe('column header Change type list', () => {
+  const LIST = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-change-type']";
+
+  it('opens with no scale', () => {
+    expect(lastBody(database, `${LIST}:not([data-blok-popover-opened='true']) > [data-blok-popover-container]`)).toContain('transform: none');
+  });
+
+  it('is at most 470 tall and fades about its centre', () => {
+    const container = lastBody(database, `${LIST} > [data-blok-popover-container]`);
+
+    expect(container).toContain('--max-height: 470px');
+    expect(container).toContain('transform-origin: center');
   });
 });

@@ -9,6 +9,7 @@ const translations: Record<string, string> = {
   'tools.marker.textColor': 'Text color',
   'tools.marker.background': 'Background',
   'tools.marker.default': 'Default',
+  'tools.colorPicker.backgroundColor': 'Background color',
   'tools.colorPicker.defaultSwatchLabel': '{default} {mode}',
 };
 const i18n: I18n = {
@@ -54,17 +55,18 @@ describe('PopoverMobile native color keyboard', () => {
     vi.restoreAllMocks();
   });
 
-  it('shows both color groups and leaves swatch keys to the native picker', async () => {
+  it('shows both color groups and leaves row keys to the picker', async () => {
     const menu = await openColors();
     const textGroup = getByRole(menu.getElement(), 'group', { name: 'Text color' });
-    const backgroundGroup = getByRole(menu.getElement(), 'group', { name: 'Background' });
+    const backgroundGroup = getByRole(menu.getElement(), 'group', { name: 'Background color' });
     const textSwatch = getByRole(textGroup, 'button', { name: 'Default text color' });
+    const backgroundSwatch = getByRole(backgroundGroup, 'button', { name: 'Default background' });
 
-    expect(getByRole(backgroundGroup, 'button', { name: 'Default background' })).toBeInTheDocument();
     expect(queryByRole(menu.getElement(), 'tablist')).toBeNull();
     textSwatch.focus();
-    expect(fireEvent.keyDown(textSwatch, { key: 'ArrowRight' })).toBe(true);
-    expect(fireEvent.keyDown(textSwatch, { key: 'ArrowLeft' })).toBe(true);
+    fireEvent.keyDown(textSwatch, { key: 'ArrowRight' });
+    expect(backgroundSwatch).toHaveFocus();
+    fireEvent.keyDown(backgroundSwatch, { key: 'ArrowLeft' });
     expect(textSwatch).toHaveFocus();
     expect(getByRole(menu.getElement(), 'button', { name: 'Back' })).toBeInTheDocument();
     expect(fireEvent.keyDown(textSwatch, { key: 'Tab' })).toBe(true);

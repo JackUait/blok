@@ -10,7 +10,7 @@ import * as tooltipModule from '../../../../src/components/utils/tooltip';
 const RECENT_KEY = 'blok-recent-colors';
 const NEUTRAL_BG = 'var(--blok-swatch-neutral-bg)';
 const TEXT_PRIMARY = 'var(--blok-text-primary)';
-const RING = 'ring-2 ring-swatch-ring-hover';
+const POPOVER_BG = 'var(--blok-popover-bg)';
 
 const TRANSLATIONS: Record<string, string> = {
   'tools.marker.default': 'Default',
@@ -99,6 +99,35 @@ const clickSwatch = (element: HTMLElement, testId: string): void => {
   byTestId(element, testId).click();
 };
 
+const tileOf = (element: HTMLElement, testId: string): HTMLElement => {
+  const tile = byTestId(element, testId).firstElementChild;
+
+  if (!(tile instanceof HTMLElement)) {
+    throw new Error(`no tile in ${testId}`);
+  }
+
+  return tile;
+};
+
+const isChecked = (element: HTMLElement, testId: string): boolean => {
+  const check = byTestId(element, testId).lastElementChild;
+
+  if (!(check instanceof HTMLElement) || check.querySelector('svg') === null) {
+    throw new Error(`no check in ${testId}`);
+  }
+
+  return !check.hidden;
+};
+
+/** twMerge reorders classes, so compare them as a set. */
+const classesOf = (el: Element): string[] => el.className.split(' ').sort();
+
+const classes = (...parts: string[]): string[] => parts.join(' ').split(' ').sort();
+
+const FOCUS_RING = 'ring-inset focus-visible:ring-2 focus-visible:ring-focus-ring';
+
+const storedRecents = (): unknown => JSON.parse(localStorage.getItem(RECENT_KEY) ?? 'null');
+
 describe('color-picker mutant kills', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -169,62 +198,66 @@ describe('color-picker mutant kills', () => {
       expect(onColorSelect).toHaveBeenCalledWith(darkPreset('gray').bg, 'bg');
     });
 
-    it('paints bg swatches with the light charcoal label color', () => {
+    it('paints a text tile with a letter in the preset text color', () => {
       const { element } = createColorPicker(createOptions());
-      const swatch = byTestId(element, 'test-swatch-bg-gray');
+      const tile = tileOf(element, 'test-swatch-text-gray');
 
-      expect(swatch.style.color).toBe('rgb(55, 53, 47)');
+      expect(tile.style.color).toBe(rgbOf(preset('gray').text));
+      expect(tile.classList.contains("before:content-['A']")).toBe(true);
     });
 
-    it('paints text swatches with the preset text color', () => {
+    it('paints a bg tile with the preset background and no letter', () => {
       const { element } = createColorPicker(createOptions());
-      const swatch = byTestId(element, 'test-swatch-text-gray');
+      const tile = tileOf(element, 'test-swatch-bg-gray');
 
-      expect(swatch.style.color).toBe(rgbOf(preset('gray').text));
+      expect(tile.style.backgroundColor).toBe(rgbOf(preset('gray').bg));
+      expect(tile.textContent).toBe('');
+      expect(tile.style.color).toBe('');
     });
 
-    it('paints the bg swatch label with the dark preset text color in dark mode', () => {
+    it('paints the tiles from the dark palette in dark mode', () => {
       document.documentElement.setAttribute('data-blok-theme', 'dark');
 
       const { element } = createColorPicker(createOptions());
 
-      expect(byTestId(element, 'test-swatch-bg-gray').style.color).toBe(rgbOf(darkPreset('gray').text));
+      expect(tileOf(element, 'test-swatch-text-gray').style.color).toBe(rgbOf(darkPreset('gray').text));
+      expect(tileOf(element, 'test-swatch-bg-gray').style.backgroundColor).toBe(rgbOf(darkPreset('gray').bg));
     });
 
-    it('falls back to the neutral background for the default swatch in each section', () => {
+    it('falls back to the neutral background for the default bg tile', () => {
       const { element } = createColorPicker(createOptions());
 
-      expect(byTestId(element, 'test-swatch-text-default').style.backgroundColor).toBe(NEUTRAL_BG);
-      expect(byTestId(element, 'test-swatch-bg-default').style.backgroundColor).toBe(NEUTRAL_BG);
+      expect(tileOf(element, 'test-swatch-bg-default').style.backgroundColor).toBe(NEUTRAL_BG);
     });
 
-    it('uses the text-primary variable as the default swatch label color', () => {
+    it('uses the text-primary variable as the default text tile color', () => {
       const { element } = createColorPicker(createOptions());
 
-      expect(byTestId(element, 'test-swatch-text-default').style.color).toBe(TEXT_PRIMARY);
+      expect(tileOf(element, 'test-swatch-text-default').style.color).toBe(TEXT_PRIMARY);
     });
 
-    it('uses the text-primary variable for the default bg swatch label in dark mode', () => {
-      document.documentElement.setAttribute('data-blok-theme', 'dark');
-
+    it('paints every text tile on the popover surface', () => {
       const { element } = createColorPicker(createOptions());
 
-      expect(byTestId(element, 'test-swatch-bg-default').style.color).toBe(TEXT_PRIMARY);
+      expect(tileOf(element, 'test-swatch-text-red').style.backgroundColor).toBe(POPOVER_BG);
+      expect(tileOf(element, 'test-swatch-text-default').style.backgroundColor).toBe(POPOVER_BG);
     });
 
-    it('paints text swatches with the neutral swatch background', () => {
+    it('edges a text tile with the ring token and a bg tile with its own hue', () => {
       const { element } = createColorPicker(createOptions());
 
-      expect(byTestId(element, 'test-swatch-text-red').style.backgroundColor).toBe(NEUTRAL_BG);
+      expect(tileOf(element, 'test-swatch-text-red').style.boxShadow).toBe('inset 0 0 0 1px var(--blok-swatch-ring-hover)');
+      expect(tileOf(element, 'test-swatch-bg-red').style.boxShadow).toBe(`inset 0 0 0 1px color-mix(in srgb, ${preset('red').text} 30%, transparent)`);
+      expect(tileOf(element, 'test-swatch-bg-default').style.boxShadow).toBe(`inset 0 0 0 1px color-mix(in srgb, ${TEXT_PRIMARY} 30%, transparent)`);
     });
   });
 
   describe('picker structure', () => {
-    it('marks the wrapper with the prefixed picker test id and layout classes', () => {
+    it('marks the wrapper with the prefixed picker test id and the two-column grid', () => {
       const { element } = createColorPicker(createOptions());
 
       expect(element.getAttribute('data-blok-testid')).toBe('test-picker');
-      expect(element.className).toContain('flex flex-col gap-3 p-2');
+      expect(element.className).toBe('grid w-76 grid-cols-2 gap-x-2 gap-y-2.5 p-0.5 mobile:w-full');
     });
 
     it('titles each section with a picker-unique id under the blok-color-picker- prefix', () => {
@@ -248,36 +281,50 @@ describe('color-picker mutant kills', () => {
       expect(element.querySelector('[data-blok-testid^="test-reset-"]')).toBeNull();
     });
 
-    it('gives every swatch the shared swatch class contract', () => {
+    it('gives every row the shared row class contract', () => {
       const { element } = createColorPicker(createOptions());
-      const swatch = byTestId(element, 'test-swatch-text-red');
-      const classes = swatch.className;
+      const row = byTestId(element, 'test-swatch-text-red');
 
-      expect(classes).toContain('w-10 h-10 rounded-(--blok-radius-control-lg) cursor-pointer border-none outline-hidden');
-      expect(classes).toContain('flex items-center justify-center text-sm font-semibold');
-      expect(classes).toContain('ring-inset hover:ring-2 hover:ring-swatch-ring-hover aria-pressed:ring-swatch-ring-active');
-      expect(classes).toContain('focus-visible:ring-2 focus-visible:ring-focus-ring aria-pressed:focus-visible:ring-focus-ring');
-      expect(classes).toContain('transition-[box-shadow,transform,scale]');
-      expect(classes).toContain('duration-150');
-      expect(classes).toContain('motion-reduce:transition-none motion-reduce:active:scale-100');
+      const [tile, name, check] = Array.from(row.children);
+
+      expect(classesOf(row)).toStrictEqual(classes(
+        '-ml-1 flex h-7 w-[calc(100%+0.25rem)] items-center gap-2 px-1.5 text-left',
+        'rounded-(--blok-radius-control) cursor-pointer border-none outline-hidden bg-transparent',
+        'hover:bg-item-hover-bg active:bg-swatch-ring-hover',
+        FOCUS_RING,
+        'transition-colors duration-150 motion-reduce:transition-none'
+      ));
+      expect(row.getAttribute('type')).toBe('button');
+      expect(row.children).toHaveLength(3);
+      expect(classesOf(tile)).toStrictEqual(classes(
+        'flex size-5 shrink-0 items-center justify-center rounded-(--blok-radius-control-sm)',
+        'text-[13px] leading-none font-semibold',
+        "before:content-['A']"
+      ));
+      expect(name.className).toBe('min-w-0 flex-1 truncate text-sm font-normal text-text-primary');
+      expect(check.className).toBe('flex size-3.5 shrink-0 text-text-primary [&>svg]:size-full [&_path]:stroke-[2.25]');
     });
 
-    it('lays each swatch grid out as five 2.5rem columns', () => {
+    it('stacks the rows of each column', () => {
       const { element } = createColorPicker(createOptions());
-      const grid = byTestId(element, 'test-swatch-text-red').parentElement;
 
-      expect(grid?.className).toBe('grid gap-1.5');
-      expect(grid?.style.gridTemplateColumns).toBe('repeat(5, 2.5rem)');
+      for (const key of ['text', 'bg']) {
+        const rows = byTestId(element, `test-swatch-${key}-red`).parentElement;
+
+        expect(rows?.className).toBe('flex flex-col');
+        expect(rows?.children).toHaveLength(COLOR_PRESETS.length + 1);
+      }
     });
   });
 
   describe('active color matching', () => {
-    it('marks the default swatch active and nothing else on a fresh picker', () => {
+    it('checks the default row and nothing else on a fresh picker', () => {
       const { element } = createColorPicker(createOptions());
 
-      expect(byTestId(element, 'test-swatch-text-default').className).toContain(RING);
-      expect(byTestId(element, 'test-swatch-text-red').className).not.toContain(RING);
-      expect(byTestId(element, 'test-swatch-text-blue').className).not.toContain(RING);
+      expect(isChecked(element, 'test-swatch-text-default')).toBe(true);
+      expect(isChecked(element, 'test-swatch-text-red')).toBe(false);
+      expect(isChecked(element, 'test-swatch-text-blue')).toBe(false);
+      expect(isChecked(element, 'test-swatch-bg-default')).toBe(true);
     });
 
     it('matches a color by all three RGB channels, never by a partial overlap', () => {
@@ -322,8 +369,9 @@ describe('color-picker mutant kills', () => {
 
       setActiveColor('rgb(212, 76, 71)', 'text');
 
-      expect(byTestId(element, 'test-swatch-text-red').className).toContain(RING);
-      expect(byTestId(element, 'test-swatch-text-gray').className).not.toContain(RING);
+      expect(isChecked(element, 'test-swatch-text-red')).toBe(true);
+      expect(isChecked(element, 'test-swatch-text-gray')).toBe(false);
+      expect(isChecked(element, 'test-swatch-text-default')).toBe(false);
     });
 
     it('ignores an unknown mode key without touching any section', () => {
@@ -331,18 +379,19 @@ describe('color-picker mutant kills', () => {
 
       setActiveColor('#123456', 'no-such-mode');
 
-      expect(byTestId(element, 'test-swatch-text-default').className).toContain(RING);
-      expect(byTestId(element, 'test-swatch-text-gray').className).not.toContain(RING);
+      expect(isChecked(element, 'test-swatch-text-default')).toBe(true);
+      expect(isChecked(element, 'test-swatch-bg-default')).toBe(true);
+      expect(isChecked(element, 'test-swatch-text-gray')).toBe(false);
     });
   });
 
   describe('section visibility', () => {
-    it('shows every section as a flex column', () => {
+    it('shows every column as a shrinkable flex column', () => {
       const { element } = createColorPicker(createOptions());
 
       for (const key of ['text', 'bg']) {
         expect(byTestId(element, `test-section-${key}`).hidden).toBe(false);
-        expect(byTestId(element, `test-section-${key}`).className).toBe('flex flex-col gap-2');
+        expect(byTestId(element, `test-section-${key}`).className).toBe('flex min-w-0 flex-col gap-1');
       }
     });
 
@@ -437,6 +486,30 @@ describe('color-picker mutant kills', () => {
       const { element } = createColorPicker(createOptions());
 
       expect(element.querySelector('[data-blok-testid="test-section-recent"]')).toBeNull();
+      // The empty host would still take a row gap in the grid.
+      expect(element.firstElementChild).toHaveProperty('hidden', true);
+    });
+
+    it('shows the recent host again once a reset finds recents', () => {
+      const { element, reset } = createColorPicker(createOptions());
+
+      clickSwatch(element, 'test-swatch-text-red');
+      reset();
+
+      expect(element.firstElementChild).toHaveProperty('hidden', false);
+      expect(element.querySelectorAll('[data-blok-testid="test-section-recent"]')).toHaveLength(1);
+    });
+
+    it('clears the recent row when a reset finds none left', () => {
+      seedRecents([{ name: 'red', field: 'text' }]);
+
+      const { element, reset } = createColorPicker(createOptions());
+
+      localStorage.removeItem(RECENT_KEY);
+      reset();
+
+      expect(element.querySelector('[data-blok-testid="test-section-recent"]')).toBeNull();
+      expect(element.firstElementChild).toHaveProperty('hidden', true);
     });
 
     it('renders the recent section with its title and layout once a preset was picked', () => {
@@ -447,63 +520,82 @@ describe('color-picker mutant kills', () => {
       const { element } = createColorPicker(createOptions());
       const section = byTestId(element, 'test-section-recent');
 
-      expect(section.className).toBe('flex flex-col gap-2');
-      // Recents lead the panel, like Notion.
+      expect(section.className).toBe('flex min-w-0 flex-col gap-1');
+      // Recents lead the panel and span both columns.
       expect(element.firstElementChild?.contains(section)).toBe(true);
-      expect(section.textContent).toContain('Recently used');
+      expect(element.firstElementChild?.className).toBe('col-span-2');
+      expect(section.children[0].textContent).toBe('Recently used');
       expect(section.children[0].className).toBe('text-xs font-medium text-text-secondary px-0.5');
-      expect(byTestId(element, 'test-swatch-recent-text-red').parentElement?.className).toBe('grid gap-1.5');
-      expect(byTestId(element, 'test-swatch-recent-text-red').parentElement?.style.gridTemplateColumns).toBe('repeat(5, 2.5rem)');
+      expect(byTestId(element, 'test-swatch-recent-text-red').parentElement?.className).toBe('flex gap-[calc((100%-14rem)/7)] px-0.5');
     });
 
-    it('paints a recent text swatch with the preset text color on the neutral background', () => {
-      const first = createColorPicker(createOptions());
-
-      clickSwatch(first.element, 'test-swatch-text-red');
+    it('paints a recent text tile with the preset text color on the popover surface', () => {
+      seedRecents([{ name: 'red', field: 'text' }]);
 
       const { element } = createColorPicker(createOptions());
       const swatch = byTestId(element, 'test-swatch-recent-text-red');
+      const tile = tileOf(element, 'test-swatch-recent-text-red');
 
-      expect(swatch.textContent).toBe('A');
-      expect(swatch.style.color).toBe(rgbOf(preset('red').text));
-      expect(swatch.style.backgroundColor).toBe(NEUTRAL_BG);
+      expect(tile.style.color).toBe(rgbOf(preset('red').text));
+      expect(tile.style.backgroundColor).toBe(POPOVER_BG);
+      expect(tile.classList.contains("before:content-['A']")).toBe(true);
+      expect(swatch.children).toHaveLength(1);
+      expect(swatch.getAttribute('style')).toBeNull();
     });
 
-    it('paints a recent bg swatch with the preset background and the charcoal label', () => {
-      const first = createColorPicker(createOptions());
+    it('paints a recent bg tile with the preset background and no letter', () => {
+      seedRecents([{ name: 'blue', field: 'bg' }]);
 
-      clickSwatch(first.element, 'test-swatch-bg-blue');
+      const { element } = createColorPicker(createOptions());
+      const swatch = byTestId(element, 'test-swatch-recent-bg-blue');
+      const tile = tileOf(element, 'test-swatch-recent-bg-blue');
+
+      expect(tile.style.backgroundColor).toBe(rgbOf(preset('blue').bg));
+      expect(tile.style.color).toBe('');
+      expect(swatch.textContent).toBe('');
+      expect(swatch.getAttribute('style')).toBeNull();
+    });
+
+    it('resolves the recent tile colors against the dark palette in dark mode', () => {
+      seedRecents([{ name: 'red', field: 'text' }, { name: 'blue', field: 'bg' }]);
+      document.documentElement.setAttribute('data-blok-theme', 'dark');
+
+      const { element } = createColorPicker(createOptions());
+
+      expect(tileOf(element, 'test-swatch-recent-text-red').style.color).toBe(rgbOf(darkPreset('red').text));
+      expect(tileOf(element, 'test-swatch-recent-bg-blue').style.backgroundColor).toBe(rgbOf(darkPreset('blue').bg));
+    });
+
+    it('labels a recent tile like its named row and leaves it unpressed', () => {
+      seedRecents([{ name: 'blue', field: 'bg' }]);
 
       const { element } = createColorPicker(createOptions());
       const swatch = byTestId(element, 'test-swatch-recent-bg-blue');
 
-      expect(swatch.textContent).toBe('');
-      expect(swatch.style.color).toBe('rgb(55, 53, 47)');
-      expect(swatch.style.backgroundColor).toBe(rgbOf(preset('blue').bg));
+      expect(swatch.getAttribute('aria-label')).toBe(byTestId(element, 'test-swatch-bg-blue').getAttribute('aria-label'));
+      expect(swatch.getAttribute('aria-label')).toBe('Blue background');
+      expect(swatch.hasAttribute('aria-pressed')).toBe(false);
+      expect(swatch.getAttribute('type')).toBe('button');
     });
 
-    it('resolves the recent swatch colors against the dark palette in dark mode', () => {
-      const first = createColorPicker(createOptions());
-
-      clickSwatch(first.element, 'test-swatch-text-red');
-
-      document.documentElement.setAttribute('data-blok-theme', 'dark');
+    it('gives a recent button and its tile their class contract', () => {
+      seedRecents([{ name: 'red', field: 'text' }]);
 
       const { element } = createColorPicker(createOptions());
 
-      expect(byTestId(element, 'test-swatch-recent-text-red').style.color).toBe(rgbOf(darkPreset('red').text));
-    });
-
-    it('labels a recent bg swatch with the dark preset text color in dark mode', () => {
-      const first = createColorPicker(createOptions());
-
-      clickSwatch(first.element, 'test-swatch-bg-blue');
-
-      document.documentElement.setAttribute('data-blok-theme', 'dark');
-
-      const { element } = createColorPicker(createOptions());
-
-      expect(byTestId(element, 'test-swatch-recent-bg-blue').style.color).toBe(rgbOf(darkPreset('blue').text));
+      expect(classesOf(byTestId(element, 'test-swatch-recent-text-red'))).toStrictEqual(classes(
+        'relative flex h-8.5 w-7 shrink-0 items-center justify-center p-0',
+        'rounded-(--blok-radius-control-lg) cursor-pointer border-none outline-hidden bg-transparent',
+        "before:absolute before:inset-y-0 before:-inset-x-0.75 before:content-['']",
+        'before:rounded-(--blok-radius-control-lg) before:transition-colors before:duration-150',
+        'hover:before:bg-item-hover-bg active:before:bg-swatch-ring-hover motion-reduce:before:transition-none',
+        FOCUS_RING
+      ));
+      expect(classesOf(tileOf(element, 'test-swatch-recent-text-red'))).toStrictEqual(classes(
+        'relative flex size-7 items-center justify-center rounded-(--blok-radius-control)',
+        'text-base leading-none font-semibold',
+        "before:content-['A']"
+      ));
     });
 
     it('skips a recent entry whose axis has no mode in this picker', () => {
@@ -521,47 +613,42 @@ describe('color-picker mutant kills', () => {
       expect(element.querySelector('[data-blok-testid="test-section-recent"]')).toBeNull();
     });
 
-    it('re-renders the recent list when a recent swatch is clicked', () => {
+    it('moves a clicked recent color to the front of the stored list', () => {
+      seedRecents([{ name: 'blue', field: 'text' }, { name: 'red', field: 'text' }]);
+
       const { element } = createColorPicker(createOptions());
-
-      clickSwatch(element, 'test-swatch-text-red');
-      clickSwatch(element, 'test-swatch-text-blue');
-
-      const before = Array.from(element.querySelectorAll('[data-blok-testid^="test-swatch-recent-"]'));
-
-      expect(before[0].getAttribute('data-blok-testid')).toBe('test-swatch-recent-text-blue');
 
       clickSwatch(element, 'test-swatch-recent-text-red');
 
-      const after = Array.from(element.querySelectorAll('[data-blok-testid^="test-swatch-recent-"]'));
-
-      expect(after[0].getAttribute('data-blok-testid')).toBe('test-swatch-recent-text-red');
+      expect(storedRecents()).toStrictEqual([{ name: 'red', field: 'text' }, { name: 'blue', field: 'text' }]);
     });
 
     it('selects the clicked recent color with its axis', () => {
+      seedRecents([{ name: 'blue', field: 'bg' }]);
+
       const onColorSelect = vi.fn();
       const { element } = createColorPicker(createOptions({ onColorSelect }));
 
-      clickSwatch(element, 'test-swatch-bg-blue');
-      onColorSelect.mockClear();
       clickSwatch(element, 'test-swatch-recent-bg-blue');
 
+      expect(onColorSelect).toHaveBeenCalledTimes(1);
       expect(onColorSelect).toHaveBeenCalledWith(preset('blue').bg, 'bg');
-      expect(byTestId(element, 'test-section-bg').hidden).toBe(false);
+    });
+
+    it('selects the dark value of a recent color in dark mode', () => {
+      seedRecents([{ name: 'red', field: 'text' }]);
+      document.documentElement.setAttribute('data-blok-theme', 'dark');
+
+      const onColorSelect = vi.fn();
+      const { element } = createColorPicker(createOptions({ onColorSelect }));
+
+      clickSwatch(element, 'test-swatch-recent-text-red');
+
+      expect(onColorSelect).toHaveBeenCalledWith(darkPreset('red').text, 'text');
     });
   });
 
   describe('tooltip wiring', () => {
-    it('wires the swatch tooltip with the top placement', () => {
-      const onHoverSpy = vi.spyOn(tooltipModule, 'onHover');
-
-      createColorPicker(createOptions());
-
-      const call = onHoverSpy.mock.calls.find(([el]) => el.getAttribute('data-blok-testid') === 'test-swatch-text-red');
-
-      expect(call?.[2]).toStrictEqual({ placement: 'top' });
-    });
-
     it('wires the recent swatch tooltip with the top placement', () => {
       const first = createColorPicker(createOptions());
 
@@ -576,6 +663,7 @@ describe('color-picker mutant kills', () => {
       );
 
       expect(call?.[2]).toStrictEqual({ placement: 'top' });
+      expect(call?.[1]).toBe('Red text');
     });
   });
 
@@ -605,74 +693,6 @@ describe('color-picker mutant kills', () => {
 
       expect(focusSpy).not.toHaveBeenCalled();
       fireEvent.keyDown(document.body, { key: 'Tab' });
-    });
-
-    it('restores focus to the matching recent swatch after a re-render', () => {
-      const { element } = createColorPicker(createOptions());
-
-      document.body.appendChild(element);
-      clickSwatch(element, 'test-swatch-text-gray');
-      clickSwatch(element, 'test-swatch-text-brown');
-
-      const gray = byTestId(element, 'test-swatch-recent-text-gray');
-
-      gray.focus();
-      expect(gray).toHaveFocus();
-
-      const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
-
-      clickSwatch(element, 'test-swatch-recent-text-brown');
-
-      expect(document.activeElement?.getAttribute('data-blok-testid')).toBe('test-swatch-recent-text-gray');
-      expect(focusSpy).toHaveBeenLastCalledWith({ preventScroll: true });
-    });
-
-    it('survives a re-render that evicts the focused recent entry', () => {
-      const uncaught: string[] = [];
-      const onError = (event: Event): void => {
-        uncaught.push(event.type);
-      };
-
-      window.addEventListener('error', onError);
-      try {
-        const { element } = createColorPicker(createOptions());
-
-        document.body.appendChild(element);
-        for (const name of ['gray', 'brown', 'orange', 'yellow', 'green']) {
-          clickSwatch(element, `test-swatch-text-${name}`);
-        }
-
-        byTestId(element, 'test-swatch-recent-text-gray').focus();
-        clickSwatch(element, 'test-swatch-text-blue');
-
-        // The evicted entry has no swatch to restore focus to — dropping the
-        // optional call throws an uncaught TypeError out of the click handler.
-        expect(uncaught).toStrictEqual([]);
-        expect(element.querySelector('[data-blok-testid="test-swatch-recent-text-gray"]')).toBeNull();
-      } finally {
-        window.removeEventListener('error', onError);
-      }
-    });
-
-    it('reads the focused test id without a focusable element', () => {
-      const { element } = createColorPicker(createOptions());
-
-      document.body.appendChild(element);
-      clickSwatch(element, 'test-swatch-text-red');
-
-      const body = document.body;
-
-      body.remove();
-
-      try {
-        expect(document.activeElement).toBeNull();
-
-        clickSwatch(element, 'test-swatch-text-blue');
-
-        expect(byTestId(element, 'test-swatch-recent-text-blue')).not.toBeNull();
-      } finally {
-        document.documentElement.appendChild(body);
-      }
     });
   });
 });

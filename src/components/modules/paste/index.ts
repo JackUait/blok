@@ -758,6 +758,10 @@ export class Paste extends Module {
     if (last === undefined || clipboard === null) {
       return;
     }
+    // Notion ignores an empty paste here (notion-motion.md Round 68 §2). A "Files" type reads '' while files are there.
+    if (clipboard.files.length === 0 && Array.from(clipboard.types).every(type => clipboard.getData(type) === '')) {
+      return;
+    }
 
     const before = new Set(BlockManager.blocks.map(block => block.id));
     const target = BlockManager.insert({ placement: { parentId: last.parentId, afterId: last.id } });

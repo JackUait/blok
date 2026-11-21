@@ -114,50 +114,6 @@ describe('List Tool - rAF timing fixes', () => {
 
     expect(scheduleUpdateAllSpy).toHaveBeenCalledTimes(1);
   });
-
-  it('calls markerManager.scheduleUpdateAll() when setStyle changes to a different style and rerenders the element', () => {
-    const options = createListOptions({ text: 'item', style: 'ordered' });
-    const list = new List(options);
-    list.render();
-
-    const scheduleUpdateAllSpy = vi.fn();
-    const markerManager = (list as unknown as { markerManager: { scheduleUpdateAll: () => void } | null }).markerManager;
-
-    if (markerManager) {
-      markerManager.scheduleUpdateAll = scheduleUpdateAllSpy;
-    }
-
-    const privateSetter = (list as unknown as { setStyle: (style: string) => void }).setStyle.bind(list);
-
-    privateSetter('unordered');
-
-    // Observable behavior: the saved data reflects the new style
-    expect(list.save().style).toBe('unordered');
-    // Marker update is scheduled via the deduplication utility
-    expect(scheduleUpdateAllSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not call scheduleUpdateAll() when setStyle is called with the same style', () => {
-    const options = createListOptions({ text: 'item', style: 'ordered' });
-    const list = new List(options);
-    list.render();
-
-    const scheduleUpdateAllSpy = vi.fn();
-    const markerManager = (list as unknown as { markerManager: { scheduleUpdateAll: () => void } | null }).markerManager;
-
-    if (markerManager) {
-      markerManager.scheduleUpdateAll = scheduleUpdateAllSpy;
-    }
-
-    const privateSetter = (list as unknown as { setStyle: (style: string) => void }).setStyle.bind(list);
-
-    privateSetter('ordered');
-
-    // Style unchanged: save still returns ordered
-    expect(list.save().style).toBe('ordered');
-    // No marker update needed when style doesn't change
-    expect(scheduleUpdateAllSpy).not.toHaveBeenCalled();
-  });
 });
 
 describe('List Tool - renumbering follows the style', () => {
@@ -167,44 +123,6 @@ describe('List Tool - renumbering follows the style', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-  });
-
-  const pickStyle = (list: List, style: string): void => {
-    const item = toMenuArray(list.renderSettings()).find((entry) => entry.name === `list-style-${style}`);
-    const activate = item?.onActivate;
-
-    expect(typeof activate).toBe('function');
-    if (typeof activate === 'function') {
-      activate();
-    }
-  };
-
-  it('a bulleted item turned numbered listens for sibling adds and removes, and stops when removed', () => {
-    const options = createListOptions({ text: 'item', style: 'unordered' });
-    const onSpy = vi.spyOn(options.api.events, 'on');
-    const offSpy = vi.spyOn(options.api.events, 'off');
-    const list = new List(options);
-
-    list.render();
-    pickStyle(list, 'ordered');
-
-    expect(onSpy).toHaveBeenCalledWith('block changed', expect.any(Function));
-
-    list.removed();
-
-    expect(offSpy).toHaveBeenCalledWith('block changed', onSpy.mock.calls[0]?.[1]);
-  });
-
-  it('a numbered item turned bulleted stops listening for sibling changes', () => {
-    const options = createListOptions({ text: 'item', style: 'ordered' });
-    const onSpy = vi.spyOn(options.api.events, 'on');
-    const offSpy = vi.spyOn(options.api.events, 'off');
-    const list = new List(options);
-
-    list.render();
-    pickStyle(list, 'unordered');
-
-    expect(offSpy).toHaveBeenCalledWith('block changed', onSpy.mock.calls[0]?.[1]);
   });
 
   it('an item filled by pasting a numbered list listens for sibling adds and removes', () => {
@@ -221,20 +139,6 @@ describe('List Tool - renumbering follows the style', () => {
 
     expect(list.save().style).toBe('ordered');
     expect(onSpy).toHaveBeenCalledWith('block changed', expect.any(Function));
-  });
-
-  it('switching numbered → bulleted → numbered leaves exactly one listener', () => {
-    const options = createListOptions({ text: 'item', style: 'ordered' });
-    const onSpy = vi.spyOn(options.api.events, 'on');
-    const offSpy = vi.spyOn(options.api.events, 'off');
-    const list = new List(options);
-
-    list.render();
-    pickStyle(list, 'unordered');
-    pickStyle(list, 'ordered');
-
-    expect(onSpy.mock.calls.filter(([name]) => name === 'block changed').length
-      - offSpy.mock.calls.filter(([name]) => name === 'block changed').length).toBe(1);
   });
 });
 
@@ -255,51 +159,9 @@ describe('List Tool - i18n', () => {
     });
   });
 
-  describe('renderSettings uses i18n via API', () => {
-    it('translates style labels in settings menu', () => {
-      const frenchDictionary: Record<string, string> = {
-        'toolNames.bulletedList': 'Liste à puces',
-        'toolNames.numberedList': 'Liste numérotée',
-        'toolNames.todoList': 'Liste de contrôle',
-      };
-
-      const options = createListOptions({}, {}, frenchDictionary);
-      const list = new List(options);
-      const settings = toMenuArray(list.renderSettings());
-
-      expect(settings).toHaveLength(3);
-      expect(settings[0].title).toBe('Liste à puces');
-      expect(settings[1].title).toBe('Liste numérotée');
-      expect(settings[2].title).toBe('Liste de contrôle');
-    });
-
-    it('falls back to original key when translation is missing', () => {
-      const emptyDictionary: Record<string, string> = {};
-
-      const options = createListOptions({}, {}, emptyDictionary);
-      const list = new List(options);
-      const settings = toMenuArray(list.renderSettings());
-
-      // Falls back to the full key when translation is missing
-      expect(settings[0].title).toBe('toolNames.bulletedList');
-      expect(settings[1].title).toBe('toolNames.numberedList');
-      expect(settings[2].title).toBe('toolNames.todoList');
-    });
-
-    it('respects configured styles when translating', () => {
-      const germanDictionary: Record<string, string> = {
-        'toolNames.bulletedList': 'Aufzählung',
-        'toolNames.numberedList': 'Nummerierung',
-        'toolNames.todoList': 'Aufgabenliste',
-      };
-
-      const options = createListOptions({}, { styles: ['unordered', 'checklist'] }, germanDictionary);
-      const list = new List(options);
-      const settings = toMenuArray(list.renderSettings());
-
-      expect(settings).toHaveLength(2);
-      expect(settings[0].title).toBe('Aufzählung');
-      expect(settings[1].title).toBe('Aufgabenliste');
+  describe('block menu', () => {
+    it('has no style rows: a style change goes through Turn into', () => {
+      expect('renderSettings' in new List(createListOptions({}))).toBe(false);
     });
   });
 

@@ -124,6 +124,23 @@ describe('row page backlinks', () => {
     drawer.destroy();
   });
 
+  // notion-motion.md Round 56 §8: Notion's list opens at the button's bottom (button 48 + 28, list at 76), no gap.
+  it('opens the list touching the button\'s bottom', () => {
+    const drawer = new DatabaseCardDrawer(createOptions({ backlinks: () => [link('r2', 'Bravo')] }));
+
+    drawer.open(ROW);
+    const trigger = button();
+
+    if (trigger === null) throw new Error('no backlinks button');
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 831, y: 48, width: 94, height: 28 }));
+    trigger.click();
+
+    const list = q('[data-blok-database-backlinks-heading]')?.closest<HTMLElement>('[data-blok-popover]');
+
+    expect(list?.style.top).toBe('76px');
+    drawer.destroy();
+  });
+
   // notion-spec-2 §18.1: a page with no emoji shows Notion's pageEmpty, not a page with text lines.
   it('draws the empty page before a linked page with no emoji', () => {
     const drawer = new DatabaseCardDrawer(createOptions({ backlinks: () => [link('r2', 'Bravo')] }));

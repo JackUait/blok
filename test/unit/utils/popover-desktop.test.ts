@@ -454,6 +454,64 @@ describe('PopoverDesktop', () => {
 
       expect(instance.nodes.scrollbarThumb.style.transform).toBe('translateY(140px)');
     });
+
+    it('tracks a scroller an item declares inside the list, so what sits above it stays put', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const scroller = document.createElement('div');
+
+      scroller.setAttribute('data-blok-popover-scroller', '');
+      instance.nodes.items.append(scroller);
+      Object.defineProperty(scroller, 'offsetParent', { configurable: true, get: () => instance.nodes.items });
+      Object.defineProperty(instance.nodes.items, 'offsetParent', { configurable: true, get: () => instance.nodes.popoverContainer });
+
+      // The list itself does not overflow; the scroller inside it does.
+      stubScrollMetrics(instance.nodes.items, { clientHeight: 300, scrollHeight: 300, scrollTop: 0, offsetTop: 8 });
+      stubScrollMetrics(scroller, { clientHeight: 200, scrollHeight: 400, scrollTop: 200, offsetTop: 40 });
+      instance.updateScrollbar();
+
+      // Thumb 100 tall at the end of its 100px travel, under the 8px + 40px above the scroller.
+      expect(instance.nodes.scrollbarThumb.hidden).toBe(false);
+      expect(instance.nodes.scrollbarThumb.style.height).toBe('100px');
+      expect(instance.nodes.scrollbarThumb.style.transform).toBe('translateY(148px)');
+    });
+
+    it('moves the thumb when the declared scroller scrolls', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const scroller = document.createElement('div');
+      const metrics = { clientHeight: 200, scrollHeight: 400, scrollTop: 0, offsetTop: 0 };
+
+      scroller.setAttribute('data-blok-popover-scroller', '');
+      instance.nodes.items.append(scroller);
+      stubScrollMetrics(instance.nodes.items, { clientHeight: 300, scrollHeight: 300, scrollTop: 0 });
+      stubScrollMetrics(scroller, metrics);
+      instance.updateScrollbar();
+
+      expect(instance.nodes.scrollbarThumb.style.transform).toBe('translateY(0px)');
+
+      metrics.scrollTop = 100;
+      scroller.dispatchEvent(new Event('scroll'));
+
+      expect(instance.nodes.scrollbarThumb.style.transform).toBe('translateY(50px)');
+      expect(instance.nodes.items).toHaveAttribute('data-blok-scrolling');
+    });
+
+    it('ignores a declared scroller that is hidden and goes back to the list', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const scroller = document.createElement('div');
+
+      scroller.setAttribute('data-blok-popover-scroller', '');
+      scroller.hidden = true;
+      instance.nodes.items.append(scroller);
+      stubScrollMetrics(instance.nodes.items, { clientHeight: 200, scrollHeight: 400, scrollTop: 0 });
+      stubScrollMetrics(scroller, { clientHeight: 0, scrollHeight: 0, scrollTop: 0 });
+      instance.updateScrollbar();
+
+      expect(instance.nodes.scrollbarThumb.hidden).toBe(false);
+      expect(instance.nodes.scrollbarThumb.style.height).toBe('100px');
+    });
   });
 
   describe('setTriggerItemPosition', () => {
@@ -1230,6 +1288,53 @@ describe('PopoverDesktop', () => {
       // Trigger left 520 in the parent-root space (280); top stays under the card.
       expect(nestedContainer.style.left).toBe('240px');
       expect(nestedContainer.style.top).toBe('114px');
+    });
+
+    it('drops an over-placement nested popover from its trigger item, over the rest of the parent', () => {
+      const popover = createPopover({
+        items: [
+          {
+            title: 'Parent',
+            name: 'parent',
+            children: {
+              placement: 'over',
+              items: [ { title: 'Child', name: 'child', onActivate: vi.fn() } ],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
+        createRect({ left: 300, top: 200, right: 640, bottom: 290, width: 340, height: 90 })
+      );
+      vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
+        createRect({ left: 280, top: 180, right: 660, bottom: 300, width: 380, height: 120 })
+      );
+
+      const parentItem = instance.items.find(
+        (item): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.hasChildren
+      );
+      const parentElement = parentItem?.getElement();
+
+      expect(parentElement).toBeInstanceOf(HTMLElement);
+
+      if (parentItem === undefined || !(parentElement instanceof HTMLElement)) {
+        return;
+      }
+
+      vi.spyOn(parentElement, 'getBoundingClientRect').mockReturnValue(
+        createRect({ left: 520, top: 210, right: 560, bottom: 250, width: 40, height: 40 })
+      );
+
+      instance.showNestedPopoverForItem(parentItem);
+
+      const nestedContainer = (instance.nestedPopover as unknown as PopoverDesktopInternal).nodes.popoverContainer;
+
+      // 4px under the trigger's bottom (250), not the parent's (290); root top is 180.
+      expect(nestedContainer.style.top).toBe('74px');
+      expect(nestedContainer.style.left).toBe('240px');
+      expect(instance.nestedPopover?.getElement().getAttribute('data-side')).toBe('bottom');
     });
 
     it('closes the nested popover once the grace delay elapses on container chrome that is no item', () => {

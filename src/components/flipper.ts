@@ -68,7 +68,7 @@ export interface FlipperOptions {
 }
 
 /** Gets the physical arrow; RTL is not mapped. */
-export type ArrowTarget = (arrow: 'up' | 'down' | 'left' | 'right', index: number, count: number) => number | undefined;
+export type ArrowTarget = (arrow: 'up' | 'down' | 'left' | 'right', index: number, count: number, items: readonly HTMLElement[]) => number | undefined;
 
 const ARROW_NAMES: Readonly<Record<number, 'up' | 'down' | 'left' | 'right'>> = {
   [keyCodes.UP]: 'up',
@@ -321,7 +321,7 @@ export class Flipper {
     }
     const items = iterator.getItems();
     const current = iterator.currentItem;
-    const next = this.arrowTarget(ARROW_NAMES[keyCode], current === null ? -1 : items.indexOf(current), items.length);
+    const next = this.arrowTarget(ARROW_NAMES[keyCode], current === null ? -1 : items.indexOf(current), items.length, items);
 
     if (next === undefined) {
       return false;

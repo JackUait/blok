@@ -1099,8 +1099,18 @@ export class PopoverDesktop extends PopoverAbstract {
       return false;
     }
 
-    if (!this.nestedPopover.closeDeepestNested()) {
-      this.destroyNestedPopoverIfExists(true);
+    if (this.nestedPopover.closeDeepestNested()) {
+      return true;
+    }
+
+    // A list's search field holds DOM focus; removing it would drop focus to <body>.
+    const hadFocus = this.nestedPopover.getElement().contains(document.activeElement);
+
+    this.destroyNestedPopoverIfExists(true);
+    if (hadFocus && this.search !== undefined) {
+      this.search.focus();
+    } else if (hadFocus) {
+      this.nodes.items?.focus({ preventScroll: true });
     }
 
     return true;
@@ -1954,7 +1964,9 @@ export class PopoverDesktop extends PopoverAbstract {
       const button = triggerItem.childrenPlacement === 'dropdown' ? this.dropdownButtonRect(triggerItem) : undefined;
       // 'under' drops from the row itself, its end edge on the row's (notion-spec-2 §16.1).
       const under = triggerItem.childrenPlacement === 'under' ? triggerItem.getElement()?.getBoundingClientRect() : undefined;
-      const flush = button ?? under;
+      // 'over' drops from the item too, start edges together, and covers the parent under it.
+      const over = triggerItem.childrenPlacement === 'over' ? triggerItem.getElement()?.getBoundingClientRect() : undefined;
+      const flush = button ?? under ?? over;
       const anchor = flush ?? triggerItem.getElement()?.getBoundingClientRect();
       const leftAligned = anchor?.left ?? parentRect.left;
       const rightAligned = (anchor?.right ?? parentRect.right) - nestedWidth;
@@ -1968,7 +1980,7 @@ export class PopoverDesktop extends PopoverAbstract {
         nestedHeight,
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
-        gap: flush === undefined ? undefined : 0,
+        gap: flush === undefined || over !== undefined ? undefined : 0,
         margin,
       });
 
@@ -2128,7 +2140,14 @@ export class PopoverDesktop extends PopoverAbstract {
       container.style.minWidth = this.params.minWidth ?? '';
     }
 
-    document.body.appendChild(popoverClone);
+    // A submenu is styled through its parent menu (the block menu pads its
+    // submenus). Measured alone in the body it loses those rules and --width
+    // comes out short by the missing padding.
+    const cloneHost = this.nodes.popover.hasAttribute(DATA_ATTR.nested)
+      ? this.nodes.popover.parentElement ?? document.body
+      : document.body;
+
+    cloneHost.appendChild(popoverClone);
 
     size.height = container.offsetHeight;
     // offsetWidth rounds to the nearest pixel. Rounding down locks --width a

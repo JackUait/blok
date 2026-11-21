@@ -2,7 +2,6 @@ import { ConversionConfig, PasteConfig, SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructable, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
 import { RichText } from '../rich-text';
-import { MenuConfig } from './menu-config';
 import { ToolboxConfig } from './tool-settings';
 
 /**
@@ -49,8 +48,8 @@ export interface ListConfig {
   /** Default list style */
   defaultStyle?: ListStyle;
   /**
-   * Available list styles for the settings menu.
-   * When specified, only these styles will be available in the block settings dropdown.
+   * List styles a block may turn into.
+   * When specified, "Turn into" offers only these styles.
    */
   styles?: ListStyle[];
   /**
@@ -114,11 +113,6 @@ export declare class List implements BlockTool {
    * Return Tool's view
    */
   render(): HTMLElement;
-
-  /**
-   * Returns list block tunes config
-   */
-  renderSettings(): MenuConfig;
 
   /**
    * Method that specified how to merge two List blocks.

@@ -170,6 +170,8 @@ class FilterChipPages {
   private trackedRoot: HTMLElement | undefined;
   /** The simple popover's day field as last drawn, with the text it was drawn with. */
   private dayField: { input: HTMLInputElement; shown: string } | undefined;
+  /** Runs after "Add to advanced filter" closes the popover. */
+  afterToAdvanced: (() => void) | undefined;
 
   constructor(ctx: ViewSettingsContext, filterId: string, writer?: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void) {
     this.ctx = ctx;
@@ -461,7 +463,7 @@ class FilterChipPages {
       panelRow({
         label: this.t('filterAddToAdvanced'),
         testId: 'database-filter-to-advanced',
-        onClick: () => pick(() => {
+        onClick: (event) => pick(() => {
           const filter = this.current();
 
           if (filter === undefined) return;
@@ -472,6 +474,11 @@ class FilterChipPages {
             filterTree: addFilterRule(tree, tree.id, { id: nanoid(), propertyId: filter.propertyId, operator: filter.operator, value: filter.value }),
           });
           panel.close();
+          this.afterToAdvanced?.();
+
+          // notion-motion.md Round 87 §1 #12 (r87-n-chip-addadv.raw): a click leaves focus on the body. A key press
+          // keeps it in the advanced filter, where opening put it.
+          return event.detail === 0 && document.activeElement instanceof HTMLElement ? document.activeElement : false;
         }),
       }),
     ], { beside: MORE_FLYOUT_GAP });
@@ -514,12 +521,18 @@ class FilterChipPages {
       case 'lastEditedTime':
         return this.dateControls(operator, value);
       case 'number':
-      case 'uniqueId':
-        return [this.valueInput(typeof value === 'number' ? String(value) : '', (text) => {
+      case 'uniqueId': {
+        const input = this.valueInput(typeof value === 'number' ? String(value) : '', (text) => {
           const n = Number(text);
 
           this.update({ value: text.trim() === '' || !Number.isFinite(n) ? null : n }, true, true);
-        })];
+        });
+
+        // database.css: Notion's Number and ID value rows have 4px more below them (Round 88 §1 #3, Round 89 §1 #7).
+        input.setAttribute('data-blok-database-filter-number-value', '');
+
+        return [input];
+      }
       case 'files':
       case 'formula':
       case 'rollup':
@@ -1085,12 +1098,21 @@ const CHIP_POPOVER_WINDOW_MARGIN = 8;
  * Opens a filter chip's popover under the chip. With `host` it is a flyout
  * over that panel, which stays open under it (the settings Filters page).
  */
-export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, filterId: string, onClose?: (escape: boolean) => void, host?: DatabasePanel): DatabasePanel => {
+export const openFilterChip = (
+  anchor: HTMLElement,
+  ctx: ViewSettingsContext,
+  filterId: string,
+  onClose?: (escape: boolean) => void,
+  host?: DatabasePanel,
+  afterToAdvanced?: () => void
+): DatabasePanel => {
   const filter = withEntryIds(ctx.view().filters).find((f) => f.id === filterId);
   const property = ctx.schema().find((p) => p.id === filter?.propertyId);
   // A rollup of the Name has a text field, as Notion's 220-wide popover shows (r13-filter-ops-rollup.png).
   const listed = property !== undefined && filter !== undefined && LIST_FILTER_TYPES.includes(property.type) && !isQuantifiedText(property, filter.operator);
   const pages = new FilterChipPages(ctx, filterId);
+
+  pages.afterToAdvanced = afterToAdvanced;
   const panel = new DatabasePanel({
     anchor,
     root: pages.root(),

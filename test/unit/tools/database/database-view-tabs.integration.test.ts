@@ -213,6 +213,21 @@ describe('view tabs (feel/findings-toolbar)', () => {
       expect(menuItem('database-view-delete').textContent).toContain('Delete view');
     });
 
+    // notion-motion.md Round 94 §1 #4: Table and Board both focus the panel's Close button.
+    it.each([
+      ['table', table('v1', 'a0')],
+      ['board', table('v1', 'a0', { type: 'board', name: 'Board' })],
+    ])('Edit view on a %s focuses View settings\' Close button', async (_layout, view) => {
+      await make(doc([view, table('v2', 'a1')]));
+
+      tab('v1').click();
+      await quiet();
+      menuItem('database-view-edit').click();
+      await quiet();
+
+      expect(settingsPanel()?.querySelector('[data-blok-testid="database-panel-close"]')).toHaveFocus();
+    });
+
     it('Copy link to view copies the link of the view it was opened on', async () => {
       const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);
 

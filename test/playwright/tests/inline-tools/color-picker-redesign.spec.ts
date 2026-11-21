@@ -61,7 +61,8 @@ test('block colors, recents and the default swatch stay independent per axis', a
   });
 
   await expect.poll(data).toMatchObject({ textColor: 'red', backgroundColor: 'blue' });
-  await expect(picker.getByTestId('block-color-section-recent')).toBeVisible();
+  // Recently used waits for the next open, so nothing shuffles under the pointer.
+  await expect(picker.getByTestId('block-color-section-recent')).toHaveCount(0);
   await picker.getByTestId('block-color-swatch-backgroundColor-default').click();
   await expect.poll(data).toMatchObject({ textColor: 'red' });
   await expect.poll(async () => (await data()).backgroundColor).toBeUndefined();

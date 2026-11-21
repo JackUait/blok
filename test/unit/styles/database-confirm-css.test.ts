@@ -73,6 +73,11 @@ describe('database confirm dialog css', () => {
     expect(body).toContain('text-align: center');
   });
 
+  // notion-motion.md Round 78 §2: the Delete option confirm's title is 16px/600.
+  it('sets the title at 600 on a dialog marked bold', () => {
+    expect(ruleBody(database, '[data-blok-database-confirm-dialog][data-bold-title] [data-blok-database-confirm-title]')).toContain('font-weight: 600');
+  });
+
   // research/26 §5a reads 17px/22px on "Delete the last view…"; research/10 §5 reads 17px on Reset.
   it('grows the title to 17px/22px on a dialog marked large', () => {
     const body = ruleBody(database, '[data-blok-database-confirm-dialog][data-large-title] [data-blok-database-confirm-title]');

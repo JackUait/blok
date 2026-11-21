@@ -30,10 +30,12 @@ export interface PropertyPickerOptions {
   placeholder: string;
   footer?: (close: () => void) => HTMLElement;
   used?: string[];
-  /** Opens over an open panel, which stays: this width and height cap, flush under the anchor. */
-  over?: { width: number; maxHeight: number };
+  /** Opens over an open panel, which stays: this fixed box, flush under the anchor, or flush above it when it does not fit under. */
+  over?: { width: number; height: number };
   /** Space under the anchor when not `over`; the panel's usual gap when unset. */
   gap?: number;
+  /** How close to the window's top and bottom it may slide; the panel's usual 12 when unset. */
+  verticalMargin?: number;
   onClose: (escape: boolean) => void;
 }
 
@@ -128,11 +130,12 @@ export const propertyPicker = (options: PropertyPickerOptions): DatabasePanel =>
     width: options.over?.width ?? 290,
     backLabel: options.i18n.t('tools.database.settingsBack'),
     ...(options.gap !== undefined ? { gap: options.gap } : {}),
-    ...(options.over !== undefined ? { gap: 0 } : {}),
+    ...(options.over !== undefined ? { gap: 0, flip: true } : {}),
+    ...(options.verticalMargin !== undefined ? { verticalMargin: options.verticalMargin } : {}),
     onClose: options.onClose,
   });
 
-  if (options.over !== undefined) panel.root.style.maxHeight = `${options.over.maxHeight}px`;
+  if (options.over !== undefined) panel.root.style.height = `${options.over.height}px`;
 
   return panel;
 };
@@ -166,6 +169,7 @@ export const sortEditor = (options: SortEditorOptions): DatabasePanel => {
   /**
    * notion-motion.md Rounds 10-11: "Add sort" opens a 280x287 picker of its
    * own, flush under the row and left-aligned to it, with its search focused.
+   * Round 52 §4: with no room under the row it opens above, its bottom on the row.
    * The sort panel stays open under it; a property already sorted is left out.
    */
   const openAddPicker = (sortPanel: DatabasePanel): void => {
@@ -180,6 +184,7 @@ export const sortEditor = (options: SortEditorOptions): DatabasePanel => {
     state.addPicker = propertyPicker({
       anchor: row,
       testId: 'database-sort-add-picker',
+      kind: 'sort',
       types: SORTABLE_TYPES,
       schema: options.schema,
       i18n: options.i18n,
@@ -189,7 +194,7 @@ export const sortEditor = (options: SortEditorOptions): DatabasePanel => {
       },
       placeholder: t('settingsSearchProperty'),
       used: sorts().map((sort) => sort.propertyId),
-      over: { width: ADD_SORT_PICKER_WIDTH, maxHeight: ADD_SORT_PICKER_HEIGHT },
+      over: { width: ADD_SORT_PICKER_WIDTH, height: ADD_SORT_PICKER_HEIGHT },
       // An outside press keeps the focus it made.
       onClose: (escape) => {
         state.addPicker = null;
@@ -205,6 +210,8 @@ export const sortEditor = (options: SortEditorOptions): DatabasePanel => {
     root: {
       // database.css: the measured rule spacing (r35:497-509).
       name: 'sort',
+      // Notion's panel sizes to its words, so no label is cut; the popover box grows with it when a rule is added (Round 91 §1 #4).
+      fitContent: true,
       build: (current) => {
         const schema = options.schema();
         const all = sorts();
@@ -312,13 +319,8 @@ export const sortEditor = (options: SortEditorOptions): DatabasePanel => {
     },
   });
 
-  // Notion's panel sizes to its words, so no label is cut.
-  panel.root.style.width = 'max-content';
-  if (options.compact === true) {
-    panel.root.setAttribute('data-blok-database-sort-compact', '');
-    // r27-pm-sortpop.raw: 290 wide, with room to spare after the direction button.
-    panel.root.style.minWidth = '290px';
-  }
+  // r27-pm-sortpop.raw: the compact panel is 290 wide, the fitContent floor, with room to spare after the direction button.
+  if (options.compact === true) panel.root.setAttribute('data-blok-database-sort-compact', '');
 
   return panel;
 };

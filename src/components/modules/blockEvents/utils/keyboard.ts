@@ -17,6 +17,39 @@ export const isInsideKeyboardOwner = (target: EventTarget | null): boolean => {
   return target.closest(`[${DATA_ATTR.keyboardOwner}]`) !== null;
 };
 
+const CONTROL_TAGS = new Set(['BUTTON', 'SELECT', 'SUMMARY']);
+
+const CONTROL_ROLES = new Set([
+  'button', 'link', 'menuitem', 'menuitemcheckbox', 'menuitemradio',
+  'checkbox', 'radio', 'switch', 'tab', 'option',
+]);
+
+/**
+ * True when the focused element is a control that is not a text field: a
+ * button, link, select, summary or an element with a control role. The key
+ * belongs to it (Enter clicks it), not to Blok's block editing.
+ * The check is on the target itself: inside a contenteditable the target is
+ * the editing host, so a link inside text never matches.
+ * @param target - the event target to test (`event.target`)
+ */
+export const isFocusedControl = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  const editable = target.getAttribute('contenteditable');
+
+  if (editable !== null && editable !== 'false') {
+    return false;
+  }
+
+  if (CONTROL_TAGS.has(target.tagName) || (target.tagName === 'A' && target.hasAttribute('href'))) {
+    return true;
+  }
+
+  return CONTROL_ROLES.has(target.getAttribute('role') ?? '');
+};
+
 /**
  * Convert KeyboardEvent.key or code to the legacy numeric keyCode
  * @param event - keyboard event

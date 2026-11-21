@@ -26,6 +26,9 @@ const CATALOG_ONLY_KEYS = new Set([
   // in the catalog rather than deleted from all locales — same rationale as
   // tools.bookmark.error above.
   'emoji.nothingFound',
+  // The heading block menu lost its "Heading" label with the level buttons.
+  // Kept for public BlokMessageKey compatibility: it shipped in 2.1.0.
+  'toolNames.heading',
   // The code language picker lost its Suggested section to family groups.
   // Kept for public BlokMessageKey compatibility: it shipped in 2.1.0.
   'tools.code.suggested',
@@ -299,7 +302,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2251 + 146 + 601 + 11 closure for all 3009 keys', () => {
+  it('rebuilds a disjoint 2260 + 146 + 610 + 12 closure for all 3028 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -313,7 +316,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(3009);
+    expect(lifecycle.size).toBe(3028);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -585,7 +588,11 @@ describe('current English catalog lifecycle coverage', () => {
       // -1: the database block menu now reads tools.database.turnIntoPage through its tools.database. prefix (see registered-namespace-compatible).
       // +2: the database block's Delete prompt calls trashDatabaseConfirm and its description by literal.
       // +2: Duplicate's submenu calls blockSettings.duplicateWithContent and duplicateWithoutContent by literal.
-      'executable-literal': 2251,
+      // +3: the form builder calls formDeleteOption, formCheckboxLabelPlaceholder and formDropdownHint by literal.
+      // +1: the link field calls tools.link.webPage by literal for web addresses.
+      // +3: the link field calls its three refusal reasons (tools.link.invalidSpaces, invalidUnsafe, invalidKind) by literal.
+      // -1: tools.database.groupWeekOf, now that a week group reads Intl's day range; still shipped.
+      'executable-literal': 2260,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -705,11 +712,14 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: tools.database.changeCover lost its literal caller; it shipped in 2.1.0, so it stays.
       // +1: tools.database.turnIntoPage, via the database block menu's prefix.
       // +2: trashDataSourcesConfirmDescription_one/_other, the database Delete prompt's plural text for 2+ data sources.
-      'registered-namespace-compatible': 601,
+      // +6: the database Locked button's label, Re-lock, both unlock rows and its two hint lines, via the tools.database. prefix.
+      // +1: tools.database.subGroupBy, the Sub-group page's "Sub-group by", via the panel's prefix.
+      // +1: tools.database.groupWeekOf, above.
+      'registered-namespace-compatible': 610,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
       // +2: tools.database.rowLastEditedBy and rowWordCount, above.
-      'catalog-only': 11,
+      'catalog-only': 12,
     });
     expect(
       [...lifecycle.entries()]

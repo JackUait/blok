@@ -94,7 +94,7 @@ describe('block-color foundation', () => {
       expect(picker.querySelector('[data-blok-testid="block-color-section-backgroundColor"]')).not.toBeNull();
     });
 
-    it('marks the active swatch from data and the Default when unset', () => {
+    it('marks the active row from data and the Default when unset', () => {
       const tunes = buildBlockColorTunes({ data: { textColor: 'purple' }, i18n, onPick: vi.fn() });
       const picker = pickerElement(tunes);
 
@@ -102,10 +102,13 @@ describe('block-color foundation', () => {
       const textDefault = picker.querySelector('[data-blok-testid="block-color-swatch-textColor-default"]');
       const bgDefault = picker.querySelector('[data-blok-testid="block-color-swatch-backgroundColor-default"]');
 
-      expect(purple?.classList.contains('ring-2')).toBe(true);
-      expect(textDefault?.classList.contains('ring-2')).toBe(false);
+      expect(purple?.getAttribute('aria-pressed')).toBe('true');
+      expect(purple?.lastElementChild).not.toHaveAttribute('hidden');
+      expect(textDefault?.getAttribute('aria-pressed')).toBe('false');
+      expect(textDefault?.lastElementChild).toHaveAttribute('hidden');
       // background unset → its Default is active
-      expect(bgDefault?.classList.contains('ring-2')).toBe(true);
+      expect(bgDefault?.getAttribute('aria-pressed')).toBe('true');
+      expect(bgDefault?.lastElementChild).not.toHaveAttribute('hidden');
     });
 
     it('calls onPick with the field + preset name, and undefined for Default', () => {

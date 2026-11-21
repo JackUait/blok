@@ -196,7 +196,8 @@ export interface BlockTool extends BaseTool {
    * Ids of blocks under this one that are its content, such as a database's
    * rows. When it returns any, the block menu's Duplicate offers "Duplicate
    * without content" (Cmd/Ctrl+Shift+D on the selected block), which copies
-   * the block without them and without the blocks under them.
+   * the block without them and without the blocks under them. Cmd/Ctrl+Shift+D
+   * works on any block whose tool has this method, even when it returns none.
    */
   contentBlockIds?(): string[];
 
@@ -226,7 +227,10 @@ export interface BlockTool extends BaseTool {
   /**
    * True while the user has locked this block, like a locked database. Its
    * block menu then leaves out Duplicate, Move to and Delete; Copy link and
-   * the tool's own items stay. Asked each time the menu opens. A throw
+   * the tool's own items stay. Asked each time the menu opens, and again
+   * after a menu switch runs: a change rebuilds the open menu. While it is
+   * selected, Backspace, Delete, Cmd+D and Cmd+Shift+D do nothing, and a
+   * drag from its handle offers no drop. A cut still removes it. A throw
    * counts as true.
    */
   isLocked?(): boolean;

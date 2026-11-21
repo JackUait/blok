@@ -371,7 +371,8 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       cell.setAttribute('data-blok-database-calendar-day', '');
       cell.setAttribute('data-day', dayIso);
       cell.setAttribute('role', 'gridcell');
-      // notion-motion.md Round 96 §1 #2: Tab skips the days and lands on the events. Arrows still walk the days.
+      // notion-motion.md Round 96 §1 #2, Round 97 §1 #3: Tab skips the days, and arrows never step in from an event.
+      // A day takes focus only from a pointer; arrows walk the days from there.
       cell.tabIndex = -1;
       if (dayIso === this.options.today) {
         cell.setAttribute('data-today', '');
@@ -665,14 +666,20 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       return;
     }
 
-    const dayEl = onEvent ? target?.closest('[data-blok-database-calendar-day]') : target;
-    const dayIso = dayEl?.hasAttribute('data-blok-database-calendar-day') === true ? dayEl.getAttribute('data-day') : null;
+    // notion-motion.md Round 97 §1 #3: arrows on a focused event do nothing, and the page does not scroll.
+    if (onEvent) {
+      if (event.key.startsWith('Arrow')) event.preventDefault();
+
+      return;
+    }
+
+    const dayIso = target?.hasAttribute('data-blok-database-calendar-day') === true ? target.getAttribute('data-day') : null;
 
     if (dayIso === null || dayIso === undefined) {
       return;
     }
 
-    if (!onEvent && event.key === 'Enter') {
+    if (event.key === 'Enter') {
       const first = this.rowsOn(dayIso)[0];
 
       event.preventDefault();

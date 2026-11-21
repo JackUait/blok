@@ -727,13 +727,18 @@ describe('DatabaseCalendarView', () => {
       expect(handlers.openRow).toHaveBeenCalledExactlyOnceWith('r1');
     });
 
-    it('steps from a focused event to the days with the arrow keys', () => {
-      const { root } = mount();
+    // notion-motion.md Round 97 §1 #3: arrows on a focused event do nothing, and the page does not scroll.
+    it.each(['ArrowDown', 'ArrowRight', 'ArrowLeft', 'ArrowUp'])('keeps focus on a focused event on %s', (name) => {
+      const { root, handlers } = mount();
+      const event = events(root, 'r1')[0];
+      const press = new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true });
 
-      events(root, 'r1')[0].focus();
-      key(document.activeElement ?? root, 'ArrowRight');
+      event.focus();
+      event.dispatchEvent(press);
 
-      expect(day(root, '2026-10-10')).toHaveFocus();
+      expect(event).toHaveFocus();
+      expect(press.defaultPrevented).toBe(true);
+      expect(handlers.navigate).not.toHaveBeenCalled();
     });
 
     it('moves between days with the arrow keys', () => {

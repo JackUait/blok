@@ -168,10 +168,11 @@ const MENU_GAP = 4;
 const SIDE_MENU_PLACE = { gap: -4, bottom: 12 };
 /**
  * notion-motion.md Round 55 §4: the Remind menu overlaps the picker's edge by 4px.
- * Which side it takes was read only once (left, with no room on the right), so
- * the side is still chosen as if it sat 4px clear. Round 57 §8: it stays 12px above the window bottom.
+ * Round 104 §1 #3: it stays on the end side while its drawn edge is 12 inside the window.
+ * The start side's fit was read only once, so it is still chosen as if it sat 4px clear.
+ * Round 57 §8: it stays 12px above the window bottom.
  */
-const REMIND_MENU_PLACE = { gap: -4, bottom: 12, fitGap: MENU_GAP };
+const REMIND_MENU_PLACE = { gap: -4, bottom: 12, fitGap: MENU_GAP, edge: 12 };
 
 type MenuKind = 'remind' | 'dateFormat' | 'timeFormat' | 'timeZone';
 
@@ -921,7 +922,7 @@ class DateEditor {
   }
 
   /** Beside the picker on its end side, else its start side, else kept inside the window; level with the row, kept `place.bottom` above the window bottom. */
-  private placeMenu(row: HTMLElement, menu: HTMLElement, place: { gap: number; bottom: number; fitGap?: number }): void {
+  private placeMenu(row: HTMLElement, menu: HTMLElement, place: { gap: number; bottom: number; fitGap?: number; edge?: number }): void {
     const box = this.root.getBoundingClientRect();
     const rowBox = row.getBoundingClientRect();
     const width = menu.offsetWidth;
@@ -934,7 +935,11 @@ class DateEditor {
       return rtl ? [left, right] : [right, left];
     };
     const sides = sidesAt(place.gap);
-    const fit = sidesAt(place.fitGap ?? place.gap).findIndex((side) => side >= 0 && side + width <= window.innerWidth);
+    const fitSides = sidesAt(place.fitGap ?? place.gap);
+    // With `edge`, the drawn menu must end that far inside the window's right edge.
+    const fit = fitSides.findIndex((side, i) => side >= 0 && (place.edge === undefined
+      ? side + width <= window.innerWidth
+      : sides[i] + width <= window.innerWidth - place.edge));
     const x = fit >= 0 ? sides[fit] : Math.max(0, Math.min(sides[1], window.innerWidth - width));
     const top = Math.max(0, Math.min(rowBox.top, window.innerHeight - height - place.bottom));
 

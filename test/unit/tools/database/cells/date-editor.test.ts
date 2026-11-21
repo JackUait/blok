@@ -1115,6 +1115,23 @@ describe('date cell editor', () => {
       expect(document.querySelector<HTMLElement>('[data-blok-database-date-remind-menu]')?.style.left).toBe('772px');
     });
 
+    // notion-motion.md Round 104 §1 #3 (r104-n-remind-side-*.raw): a 248 picker at 1006 draws the 250 menu to 1500,
+    // on the right; at 1007 it would end at 1501, past the window less 12, so it opens on the left at 761.
+    it.each([
+      [1006, '1250px'],
+      [1007, '761px'],
+    ])('with the picker at %i opens the Remind menu at %s', (x, left) => {
+      vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
+      vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+      vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(250);
+      vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(297);
+      openRows('2026-10-09T14:00');
+      vi.spyOn(document.querySelector<HTMLElement>('[data-blok-database-date-editor]') ?? document.body, 'getBoundingClientRect').mockReturnValue(new DOMRect(x, 205, 248, 500));
+      q('[data-blok-database-date-remind]').click();
+
+      expect(document.querySelector<HTMLElement>('[data-blok-database-date-remind-menu]')?.style.left).toBe(left);
+    });
+
     // notion-motion.md Round 83 §1 (r83-n-date-format.raw, r83-n-date-timefmt.raw): with the picker at 1118, the
     // 180 wide menus sit at 942..1122, over its edge by 4. Date format (181 tall, row at 541) ends at 705, 12 above a
     // 717 window; Time format (94 tall) stays level with its row at 541.

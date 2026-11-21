@@ -428,7 +428,17 @@ describe('minimized database toolbar', () => {
     expect(rule).toContain('transition: background-color 0.1s ease-in-out, opacity 0s 0.2s, pointer-events 0s 0.2s allow-discrete');
   });
 
-  // notion-motion.md Round 101 §1 #2, §3, Round 102 §1 #1-#3: with a sort, filters or no rule, Notion mounts » while the
+  // notion-motion.md Round 102 §1 #1, #2: with a sort or filters » shows the same way, in a view bar and a title row.
+  // It keeps its room, so the tab fold leaves space for it as it did while » always showed.
+  it('hides a » kept for a chip bar until the pointer or a keyboard focus is on the controls, 200ms after they leave', () => {
+    const rule = body(database, `:is([data-blok-database-view-bar], [data-blok-database-title-row]) > ${TOOLBAR}:not(:hover):not(:has(> :focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="bar"]`);
+
+    expect(rule).toContain('opacity: 0');
+    expect(rule).toContain('pointer-events: none');
+    expect(rule).toContain('transition: background-color 0.1s ease-in-out, opacity 0s 0.2s, pointer-events 0s 0.2s allow-discrete');
+  });
+
+  // notion-motion.md Round 101 §1 #2, §3, Round 102 §1 #3: with no rule, Notion mounts » while the
   // pointer is on the controls, with no fade, and drops it ~200ms after the pointer leaves.
   describe('» on hover, with the search closed', () => {
     const IDLE = '[data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"]';

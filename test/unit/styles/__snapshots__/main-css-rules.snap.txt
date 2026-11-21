@@ -15736,7 +15736,7 @@ button[data-blok-database-table-group-count]:hover {
   align-self: stretch;
 }
 
-[data-blok-database-view-bar] > [data-blok-database-view-toolbar]:not(:hover):not(:has(> :not([data-blok-database-search-input]):focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only=""] {
+[data-blok-database-view-bar] > [data-blok-database-view-toolbar]:not(:hover):not(:has(> :not([data-blok-database-search-input]):focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only=""], :is([data-blok-database-view-bar], [data-blok-database-title-row]) > [data-blok-database-view-toolbar]:not(:hover):not(:has(> :focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="bar"] {
   opacity: 0;
   pointer-events: none;
   transition: background-color 0.1s ease-in-out, opacity 0s 0.2s, pointer-events 0s 0.2s allow-discrete;

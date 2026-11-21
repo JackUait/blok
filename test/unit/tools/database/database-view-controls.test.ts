@@ -3327,12 +3327,13 @@ describe('DatabaseViewControls', () => {
     };
 
     // notion-motion.md Round 102 §1 #2 (r102-n-minimize-filter-only*.raw): » shows on hover for a bar of filters alone.
+    // It keeps its room, so the tab fold leaves space for it, as before it went hover-only.
     it('keeps a hover-only » for a bar of filters alone', () => {
       withFilter();
       const minimize = q('database-toolbar-minimize');
 
       expect(minimize?.hidden).toBe(false);
-      expect(minimize?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('idle');
+      expect(minimize?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('bar');
     });
 
     // notion-motion.md Round 102 §1 #1 (r102-n-minimize-sort-only.raw, -both.raw): with a sort » is hover-only too.
@@ -3342,7 +3343,7 @@ describe('DatabaseViewControls', () => {
       saved.view = { ...saved.view, sorts: [{ id: 's1', propertyId: 'num', direction: 'asc' }] };
       controls.refresh();
 
-      expect(q('database-toolbar-minimize')?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('idle');
+      expect(q('database-toolbar-minimize')?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('bar');
     });
 
     it('keeps » for a sort on a database with only a title', () => {

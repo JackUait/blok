@@ -1282,8 +1282,10 @@ export class DatabaseViewControls {
     const foldable = searching || this.barShown || this.host.schema().length > 1;
 
     this.minimizeButton.hidden = this.minimized || type === 'form' || type === 'dashboard' || !foldable;
-    // An open search keeps »'s room (database.css), so the folded tabs do not move under the pointer.
-    this.minimizeButton.setAttribute('data-blok-database-toolbar-hover-only', searching ? '' : 'idle');
+    // With an open search or a chip bar » keeps its room (database.css), so the tab fold leaves space for it.
+    const hoverOnly = this.barShown ? 'bar' : 'idle';
+
+    this.minimizeButton.setAttribute('data-blok-database-toolbar-hover-only', searching ? '' : hoverOnly);
   }
 
   /**

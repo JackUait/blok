@@ -17,7 +17,12 @@ declare global {
  */
 const HOLDER_ID = 'blok';
 
-const blocks = (sorts: unknown[]): OutputData['blocks'] => [{
+const MORE_VIEWS = [
+  { id: 'v3', name: 'Gallery', type: 'gallery', position: 'a2', sorts: [], filters: [], properties: [{ id: 't', visible: true }] },
+  { id: 'v4', name: 'Calendar', type: 'calendar', position: 'a3', sorts: [], filters: [], properties: [{ id: 't', visible: true }] },
+];
+
+const blocks = (sorts: unknown[], views: number): OutputData['blocks'] => [{
   id: 'db-1',
   type: 'database',
   data: {
@@ -28,13 +33,14 @@ const blocks = (sorts: unknown[]): OutputData['blocks'] => [{
     views: [
       { id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts, filters: [], properties: [{ id: 't', visible: true, width: 280 }, { id: 'n', visible: true, width: 200 }] },
       { id: 'v2', name: 'List', type: 'list', position: 'a1', sorts: [], filters: [], properties: [{ id: 't', visible: true }] },
+      ...MORE_VIEWS.slice(0, views - 2),
     ],
     activeViewId: 'v1',
   },
   content: [],
 }];
 
-const create = async (page: Page, sorts: unknown[]): Promise<void> => {
+const create = async (page: Page, sorts: unknown[], views: number): Promise<void> => {
   await page.evaluate(async ({ holder, blokBlocks }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
@@ -57,7 +63,26 @@ const create = async (page: Page, sorts: unknown[]): Promise<void> => {
 
     window.blokInstance = blok;
     await blok.isReady;
-  }, { holder: HOLDER_ID, blokBlocks: blocks(sorts) });
+  }, { holder: HOLDER_ID, blokBlocks: blocks(sorts, views) });
+};
+
+/** Widens the holder until the tabs run up to the toolbar, where a » with no room would hide. */
+const packTabs = async (page: Page): Promise<void> => {
+  const packed = await page.evaluate(async (holder) => {
+    const container = document.getElementById(holder);
+    const bar = (): Element | null => document.querySelector('[data-blok-database-view-bar]');
+
+    for (let width = 700; width <= 1500; width += 4) {
+      if (container === null) return false;
+      container.style.width = `${width}px`;
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      if (bar()?.hasAttribute('data-blok-database-fold-minimize') === true) return true;
+    }
+
+    return false;
+  }, HOLDER_ID);
+
+  expect(packed).toBe(true);
 };
 
 test.describe('Database — » Minimize from the keyboard', () => {
@@ -70,9 +95,14 @@ test.describe('Database — » Minimize from the keyboard', () => {
     await gotoTestPage(page);
   });
 
-  for (const [name, sorts] of [['a sort', [{ propertyId: 'n', direction: 'ascending' }]], ['no rule', []]] as const) {
+  const SORT = [{ propertyId: 'n', direction: 'ascending' }];
+  // Four views run the tabs up to the toolbar: a sorted view's » keeps its room there.
+  const cases = [['a sort', SORT, 2], ['a sort and four views', SORT, 4], ['no rule', [], 2]] as const;
+
+  for (const [name, sorts, views] of cases) {
     test(`Shift+Tab from Filter reaches » with ${name}, and Enter moves between » and «`, async ({ page }) => {
-      await create(page, [...sorts]);
+      await create(page, [...sorts], views);
+      if (views > 2) await packTabs(page);
       const minimize = page.getByTestId('database-toolbar-minimize');
       const expand = page.getByTestId('database-toolbar-expand');
       const filter = page.getByTestId('database-toolbar-filter');

@@ -641,6 +641,18 @@ describe('row selection after undo', () => {
     expect(picked(type)).toEqual([]);
   });
 
+  // notion-motion.md Round 95 §1 #5 (r95-n-gallery-drop-esc.raw): a gallery drop focuses the dropped card.
+  it('focuses the dropped gallery card', async () => {
+    const blok = await make('gallery');
+
+    await caretInParagraph(blok);
+    await dragItemToTop('gallery', 'r3');
+
+    expect(itemOf('gallery', 'r3')).toHaveFocus();
+    expect(window.getSelection()?.rangeCount).toBe(0);
+    expect([...document.querySelectorAll(`${ITEM.gallery}[tabindex="0"]`)]).toHaveLength(3);
+  });
+
   // notion-motion.md Round 95 §1 #4: a drop into another board column leaves focus on body.
   it('leaves focus on body after a board drop into another column', async () => {
     const blok = await make('board');

@@ -383,8 +383,8 @@ const seedWins = <T extends DatabaseData | undefined>(data: T): T => {
 /** Groups a board shows before "Load more groups" (research/08). */
 const BOARD_GROUP_PAGE = 10;
 
-/** Items a drop focuses (notion-motion.md Round 94 §1 #3). */
-const LANDED_FOCUS_ITEM = '[data-blok-database-card], [data-blok-database-list-row], [data-blok-database-calendar-event]';
+/** Items a drop focuses (notion-motion.md Round 94 §1 #3, Round 95 §1 #5). */
+const LANDED_FOCUS_ITEM = '[data-blok-database-card], [data-blok-database-list-row], [data-blok-database-calendar-event], [data-blok-database-gallery-card]';
 
 /**
  * notion-motion.md Round 93 §1 #2: a row or card drop clears a caret left in page text and focus goes to body.
@@ -10107,7 +10107,10 @@ export class DatabaseTool implements BlockTool {
     this.placeRow(view, rowId, afterRowId, beforeRowId, context?.owner);
     if (context === undefined) this.rerenderView({ keepDrawer: true });
     else context.redraw();
-    if (gallery) this.landRow(rowId);
+    if (gallery) {
+      this.landRow(rowId);
+      this.focusLandedItem(rowId);
+    }
   }
 
   /** Same as the drawer: a label the user kept goes back as the saved (unlocalized) one. */
@@ -12221,8 +12224,8 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * notion-motion.md Round 94 §1 #3: a Board, List or Calendar drop focuses the dropped item, with no range.
-   * A table drop leaves focus on body (Round 93); Gallery and Timeline are unmeasured.
+   * notion-motion.md Round 94 §1 #3, Round 95 §1 #5: a Board, List, Calendar or Gallery drop focuses the dropped item, with no range.
+   * A table drop leaves focus on body (Round 93), and so does a Timeline drop (Round 95 §2).
    * `day`: a calendar event split across weeks takes focus on the part in that day's week.
    */
   private focusLandedItem(rowId: string, day?: string): void {
@@ -12232,8 +12235,8 @@ export class DatabaseTool implements BlockTool {
     const item = items.find((el) => day !== undefined && el.closest('[data-blok-database-calendar-week]')?.querySelector(`[data-day="${CSS.escape(day)}"]`) != null) ?? items[0];
 
     if (item === undefined) return;
-    // Board cards and list rows keep one tabbable item, so Tab and the arrows go on from here.
-    if (!item.hasAttribute('data-blok-database-calendar-event')) {
+    // Board cards and list rows keep one tabbable item, so Tab and the arrows go on from here. Gallery cards are all tabbable.
+    if (!item.matches('[data-blok-database-calendar-event], [data-blok-database-gallery-card]')) {
       const kind = item.hasAttribute('data-blok-database-card') ? '[data-blok-database-card]' : '[data-blok-database-list-row]';
 
       root?.querySelectorAll<HTMLElement>(kind).forEach((el) => el.setAttribute('tabindex', el === item ? '0' : '-1'));

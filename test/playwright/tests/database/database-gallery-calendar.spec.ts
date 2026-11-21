@@ -876,6 +876,25 @@ test.describe('calendar', () => {
     await expect(drawer(page)).toBeVisible();
   });
 
+  // notion-motion.md Round 96 §1 #2 (r96-n-cal-event-tab.raw): Tab from Next Month lands on the first event, no day cell first.
+  test('Tab from Next month visits each event, then leaves the grid; Space opens the focused event', async ({ page }) => {
+    await mount(page, blocks({ type: 'calendar' }));
+    const grid = page.locator('[data-blok-database-calendar-grid]');
+
+    await page.locator('[data-blok-database-calendar-next]').focus();
+    await page.keyboard.press('Tab');
+    await expect(event(page, 'r1')).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(event(page, 'r2')).toBeFocused();
+    await page.keyboard.press('Tab');
+    expect(await grid.evaluate((el) => el.contains(document.activeElement))).toBe(false);
+
+    await page.keyboard.press('Shift+Tab');
+    await expect(event(page, 'r2')).toBeFocused();
+    await page.keyboard.press('Space');
+    await expect(drawer(page)).toBeVisible();
+  });
+
   test('next, previous and Today navigate, and the range survives a reload for this person', async ({ page }) => {
     await mount(page, blocks({ type: 'calendar' }));
 

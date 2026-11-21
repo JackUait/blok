@@ -3383,7 +3383,7 @@ export class ViewSettingsPages {
       if (tokens.length > 0) label.replaceChildren(...tokens);
     }
     field.append(label);
-    // r20-cc-is-parts.raw: the field ends in a 16x16 ⌄. Other types are unread.
+    // r20-cc-is-parts.raw, r104-n-cc-5types-light.raw: the field ends in a 16x16 ⌄. Other types are unread.
     if (CHEVRON_VALUE_TYPES.includes(property.type)) {
       const chevron = marked(document.createElement('span'), 'data-blok-database-color-rule-chevron');
 
@@ -3653,8 +3653,11 @@ const SELECT_PLACEHOLDER_TYPES: readonly PropertyType[] = [
   'relation', 'createdBy', 'createdTime', 'lastEditedBy', 'lastEditedTime',
 ];
 
-/** notion-motion.md Round 21 §1: the colour rule value types read with a ⌄ at the field's end. */
-const CHEVRON_VALUE_TYPES: readonly PropertyType[] = ['select', 'status', 'multiSelect', 'date', 'checkbox', 'person'];
+/** notion-motion.md Round 21 §1, Round 104 §1 #4: the colour rule value types read with a ⌄ at the field's end. */
+const CHEVRON_VALUE_TYPES: readonly PropertyType[] = [
+  'select', 'status', 'multiSelect', 'date', 'checkbox', 'person',
+  'relation', 'createdBy', 'createdTime', 'lastEditedBy', 'lastEditedTime',
+];
 
 /** notion-motion.md Round 21 §1 (r21-cc-ms-bg.raw): Multi-select's switch reads "Match first option". */
 const matchOptionLabelKey = (property: PropertyDefinition | undefined): string =>

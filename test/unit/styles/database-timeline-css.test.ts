@@ -428,29 +428,30 @@ describe('timeline in dark (research/21 §1i)', () => {
 describe('content inset (side-by-side-4 #2)', () => {
   it('starts the toolbar at the text column, like the table, while the grid stays as wide as the view', () => {
     // Round 46 B: less the 6 the « sits before the column.
-    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5)))');
+    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5) - var(--blok-space-1-5)))');
     expect(ruleBody('[data-blok-database-timeline-scroller]')).not.toMatch(/padding-inline|padding-left/);
   });
 
   it('keeps "+ New" at the text column while the canvas scrolls, measured against the view\'s width', () => {
     expect(ruleBody('[data-blok-database-timeline]')).toMatch(/container(-type)?: [^;]*inline-size/);
-    expect(ruleBody('[data-blok-database-timeline-new-lane] [data-blok-database-timeline-new]')).toContain('inset-inline-start: max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2))');
+    expect(ruleBody('[data-blok-database-timeline-new-lane] [data-blok-database-timeline-new]')).toContain('inset-inline-start: max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)))');
   });
 });
 
 // notion-motion.md Round 41 Part B Timeline (r41-n-empty-tl.png): in a page-wide editor the grid spans x 531-1238.5,
 // the text column plus 8 each side, and › ends with the column. Round 6: with the table panel open the view is full-bleed.
 describe('page-wide editor: the timeline keeps to the text column', () => {
-  const inset = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
+  const lead = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)))';
+  const trail = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)))';
   const closed = '[data-blok-database-timeline]:not(:has(> [data-blok-database-timeline-toolbar] > [data-blok-database-timeline-table-toggle][aria-pressed="true"]))';
   const open = '[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])';
 
   it('narrows the closed-panel view to the column plus 8px each side', () => {
-    expect(ruleBody(closed)).toContain(`margin-inline: max(0px, calc(${inset} - var(--blok-space-2)))`);
+    expect(ruleBody(closed)).toContain(`margin-inline: max(0px, calc(${lead} - var(--blok-space-2))) max(0px, calc(${trail} - var(--blok-space-2)))`);
   });
 
   it('ends the toolbar at the column', () => {
-    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain(`padding-inline-end: ${inset}`);
+    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain(`padding-inline-end: ${trail}`);
   });
 
   it('keeps the open-panel toolbar full-bleed on both sides', () => {
@@ -650,7 +651,7 @@ describe('Hours zoom 15-minute lines and day period (Round 35)', () => {
       expect(toggle).toMatch(/padding:\s*0 var\(--blok-space-1\)/);
       expect(toggle).not.toContain('margin-inline-start');
       // 6 before the text column, never outside a narrow view.
-      expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5)))');
+      expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5) - var(--blok-space-1-5)))');
     });
 
     it('packs ‹, Today and › with no gap', () => {
@@ -790,8 +791,8 @@ describe('timeline toolbar controls hide the group labels under them', () => {
   it('runs the outer boxes to the chart edges while the panel is shut', () => {
     const shut = '[data-blok-database-timeline-toolbar]:not(:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"]))';
 
-    expect(ruleBody(`${shut} > :first-child::before`)).toContain('inset-inline-start: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5))))');
-    expect(ruleBody(`${shut} > :last-child::before`)).toContain('inset-inline-end: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2)))');
+    expect(ruleBody(`${shut} > :first-child::before`)).toContain('inset-inline-start: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5) - var(--blok-space-1-5))))');
+    expect(ruleBody(`${shut} > :last-child::before`)).toContain('inset-inline-end: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5))))');
   });
 });
 

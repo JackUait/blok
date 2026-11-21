@@ -5682,8 +5682,8 @@ span[data-blok-slash-search] {
 
 [data-blok-database-board] {
   padding-top: var(--blok-space-2);
-  padding-left: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-right: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
 [@supports not selector(::-webkit-scrollbar)] [data-blok-database-board] {
@@ -7311,8 +7311,8 @@ button[data-blok-database-board-lane-count]:hover {
 }
 
 [data-blok-database-title] {
-  padding-left: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-right: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
 [data-blok-database-title][data-placeholder]::before {
@@ -7324,7 +7324,7 @@ button[data-blok-database-board-lane-count]:hover {
   align-items: center;
   gap: var(--blok-border-width-hairline);
   padding: var(--blok-space-1) 0 var(--blok-space-1);
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
 }
 
 [data-blok-database-title-row] {
@@ -7339,8 +7339,8 @@ button[data-blok-database-board-lane-count]:hover {
 }
 
 [data-blok-database-title-row][data-single-view] {
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
   min-height: 40px;
   margin-bottom: 0;
 }
@@ -7354,7 +7354,7 @@ button[data-blok-database-board-lane-count]:hover {
 
 [data-blok-database-description] {
   padding-block: var(--blok-space-0-75) var(--blok-space-1);
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
   color: var(--blok-database-ink);
   font-size: 14px;
   line-height: 21px;
@@ -7451,7 +7451,7 @@ button[data-blok-database-board-lane-count]:hover {
 
 [data-blok-database-title-row] > [data-blok-database-table-selection-bar], [data-blok-database-title-row] > [data-blok-database-table-selection-bar-leaving] {
   inset-block: 0;
-  inset-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2 - 8px));
+  inset-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5) - 8px));
   margin-block: 0 auto;
 }
 
@@ -8533,8 +8533,8 @@ button[data-blok-database-board-lane-count]:hover {
   display: flex;
   flex-direction: column;
   padding-block-start: var(--blok-space-1);
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
 [data-blok-database-list-row] {
@@ -13727,15 +13727,15 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-table-scroller] {
   overflow-x: auto;
-  margin-inline-start: calc(-1 * max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))));
-  padding-inline: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-inline-start: max(var(--blok-database-table-row-gutter), calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  margin-inline-start: calc(-1 * max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)))));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
+  padding-inline-start: max(var(--blok-database-table-row-gutter), calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
   padding-block-end: var(--blok-space-3);
 }
 
 [data-blok-database-board-container]:has(> [data-blok-database-table], > [data-blok-database-list], > [data-blok-database-form]) {
-  margin-inline-start: calc(-1 * max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))));
-  padding-inline-start: max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)));
+  margin-inline-start: calc(-1 * max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)))));
+  padding-inline-start: max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5))));
 }
 
 [data-blok-database-table-grid] {
@@ -15336,7 +15336,7 @@ button[data-blok-database-table-group-count]:hover {
 [data-blok-database-table-selection-bar], [data-blok-database-table-selection-bar-leaving] {
   position: absolute;
   inset-block-start: 2px;
-  inset-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  inset-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
   z-index: 5;
   display: inline-flex;
   align-items: center;
@@ -15552,7 +15552,7 @@ button[data-blok-database-table-group-count]:hover {
 }
 
 [data-blok-database-view-bar] > [data-blok-database-view-toolbar] {
-  margin-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  margin-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
 [data-blok-database-view-toolbar] > :not([data-blok-database-toolbar-icon], [data-blok-database-new]) {
@@ -15744,9 +15744,9 @@ button[data-blok-database-table-group-count]:hover {
   gap: var(--blok-space-2);
   min-block-size: 45px;
   margin-block-start: var(--blok-space-1);
-  margin-inline: max(0px, calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)) - var(--blok-space-2)));
+  margin-inline: max(0px, calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5))) - var(--blok-space-2))) max(0px, calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5))) - var(--blok-space-2)));
   padding-block-start: var(--blok-space-1);
-  padding-inline-start: min(var(--blok-space-2), max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)));
+  padding-inline-start: min(var(--blok-space-2), max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5))));
   border-block-start: 1px solid var(--blok-database-table-border);
 }
 
@@ -16431,7 +16431,7 @@ button[data-blok-database-table-group-count]:hover {
   block-size: 21px;
   align-items: center;
   justify-content: center;
-  margin-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  margin-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
   margin-inline-end: var(--blok-space-2);
   border-radius: var(--blok-radius-control-sm);
 }
@@ -18652,8 +18652,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   flex-direction: column;
   gap: var(--blok-space-4);
   padding-block: var(--blok-space-4) var(--blok-space-1);
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
 [data-blok-database-gallery][data-card-size="small"] {
@@ -18959,8 +18959,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   display: flex;
   flex-direction: column;
   padding-block-end: var(--blok-space-4);
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
 [data-blok-database-calendar-toolbar] {
@@ -19393,8 +19393,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   box-sizing: border-box;
   min-block-size: 40px;
   padding-block-start: var(--blok-space-3-25);
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5)));
-  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5) - var(--blok-space-1-5)));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
 [data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"]) {
@@ -19413,7 +19413,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-timeline]:not(:has(> [data-blok-database-timeline-toolbar] > [data-blok-database-timeline-table-toggle][aria-pressed="true"])) {
-  margin-inline: max(0px, calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)) - var(--blok-space-2)));
+  margin-inline: max(0px, calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5))) - var(--blok-space-2))) max(0px, calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5))) - var(--blok-space-2)));
 }
 
 [data-blok-database-timeline-toolbar-spacer] {
@@ -19442,11 +19442,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-timeline-toolbar]:not(:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])) > :first-child::before {
-  inset-inline-start: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5))));
+  inset-inline-start: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5) - var(--blok-space-1-5))));
 }
 
 [data-blok-database-timeline-toolbar]:not(:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])) > :last-child::before {
-  inset-inline-end: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2)));
+  inset-inline-end: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5))));
 }
 
 [data-blok-database-timeline-month]::after, [data-blok-database-timeline-toolbar-spacer] + *::after {
@@ -19573,7 +19573,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 [data-blok-database-timeline-new-lane] [data-blok-database-timeline-new] {
   margin-block-start: 0;
   position: sticky;
-  inset-inline-start: max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  inset-inline-start: max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
   gap: var(--blok-space-1-5);
   block-size: 36px;
   padding: 0;
@@ -23139,8 +23139,8 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-database-map] {
   padding-block-start: var(--blok-space-2);
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-inline-end: calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)) + var(--blok-space-2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
+  padding-inline-end: calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5))) + var(--blok-space-2));
 }
 
 [data-blok-database-form] form {
@@ -24437,7 +24437,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   flex-direction: column;
   gap: var(--blok-space-3);
   padding-block: var(--blok-space-3);
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
 }
 
 [data-blok-database-dashboard-row] {

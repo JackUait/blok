@@ -716,8 +716,8 @@ describe('map view chrome', () => {
   it('keeps the map in the text column, 8 short of its end, 8 under the view top', () => {
     const map = ruleBody('[data-blok-database-map]');
 
-    expect(map).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))');
-    expect(map).toContain('padding-inline-end: calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)) + var(--blok-space-2))');
+    expect(map).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)))');
+    expect(map).toContain('padding-inline-end: calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5))) + var(--blok-space-2))');
     expect(map).toContain('padding-block-start: var(--blok-space-2)');
   });
 

@@ -24,10 +24,11 @@ const ruleBody = (css: string, selector: string): string =>
 describe('list width (notion-spec-2 §21.8, side-by-side-3 #1, Round 41)', () => {
   it('starts rows at the text column and ends them with the view toolbar at the column\'s end', () => {
     const body = ruleBody(database, '[data-blok-database-list]');
-    const inset = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
+    const lead = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)))';
+  const trail = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)))';
 
-    expect(body).toContain(`padding-inline-start: ${inset}`);
-    expect(body).toContain(`padding-inline-end: ${inset}`);
+    expect(body).toContain(`padding-inline-start: ${lead}`);
+    expect(body).toContain(`padding-inline-end: ${trail}`);
     expect(body).not.toMatch(/padding-(left|right)/);
   });
 });

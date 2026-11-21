@@ -522,22 +522,23 @@ describe('calendar day digits and weekday row (Round 32)', () => {
 });
 
 describe('content inset (side-by-side-4 #2)', () => {
-  const inset = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
+  const lead = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)))';
+  const trail = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)))';
 
   // notion-motion.md Round 41 Part B Gallery: in a page-wide editor Notion's grid is the 692 text column (2 cards of 338).
   it('keeps gallery cards in the text column, like the toolbar', () => {
     const body = ruleBody('[data-blok-database-gallery]');
 
-    expect(body).toContain(`padding-inline-start: ${inset}`);
-    expect(body).toContain(`padding-inline-end: ${inset}`);
+    expect(body).toContain(`padding-inline-start: ${lead}`);
+    expect(body).toContain(`padding-inline-end: ${trail}`);
   });
 
   // notion-motion.md Round 41 Part B Calendar (r41-n-empty-cal.png): the grid spans x 539-1230.5 and ‹ Today › ends at the column.
   it('keeps the calendar grid and its nav in the text column, like the toolbar', () => {
     const body = ruleBody('[data-blok-database-calendar]');
 
-    expect(body).toContain(`padding-inline-start: ${inset}`);
-    expect(body).toContain(`padding-inline-end: ${inset}`);
+    expect(body).toContain(`padding-inline-start: ${lead}`);
+    expect(body).toContain(`padding-inline-end: ${trail}`);
   });
 });
 

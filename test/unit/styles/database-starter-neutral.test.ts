@@ -67,7 +67,7 @@ describe('an emoji database icon', () => {
 describe('a template\'s database icon sits right before the title', () => {
   // With tabs the title carries the centring offset itself, so the icon took it over (research/27:42).
   it('the icon takes the content offset and the title after it drops its own', () => {
-    expect(rule('[data-blok-database-icon]')).toMatch(/margin-inline-start: max\(0px, calc\(\(100% - var\(--blok-content-max-width, var\(--max-width-content\)\)\) \/ 2\)\)/);
+    expect(rule('[data-blok-database-icon]')).toMatch(/margin-inline-start: max\(0px, calc\(\(100% - var\(--blok-content-max-width, var\(--max-width-content\)\)\) \* var\(--_blok-database-lead, 0\.5\)\)\)/);
     expect(rule('[data-blok-database-icon] + [data-blok-database-title]')).toMatch(/padding-inline-start: 0/);
     expect(rule('[data-blok-database-title-row][data-single-view] [data-blok-database-icon]')).toMatch(/margin-inline-start: 0/);
   });

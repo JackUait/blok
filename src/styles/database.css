@@ -1260,8 +1260,8 @@
 [data-blok-database-board] {
   /* board.png: Notion's columns start 8px under the 40px title row. */
   padding-top: var(--blok-space-2);
-  padding-left: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-right: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 
   /* No scrollbar-gutter: it only reserves a vertical lane, which this
      horizontal scroller never needs, and in RTL Chromium it shifts the first
@@ -3262,8 +3262,8 @@ button[data-blok-database-board-lane-count]:hover {
 
 /* Database Title */
 [data-blok-database-title] {
-  padding-left: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-right: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
 [data-blok-database-title][data-placeholder]::before {
@@ -3277,7 +3277,7 @@ button[data-blok-database-board-lane-count]:hover {
   gap: var(--blok-border-width-hairline);
   /* listview.png: 10px from the pill to row 1, which the list's 4px padding and the row margin make up; gallery cards start 20px under. */
   padding: var(--blok-space-1) 0 var(--blok-space-1);
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
 }
 
 /* Notion's title stays put when tabs appear (side-by-side-v1 X2): the row keeps 40px, and the pills start 9px under it. */
@@ -3296,8 +3296,8 @@ button[data-blok-database-board-lane-count]:hover {
 /* Single-view mode: move centering offset to the row, strip it from the title
    so the + button sits exactly 4px after the title text */
 [data-blok-database-title-row][data-single-view] {
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
   /* Notion's one-view title row is 40px, and the header starts right under it. */
   min-height: 40px;
   margin-bottom: 0;
@@ -3313,7 +3313,7 @@ button[data-blok-database-board-lane-count]:hover {
 /* A full-page database's description (notion-motion.md Round 15 C): 14px/21px, under the title, in its column. */
 [data-blok-database-description] {
   padding-block: var(--blok-space-0-75) var(--blok-space-1);
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
   color: var(--blok-database-ink);
   font-size: 14px;
   line-height: 21px;
@@ -3425,7 +3425,7 @@ button[data-blok-database-board-lane-count]:hover {
 [data-blok-database-title-row] > [data-blok-database-table-selection-bar],
 [data-blok-database-title-row] > [data-blok-database-table-selection-bar-leaving] {
   inset-block: 0;
-  inset-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2 - 8px));
+  inset-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5) - 8px));
   margin-block: 0 auto;
 }
 
@@ -4724,8 +4724,8 @@ button[data-blok-database-board-lane-count]:hover {
   display: flex;
   flex-direction: column;
   padding-block-start: var(--blok-space-1);
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
 /**
@@ -10552,9 +10552,9 @@ textarea[data-blok-database-cell-input] {
    it bleeds left by the shortfall so the gutter is not clipped; the columns stay put. */
 [data-blok-database-table-scroller] {
   overflow-x: auto;
-  margin-inline-start: calc(-1 * max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))));
-  padding-inline: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-inline-start: max(var(--blok-database-table-row-gutter), calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  margin-inline-start: calc(-1 * max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)))));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
+  padding-inline-start: max(var(--blok-database-table-row-gutter), calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
   /* notion-motion.md Round 11: the next block starts 12px under the last row. */
   padding-block-end: var(--blok-space-3);
 }
@@ -10562,8 +10562,8 @@ textarea[data-blok-database-cell-input] {
 /* It clips too, so it bleeds the same way. The list's
    narrower gutter fits in the table's, and so does the form's gap "+". */
 [data-blok-database-board-container]:has(> [data-blok-database-table], > [data-blok-database-list], > [data-blok-database-form]) {
-  margin-inline-start: calc(-1 * max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))));
-  padding-inline-start: max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)));
+  margin-inline-start: calc(-1 * max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)))));
+  padding-inline-start: max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5))));
 }
 
 [data-blok-database-table-grid] {
@@ -12395,7 +12395,7 @@ button[data-blok-database-table-group-count]:hover {
 [data-blok-database-table-selection-bar-leaving] {
   position: absolute;
   inset-block-start: 2px;
-  inset-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  inset-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
   z-index: 5;
   display: inline-flex;
   align-items: center;
@@ -12717,7 +12717,7 @@ button[data-blok-database-table-group-count]:hover {
 
 /* Notion's New ends at the text column in a page-wide editor (notion-motion.md Round 32 §3 Table). A margin, so the tab bar's start inset keeps the full width as its base. */
 [data-blok-database-view-bar] > [data-blok-database-view-toolbar] {
-  margin-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  margin-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
 [data-blok-database-view-toolbar] > :not([data-blok-database-toolbar-icon], [data-blok-database-new]) {
@@ -12954,9 +12954,9 @@ button[data-blok-database-table-group-count]:hover {
   gap: var(--blok-space-2);
   min-block-size: 45px;
   margin-block-start: var(--blok-space-1);
-  margin-inline: max(0px, calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)) - var(--blok-space-2)));
+  margin-inline: max(0px, calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5))) - var(--blok-space-2))) max(0px, calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5))) - var(--blok-space-2)));
   padding-block-start: var(--blok-space-1);
-  padding-inline-start: min(var(--blok-space-2), max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)));
+  padding-inline-start: min(var(--blok-space-2), max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5))));
   border-block-start: 1px solid var(--blok-database-table-border);
 }
 
@@ -13697,7 +13697,7 @@ button[data-blok-database-table-group-count]:hover {
   block-size: 21px;
   align-items: center;
   justify-content: center;
-  margin-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  margin-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
   margin-inline-end: var(--blok-space-2);
   border-radius: var(--blok-radius-control-sm);
 }
@@ -16048,8 +16048,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   gap: var(--blok-space-4);
   padding-block: var(--blok-space-4) var(--blok-space-1);
   /* Cards keep to the text column, as the toolbar does (side-by-side-4 #2, notion-motion.md Round 41 Part B). */
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
 [data-blok-database-gallery][data-card-size="small"] {
@@ -16408,8 +16408,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   flex-direction: column;
   padding-block-end: var(--blok-space-4);
   /* The grid and its nav keep to the text column, as the toolbar does (side-by-side-4 #2, notion-motion.md Round 41 Part B). */
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
 [data-blok-database-calendar-toolbar] {
@@ -16913,8 +16913,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   padding-block-start: var(--blok-space-3-25);
   /* The toolbar keeps to the text column; the grid below stays as wide as the view (side-by-side-4 #2).
      « starts 6 before the column (notion-motion.md Round 46 B). */
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5)));
-  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5) - var(--blok-space-1-5)));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
 /* The panel starts at the view's edge, so its « and the month are placed from there. */
@@ -16940,7 +16940,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 /* notion-motion.md Round 41 Part B: with the panel shut, a page-wide editor's timeline spans the column plus 8px each side. Round 6: open, it is full-bleed. */
 [data-blok-database-timeline]:not(:has(> [data-blok-database-timeline-toolbar] > [data-blok-database-timeline-table-toggle][aria-pressed="true"])) {
-  margin-inline: max(0px, calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)) - var(--blok-space-2)));
+  margin-inline: max(0px, calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5))) - var(--blok-space-2))) max(0px, calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5))) - var(--blok-space-2)));
 }
 
 [data-blok-database-timeline-toolbar-spacer] {
@@ -16976,11 +16976,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 /* The toolbar's padding, in cqi so it resolves here (the view is the container). Keep in step with its padding. */
 [data-blok-database-timeline-toolbar]:not(:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])) > :first-child::before {
-  inset-inline-start: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5))));
+  inset-inline-start: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5) - var(--blok-space-1-5))));
 }
 
 [data-blok-database-timeline-toolbar]:not(:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])) > :last-child::before {
-  inset-inline-end: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2)));
+  inset-inline-end: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5))));
 }
 
 /* notion-motion.md Round 76 §5: two fades soften what scrolls behind the toolbar, always drawn. One leaves the month's
@@ -17134,7 +17134,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 [data-blok-database-timeline-new-lane] [data-blok-database-timeline-new] {
   margin-block-start: 0;
   position: sticky;
-  inset-inline-start: max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  inset-inline-start: max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
   gap: var(--blok-space-1-5);
   block-size: 36px;
   padding: 0;
@@ -21104,8 +21104,8 @@ button[data-blok-database-feed-reaction]:hover,
 /* notion-motion.md Round 52 §2: Notion's map is 684x400 at the column start, 8 short of the 692 column, 14 under the toolbar. */
 [data-blok-database-map] {
   padding-block-start: var(--blok-space-2);
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-inline-end: calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)) + var(--blok-space-2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
+  padding-inline-end: calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5))) + var(--blok-space-2));
 }
 
 [data-blok-database-form] form {
@@ -22519,7 +22519,7 @@ button[data-blok-database-feed-reaction]:hover,
   gap: var(--blok-space-3);
   padding-block: var(--blok-space-3);
   /* The widgets start under the title and end under ⚙, as the tab bar does. */
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)));
 }
 
 [data-blok-database-dashboard-row] {

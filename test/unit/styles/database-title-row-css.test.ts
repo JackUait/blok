@@ -312,28 +312,29 @@ describe('full-page database: the toolbar icons show on hover', () => {
 
 // notion-motion.md Round 32 §3 Table and gap 0 (side-by-side-v1 X1): in a page-wide editor Notion's New ends at the text column.
 describe('the toolbar ends at the text column', () => {
-  const inset = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
+  const trail = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)))';
 
   it('stops the toolbar beside the tabs at the column end', () => {
-    expect(rule('[data-blok-database-view-bar] > [data-blok-database-view-toolbar]')).toContain(`margin-inline-end: ${inset}`);
+    expect(rule('[data-blok-database-view-bar] > [data-blok-database-view-toolbar]')).toContain(`margin-inline-end: ${trail}`);
   });
 
   it('stops the one-view title row at the column end', () => {
-    expect(rule('[data-blok-database-title-row][data-single-view]')).toContain(`padding-inline-end: ${inset}`);
+    expect(rule('[data-blok-database-title-row][data-single-view]')).toContain(`padding-inline-end: ${trail}`);
   });
 });
 
 // notion-motion.md Round 35 gap 5 (r35-sort2.raw, .png): in a page-wide editor the bar's line spans x 531-1238 (the column and 8 each side) at y 309, 4 under Blok's,
 // and the "2 sorts" chip sits at (539, 322.2), 13 under the line.
 describe('the sort and filter chip bar keeps to the text column', () => {
-  const inset = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
+  const lead = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)))';
+  const trail = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)))';
 
   it('stops the line 8px outside the column on both sides', () => {
-    expect(rule('[data-blok-database-filter-bar]')).toContain(`margin-inline: max(0px, calc(${inset} - var(--blok-space-2)))`);
+    expect(rule('[data-blok-database-filter-bar]')).toContain(`margin-inline: max(0px, calc(${lead} - var(--blok-space-2))) max(0px, calc(${trail} - var(--blok-space-2)))`);
   });
 
   it('starts the first chip at the column', () => {
-    expect(rule('[data-blok-database-filter-bar]')).toContain(`padding-inline-start: min(var(--blok-space-2), ${inset})`);
+    expect(rule('[data-blok-database-filter-bar]')).toContain(`padding-inline-start: min(var(--blok-space-2), ${lead})`);
   });
 
   it('puts the line 4px lower and the chips 13px under it, in the same 45px bar', () => {
@@ -365,7 +366,7 @@ describe('the selection bar on the title row sits at the database top, 8px left 
   it('starts 8px before the title text, with one view or several', () => {
     const body = rule('[data-blok-database-title-row] > [data-blok-database-table-selection-bar], [data-blok-database-title-row] > [data-blok-database-table-selection-bar-leaving]');
 
-    expect(body).toMatch(/inset-inline-start: max\(0px, calc\(\(100% - var\(--blok-content-max-width, var\(--max-width-content\)\)\) \/ 2 - 8px\)\)/);
+    expect(body).toMatch(/inset-inline-start: max\(0px, calc\(\(100% - var\(--blok-content-max-width, var\(--max-width-content\)\)\) \* var\(--_blok-database-lead, 0\.5\) - 8px\)\)/);
   });
 });
 

@@ -547,8 +547,9 @@ test.describe('selection bar', () => {
     expect(Math.abs(bar.y - top.y)).toBeLessThanOrEqual(0.5);
     expect(Math.abs(title.x - 8 - bar.x)).toBeLessThanOrEqual(0.5);
   });
-  // With tabs the bar sat at the view bar's edge, 316px left of the table (sweep9a motion-rowdrag.json).
-  test('starts at the table content with tabs, as it does with one view', async ({ page }) => {
+  // notion-motion.md Round 98 §1 #3 (r98-n-selbar-views.raw): with several views the bar starts 8px left of the title text too.
+  // The wide holder keeps the centring offset in the check: a bar at the view bar's edge would sit 316px out (sweep9a).
+  test('with several views the bar starts 8px left of the title, as it does with one view', async ({ page }) => {
     await mount(page, blocks());
     // A wide holder gives the content a centring offset, so a bar at the view bar's edge shows.
     await page.evaluate(() => document.getElementById('blok')?.style.setProperty('max-width', 'none'));
@@ -556,11 +557,16 @@ test.describe('selection bar', () => {
     await tableRow(page, 'r1').locator('[data-blok-database-table-row-checkbox]').click();
 
     const bar = await page.locator('[data-blok-database-table-selection-bar]').boundingBox();
-    const firstHeader = await page.getByRole('columnheader', { name: 'Name' }).boundingBox();
+    // With several views the title box spans the row, so read where its placeholder text starts.
+    const titleTextX = await page.locator('[data-blok-database-title]').evaluate((el) => {
+      const padding = Number.parseFloat(getComputedStyle(el).paddingInlineStart);
 
-    if (bar === null || firstHeader === null) throw new Error('no layout');
-    expect(firstHeader.x).toBeGreaterThan(100);
-    expect(Math.abs(bar.x - firstHeader.x)).toBeLessThanOrEqual(1);
+      return el.getBoundingClientRect().x + padding;
+    });
+
+    if (bar === null) throw new Error('no layout');
+    expect(titleTextX).toBeGreaterThan(100);
+    expect(Math.abs(titleTextX - 8 - bar.x)).toBeLessThanOrEqual(0.5);
   });
 });
 

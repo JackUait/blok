@@ -378,6 +378,17 @@ describe('database timeline styles', () => {
     expect(css).toContain('--blok-database-timeline-bar-bg: #ffffff;');
   });
 
+  // notion-motion.md Round 92 §4: Notion's fill is the bar's A, 100% wide with 6px sides, so an 11 bar's fill is 12 and spills 1px.
+  it('never draws the hover fill narrower than its two 6px sides', () => {
+    const layer = ruleBody('[data-blok-database-timeline-bar]::before');
+
+    expect(layer).toContain('min-inline-size: calc(2 * var(--blok-space-1-5))');
+    expect(layer).not.toMatch(/(^|;)\s*inset:\s*0\s*(;|$)/);
+    expect(layer).toContain('inset-block: 0');
+    expect(layer).toContain('inset-inline-start: 0');
+    expect(layer).toContain('inline-size: 100%');
+  });
+
   it('turns every timeline transition off under reduced motion', () => {
     const reduced = timelineCss.slice(timelineCss.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
 

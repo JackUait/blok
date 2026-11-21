@@ -2021,6 +2021,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R278_BYTES = 366 + 257 + 250;
     // Lane r281: the row menu's "Page" label takes Notion's dark ink; +31: » with the search open is hover-only in a title row.
     const DATABASE_R281_BYTES = 524 + 31;
+    // Lane r282: the Show calendar as row's › turns while its menu is open (Round 87 §2),
+    // and a one-day timeline bar's hover fill is never under 12 (Round 92 §4). Net database.css growth against origin/main.
+    const DATABASE_R282_BYTES = 983;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2723,6 +2726,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R280_BYTES
       + DATABASE_R278_BYTES
       + DATABASE_R281_BYTES
+      + DATABASE_R282_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

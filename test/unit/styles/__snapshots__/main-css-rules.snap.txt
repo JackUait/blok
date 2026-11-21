@@ -20275,7 +20275,10 @@ button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-fie
 [data-blok-database-timeline-bar]::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: 100%;
+  min-inline-size: calc(2 * var(--blok-space-1-5));
   z-index: -1;
   border-start-start-radius: inherit;
   border-start-end-radius: inherit;

@@ -17920,11 +17920,15 @@ button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-fie
   padding-inline-end: 0;
 }
 
-/* A layer under the content, so it tints a conditional colour fill too (research/21 §1i). notion-motion.md Timeline: 20ms ease-in. */
+/* A layer under the content, so it tints a conditional colour fill too (research/21 §1i). notion-motion.md Timeline: 20ms ease-in.
+   Round 92 §4: Notion's fill has two 6px sides, so an 11 wide bar's fill is 12 and spills 1px past its end. */
 [data-blok-database-timeline-bar]::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: 100%;
+  min-inline-size: calc(2 * var(--blok-space-1-5));
   z-index: -1;
   border-start-start-radius: inherit;
   border-start-end-radius: inherit;

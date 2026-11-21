@@ -678,11 +678,62 @@ describe('DatabaseCalendarView', () => {
   });
 
   describe('keyboard', () => {
-    it('makes one day tabbable: today when shown', () => {
+    // notion-motion.md Round 96 §1 #2 (r96-n-cal-event-tab.raw): Tab from Next Month lands on the first event, no day cell before it.
+    it('makes each event a Tab stop and no day cell', () => {
       const { root } = mount();
 
-      expect(days(root).filter((el) => el.tabIndex === 0).map((el) => el.getAttribute('data-day'))).toEqual(['2026-10-09']);
+      expect(events(root).filter((el) => el.tabIndex === 0).map((el) => el.getAttribute('data-row-id'))).toEqual(['r1', 'r2']);
+      expect(days(root).filter((el) => el.tabIndex === 0)).toEqual([]);
       expect(root.querySelector('[data-blok-database-calendar-grid]')?.hasAttribute('data-blok-keyboard-owner')).toBe(true);
+    });
+
+    it('gives an event that spans weeks one Tab stop, on its first part', () => {
+      const { root } = mount({ rows: [row('r1', 'Long', '2026-09-30/2026-10-06')] });
+      const parts = events(root, 'r1');
+
+      expect(parts.length).toBe(2);
+      expect(parts.map((el) => el.tabIndex)).toEqual([0, -1]);
+    });
+
+    it('keeps one Tab stop per event after a redraw during a drag', () => {
+      const { root } = mount();
+
+      layOut(root);
+      const handle = events(root, 'r1')[0].querySelector<HTMLElement>('[data-blok-database-calendar-resize="end"]');
+
+      pointer('pointerdown', handle ?? root, 595, 110);
+      pointer('pointermove', document, 150, 210);
+
+      expect(events(root, 'r1').map((el) => el.tabIndex)).toEqual([0, -1]);
+      expect(events(root, 'r2').map((el) => el.tabIndex)).toEqual([0]);
+      key(document, 'Escape');
+    });
+
+    it('opens a focused event on Space, like a click', () => {
+      const { root, handlers } = mount();
+
+      events(root, 'r1')[0].focus();
+      key(document.activeElement ?? root, ' ');
+
+      expect(handlers.openRow).toHaveBeenCalledExactlyOnceWith('r1');
+    });
+
+    it('opens a focused event on Enter, like a click', () => {
+      const { root, handlers } = mount();
+
+      events(root, 'r1')[0].focus();
+      key(document.activeElement ?? root, 'Enter');
+
+      expect(handlers.openRow).toHaveBeenCalledExactlyOnceWith('r1');
+    });
+
+    it('steps from a focused event to the days with the arrow keys', () => {
+      const { root } = mount();
+
+      events(root, 'r1')[0].focus();
+      key(document.activeElement ?? root, 'ArrowRight');
+
+      expect(day(root, '2026-10-10')).toHaveFocus();
     });
 
     it('moves between days with the arrow keys', () => {
@@ -696,8 +747,7 @@ describe('DatabaseCalendarView', () => {
       key(document.activeElement ?? root, 'ArrowLeft');
       key(document.activeElement ?? root, 'ArrowUp');
       expect(document.activeElement?.getAttribute('data-day')).toBe('2026-10-09');
-      expect(day(root, '2026-10-09').tabIndex).toBe(0);
-      expect(day(root, '2026-10-17').tabIndex).toBe(-1);
+      expect(days(root).filter((el) => el.tabIndex === 0)).toEqual([]);
     });
 
     it('flips Left and Right in a right-to-left editor', () => {

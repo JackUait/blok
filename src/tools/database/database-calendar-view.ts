@@ -346,18 +346,15 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     }
     grid.appendChild(header);
 
-    const tabbable = this.shownDays.includes(this.options.today)
-      ? this.options.today
-      : this.shownDays.find((d) => d.startsWith(month)) ?? this.shownDays[0];
-
     for (const week of weeks) {
-      grid.appendChild(this.createWeek(week, month, tabbable));
+      grid.appendChild(this.createWeek(week, month));
     }
+    setEventTabStops(grid);
 
     return grid;
   }
 
-  private createWeek(week: string[], month: string, tabbable: string | undefined): HTMLElement {
+  private createWeek(week: string[], month: string): HTMLElement {
     const rowEl = document.createElement('div');
     const placed = layoutWeek(week, this.events());
     const lanes = placed.reduce((max, p) => Math.max(max, p.lane + 1), 0);
@@ -374,7 +371,8 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       cell.setAttribute('data-blok-database-calendar-day', '');
       cell.setAttribute('data-day', dayIso);
       cell.setAttribute('role', 'gridcell');
-      cell.tabIndex = dayIso === tabbable ? 0 : -1;
+      // notion-motion.md Round 96 §1 #2: Tab skips the days and lands on the events. Arrows still walk the days.
+      cell.tabIndex = -1;
       if (dayIso === this.options.today) {
         cell.setAttribute('data-today', '');
         cell.setAttribute('aria-current', 'date');
@@ -658,20 +656,23 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
   private readonly onKeyDown = (event: KeyboardEvent): void => {
     const target = event.target instanceof HTMLElement ? event.target : null;
 
-    if (target?.matches('[data-blok-database-calendar-event]') === true && event.key === 'Enter') {
+    const onEvent = target?.matches('[data-blok-database-calendar-event]') === true;
+
+    if (onEvent && (event.key === 'Enter' || event.key === ' ')) {
       event.preventDefault();
-      target.click();
+      target?.click();
 
       return;
     }
 
-    const dayIso = target?.hasAttribute('data-blok-database-calendar-day') === true ? target.getAttribute('data-day') : null;
+    const dayEl = onEvent ? target?.closest('[data-blok-database-calendar-day]') : target;
+    const dayIso = dayEl?.hasAttribute('data-blok-database-calendar-day') === true ? dayEl.getAttribute('data-day') : null;
 
     if (dayIso === null || dayIso === undefined) {
       return;
     }
 
-    if (event.key === 'Enter') {
+    if (!onEvent && event.key === 'Enter') {
       const first = this.rowsOn(dayIso)[0];
 
       event.preventDefault();
@@ -697,9 +698,6 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       return;
     }
 
-    this.root?.querySelectorAll<HTMLElement>('[data-blok-database-calendar-day]').forEach((el) => {
-      el.setAttribute('tabindex', el === cell ? '0' : '-1');
-    });
     cell.focus();
   };
 
@@ -980,6 +978,9 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
         placed.filter((p) => p.startCol === col).forEach((p) => cell.appendChild(this.createEvent(p)));
       });
     });
+    if (this.root !== null) {
+      setEventTabStops(this.root);
+    }
   }
 
   private eventParts(rowId: string): HTMLElement[] {
@@ -1116,3 +1117,15 @@ const weekendSkip = (day: string, direction: number): number => {
 
 const isBand = (value: unknown): value is { left: number; top: number; right: number; bottom: number } =>
   typeof value === 'object' && value !== null && 'left' in value && 'top' in value && 'right' in value && 'bottom' in value;
+
+/** One Tab stop per event: its first part, so an event that starts before the shown range still gets one. */
+const setEventTabStops = (root: HTMLElement): void => {
+  const seen = new Set<string>();
+
+  root.querySelectorAll<HTMLElement>('[data-blok-database-calendar-event]').forEach((el) => {
+    const rowId = el.getAttribute('data-row-id') ?? '';
+
+    el.setAttribute('tabindex', seen.has(rowId) ? '-1' : '0');
+    seen.add(rowId);
+  });
+};

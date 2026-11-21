@@ -911,7 +911,7 @@ export class DatabaseTool implements BlockTool {
   /** The rows an undo just unpicked: the next paint fades their tint out once. */
   private leavingRowIds: readonly string[] = [];
   /** What an undo does to the selection, applied once its redraw is done. */
-  private undoPick: { restored: string[]; edited: boolean; redone: boolean; step?: HistoryStep; atUndo?: string[] } | null = null;
+  private undoPick: { restored: string[]; edited: boolean; redone: boolean; moved?: boolean; step?: HistoryStep; atUndo?: string[] } | null = null;
   private undoPickTimer: ReturnType<typeof setTimeout> | null = null;
   /**
    * Per row-edit step: the row pick when it was recorded, the pick its undo replaced,
@@ -3662,8 +3662,9 @@ export class DatabaseTool implements BlockTool {
   /**
    * notion-motion.md Round 63 §1 (table): an undone row delete selects the
    * row. Round 65 §2: an undone cell edit brings back the pick recorded with
-   * it, and its redo the pick the undo replaced. A table reorder follows the
-   * same rule: its drag picks the row, so undo picks it and redo clears it.
+   * it, and its redo the pick the undo replaced. A reorder follows the same
+   * rule: its drop picks the row, so undo picks it and redo clears it (table:
+   * Round 63 §1; Board, List and Gallery: Round 92 §1).
    */
   private noteUndoPick(capture: BlockReplayCapture): void {
     const native = capture.native;
@@ -3676,12 +3677,15 @@ export class DatabaseTool implements BlockTool {
     if (this.linked && this.sourceMissing()) return;
     const restored = capture.origin === 'undo' && capture.type === 'add';
 
-    // A reorder is measured only in a table (Round 63 §1).
-    const picksOn = (key: unknown): boolean => key === 'properties' || (key === 'position' && this.view instanceof DatabaseTableView);
+    const type = this.shownView()?.type;
+    // Other views' reorders are unmeasured.
+    const moved = capture.type === 'update' && (type === 'table' || type === 'board' || type === 'list' || type === 'gallery')
+      && capture.changes.some((change) => change.path[0] === 'position');
 
-    if (!restored && (capture.type !== 'update' || !capture.changes.some((change) => picksOn(change.path[0])))) return;
+    if (!restored && !moved && (capture.type !== 'update' || !capture.changes.some((change) => change.path[0] === 'properties'))) return;
     const pick = this.undoPick ?? { restored: [], edited: false, redone: false };
 
+    if (moved) pick.moved = true;
     if (restored) pick.restored.push(capture.blockId);
     else if (capture.origin === 'undo') pick.edited = true;
     else pick.redone = true;
@@ -3714,7 +3718,7 @@ export class DatabaseTool implements BlockTool {
       const next = live(record.recorded);
 
       this.stepPicks.set(pick.step, { recorded: record.recorded, undone: pick.atUndo ?? [], applied: next });
-      this.landPick(next, false);
+      this.landPick(next, false, pick.moved === true);
 
       return;
     }
@@ -3725,7 +3729,7 @@ export class DatabaseTool implements BlockTool {
 
     // A pick made since the undo stays.
     if (record?.undone === undefined || record.applied === undefined || !sameIds(current, record.applied)) return;
-    this.landPick(live(record.undone), false);
+    this.landPick(live(record.undone), false, pick.moved === true);
   }
 
   /**
@@ -3733,8 +3737,9 @@ export class DatabaseTool implements BlockTool {
    * Round 65 §2, a List or Gallery; a Board card comes back unpicked, and the
    * other views are unmeasured. An undone delete only adds its rows.
    * Round 66 §3: a Calendar edit's pick too; its undone delete is unmeasured.
+   * Round 92 §1: a Board card's reorder picks it too.
    */
-  private landPick(rowIds: string[], restoring: boolean): void {
+  private landPick(rowIds: string[], restoring: boolean, moved = false): void {
     if (this.view instanceof DatabaseTableView) {
       this.view.pickAfterUndo(rowIds);
 
@@ -3742,7 +3747,7 @@ export class DatabaseTool implements BlockTool {
     }
     const type = this.shownView()?.type;
 
-    if (type !== 'list' && type !== 'gallery' && (type !== 'calendar' || restoring)) return;
+    if (type !== 'list' && type !== 'gallery' && (type !== 'calendar' || restoring) && (type !== 'board' || !moved)) return;
     const before = restoring ? [] : [...this.rowSelection];
 
     this.landedRowIds = rowIds.filter((id) => !before.includes(id));
@@ -10029,6 +10034,10 @@ export class DatabaseTool implements BlockTool {
     const groupBy = view?.groupBy;
 
     if (this.readOnly || (context !== undefined && !context.writable())) return;
+    // notion-motion.md Round 92 §1: a Gallery drop picks the card, before the write so its undo picks it again.
+    const gallery = context === undefined && this.view instanceof DatabaseGalleryView;
+
+    if (gallery) this.selectRows([rowId]);
     if (groupBy !== undefined && groupKey !== fromGroupKey) {
       this.cardDragFromOptionId = fromGroupKey;
       const value = this.droppedGroupValue(groupBy, rowId, groupKey, view);
@@ -10039,6 +10048,7 @@ export class DatabaseTool implements BlockTool {
     this.placeRow(view, rowId, afterRowId, beforeRowId, context?.owner);
     if (context === undefined) this.rerenderView({ keepDrawer: true });
     else context.redraw();
+    if (gallery) this.landRow(rowId);
   }
 
   /** Same as the drawer: a label the user kept goes back as the saved (unlocalized) one. */
@@ -11540,8 +11550,11 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
+    // Picked before the write, so the step records it and its undo picks the row again.
+    this.selectRows([rowId]);
     this.placeRow(this.shownView(), rowId, afterRowId, beforeRowId);
     this.rerenderView();
+    this.landRow(rowId);
   }
 
   /**
@@ -11642,6 +11655,8 @@ export class DatabaseTool implements BlockTool {
     const value = this.droppedGroupValue(groupByPropId, rowId, toOptionId);
     const changes: Record<string, PropertyValue> = { [groupByPropId]: value, ...subChange };
 
+    // Picked before the write, so the step records it and its undo picks the card again.
+    this.selectRows([rowId]);
     this.placeRow(viewConfig, rowId, afterRowId, beforeRowId, this, {
       write: () => this.updateRowBlock(rowId, changes),
       sync: () => this.sync.syncUpdateRow({ rowId, properties: changes }),

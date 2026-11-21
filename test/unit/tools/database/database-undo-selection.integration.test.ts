@@ -60,9 +60,23 @@ let holder: HTMLDivElement | undefined;
 
 const make = async (type = 'table'): Promise<TestEditor> => {
   const blocks = doc();
-  const data = blocks[0].data as { views: Array<Record<string, unknown>> };
+  const data = blocks[0].data as { schema: Array<Record<string, unknown>>; views: Array<Record<string, unknown>> };
 
-  data.views[0] = { ...data.views[0], type, ...(type === 'board' ? { groupBy: 'x' } : {}) };
+  // 'board-one-group': every card in one Status column, so a drag reorders within it.
+  if (type === 'board-one-group') {
+    data.schema.push({ id: 's', name: 'Status', type: 'select', position: 'a2', config: { options: [{ id: 'o1', label: 'One', color: 'gray' }] } });
+    blocks.slice(1).forEach((block) => {
+      const rowData = block.data as { properties: Record<string, unknown> };
+
+      rowData.properties.s = 'o1';
+    });
+  }
+  data.views[0] = {
+    ...data.views[0],
+    type: type === 'board-one-group' ? 'board' : type,
+    ...(type === 'board' ? { groupBy: 'x' } : {}),
+    ...(type === 'board-one-group' ? { groupBy: 's' } : {}),
+  };
   editor = new Blok({
     holder,
     dataModel: 'hierarchical',
@@ -521,6 +535,71 @@ describe('row selection after undo', () => {
 
     expect(await done()).not.toBe(true);
     expect(calendarPicked()).toEqual(['r1']);
+  });
+
+  /** Drags `id` to the top of its list, gallery or board column; items stack 40 tall. */
+  const dragItemToTop = async (type: keyof typeof ITEM, id: string): Promise<void> => {
+    const items = [...document.querySelectorAll<HTMLElement>(ITEM[type])];
+
+    items.forEach((el, index) => {
+      vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, index * 40, 300, 40));
+    });
+    document.querySelectorAll<HTMLElement>('[data-blok-database-column]').forEach((el) => {
+      vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 300, 1000));
+    });
+    const item = document.querySelector<HTMLElement>(`${ITEM[type]}[data-row-id="${id}"]`);
+
+    if (item === null) throw new Error(`no ${type} item ${id}`);
+    const y = items.indexOf(item) * 40 + 20;
+
+    item.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: 10, clientY: y, bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 10, clientY: 5, bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 10, clientY: 5, bubbles: true }));
+    await quiet();
+  };
+  const shownOrder = (type: keyof typeof ITEM): string[] =>
+    [...document.querySelectorAll(ITEM[type])].map((el) => el.getAttribute('data-row-id') ?? '');
+  const itemOf = (type: keyof typeof ITEM, id: string): HTMLElement | null =>
+    document.querySelector<HTMLElement>(`${ITEM[type]}[data-row-id="${id}"]`);
+
+  // notion-motion.md Round 92 §1 #2: a List or Gallery drop selects the dropped item, its halo fading in; Escape clears it.
+  it.each(['list', 'gallery'] as const)('selects the dropped %s item, and Escape clears it', async (type) => {
+    await make(type);
+
+    await dragItemToTop(type, 'r3');
+
+    expect(picked(type)).toEqual(['r3']);
+    expect(itemOf(type, 'r3')?.hasAttribute('data-blok-database-row-landed')).toBe(true);
+    expect(shownOrder(type)).toEqual(['r3', 'r1', 'r2']);
+
+    await escapeOnBody();
+
+    expect(picked(type)).toEqual([]);
+  });
+
+  // notion-motion.md Round 92 §1 #1–2: undo of a Board, List or Gallery reorder selects the moved item (fade in); redo clears it (fade out).
+  it.each(['board', 'list', 'gallery'] as const)('selects the %s item its reorder undo moves back, and its redo clears it', async (type) => {
+    const blok = await make(type === 'board' ? 'board-one-group' : type);
+
+    expect(shownOrder(type)).toEqual(['r1', 'r2', 'r3']);
+    await dragItemToTop(type, 'r3');
+    expect(shownOrder(type)).toEqual(['r3', 'r1', 'r2']);
+    await escapeOnBody();
+    expect(picked(type)).toEqual([]);
+
+    blok.history.undo();
+    await quiet();
+
+    expect(picked(type)).toEqual(['r3']);
+    expect(itemOf(type, 'r3')?.hasAttribute('data-blok-database-row-landed')).toBe(true);
+    expect(shownOrder(type)).toEqual(['r1', 'r2', 'r3']);
+
+    blok.history.redo();
+    await quiet();
+
+    expect(picked(type)).toEqual([]);
+    expect(itemOf(type, 'r3')?.hasAttribute('data-blok-database-row-leaving')).toBe(true);
+    expect(shownOrder(type)).toEqual(['r3', 'r1', 'r2']);
   });
 
   it('selects nothing when undo brings a board card back', async () => {

@@ -268,3 +268,18 @@ describe('database board card and calendar "No date" styles', () => {
     expect(body).toContain('color: var(--blok-database-ink-secondary)');
   });
 });
+
+// notion-motion.md Round 82 §1 "Board card tools" (r82-n-a4-bd-cardtools.raw): the 57x24 group is r4 and clips
+// buttons that are r0. Blok rounds only the group's outer corners, as the gallery does, so a focus ring is not clipped.
+describe('board card tools (Round 82)', () => {
+  const TOOLS = '[data-blok-database-card] [data-blok-database-card-actions]';
+
+  it('squares the inner corners of the two tool buttons', () => {
+    expect(ruleBody(`${TOOLS} > button`)).toMatch(/border-radius:\s*0/);
+  });
+
+  it('keeps the group\'s 4px radius on its outer corners', () => {
+    expect(ruleBody(`${TOOLS} > button:first-child`)).toMatch(/border-start-start-radius:\s*inherit;\s*border-end-start-radius:\s*inherit/);
+    expect(ruleBody(`${TOOLS} > button:last-child`)).toMatch(/border-start-end-radius:\s*inherit;\s*border-end-end-radius:\s*inherit/);
+  });
+});

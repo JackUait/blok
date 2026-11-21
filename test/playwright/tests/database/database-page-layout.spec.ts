@@ -1090,6 +1090,8 @@ test.describe('row page layout', () => {
     await builder(page).getByRole('button', { name: /^\d+ more…$/ }).click();
     const list = page.locator('[data-blok-database-tab-overflow-dropdown]');
 
+    // It opens from scale 0.96 (notion-motion.md Round 74 §3); measure the settled box.
+    await expect.poll(() => list.evaluate((el) => el.getAnimations().length)).toBe(0);
     // research/13 §3a: 290px wide, in the top layer above the builder.
     expect((await list.boundingBox())?.width).toBe(290);
     await expect(list).toHaveCSS('padding-top', '4px');

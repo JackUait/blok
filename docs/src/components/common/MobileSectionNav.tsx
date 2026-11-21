@@ -105,7 +105,7 @@ export const MobileSectionNav: React.FC<MobileSectionNavProps> = ({
       >
         <div className="flex min-w-0 flex-col">
           {currentSectionTitle && (
-            <span className="text-xs font-bold uppercase tracking-wide text-primary">
+            <span className="text-xs font-bold text-primary">
               {currentSectionTitle}
             </span>
           )}
@@ -140,7 +140,7 @@ export const MobileSectionNav: React.FC<MobileSectionNavProps> = ({
         >
           {sections.map((section) => (
             <div key={section.title} className="px-1 py-1.5">
-              <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              <div className="px-3 py-1.5 text-xs font-bold text-muted-foreground">
                 {section.title}
               </div>
               {section.links.map((link) => {

@@ -416,6 +416,18 @@ describe('PopoverInline', () => {
       expect(popover.hasNestedPopoverOpen).toBe(false);
     });
 
+    it('drops a tool\'s children over the card unless the tool picks a placement', () => {
+      const popover = createPopoverInline({
+        items: [
+          { name: 'plain', title: 'Plain', icon: 'Icon', children: { items: [ { title: 'Child', onActivate: vi.fn() } ] } },
+          { name: 'side', title: 'Side', icon: 'Icon', children: { placement: 'beside', items: [ { title: 'Child', onActivate: vi.fn() } ] } },
+        ],
+      });
+      const { items } = popover as unknown as { items: Array<{ childrenPlacement: string }> };
+
+      expect(items.map(item => item.childrenPlacement)).toEqual([ 'over', 'beside' ]);
+    });
+
     it('should create popover with separator items', () => {
       const popover = createPopoverInline({
         items: [

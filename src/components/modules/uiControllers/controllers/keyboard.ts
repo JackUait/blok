@@ -11,7 +11,7 @@ import { announceHistoryPress } from '../../../utils/history-announcement';
 import { historyKeyOf, type HistoryKey } from '../../../utils/history-keys';
 import { announceDeletedRoots, selectionRoots } from '../../../utils/selection-roots';
 import { deleteWithTrashToast } from '../../../utils/trash-toast';
-import { askBeforeDelete, deleteAsker, isAskingBeforeDelete } from '../../../utils/delete-confirm';
+import { askBeforeDelete, deleteAsker, holdsLockedRoot, isAskingBeforeDelete } from '../../../utils/delete-confirm';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
 import { HEADER_TOOL_NAME, LIST_TOOL_NAME } from '../../blockEvents/constants';
@@ -801,6 +801,15 @@ export class KeyboardController extends Controller {
     }
 
     const selected = BlockManager.blocks.filter((block) => block.selected);
+
+    if (holdsLockedRoot(selectionRoots(selected))) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+
+      return;
+    }
+
     const asker = deleteAsker(selectionRoots(selected));
 
     if (asker !== undefined) {

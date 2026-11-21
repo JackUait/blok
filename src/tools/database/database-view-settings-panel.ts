@@ -72,6 +72,7 @@ import {
   withPropertyOrder,
   withPropertyVisibility,
 } from './view-settings';
+import { NO_VALUE_GROUP_KEY } from './database-model';
 import type { ViewChanges } from './database-model';
 import type {
   ColorRule,
@@ -140,7 +141,7 @@ export interface ViewSettingsContext {
   /** A linked view: its lock reads "Lock views" (research 20 §2b). */
   linked?: () => boolean;
   /** The block's "Show data source titles", as the tab menu toggles it (research/30 §B17). Without it a database with its own rows has no such row. */
-  dataSourceTitles?: { shown: () => boolean; toggle: () => void };
+  dataSourceTitles?: { shown: () => boolean; toggle: () => void; views?: () => number };
   duplicateView: () => void;
   deleteView: () => void;
   copyViewLink: () => void;
@@ -148,6 +149,11 @@ export interface ViewSettingsContext {
   manageInCalendar?: { label: string; onClick: () => void };
   /** The groups of the view's grouping (`sub` for the board's sub-grouping). */
   groups: (sub: boolean) => ViewGroupEntry[];
+  /**
+   * Moves a group of the view's grouping as a board column drop does: `afterKey` and `beforeKey` are its new
+   * neighbours. `enabled` is false where a drop would not show (a sorted grouping, no option groups).
+   */
+  moveGroup?: { enabled: () => boolean; move: (key: string, beforeKey: string | null, afterKey: string | null) => void };
   /** People the host lists, for person filters. */
   people?: () => Array<{ id: string; name: string }>;
   /** Rows a relation can point at, for relation filters. */
@@ -325,6 +331,8 @@ const HIDDEN_IN_KEYS: Partial<Record<ViewType, string>> = {
 };
 
 const DATE_LIKE_TYPES: readonly PropertyType[] = ['date', 'createdTime', 'lastEditedTime'];
+/** notion-motion.md Round 75 §2, Round 76 §4: types whose new colour rule leaves nothing focused. */
+const BLUR_AFTER_NEW_COLOR_RULE: ReadonlySet<PropertyType> = new Set<PropertyType>(['text', 'number', 'select', 'date', 'status', 'multiSelect', 'checkbox']);
 
 /** A picker's search text, kept across page redraws. */
 interface QueryState {
@@ -385,9 +393,11 @@ export class ViewSettingsPages {
   /** notion-motion.md Round 32 §3: a database with its own rows lists "Show data source titles" first. */
   private ownSourceTitle(): HTMLButtonElement[] {
     const titles = this.ctx.dataSourceTitles;
+    // Round 97 (notes): a linked block's label reads "title" with one view, "titles" with several.
+    const singular = this.ctx.linked?.() === true && (titles?.views?.() ?? 1) < 2;
 
     return titles === undefined ? [] : [panelSwitch({
-      label: this.t('showDataSourceTitles'),
+      label: this.t(singular ? 'settingsShowDataSourceTitle' : 'showDataSourceTitles'),
       testId: 'database-settings-data-source-title',
       checked: titles.shown(),
       disabled: !this.shared,
@@ -1204,16 +1214,8 @@ export class ViewSettingsPages {
       build: (panel) => {
         const view = this.ctx.view();
         const tiles = this.layoutTiles(panel, view.type);
-        // Linked views only: a database that holds its rows shows its own title (R-2022-03-15).
-        const sourceTitle = this.ctx.linked?.() === true
-          ? [panelSwitch({
-            label: this.t('settingsShowDataSourceTitle'),
-            testId: 'database-settings-data-source-title',
-            checked: view.showDataSourceTitle !== false,
-            disabled: !this.shared,
-            onToggle: (next) => this.ctx.updateView({ showDataSourceTitle: next }),
-          })]
-          : this.ownSourceTitle();
+        // notion-motion.md Round 97 §1 #5: one setting for the block, linked or not.
+        const sourceTitle = this.ownSourceTitle();
         const pageIcon = panelSwitch({
           label: this.t('settingsShowPageIcon'),
           testId: 'database-settings-page-icon',
@@ -1938,13 +1940,13 @@ export class ViewSettingsPages {
     const empty = (): boolean => this.ctx.view().filters.length === 0 && countFilterRules(this.ctx.view().filterTree) === 0;
     const t = (key: string): string => this.t(key);
 
-    // notion-motion.md Round 9 (r9-vs-filter.raw): with no filter yet the page reads "Add filter".
+    // notion-motion.md Round 9 (r9-vs-filter.raw): with no filter yet the page reads "Add filter"; Round 88 (r88-n-settext.raw): then "Filters".
     return {
       get title() {
-        return t(empty() ? 'filterAdd' : 'settingsFilter');
+        return t(empty() ? 'filterAdd' : 'settingsFiltersTitle');
       },
       get name() {
-        return empty() ? 'pick' : undefined;
+        return empty() ? 'pick' : 'filters';
       },
       build: (panel) => {
         const view = this.ctx.view();
@@ -1958,7 +1960,8 @@ export class ViewSettingsPages {
               const filter = defaultFilterFor(property);
 
               this.ctx.updatePersonal({ filters: [filter] });
-              panel.push(this.simpleFilter(filter.id));
+              panel.refresh();
+              this.openRule(panel, filter.id);
             }, { placeholder: this.t('filterByPlaceholder') }),
             panelSeparator(),
             panelRow({
@@ -1986,9 +1989,7 @@ export class ViewSettingsPages {
           });
 
           chip.toggleAttribute('data-active', parts.value !== '');
-          chip.addEventListener('click', () => {
-            openFilterChip(chip, this.ctx, filter.id, () => panel.refresh(), panel);
-          });
+          chip.addEventListener('click', () => this.openRule(panel, filter.id));
 
           return [{ id: filter.id, element: chip }];
         });
@@ -2020,7 +2021,7 @@ export class ViewSettingsPages {
 
               this.ctx.updatePersonal({ filters: [...withEntryIds(this.ctx.view().filters), filter] });
               panel.back();
-              panel.push(this.simpleFilter(filter.id));
+              this.openRule(panel, filter.id);
             }, {
               measured: true,
               used: () => this.ctx.view().filters.map((f) => f.propertyId),
@@ -2062,133 +2063,29 @@ export class ViewSettingsPages {
     };
   }
 
-  /** The editor of one simple filter. Also the root page of a filter pill's popover. */
-  simpleFilter(filterId: string): PanelPage {
-    const current = (): FilterConfig | undefined => withEntryIds(this.ctx.view().filters).find((f) => f.id === filterId);
-    const write = (next: (filters: Array<FilterConfig & { id: string }>) => FilterConfig[]): void =>
-      this.ctx.updatePersonal({ filters: next(withEntryIds(this.ctx.view().filters)) });
+  /**
+   * A filter chip's rule popover over the Filters page, also right after a property pick (notion-motion.md Round 87
+   * §1 #7). Round 87 §1 #6 (r87-n-settings-addadv.raw): after "Add to advanced filter" the page stays and the
+   * advanced filter opens at its chip.
+   */
+  private openRule(panel: DatabasePanel, filterId: string): void {
+    const chip = panel.root.querySelector<HTMLElement>(`[data-blok-testid="database-filter-row-${CSS.escape(filterId)}"]`);
 
-    return this.ruleEditor({
-      read: current,
-      update: (patch) => write((filters) => filters.map((f) => (f.id === filterId ? { ...f, ...patch } : f))),
-      remove: () => write((filters) => filters.filter((f) => f.id !== filterId)),
-      toAdvanced: () => {
-        const filter = current();
-
-        if (filter === undefined) return;
-        const tree = this.ctx.view().filterTree ?? emptyFilterTree();
-
-        this.ctx.updatePersonal({
-          filters: withEntryIds(this.ctx.view().filters).filter((f) => f.id !== filterId),
-          filterTree: addFilterRule(tree, tree.id, { id: nanoid(), propertyId: filter.propertyId, operator: filter.operator, value: filter.value }),
-        });
+    if (chip === null) return;
+    // The toolbar refreshes only the settings panel on a write; the rule popover redraws itself, as the bar's does.
+    const ctx: ViewSettingsContext = {
+      ...this.ctx,
+      updatePersonal: (patch, options) => {
+        this.ctx.updatePersonal(patch, options);
+        rule.refresh();
       },
+    };
+    const rule = openFilterChip(chip, ctx, filterId, () => panel.refresh(), panel, () => {
+      panel.refresh();
+      const advanced = panel.root.querySelector<HTMLElement>('[data-blok-testid="database-filter-advanced-chip"]');
+
+      if (advanced !== null) openAdvancedFilter(advanced, this.ctx, () => panel.refresh(), panel);
     });
-  }
-
-  private ruleEditor(rule: {
-    read: () => Pick<FilterConfig, 'propertyId' | 'operator' | 'value'> | undefined;
-    update: (patch: Partial<Pick<FilterConfig, 'propertyId' | 'operator' | 'value'>>) => void;
-    remove: () => void;
-    toAdvanced?: () => void;
-  }): PanelPage {
-    return {
-      build: (panel) => {
-        const current = rule.read();
-        const property = this.property(current?.propertyId);
-
-        if (current === undefined || property === undefined) {
-          return [panelText(this.t('filterGone'))];
-        }
-        const opKey = operatorLabelKey(property.type, current.operator);
-        const { lead, operator: inner } = splitOperator(current.operator);
-        const writeLead = (next: string | undefined): void => {
-          rule.update({ operator: joinOperator(next, inner) });
-          panel.back();
-        };
-        const rows: HTMLElement[] = [
-          // notion-motion.md Round 13: a Date filter's Start date / End date, a Name rollup's Any / None / Every.
-          ...(property.type === 'date' ? [panelRow({
-            label: this.t(lead === 'end' ? 'dateEnd' : 'dateStart'),
-            testId: 'database-filter-side',
-            opensPage: true,
-            onClick: () => panel.push({
-              build: () => (['start', 'end'] as const).map((side) => panelRow({
-                label: this.t(side === 'end' ? 'dateEnd' : 'dateStart'),
-                testId: `database-filter-side-${side}`,
-                checked: (lead === 'end') === (side === 'end'),
-                onClick: () => writeLead(side === 'end' ? 'end' : undefined),
-              })),
-            }),
-          })] : []),
-          ...(isQuantifiedText(property, current.operator) ? [panelRow({
-            label: this.ctx.i18n.t(`tools.database.filterOperator.${lead ?? 'any'}`),
-            testId: 'database-filter-quantifier',
-            opensPage: true,
-            onClick: () => panel.push({
-              build: () => quantifierChoices().map((choice) => panelRow({
-                label: this.ctx.i18n.t(choice.labelKey),
-                testId: `database-filter-quantifier-${choice.operator}`,
-                checked: (lead ?? 'any') === choice.operator,
-                onClick: () => writeLead(choice.operator),
-              })),
-            }),
-          })] : []),
-          panelRow({
-            label: property.name,
-            testId: 'database-filter-operator',
-            value: opKey === undefined ? current.operator : this.ctx.i18n.t(opKey),
-            opensPage: true,
-            onClick: () => panel.push(this.operators(property, current.operator, (operator) => {
-              rule.update(operatorPick(property, operator, current));
-              panel.back();
-            })),
-          }),
-          ...this.valueControls(property, current, (patch) => {
-            rule.update(patch.operator === undefined ? patch : { ...patch, operator: keepLead(current.operator, patch.operator) });
-            panel.refresh();
-          }),
-          panelSeparator(),
-        ];
-
-        if (rule.toAdvanced !== undefined) {
-          const toAdvanced = rule.toAdvanced;
-
-          rows.push(panelRow({
-            label: this.t('filterAddToAdvanced'),
-            testId: 'database-filter-to-advanced',
-            onClick: () => {
-              toAdvanced();
-              panel.close();
-            },
-          }));
-        }
-        rows.push(panelRow({
-          label: this.t('filterDelete'),
-          testId: 'database-filter-delete',
-          icon: IconTrash,
-          danger: true,
-          onClick: () => {
-            rule.remove();
-            panel.back();
-          },
-        }));
-
-        return rows;
-      },
-    };
-  }
-
-  private operators(property: PropertyDefinition, current: string, onPick: (operator: string) => void): PanelPage {
-    return {
-      title: property.name,
-      build: () => operatorChoicesFor(property, current).map((choice) => panelRow({
-        label: this.ctx.i18n.t(choice.labelKey),
-        testId: `database-filter-op-${choice.operator}`,
-        checked: menuOperatorOf(current) === choice.operator,
-        onClick: () => onPick(choice.operator),
-      })),
-    };
   }
 
   private valueControls(
@@ -2609,6 +2506,8 @@ export class ViewSettingsPages {
     if (controls.length === 1 && only instanceof HTMLInputElement) {
       only.setAttribute('data-blok-testid', `database-filter-rule-value-${id}`);
       only.setAttribute('data-blok-database-filter-rule-value', '');
+      // notion-motion.md Round 83 §5 (r83-n-af-one.raw): "Value" here; the simple chip keeps its own placeholder.
+      only.placeholder = this.t('filterValue');
       line.append(only);
     } else if (controls.length > 0) {
       const valueText = (rule: Pick<FilterConfig, 'operator' | 'value'>): string => {
@@ -2735,14 +2634,20 @@ export class ViewSettingsPages {
   }
 
   /**
-   * A new advanced rule, empty, on the property already in use: the last rule in `group`, else the
+   * A new advanced rule on the property already in use: the last rule in `group`, else the
    * tree's first rule, else Name (Round 19 §1, Round 20 §2). Which rule Notion copies is unread.
+   * Round 86 §1 #2 (r86-n-advrule-copy.raw): the new rule, and a new group's rule, also copy the
+   * seed's operator and value, on any operator.
    */
   private firstRule(group: FilterGroup, tree: FilterGroup): FilterConfig & { id: string } {
     const filterable = this.ctx.schema().filter((p) => FILTERABLE_TYPES.includes(p.type));
     const seed = rulesOf(group).at(-1) ?? rulesOf(tree)[0];
     const property = filterable.find((p) => p.id === seed?.propertyId) ?? filterable.find((p) => p.type === 'title') ?? filterable[0];
     const { id: _id, ...condition } = defaultFilterFor(property);
+
+    if (seed !== undefined && seed.propertyId === property.id) {
+      return { id: nanoid(), ...condition, operator: seed.operator, value: structuredClone(seed.value) };
+    }
 
     return { id: nanoid(), ...condition };
   }
@@ -2919,13 +2824,13 @@ export class ViewSettingsPages {
     const stateKey = (key: string): string => (sub ? `sub:${key}` : key);
     const pickState = queryState();
 
-    const ungrouped = (): boolean => !sub && this.property(this.ctx.view().groupBy) === undefined;
+    const ungrouped = (): boolean => this.property(sub ? this.ctx.view().subGroupBy : this.ctx.view().groupBy) === undefined;
     const t = (key: string): string => this.t(key);
 
     // notion-motion.md Round 10 "Group by list": ungrouped, the page is the property list titled "Group by".
     return {
       get title() {
-        if (sub) return t('settingsSubGroup');
+        if (sub) return t(ungrouped() ? 'subGroupBy' : 'settingsSubGroup');
 
         return t(ungrouped() ? 'groupBy' : 'settingsGroup');
       },
@@ -2940,13 +2845,14 @@ export class ViewSettingsPages {
         const disabled = !this.shared;
 
         // findings V15 (26-notion-group.png): ungrouped, the page is None, then the property picker.
-        if (!sub && property === undefined) {
+        // Round 82 §3 (r82-n-a2-subgroup.raw): with no sub-group, Sub-group opens the same way.
+        if (property === undefined) {
           return this.propertyPicker(pickState, GROUPABLE_TYPES, (picked) => {
-            this.ctx.updateView(groupByChange(this.ctx.view(), picked));
+            this.ctx.updateView(sub ? subGroupByChange(this.ctx.view(), picked) : groupByChange(this.ctx.view(), picked));
             panel.refresh();
           }, {
             disabled,
-            leading: () => [panelRow({ label: this.t('settingsNone'), testId: 'database-group-none', checked: true, onClick: () => undefined })],
+            leading: () => [panelRow({ label: this.t('settingsNone'), testId: sub ? 'database-subgroup-none' : 'database-group-none', checked: true, onClick: () => undefined })],
           });
         }
         const refreshAfter = (write: () => void): (() => void) => () => {
@@ -2955,19 +2861,17 @@ export class ViewSettingsPages {
         };
         const rows: HTMLElement[] = [
           panelRow({
-            label: this.t('groupBy'),
+            label: this.t(sub ? 'subGroupBy' : 'groupBy'),
             testId: sub ? 'database-subgroup-by' : 'database-group-by',
-            value: property?.name ?? this.t('settingsNone'),
+            value: property.name,
             opensPage: true,
             disabled,
-            onClick: () => panel.push(this.pickProperty(this.t('groupBy'), GROUPABLE_TYPES, (picked) => {
+            onClick: () => panel.push(this.pickProperty(this.t(sub ? 'subGroupBy' : 'groupBy'), GROUPABLE_TYPES, (picked) => {
               this.ctx.updateView(sub ? subGroupByChange(this.ctx.view(), picked) : groupByChange(this.ctx.view(), picked));
               panel.back();
             }, { measured: true })),
           }),
         ];
-
-        if (property === undefined) return rows;
 
         if (property.type === 'status' && !sub) {
           const statusBy = view.groupByStatus ?? 'option';
@@ -3054,18 +2958,45 @@ export class ViewSettingsPages {
           ...withGroupFlags(this.ctx.view(), groups.map((g) => stateKey(g.key)), { hidden: !allHidden }),
         })));
         header.append(panelLabel(this.t('groupGroups')), hideAll);
-        rows.push(
-          panelSeparator(),
-          header,
-          ...groups.map((group) => this.groupVisibilityRow(group, hidden(group.key), disabled, refreshAfter(() => this.ctx.updateView({
+        rows.push(panelSeparator(), header);
+        const groupRow = (group: ViewGroupEntry): HTMLElement => {
+          const row = this.groupVisibilityRow(group, hidden(group.key), disabled, refreshAfter(() => this.ctx.updateView({
             ...withGroupFlags(this.ctx.view(), [stateKey(group.key)], { hidden: !hidden(group.key) }),
           })), view.type === 'board' && !sub ? {
             pinned: isGroupPinned(this.ctx.view(), group.key),
             onToggle: refreshAfter(() => this.ctx.updateView({
               ...withGroupFlags(this.ctx.view(), [group.key], { pinned: !isGroupPinned(this.ctx.view(), group.key) }),
             })),
-          } : undefined)),
-        );
+          } : undefined);
+
+          // Round 82: Status group names keep 14/400, the rest are 14/500 (database.css).
+          row.toggleAttribute('data-status', property.type === 'status');
+
+          return row;
+        };
+        // notion-motion.md Round 82 (r82-n-a2-hidden-eye.raw): hidden groups are listed last. The saved order stays.
+        const sections = [groups.filter((g) => !hidden(g.key)), groups.filter((g) => hidden(g.key))].filter((section) => section.length > 0);
+        const mover = sub || disabled ? undefined : this.ctx.moveGroup;
+
+        if (mover === undefined || !mover.enabled()) {
+          rows.push(...sections.flat().map(groupRow));
+        } else {
+          // Round 92 §1 #4: every row has a handle, hidden ones too (Round 23, r23-grp.raw). Shown and hidden rows
+          // are two lists: their neighbours across the split are not neighbours in the saved order.
+          rows.push(...sections.map((section) => panelReorderList({
+            testId: 'database-group-list',
+            handleLabel: this.t('settingsDragToReorder'),
+            // A board cannot move its no-value column either.
+            items: section.map((group) => ({ id: group.key, element: groupRow(group), fixed: group.key === NO_VALUE_GROUP_KEY })),
+            onMove: (key, beforeKey) => {
+              const rest = section.map((group) => group.key).filter((other) => other !== key);
+              const after = beforeKey === null ? rest.at(-1) : rest[rest.indexOf(beforeKey) - 1];
+
+              mover.move(key, beforeKey, after ?? null);
+              panel.refresh();
+            },
+          })));
+        }
         if (view.type !== 'board' || sub) {
           rows.push(panelSeparator(), panelRow({
             label: this.t('groupRemove'),
@@ -3210,7 +3141,10 @@ export class ViewSettingsPages {
           choice('database-group-date-by', 'groupDateBy', 'dateBy', [
             ['relative', 'groupDateRelative'], ['day', 'groupDateDay'], ['week', 'groupDateWeek'], ['month', 'groupDateMonth'], ['year', 'groupDateYear'],
           ], 'relative'),
-          choice('database-group-week-start', 'groupWeekStart', 'weekStart', [[0, 'groupWeekSunday'], [1, 'groupWeekMonday']], 0),
+          // Round 84b §3, Round 85c §2: Notion shows it for Week only.
+          ...(settings.dateBy !== 'week'
+            ? []
+            : [choice('database-group-week-start', 'groupWeekStart', 'weekStart', [[0, 'groupWeekSunday'], [1, 'groupWeekMonday']], 0)]),
         ];
       case 'number':
         return [this.numberByRow(panel, liveSettings, set, disabled)];
@@ -3327,8 +3261,11 @@ export class ViewSettingsPages {
         lead.append(headerButton(`database-color-side-${rule.id}`, this.t(part === 'end' ? 'dateEnd' : 'dateStart'), 'database-filter-side-picker', (pick) => (['start', 'end'] as const).map((side) =>
           choice(`database-filter-side-${side}`, this.t(side === 'end' ? 'dateEnd' : 'dateStart'), (part === 'end') === (side === 'end'), { operator: joinOperator(side === 'end' ? 'end' : undefined, inner) }, pick))));
       } else if (isQuantifiedText(property, rule.operator) || isQuantifiedNumber(property, rule.operator)) {
-        lead.append(headerButton(`database-color-quantifier-${rule.id}`, this.ctx.i18n.t(`tools.database.filterOperator.${part ?? 'any'}`).toLocaleLowerCase(), 'database-filter-quantifier-picker', (pick) => quantifierChoices().map((q) =>
-          choice(`database-filter-quantifier-${q.operator}`, this.ctx.i18n.t(q.labelKey), (part ?? 'any') === q.operator, { operator: joinOperator(q.operator, inner) }, pick))));
+        const quantifier = headerButton(`database-color-quantifier-${rule.id}`, this.ctx.i18n.t(`tools.database.filterOperator.${part ?? 'any'}`).toLocaleLowerCase(), 'database-filter-quantifier-picker', (pick) => quantifierChoices().map((q) =>
+          choice(`database-filter-quantifier-${q.operator}`, this.ctx.i18n.t(q.labelKey), (part ?? 'any') === q.operator, { operator: joinOperator(q.operator, inner) }, pick)));
+
+        // notion-motion.md Round 74 §4: a Number rollup's "any" is 400. A Text rollup's weight is unmeasured.
+        lead.append(isQuantifiedNumber(property, rule.operator) ? marked(quantifier, 'data-blok-database-color-rule-quantifier') : quantifier);
       }
       lead.append(headerButton(`database-color-operator-${rule.id}`, (opKey === undefined ? rule.operator : this.ctx.i18n.t(opKey)).toLocaleLowerCase(), 'database-filter-operator-picker', (pick) => colorRuleOperatorChoices(property, rule.operator).map((c) =>
         choice(`database-filter-op-${c.operator}`, this.ctx.i18n.t(c.labelKey), menuOperatorOf(rule.operator) === c.operator, quantified(property, operatorPick(property, c.operator, rule)), pick))));
@@ -3527,8 +3464,21 @@ export class ViewSettingsPages {
           icon: IconPlus,
           disabled,
           onClick: () => openFlyout(add, panel, 'database-color-property-picker', COLOR_PROPERTY_FLYOUT_WIDTH, (pick) => this.propertyPicker(queryState(), COLOR_RULE_TYPES, (property) => pick(() => {
-            write([...rules(), { id: nanoid(), propertyId: property.id, ...newColorRule(property, this.ctx.storedType?.(property.id)) }]);
+            const id = nanoid();
+
+            write([...rules(), { id, propertyId: property.id, ...newColorRule(property, this.ctx.storedType?.(property.id)) }]);
             panel.refresh();
+
+            const stored = this.ctx.storedType?.(property.id) ?? property.type;
+
+            // notion-motion.md Round 77 §5: a checkbox formula has no input and leaves nothing focused.
+            if (stored === 'formula' && property.type === 'checkbox') return false;
+
+            // notion-motion.md Round 74 §4, Round 76 §4, Round 77 §5: a new Rollup or Formula rule focuses its value input.
+            if (stored === 'rollup' || stored === 'formula') return panel.root.querySelector<HTMLInputElement>(`input[data-blok-testid="${CSS.escape(`database-color-value-${id}`)}"]`);
+
+            // notion-motion.md Round 75 §2, Round 76 §4: these types leave nothing focused. Other types are unmeasured and keep Add another.
+            return BLUR_AFTER_NEW_COLOR_RULE.has(stored) ? false : null;
           })), { gap: COLOR_PROPERTY_FLYOUT_GAP, flip: true }),
         }), cards.length === 0 ? 'data-blok-database-color-new' : 'data-blok-database-color-add-another');
 
@@ -3621,6 +3571,9 @@ const newColorRule = (property: PropertyDefinition, storedType: PropertyType | u
   const numberFormula = type === 'number' && storedType === 'formula';
 
   if (isNumberListRollup(property)) return { operator: 'any:equals', value: null, color: plain };
+
+  // notion-motion.md Round 77 §5 (r77-n-ccformula-text.raw): a text formula starts on "contains".
+  if (type === 'text' && storedType === 'formula') return { operator: 'contains', value: null, color: plain };
 
   return {
     operator: type === 'checkbox' || numberFormula ? 'equals' : 'is_not_empty',
@@ -3763,8 +3716,8 @@ const idList = (value: FilterConfig['value']): string[] => {
   return typeof value === 'string' && value !== '' ? [value] : [];
 };
 
-/** `rename` is the root with the name field focused and selected (findings V08). */
-export type ViewSettingsStart = 'root' | 'rename' | 'filter' | 'sort' | 'group' | 'layout' | 'properties' | 'automations' | 'autofill' | 'source';
+/** `rename` is the root with the name field focused and selected (findings V08); `edit` is the root with Close focused. */
+export type ViewSettingsStart = 'root' | 'rename' | 'edit' | 'filter' | 'sort' | 'group' | 'layout' | 'properties' | 'automations' | 'autofill' | 'source';
 
 /** Opens the view settings panel under `anchor`, at `start`. */
 export const openViewSettings = (
@@ -3777,6 +3730,7 @@ export const openViewSettings = (
   const root = {
     root: (): PanelPage => pages.root(),
     rename: (): PanelPage => pages.root(),
+    edit: (): PanelPage => pages.root(),
     filter: (): PanelPage => pages.filters(),
     sort: (): PanelPage => pages.sorts(),
     group: (): PanelPage => pages.group(false),
@@ -3793,6 +3747,8 @@ export const openViewSettings = (
     width: 290,
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
     docked: true,
+    // notion-motion.md Round 92 §1 #5: a short page sits 3px under the Settings button; a tall one still clamps to the window.
+    dockGap: 3,
     closeLabel: ctx.i18n.t('tools.database.close'),
     ...(onClose !== undefined ? { onClose } : {}),
   });
@@ -3804,6 +3760,8 @@ export const openViewSettings = (
     name?.focus();
     name?.select();
   }
+  // notion-motion.md Round 94 §1 #4, Round 95 §1 #6: tab menu › Edit view and the Settings button land on Close on every layout.
+  if (start === 'edit') panel.root.querySelector<HTMLElement>('[data-blok-testid="database-panel-close"]')?.focus();
 
   return panel;
 };
@@ -3838,13 +3796,14 @@ const NEW_GROUP_CONJUNCTION = 'or';
 const ADD_MENU_WIDTH = 206.9;
 
 /** The advanced filter on its own: "+ Filter"'s "Add advanced filter" footer opens it. */
-export const openAdvancedFilter = (anchor: HTMLElement, ctx: ViewSettingsContext, onClose?: (escape: boolean) => void, host?: DatabasePanel): DatabasePanel => {
+export const openAdvancedFilter = (anchor: HTMLElement, ctx: ViewSettingsContext, onClose?: (escape: boolean) => void, host?: DatabasePanel, focusHost?: HTMLElement): DatabasePanel => {
   const release = host?.hold();
   const panel = new DatabasePanel({
     anchor,
     root: new ViewSettingsPages(ctx).advanced(false),
     testId: 'database-advanced-filter',
     ignoresHistoryKeys: true,
+    ...(focusHost !== undefined ? { focusHost } : {}),
     // The floor under the rules' width (advanced() fits its content). Blok's old fixed width, unmeasured in Notion.
     width: 290,
     // notion-motion.md Round 18 §2 (r18-adv-open.raw): 4px under the "1 rule" chip.
@@ -3861,20 +3820,3 @@ export const openAdvancedFilter = (anchor: HTMLElement, ctx: ViewSettingsContext
 
   return panel;
 };
-
-export const openFilterPill = (anchor: HTMLElement, ctx: ViewSettingsContext, filterId: string, onClose?: () => void): DatabasePanel => {
-  const panel = new DatabasePanel({
-    anchor,
-    root: new ViewSettingsPages(ctx).simpleFilter(filterId),
-    testId: 'database-filter-popover',
-    ignoresHistoryKeys: true,
-    width: 220,
-    backLabel: ctx.i18n.t('tools.database.settingsBack'),
-    ...(onClose !== undefined ? { onClose } : {}),
-  });
-
-  panel.open();
-
-  return panel;
-};
-

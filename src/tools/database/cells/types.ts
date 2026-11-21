@@ -96,9 +96,14 @@ export interface CellContext {
   coverCell?: boolean | 'value';
   /**
    * The anchor is a zero-size point: the editor opens with its top-left on it,
-   * or above it when it would not fit below. Text editors only.
+   * or above it when it would not fit below. Text, number, select and date editors.
    */
   atPoint?: boolean;
+  /**
+   * A list row's chip (notion-motion.md Round 52 §1): the editor sits 1px left of it and,
+   * with no room below, above it, its bottom 1 over the chip's top. Select and status only.
+   */
+  listChip?: boolean;
   /**
    * The table grid: Tab saves and closes a text-like editor, so focus stays in
    * the grid. Elsewhere Tab moves to the next field.

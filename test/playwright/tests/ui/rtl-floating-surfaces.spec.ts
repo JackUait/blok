@@ -269,7 +269,7 @@ for (const direction of DIRECTIONS) {
       const link = page.getByTestId('inline-toolbar').filter({ visible: true }).getByRole('menuitemcheckbox', { name: 'Link', exact: true });
 
       await link.click();
-      const field = page.getByPlaceholder('Paste a link or search headings');
+      const field = page.getByPlaceholder('Paste link or search pages');
 
       await expect(field).toBeVisible();
       const card = page.getByTestId('popover-container').filter({ has: field });

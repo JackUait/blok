@@ -748,7 +748,7 @@ describe('BlockManager.duplicateCurrentBlock', () => {
 
     harness.blockManager.duplicateCurrentBlock();
 
-    expect(harness.duplicateBlocksInPlace).toHaveBeenCalledWith(current);
+    expect(harness.duplicateBlocksInPlace).toHaveBeenCalledWith(current, { numberCopies: true });
   });
 
   it('anchors on the last block of a block-level selection', () => {
@@ -757,7 +757,7 @@ describe('BlockManager.duplicateCurrentBlock', () => {
 
     harness.blockManager.duplicateCurrentBlock();
 
-    expect(harness.duplicateBlocksInPlace).toHaveBeenCalledWith(selected[1]);
+    expect(harness.duplicateBlocksInPlace).toHaveBeenCalledWith(selected[1], { numberCopies: true });
   });
 
   it('does nothing mid-drag, so a duplicate never lands on the dragged block', () => {

@@ -35,6 +35,8 @@ export interface DatabasePanelOptions {
   backLabel: string;
   /** Docks at the window's end edge (view settings, research/26 §1a). */
   docked?: boolean;
+  /** With `docked` as a floating card: opens this far under the anchor instead of level with its top. */
+  dockGap?: number;
   /** With `docked`: every sub-page header ends in a × with this name (findings V25). */
   closeLabel?: string;
   /** Space under the anchor; the popover's usual gap when unset. */
@@ -55,11 +57,15 @@ export interface DatabasePanelOptions {
   halfWindow?: boolean;
   /** Under the anchor, its end edge on the anchor's end edge. */
   alignEnd?: boolean;
+  /** An extra class on the popover surface, for motion only this panel has. */
+  surfaceClass?: string;
   /**
    * The undo and redo keys walk no history while it is open (notion-motion.md Round 64 §2,
    * Round 65 §2: Notion's filter popovers). A text field keeps its native undo. Its flyouts inherit it.
    */
   ignoresHistoryKeys?: boolean;
+  /** Opening leaves focus on this control outside the panel, which does not close it (notion-motion.md Round 83 §5). */
+  focusHost?: HTMLElement;
   /** `escape` is true when Escape closed the first page. */
   onClose?: (escape: boolean) => void;
 }
@@ -82,17 +88,22 @@ const keepsNativeUndo = (target: EventTarget | null): boolean =>
 
 /** Each panel by its element, for {@link historyKeyStaysInPanel}. */
 const panels = new WeakMap<Element, DatabasePanel>();
+/** Open panels with a focus host: one that ignores history keys holds them on its host too. */
+const hostedPanels = new Set<DatabasePanel>();
 
 /**
  * True when a history key pressed at `target` walks no editor history: the panel
  * it is in ignores the key, or the key goes to a text field there, which keeps
- * its native undo (core walks no history from a text field).
+ * its native undo (core walks no history from a text field), or it is pressed on
+ * the focus host of an open panel that ignores the keys.
  */
 export const historyKeyStaysInPanel = (target: EventTarget | null): boolean => {
   const element = target instanceof Element ? target.closest('[data-blok-database-panel]') : null;
   const panel = element === null ? undefined : panels.get(element);
 
-  return panel !== undefined && (panel.ignoringHistoryKeys || keepsNativeUndo(target));
+  if (panel === undefined) return [...hostedPanels].some((open) => open.holdsHistoryKeyAt(target));
+
+  return panel.ignoringHistoryKeys || keepsNativeUndo(target);
 };
 
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex="0"]';
@@ -133,6 +144,7 @@ export class DatabasePanel {
       content: this.element,
       panel: true,
       ...(dock ?? {}),
+      ...(options.dockGap !== undefined ? { dockGap: options.dockGap } : {}),
       ...(options.gap !== undefined ? { gap: options.gap } : {}),
       ...(options.beside !== undefined ? { beside: options.beside } : {}),
       ...(options.besideOf !== undefined ? { besideOf: options.besideOf } : {}),
@@ -141,6 +153,8 @@ export class DatabasePanel {
       ...(options.flip === true ? { flip: true } : {}),
       ...(options.verticalMargin !== undefined ? { verticalMargin: options.verticalMargin } : {}),
       ...(options.alignEnd === true ? { alignEnd: true } : {}),
+      ...(options.focusHost !== undefined ? { focusHost: options.focusHost } : {}),
+      ...(options.surfaceClass !== undefined ? { surfaceClass: options.surfaceClass } : {}),
       onEscape: () => this.back(true),
       onDismiss: () => this.finish(),
     });
@@ -166,7 +180,15 @@ export class DatabasePanel {
   open(): void {
     this.render();
     this.popover.show();
-    this.focusFirst();
+    if (this.options.focusHost === undefined) {
+      this.focusFirst();
+
+      return;
+    }
+    hostedPanels.add(this);
+    // Window capture: before core's keyboard-owner check, which runs after the key bubbles.
+    window.addEventListener('keydown', this.holdHistoryKeyOnHost, true);
+    this.options.focusHost.focus();
   }
 
   /** Keeps this panel open under a panel it opens; outside presses, focus and Escape go there until the release. */
@@ -233,6 +255,8 @@ export class DatabasePanel {
   private finish(escape = false): void {
     if (this.closed) return;
     this.closed = true;
+    hostedPanels.delete(this);
+    window.removeEventListener('keydown', this.holdHistoryKeyOnHost, true);
     this.owned.forEach((child) => child.close());
     this.options.onClose?.(escape);
   }
@@ -307,6 +331,18 @@ export class DatabasePanel {
     this.element.querySelector<HTMLElement>(`[data-blok-database-panel-row]:not([disabled]), :is(${FOCUSABLE}):not([data-blok-database-panel-close])`)?.focus();
   }
 
+  /** True when this panel ignores history keys and `target` is in its focus host. */
+  holdsHistoryKeyAt(target: EventTarget | null): boolean {
+    const host = this.options.focusHost;
+
+    return this.ignoringHistoryKeys && host !== undefined && target instanceof Node && host.contains(target);
+  }
+
+  /** {@link handleKeydown} covers keys pressed in the panel; this covers its focus host. */
+  private readonly holdHistoryKeyOnHost = (event: KeyboardEvent): void => {
+    if (isHistoryKey(event) && this.holdsHistoryKeyAt(event.target)) event.preventDefault();
+  };
+
   private readonly handleKeydown = (event: KeyboardEvent): void => {
     // The panel is a keyboard owner: core walks history after the key bubbles unless it is prevented.
     if (this.ignoringHistoryKeys && isHistoryKey(event) && !keepsNativeUndo(event.target)) {
@@ -366,7 +402,8 @@ export interface PanelRowOptions {
   /** Secondary ink, as Notion's "Add sort" and "Delete sort" (research/21 §1c). */
   muted?: boolean;
   disabled?: boolean;
-  onClick: () => void;
+  /** `event.detail` is 0 when Enter or Space pressed the row. */
+  onClick: (event: MouseEvent) => void;
 }
 
 export const panelRow = (options: PanelRowOptions): HTMLButtonElement => {
@@ -446,7 +483,7 @@ export const panelRow = (options: PanelRowOptions): HTMLButtonElement => {
     arrow.innerHTML = IconArrowDiagonal;
     row.appendChild(arrow);
   }
-  row.addEventListener('click', () => options.onClick());
+  row.addEventListener('click', (event) => options.onClick(event));
 
   return row;
 };
@@ -540,10 +577,11 @@ export const panelInput = (options: {
 /**
  * A list whose rows reorder by dragging their ⋮⋮ handle, or with Alt+Arrow
  * keys on the handle. `onMove(id, beforeId)` gets `null` for "to the end".
+ * A `fixed` row keeps its place: its handle is an inert, unseen spacer, but others move past it.
  */
 export const panelReorderList = (options: {
   testId: string;
-  items: Array<{ id: string; element: HTMLElement }>;
+  items: Array<{ id: string; element: HTMLElement; fixed?: boolean }>;
   handleLabel: string;
   onMove: (id: string, beforeId: string | null) => void;
 }): HTMLElement => {
@@ -563,7 +601,7 @@ export const panelReorderList = (options: {
     options.onMove(id, rest[to] ?? null);
   };
 
-  for (const { id, element } of options.items) {
+  for (const { id, element, fixed } of options.items) {
     const row = document.createElement('div');
     const handle = document.createElement('button');
 
@@ -572,15 +610,21 @@ export const panelReorderList = (options: {
     handle.type = 'button';
     handle.setAttribute('data-blok-database-panel-handle', '');
     handle.setAttribute('data-blok-testid', `${options.testId}-handle-${id}`);
-    handle.setAttribute('aria-label', options.handleLabel);
     handle.innerHTML = IconMenu;
-    handle.addEventListener('keydown', (event) => {
-      if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
-      event.preventDefault();
-      event.stopPropagation();
-      moveBy(id, event.key === 'ArrowUp' ? -1 : 1);
-    });
-    handle.addEventListener('pointerdown', (event) => startReorderDrag(event, list, id, options.onMove));
+    if (fixed === true) {
+      handle.disabled = true;
+      handle.setAttribute('data-fixed', '');
+      handle.setAttribute('aria-hidden', 'true');
+    } else {
+      handle.setAttribute('aria-label', options.handleLabel);
+      handle.addEventListener('keydown', (event) => {
+        if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
+        event.preventDefault();
+        event.stopPropagation();
+        moveBy(id, event.key === 'ArrowUp' ? -1 : 1);
+      });
+      handle.addEventListener('pointerdown', (event) => startReorderDrag(event, list, id, options.onMove));
+    }
     row.append(handle, element);
     list.appendChild(row);
   }
@@ -588,13 +632,15 @@ export const panelReorderList = (options: {
   return list;
 };
 
-/** Notion starts a list drag somewhere in 10–19px (r35:509, not narrowed). */
-const DRAG_THRESHOLD = 12;
+/** notion-motion.md Round 91 §1 #6: Notion's sort row stays at +6 and follows from +8. */
+const DRAG_THRESHOLD = 8;
 
 /**
  * Pointer drag inside one list, as Notion's sort list (r35:497-509): past the
  * threshold the row follows the pointer, clamped to the list ends. A neighbour
- * jumps one slot, with no motion, once the row's leading edge passes its middle.
+ * moves one slot once the pointer enters its slot: the gap before it, then its
+ * box (Round 91 §1 #6). Going up it swaps once the pointer reaches the row's
+ * bottom (Round 92 §1 #9). The lists slide it in database.css (r52-n-sort-rule-drag.raw).
  * Release commits the order shown. Rows carry their id in `data-item-id`.
  */
 export const startReorderDrag = (
@@ -642,15 +688,14 @@ export const startReorderDrag = (
       for (const row of rows) row.style.position = 'relative';
     }
     const offset = Math.min(maxOffset, Math.max(minOffset, delta));
-    const top = self.top + offset;
-    const bottom = self.bottom + offset;
+    const pointer = moveEvent.clientY;
 
     source.style.top = `${offset}px`;
     state.slot = from;
     for (const [index, row] of rows.entries()) {
-      const middle = rects[index].top + rects[index].height / 2;
-      const passedAbove = index < from && top < middle;
-      const passedBelow = index > from && bottom > middle;
+      // A row's slot runs from the previous row's bottom to its own bottom. The bottom itself is the upper slot's.
+      const passedAbove = index < from && pointer <= rects[index].bottom;
+      const passedBelow = index > from && pointer > rects[index - 1].bottom;
       const shift = (passedAbove ? pitchUp : 0) - (passedBelow ? pitchDown : 0);
 
       state.slot += (passedBelow ? 1 : 0) - (passedAbove ? 1 : 0);

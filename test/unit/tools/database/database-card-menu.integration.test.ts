@@ -487,6 +487,122 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     expect(document.querySelector('[data-blok-database-cell-editor] textarea, [data-blok-database-cell-editor] input')).not.toBeNull();
   });
 
+  // notion-motion.md Round 68 §4: from a right-click, Select and Number open alone at the click point in Board and
+  // Table, x = click x - 1, not on the row page or over the column's cell. Table Date too.
+  describe('Edit property › from a right-click', () => {
+    const POINT_SCHEMA = [
+      ...BOARD_SCHEMA,
+      { id: 'cost', name: 'Cost', type: 'number' as const, position: 'a4' },
+      { id: 'due', name: 'Due', type: 'date' as const, position: 'a5' },
+      { id: 'done', name: 'Done', type: 'checkbox' as const, position: 'a6' },
+      { id: 'site', name: 'Site', type: 'url' as const, position: 'a7' },
+    ];
+    const pointRow = (): Doc => makeDoc([fakeRow('a', 'db', { title: 'Alpha beta', status: 'o1', cost: 1234.5, due: '2026-10-15', notes: 'Short note', done: true }, 'a0')]);
+
+    const editFromRightClick = (el: HTMLElement, type: 'board' | 'table', propertyId: string): void => {
+      rowEl(el, type).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 700, clientY: 424 }));
+      itemByTitle('tools.database.tableEditProperty').click();
+      menuItem(`database-row-edit-property-${propertyId}`)?.click();
+    };
+
+    it.each([
+      ['board', 'status', '[data-blok-database-cell-editor] input'],
+      ['board', 'cost', '[data-blok-database-cell-editor] input'],
+      ['table', 'status', '[data-blok-database-cell-editor] input'],
+      ['table', 'cost', '[data-blok-database-cell-editor] input'],
+      ['table', 'due', '[data-blok-database-date-editor]'],
+      // Round 69 §2: Board Text and Date, and Table Text, open at the point too.
+      ['board', 'notes', '[data-blok-database-cell-editor] textarea'],
+      ['board', 'due', '[data-blok-database-date-editor]'],
+      ['table', 'notes', '[data-blok-database-cell-editor] textarea'],
+    ] as const)('%s: %s opens at the click point', (type, propertyId, editor) => {
+      const { el } = buildTool(pointRow(), {}, tableData(POINT_SCHEMA, { type, ...(type === 'board' ? { groupBy: 'status' } : {}) }));
+
+      editFromRightClick(el, type, propertyId);
+
+      expect(document.querySelector('[data-blok-database-drawer], [data-blok-database-peek]')).toBeNull();
+      expect(document.querySelector(editor)).not.toBeNull();
+      const point = document.querySelector<HTMLElement>('[data-blok-database-edit-point]');
+
+      expect([point?.style.left, point?.style.top]).toEqual(['699px', '424px']);
+      expect(document.querySelector('[data-blok-popover-custom-class~="blok-database-point-editor"]')).not.toBeNull();
+    });
+
+    it.each(['board', 'table'] as const)('%s: Escape closes it and takes the point away', (type) => {
+      const { el } = buildTool(pointRow(), {}, tableData(POINT_SCHEMA, { type, ...(type === 'board' ? { groupBy: 'status' } : {}) }));
+
+      editFromRightClick(el, type, 'cost');
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(document.querySelector('[data-blok-database-cell-editor]')).toBeNull();
+      expect(document.querySelector('[data-blok-database-edit-point]')).toBeNull();
+    });
+
+    it('a board URL, not measured yet, still opens on the row page', () => {
+      const { el } = buildTool(pointRow(), {}, tableData(POINT_SCHEMA, { type: 'board', groupBy: 'status' }));
+
+      editFromRightClick(el, 'board', 'site');
+
+      expect(document.querySelector('[data-blok-database-edit-point]')).toBeNull();
+    });
+
+    // Round 69 §2: a board Checkbox flips with no editor and no row page; the menus close and nothing is picked.
+    it('board: Checkbox flips the value and closes the menus', () => {
+      const doc = pointRow();
+      const { el } = buildTool(doc, {}, tableData(POINT_SCHEMA, { type: 'board', groupBy: 'status' }));
+
+      editFromRightClick(el, 'board', 'done');
+
+      expect(doc.rows.get('a')?.data.properties.done).toBe(false);
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+      expect(document.querySelector('[data-blok-database-drawer], [data-blok-database-peek], [data-blok-database-cell-editor]')).toBeNull();
+      expect(el.querySelector('[data-blok-database-card-picked]')).toBeNull();
+    });
+  });
+
+  // notion-motion.md Round 70 §2: after a right-click on a cell, Notion keeps the row selected and focuses that cell.
+  describe('table: focus after a right-click row menu', () => {
+    const FOCUS_SCHEMA = [...BOARD_SCHEMA, { id: 'done', name: 'Done', type: 'checkbox' as const, position: 'a4' }];
+    const focusRow = (): Doc => makeDoc([fakeRow('a', 'db', { title: 'Alpha beta', status: 'o1', notes: 'Short note', done: true }, 'a0')]);
+    const notesCell = (el: HTMLElement): HTMLElement | null => el.querySelector<HTMLElement>('[data-row-id="a"] [role="gridcell"][data-property-id="notes"]');
+    const rowSelected = (el: HTMLElement): string | null | undefined => el.querySelector('[data-blok-database-table-row][data-row-id="a"]')?.getAttribute('aria-selected');
+    const rightClickNotes = (el: HTMLElement): void => {
+      const cell = notesCell(el);
+
+      if (cell === null) throw new Error('no Notes cell');
+      cell.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 700, clientY: 424 }));
+    };
+
+    it('Edit property › Checkbox flips the value, keeps the row selected and focuses the right-clicked cell', async () => {
+      const doc = focusRow();
+      const { el } = buildTool(doc, {}, tableData(FOCUS_SCHEMA, { type: 'table' }));
+
+      rightClickNotes(el);
+      itemByTitle('tools.database.tableEditProperty').click();
+      menuItem('database-row-edit-property-done')?.click();
+      // The flip redraws the table; the new one takes the selection and focus a task later.
+      await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
+
+      expect(rowSelected(el)).toBe('true');
+      expect(notesCell(el)).toHaveFocus();
+      expect(doc.rows.get('a')?.data.properties.done).toBe(false);
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    });
+
+    it('Escape on the row menu keeps the row selected and focuses the right-clicked cell', async () => {
+      const { el } = buildTool(focusRow(), {}, tableData(FOCUS_SCHEMA, { type: 'table' }));
+
+      rightClickNotes(el);
+      expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+      (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
+
+      expect(notesCell(el)).toHaveFocus();
+      expect(rowSelected(el)).toBe('true');
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    });
+  });
+
   // notion-motion.md Round 42 §2: a card that shows only Name still has Edit property ›, and it lists every
   // property, not the shown ones. Created time and ID were not in Notion's list.
   it('Edit property › lists every property on a card that shows only Name', () => {
@@ -640,7 +756,7 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       const grid = el.querySelector<HTMLElement>('[role="grid"]');
       const nameCell = el.querySelector<HTMLElement>('[data-row-id="a"] [role="gridcell"][data-property-id="title"]');
 
-      expect(grid).toHaveFocus();
+      expect(nameCell).toHaveFocus();
       expect(grid?.getAttribute('aria-activedescendant')).toBe(nameCell?.id);
     });
 
@@ -668,7 +784,7 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
 
       expect(selectedRow(el)).toBeNull();
       expect(nameSelected(el)).toBe(true);
-      expect(grid).toHaveFocus();
+      expect(el.querySelector('[data-row-id="a"] [role="gridcell"][data-property-id="title"]')).toHaveFocus();
     });
 
     it('lets Escape select the row again once the cell selection moves', async () => {

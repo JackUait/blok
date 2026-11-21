@@ -4,9 +4,10 @@ import type { Locator, Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
-import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { BLOK_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { savedAsHtml } from '../helpers/saved-as-html';
+import { historyKeys } from '../helpers/history-keys';
 
 const HOLDER_ID = 'blok';
 const LIST_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="list"]`;
@@ -151,6 +152,54 @@ const createListItems = (
     },
   })),
 });
+
+const BLOCK_TUNES_POPOVER_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
+const NESTED_POPOVER_SELECTOR = '[data-blok-testid="popover"][data-blok-nested="true"]';
+
+type ListStyle = 'unordered' | 'ordered' | 'checklist';
+
+const TURN_INTO_TITLE: Record<ListStyle, string> = {
+  unordered: 'Bulleted list',
+  ordered: 'Numbered list',
+  checklist: 'To-do list',
+};
+
+/** The item's own tool root; `first()` skips the roots of items nested under it. */
+const listItemRoot = (page: Page, id: string): Locator =>
+  page.locator(`[data-blok-id="${id}"] [data-blok-tool="list"]`).first();
+
+/** Opens the block menu of item `id`, then its Turn into submenu. */
+const openTurnInto = async (page: Page, id: string): Promise<Locator> => {
+  await page.locator(`[data-blok-id="${id}"] [contenteditable="true"]`).first().click();
+  await page.keyboard.press(`${MODIFIER_KEY}+/`);
+  await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toBeVisible();
+  await page.getByTestId('block-tunes-popover').getByRole('menuitem', { name: 'Turn into', exact: true }).click();
+
+  // The wrapper itself has no box, so wait on a row instead.
+  const nested = page.locator(NESTED_POPOVER_SELECTOR);
+
+  await expect(nested.getByRole('menuitem').first()).toBeVisible();
+
+  return nested;
+};
+
+const turnListItemInto = async (page: Page, id: string, style: ListStyle): Promise<void> => {
+  const nested = await openTurnInto(page, id);
+
+  await nested.getByRole('menuitem', { name: TURN_INTO_TITLE[style], exact: true }).click();
+  // A convert swaps the block instance about a frame later.
+  await expect(listItemRoot(page, id)).toHaveAttribute('data-list-style', style);
+};
+
+const saveBlocks = async (page: Page): Promise<OutputData['blocks']> => {
+  const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
+
+  if (saved === undefined) {
+    throw new Error('blokInstance.save() returned nothing');
+  }
+
+  return saved.blocks;
+};
 
 test.describe('list tool (ListItem)', () => {
   test.beforeAll(() => {
@@ -2002,6 +2051,110 @@ test.describe('list tool (ListItem)', () => {
 
       await expect(secondBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
       await expect(thirdBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
+    });
+  });
+
+  test.describe('style change through Turn into', () => {
+    test('a nested item keeps its depth, parent and children', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            { id: 'top', type: 'list', data: { text: 'Top', style: 'unordered' }, content: ['mid'] },
+            { id: 'mid', type: 'list', data: { text: 'Middle', style: 'unordered', depth: 1 }, parent: 'top', content: ['leaf'] },
+            { id: 'leaf', type: 'list', data: { text: 'Leaf', style: 'unordered', depth: 2 }, parent: 'mid' },
+            { id: 'tail', type: 'list', data: { text: 'Tail', style: 'unordered' } },
+          ],
+        },
+      });
+
+      const before = await saveBlocks(page);
+
+      expect(before.find(block => block.id === 'mid')).toMatchObject({ parent: 'top', content: ['leaf'], data: { depth: 1 } });
+
+      await turnListItemInto(page, 'mid', 'ordered');
+
+      const after = await saveBlocks(page);
+
+      expect(after.find(block => block.id === 'mid')?.data.depth).toBe(1);
+      expect(after).toEqual(before.map(block => (
+        block.id === 'mid' ? { ...block, data: { ...block.data, style: 'ordered' } } : block
+      )));
+    });
+
+    test('a numbered item keeps its start number through bulleted and back', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            { id: 'item', type: 'list', data: { text: 'Fifth', style: 'ordered', start: 5 } },
+            { id: 'next', type: 'list', data: { text: 'Sixth', style: 'ordered' } },
+          ],
+        },
+      });
+
+      await expect(listItemRoot(page, 'item').locator('[data-list-marker]')).toHaveText('5.');
+
+      await turnListItemInto(page, 'item', 'unordered');
+      await turnListItemInto(page, 'item', 'ordered');
+
+      await expect(listItemRoot(page, 'item').locator('[data-list-marker]')).toHaveText('5.');
+      await expect(listItemRoot(page, 'next').locator('[data-list-marker]')).toHaveText('6.');
+
+      const saved = await saveBlocks(page);
+
+      expect(saved.find(block => block.id === 'item')?.data).toMatchObject({ style: 'ordered', start: 5 });
+    });
+
+    test('does not offer a style the `styles` config leaves out', async ({ page }) => {
+      const data: OutputData = {
+        blocks: [
+          { id: 'item', type: 'list', data: { text: 'Item', style: 'unordered' } },
+        ],
+      };
+
+      // Control: without the config the to-do entry is there, so its absence below means something.
+      await createBlok(page, { tools: defaultTools, data });
+      await expect((await openTurnInto(page, 'item')).getByRole('menuitem', { name: 'To-do list', exact: true })).toBeVisible();
+
+      await createBlok(page, {
+        tools: {
+          list: {
+            className: 'Blok.List',
+            inlineToolbar: true,
+            // createBlok spreads `config` into the tool settings, so the tool's own config sits one level down.
+            config: { config: { styles: ['unordered', 'ordered'] } },
+          },
+        },
+        data,
+      });
+
+      const nested = await openTurnInto(page, 'item');
+
+      await expect(nested.getByRole('menuitem', { name: 'Numbered list', exact: true })).toBeVisible();
+      await expect(nested.getByRole('menuitem', { name: 'To-do list', exact: true })).toHaveCount(0);
+    });
+
+    test('one undo restores the previous style', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            { id: 'first', type: 'list', data: { text: 'First', style: 'unordered' } },
+            { id: 'item', type: 'list', data: { text: 'Second', style: 'unordered' } },
+          ],
+        },
+      });
+
+      const before = await saveBlocks(page);
+
+      await turnListItemInto(page, 'item', 'ordered');
+      expect((await saveBlocks(page)).find(block => block.id === 'item')?.data.style).toBe('ordered');
+
+      await page.keyboard.press((await historyKeys(page)).undo);
+
+      await expect(listItemRoot(page, 'item')).toHaveAttribute('data-list-style', 'unordered');
+      expect(await saveBlocks(page)).toEqual(before);
     });
   });
 });

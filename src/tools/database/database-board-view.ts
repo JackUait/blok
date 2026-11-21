@@ -4,6 +4,7 @@ import type { SelectOption, DatabaseRow, DatabaseViewConfig, PropertyDefinition,
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { NO_VALUE_GROUP_KEY } from './database-model';
 import { createGroupPill, renderCellValue } from './cells';
+import { checkboxGroupName } from './database-group-checkbox';
 import { shownStatusOption } from './cells/option-colors';
 import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
@@ -63,6 +64,8 @@ interface DatabaseBoardViewOptions {
   lassoRows?: (rowIds: string[]) => void;
   /** The view's pinned groups in group order, hidden ones included, each with its row count. */
   pinnedGroups?: Array<{ option: SelectOption; count: number }>;
+  /** The group property's name when the columns are checkbox states: each header shows a box and this name. */
+  checkboxGroup?: string;
 }
 
 /** A card title edit in progress, carried across a redraw so typed text is not lost. */
@@ -131,7 +134,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly hideCounts: boolean;
   private readonly aggregate: ((optionId: string) => string) | undefined;
   private readonly aggregateHint: string | undefined;
-  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'onLaneToggle' | 'cellContext' | 'getTotal' | 'onLoadMore' | 'commentBadges' | 'addCardLabel' | 'lassoRows' | 'pinnedGroups' | 'structureLocked'>;
+  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'onLaneToggle' | 'cellContext' | 'getTotal' | 'onLoadMore' | 'commentBadges' | 'addCardLabel' | 'lassoRows' | 'pinnedGroups' | 'structureLocked' | 'checkboxGroup'>;
   private root: HTMLElement | null = null;
   private box: { startX: number; startY: number; el: HTMLElement | null; picked: string | null } | null = null;
   private readonly editHints = new WeakMap<HTMLElement, HTMLElement>();
@@ -222,9 +225,9 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     }
 
     wrapper.appendChild(boardArea);
-    boardArea.querySelector<HTMLElement>('[data-blok-database-card]')?.setAttribute('tabindex', '0');
     boardArea.addEventListener('click', this.onCardPropertyClick);
     boardArea.addEventListener('keydown', this.onCardKeyDown);
+    if (lanes === undefined) boardArea.addEventListener('keydown', this.onBoardTab);
     if (!this.readOnly && this.settings.lassoRows !== undefined) {
       // Core leaves Shift-click inside to the tool and hands a margin lasso to onLasso.
       boardArea.setAttribute('data-blok-selection-owner', '');
@@ -522,9 +525,37 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     if (next === null) {
       return;
     }
-    cardEl.closest('[data-blok-database-board]')?.querySelectorAll('[data-blok-database-card]').forEach((el) => {
-      el.setAttribute('tabindex', el === next ? '0' : '-1');
-    });
+    next.focus();
+  };
+
+  /**
+   * notion-motion.md Round 97 §1 #1: Tab walks every column header first, then each column's cards and buttons.
+   * The headers sit inside their columns, so DOM order would interleave them. The two ends stay native,
+   * so Tab enters and leaves the board as usual. A sub-grouped board keeps its heads row first in the DOM.
+   */
+  private readonly onBoardTab = (event: KeyboardEvent): void => {
+    const target = event.target;
+
+    if (event.key !== 'Tab' || event.metaKey || event.ctrlKey || event.altKey || !(event.currentTarget instanceof HTMLElement)
+      || !(target instanceof HTMLElement) || target.matches('input, textarea, select, [contenteditable="true"]')) {
+      return;
+    }
+
+    const board = event.currentTarget;
+    const tabbables = (root: Element): HTMLElement[] => [...root.querySelectorAll<HTMLElement>('button, a[href], [tabindex]')]
+      .filter((el) => el.tabIndex >= 0 && !el.matches(':disabled') && el.closest('[hidden]') === null);
+    const columns = [...board.querySelectorAll<HTMLElement>(':scope > [data-blok-database-column]')];
+    const order = [
+      ...columns.flatMap((column) => [...column.querySelectorAll(':scope > [data-blok-database-column-header]')].flatMap(tabbables)),
+      ...columns.flatMap((column) => tabbables(column).filter((el) => el.closest('[data-blok-database-column-header]') === null)),
+    ];
+    const index = order.indexOf(target);
+    const next = index === -1 ? undefined : order[index + (event.shiftKey ? -1 : 1)];
+
+    if (next === undefined) {
+      return;
+    }
+    event.preventDefault();
     next.focus();
   };
 
@@ -827,8 +858,13 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
     // The no-value label is not a rename target: column controls and rename lookups find the first column-title.
     titleEl.setAttribute(option.id === NO_VALUE_GROUP_KEY ? 'data-blok-database-no-value-label' : 'data-blok-database-column-title', '');
-    titleEl.textContent = option.label;
-    pill.appendChild(titleEl);
+    if (this.settings.checkboxGroup !== undefined && option.id !== NO_VALUE_GROUP_KEY) {
+      titleEl.textContent = this.settings.checkboxGroup;
+      pill.appendChild(checkboxGroupName(option.id === 'true', titleEl, option.label));
+    } else {
+      titleEl.textContent = option.label;
+      pill.appendChild(titleEl);
+    }
 
     header.appendChild(pill);
 
@@ -896,7 +932,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     cardEl.setAttribute('data-blok-database-card', '');
     cardEl.setAttribute('data-row-id', row.id);
     cardEl.setAttribute('role', 'listitem');
-    cardEl.tabIndex = -1;
+    cardEl.tabIndex = 0;
     cardEl.style.cursor = 'pointer';
     cardEl.style.position = 'relative';
 

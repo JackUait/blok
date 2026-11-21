@@ -38,7 +38,7 @@ export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
       </div>
 
       <div className="mt-8">
-        <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">
+        <h3 className="mb-3 text-sm font-bold text-foreground">
           {t('tools.import')}
         </h3>
         <CodeBlock code={section.importExample} language="typescript" />
@@ -46,7 +46,7 @@ export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
 
       {section.configOptions.length > 0 && (
         <div className="mt-8">
-          <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">
+          <h3 className="mb-3 text-sm font-bold text-foreground">
             {t('tools.configuration')}
           </h3>
           <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -79,7 +79,7 @@ export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
       )}
 
       <div className="mt-8 flex flex-col gap-3">
-        <h3 className="mb-0 text-sm font-bold uppercase tracking-wide text-foreground">
+        <h3 className="mb-0 text-sm font-bold text-foreground">
           <Typo>{t('tools.saveData')}</Typo>
         </h3>
         <CodeBlock code={section.saveDataShape} language="typescript" />
@@ -87,7 +87,7 @@ export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
       </div>
 
       <div className="mt-8">
-        <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">
+        <h3 className="mb-3 text-sm font-bold text-foreground">
           <Typo>{t('tools.usageExample')}</Typo>
         </h3>
         <CodeBlock code={usage.code} language={usage.language} />

@@ -1,15 +1,12 @@
-import { nanoid } from 'nanoid';
-
 import { IconCross, IconDotsHorizontal, IconMenu, IconSliders } from '../../../components/icons';
 import { onHover } from '../../../components/utils/tooltip';
-import { DatabaseModel } from '../database-model';
 import { orderedStatusOptions, personIdsOf, statusGroupOf, statusGroupsOf } from '../property-values';
 import { sortedSelectOptions } from '../../../shared/database/value-helpers';
 import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { CellPopover, coverMinWidth } from './cell-popover';
 import { createOptionPill, optionsFor } from './display';
 import { pickOptionColor, shownStatusOption } from './option-colors';
-import { OptionDrag, buildDeletePrompt, buildOptionPanel, placeDroppedOption } from './option-editing';
+import { OptionDrag, buildOptionPanel, confirmOptionDelete, newSelectOption, placeDroppedOption } from './option-editing';
 import type { CellEditorContext, CellEditorHandle } from './types';
 
 const listIds = { next: 0 };
@@ -52,7 +49,14 @@ class SelectEditor {
   private readonly body = document.createElement('div');
   private readonly popover: CellPopover;
   /** The open option ⋯ menu. The editor is held open under it. */
-  private menu: { popover: CellPopover; root: HTMLElement; optionId: string; release: () => void } | null = null;
+  private menu: {
+    popover: CellPopover;
+    root: HTMLElement;
+    optionId: string;
+    release: () => void;
+  } | null = null;
+  /** Takes the delete confirm away when the editor closes under it, or its modal leaves the page inert. */
+  private deleteConfirm: AbortController | null = null;
   private readonly drag = new OptionDrag(
     this.body,
     () => this.options,
@@ -67,7 +71,6 @@ class SelectEditor {
     },
     () => this.renderList()
   );
-  private deletePromptOpen = false;
 
   constructor(
     private readonly property: PropertyDefinition,
@@ -112,6 +115,9 @@ class SelectEditor {
       content: this.root,
       // Notion: 300 wide beside a 200px cell (research/08:306); status is 240 (feel/findings-table T17).
       minWidth: coverMinWidth(anchor, ctx.coverCell, property.type === 'status' ? 240 : 300),
+      // notion-motion.md Round 68 §4: 300 wide at a right-click point, above it near the window's bottom.
+      point: ctx.atPoint === true,
+      ...(ctx.listChip === true ? { flip: true, flipGap: 1, shiftX: -1 } : {}),
       onEscape: () => this.finish(true),
       onDismiss: () => this.finish(false),
     });
@@ -136,6 +142,7 @@ class SelectEditor {
       return;
     }
     this.open = false;
+    this.deleteConfirm?.abort();
     this.closeMenu();
     this.drag.stop();
     if (closePopover) {
@@ -211,13 +218,7 @@ class SelectEditor {
   }
 
   private create(label: string): void {
-    const last = this.options[this.options.length - 1];
-    const option: SelectOption = {
-      id: nanoid(),
-      label,
-      color: pickOptionColor(this.options),
-      position: DatabaseModel.positionBetween(last?.position ?? null, null),
-    };
+    const option = newSelectOption(this.options, label);
 
     this.setOptions([...this.options, option]);
     this.pick(option.id);
@@ -511,7 +512,7 @@ class SelectEditor {
       minWidth: `${OPTION_MENU_WIDTH}px`,
       gap: 0,
       flip: true,
-      onEscape: () => (this.deletePromptOpen ? this.renderPanel() : this.closeMenu()),
+      onEscape: () => this.closeMenu(),
       onDismiss: () => this.closeMenu(),
     });
 
@@ -530,7 +531,6 @@ class SelectEditor {
       return;
     }
     this.menu = null;
-    this.setDeletePromptOpen(false);
     if (this.open) {
       this.search.focus();
     }
@@ -544,19 +544,12 @@ class SelectEditor {
     this.renderList();
   }
 
-  /** The editor goes inert under the prompt, so the prompt stays modal. */
-  private setDeletePromptOpen(open: boolean): void {
-    this.deletePromptOpen = open;
-    this.chips.toggleAttribute('inert', open);
-  }
-
   private renderPanel(): void {
     const menu = this.menu;
 
     if (menu === null) {
       return;
     }
-    this.setDeletePromptOpen(false);
     const option = this.options.find((o) => o.id === menu.optionId);
 
     if (option === undefined) {
@@ -579,30 +572,45 @@ class SelectEditor {
     name.focus();
   }
 
+  /**
+   * notion-motion.md Round 79 §4: the form's centred confirm. Round 81 §1: the option menu
+   * closes as it opens, and Cancel gives focus back to the search. It mounts in the editor:
+   * focus on a dialog outside it would close the editor. The hold keeps the editor's Escape
+   * and outside presses off it while the dialog is up; it starts after the menu's release,
+   * which would clear it.
+   */
   private confirmDelete(optionId: string): void {
-    const menu = this.menu;
+    const host = this.root.closest<HTMLElement>('[data-blok-popover]');
 
-    if (menu === null) {
-      return;
-    }
-    const { prompt, confirm } = buildDeletePrompt({
-      t: (key) => this.t(key),
-      onConfirm: () => {
-        this.closeMenu();
-        this.setOptions(this.options.filter((o) => o.id !== optionId));
-        if (this.selected.includes(optionId)) {
-          this.selected = this.selected.filter((id) => id !== optionId);
-          this.commit();
-        }
-        this.renderChips();
-        this.renderList();
-      },
-      onCancel: () => this.renderPanel(),
+    this.closeMenu();
+    const release = this.popover.hold();
+    const confirm = new AbortController();
+
+    this.deleteConfirm = confirm;
+    void confirmOptionDelete((key) => this.t(key), {
+      directionSource: this.root,
+      signal: confirm.signal,
+      ...(host === null ? {} : { container: host, topLayer: true }),
+    }).then((confirmed) => {
+      release();
+      if (this.deleteConfirm !== confirm || !this.open) {
+        return;
+      }
+      this.deleteConfirm = null;
+      this.search.focus();
+      if (!confirmed) {
+        return;
+      }
+      this.setOptions(this.options.filter((o) => o.id !== optionId));
+      if (this.selected.includes(optionId)) {
+        this.selected = this.selected.filter((id) => id !== optionId);
+        this.commit();
+      }
+      // notion-motion.md Round 82 §1: Notion highlights the first option after the Delete.
+      this.activeIndex = this.activeTargets().length > 0 ? 0 : -1;
+      this.renderChips();
+      this.renderList();
     });
-
-    menu.root.replaceChildren(prompt);
-    this.setDeletePromptOpen(true);
-    confirm.focus();
   }
 }
 export const openSelectEditor = (

@@ -115,6 +115,24 @@ describe('DatabaseCalendarView', () => {
       expect(all[0].getAttribute('role')).toBe('gridcell');
     });
 
+    // notion-motion.md Round 86 §1 #5 (r86-n-cal-labels.raw): Notion's "Nov 1" text node ends in a space, which keeps its ink 4px off the right edge.
+    it('ends a month-start label with a kept space, and a plain day number with none', () => {
+      const { root } = mount();
+      const label = (iso: string): string | null | undefined => day(root, iso).querySelector('[data-blok-database-calendar-day-number]')?.textContent;
+
+      expect(label('2026-10-01')).toBe('Oct 1 ');
+      expect(label('2026-10-02')).toBe('2');
+    });
+
+    // database.css draws today's circle a fixed 24 on a day number; a month-start label keeps its padded pill.
+    it('marks a month-start label, and no plain day number', () => {
+      const { root } = mount();
+      const number = (iso: string): Element | null => day(root, iso).querySelector('[data-blok-database-calendar-day-number]');
+
+      expect(number('2026-10-01')?.hasAttribute('data-month-start')).toBe(true);
+      expect(number('2026-10-12')?.hasAttribute('data-month-start')).toBe(false);
+    });
+
     it('starts the week on the configured day', () => {
       const { root } = mount({ weekStart: 1 });
 
@@ -660,11 +678,67 @@ describe('DatabaseCalendarView', () => {
   });
 
   describe('keyboard', () => {
-    it('makes one day tabbable: today when shown', () => {
+    // notion-motion.md Round 96 §1 #2 (r96-n-cal-event-tab.raw): Tab from Next Month lands on the first event, no day cell before it.
+    it('makes each event a Tab stop and no day cell', () => {
       const { root } = mount();
 
-      expect(days(root).filter((el) => el.tabIndex === 0).map((el) => el.getAttribute('data-day'))).toEqual(['2026-10-09']);
+      expect(events(root).filter((el) => el.tabIndex === 0).map((el) => el.getAttribute('data-row-id'))).toEqual(['r1', 'r2']);
+      expect(days(root).filter((el) => el.tabIndex === 0)).toEqual([]);
       expect(root.querySelector('[data-blok-database-calendar-grid]')?.hasAttribute('data-blok-keyboard-owner')).toBe(true);
+    });
+
+    it('gives an event that spans weeks one Tab stop, on its first part', () => {
+      const { root } = mount({ rows: [row('r1', 'Long', '2026-09-30/2026-10-06')] });
+      const parts = events(root, 'r1');
+
+      expect(parts.length).toBe(2);
+      expect(parts.map((el) => el.tabIndex)).toEqual([0, -1]);
+    });
+
+    it('keeps one Tab stop per event after a redraw during a drag', () => {
+      const { root } = mount();
+
+      layOut(root);
+      const handle = events(root, 'r1')[0].querySelector<HTMLElement>('[data-blok-database-calendar-resize="end"]');
+
+      pointer('pointerdown', handle ?? root, 595, 110);
+      pointer('pointermove', document, 150, 210);
+
+      expect(events(root, 'r1').map((el) => el.tabIndex)).toEqual([0, -1]);
+      expect(events(root, 'r2').map((el) => el.tabIndex)).toEqual([0]);
+      key(document, 'Escape');
+    });
+
+    it('opens a focused event on Space, like a click', () => {
+      const { root, handlers } = mount();
+
+      events(root, 'r1')[0].focus();
+      key(document.activeElement ?? root, ' ');
+
+      expect(handlers.openRow).toHaveBeenCalledExactlyOnceWith('r1');
+    });
+
+    it('opens a focused event on Enter, like a click', () => {
+      const { root, handlers } = mount();
+
+      events(root, 'r1')[0].focus();
+      key(document.activeElement ?? root, 'Enter');
+
+      expect(handlers.openRow).toHaveBeenCalledExactlyOnceWith('r1');
+    });
+
+    // notion-motion.md Round 97 §1 #3: arrows on a focused event do nothing, and the page does not scroll.
+    it.each(['ArrowDown', 'ArrowRight', 'ArrowLeft', 'ArrowUp'])('keeps focus on a focused event on %s', (name) => {
+      const { root, handlers } = mount();
+      const event = events(root, 'r1')[0];
+      const press = new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true });
+
+      event.focus();
+      event.dispatchEvent(press);
+
+      expect(event).toHaveFocus();
+      expect(press.defaultPrevented).toBe(true);
+      expect(handlers.navigate).not.toHaveBeenCalled();
     });
 
     it('moves between days with the arrow keys', () => {
@@ -678,8 +752,7 @@ describe('DatabaseCalendarView', () => {
       key(document.activeElement ?? root, 'ArrowLeft');
       key(document.activeElement ?? root, 'ArrowUp');
       expect(document.activeElement?.getAttribute('data-day')).toBe('2026-10-09');
-      expect(day(root, '2026-10-09').tabIndex).toBe(0);
-      expect(day(root, '2026-10-17').tabIndex).toBe(-1);
+      expect(days(root).filter((el) => el.tabIndex === 0)).toEqual([]);
     });
 
     it('flips Left and Right in a right-to-left editor', () => {

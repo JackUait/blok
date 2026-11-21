@@ -37,6 +37,7 @@ const TOKENS = [
   '--blok-database-timeline-panel-bg',
   '--blok-database-timeline-panel-shadow',
   '--blok-database-timeline-header-text',
+  '--blok-database-timeline-fade-end',
 ];
 
 describe('database timeline styles', () => {
@@ -130,6 +131,14 @@ describe('database timeline styles', () => {
     const offset = /inset-inline-end:\s*-(\d+)px/.exec(ruleBody('[data-blok-database-timeline-link-handle]'));
 
     expect(Number(offset?.[1]) - 10).toBeGreaterThanOrEqual(6);
+  });
+
+  // notion-motion.md Round 84b §5 (r84-n-tl-dot.raw): the 8px ring's centre is 10 past the bar's end (+47 on a 37 bar),
+  // the hit box starts 6 past it, and the 2px line runs from 1px inside the bar's end to the ring.
+  it('centres the link ring 10px past the bar and runs the line up to it', () => {
+    expect(ruleBody('[data-blok-database-timeline-link-handle]::after')).toContain('inset-inline-start: 0');
+    expect(ruleBody('[data-blok-database-timeline-link-handle]::before')).toContain('inset-inline-end: 100%');
+    expect(ruleBody('[data-blok-database-timeline-link-handle]::before')).toContain('inline-size: 7px');
   });
 
   // findings C19/C20 (r26 §4d, r33 §4.6): no line under the toolbar; a near-white canvas with a bottom line.
@@ -249,9 +258,21 @@ describe('database timeline styles', () => {
     expect(ruleBody('[dir="rtl"] [data-blok-database-timeline-link-handle] svg')).toContain('transform: scaleX(-1)');
   });
 
-  // notion-motion.md Timeline (tlhover.png): the connector shows at once, and the hover pill is 128px over a 120px, 3-day span.
-  it('shows the connector at once on bar hover', () => {
-    expect(ruleBody('[data-blok-database-timeline-link-handle]')).not.toContain('transition');
+  // notion-motion.md Round 72 §2 "Dependency dot": full opacity in the first frame, no transition on it or its parents.
+  // Notion's fade-out is unread, so leaving keeps the 200ms fade. A drag still hides it at once.
+  it('shows the connector at once on bar hover and fades it out over 200ms, with a pointer cursor', () => {
+    const handle = ruleBody('[data-blok-database-timeline-link-handle]');
+    const shown = ruleBody('[data-blok-database-timeline-bar]:hover [data-blok-database-timeline-link-handle]');
+
+    expect(shown).toContain('transition: none');
+    expect(ruleBody('[data-blok-database-timeline][data-dragging="link"] [data-blok-database-timeline-link-handle]')).toBe(shown);
+    expect(handle).toContain('transition: opacity 0.2s ease-out');
+    expect(handle).toContain('cursor: pointer');
+    expect(handle).not.toContain('crosshair');
+    const dragging = css.indexOf('[data-blok-database-timeline]:is([data-dragging="move"], [data-dragging="start"], [data-dragging="end"]) [data-blok-database-timeline-link-handle] {');
+
+    expect(dragging).toBeGreaterThan(-1);
+    expect(css.slice(dragging, css.indexOf('}', dragging))).toContain('transition: none');
   });
 
   it('runs the hover pill 4px past each end of the bar\'s days', () => {
@@ -261,6 +282,50 @@ describe('database timeline styles', () => {
     expect(pill).toMatch(/margin-inline-start:\s*calc\(-1 \* var\(--blok-space-1\)\)/);
     expect(pill).toMatch(/padding-inline:\s*var\(--blok-space-1\)/);
     expect(pill).toMatch(/box-sizing:\s*content-box/);
+  });
+
+  // notion-motion.md Round 47 A3 (Month): mid-drag the pill is span + 8 too, 48 for a day. Hours moves are unread.
+  it('runs the mid-drag pill 4px past each end, outside Hours', () => {
+    // The :is() list has commas, so ruleBody's selector split cannot find it.
+    const selector = '[data-blok-database-timeline]:not([data-zoom="hours"]):is([data-dragging="move"], [data-dragging="start"], [data-dragging="end"]) [data-blok-database-timeline-range]';
+    const pill = Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g)).find((match) => (match[1] ?? '').includes(selector))?.[2] ?? '';
+
+    expect(pill).toMatch(/margin-inline-start:\s*calc\(-1 \* var\(--blok-space-1\)\)/);
+    expect(pill).toMatch(/padding-inline:\s*var\(--blok-space-1\)/);
+    expect(pill).toMatch(/box-sizing:\s*content-box/);
+  });
+
+  // notion-motion.md Round 88 §1 #5: the Quarter date pill, padding 0 6, 12/400 ink, its left 6 before the bar (the bar sits 2 into its day).
+  it('draws the Quarter date pill fitted to its 12px text, 4 before the day', () => {
+    const selector = '[data-blok-database-timeline] [data-blok-database-timeline-header] [data-blok-database-timeline-range][data-label]';
+    const pill = ruleBody(selector);
+    const drag = css.indexOf('[data-blok-database-timeline]:not([data-zoom="hours"]):is([data-dragging="move"]');
+
+    expect(pill).toMatch(/padding-inline:\s*var\(--blok-space-1-5\)/);
+    expect(pill).toMatch(/margin-inline-start:\s*calc\(-1 \* var\(--blok-space-1\)\)/);
+    expect(pill).toMatch(/font-size:\s*12px/);
+    expect(pill).toMatch(/font-weight:\s*400/);
+    expect(pill).toMatch(/line-height:\s*22px/);
+    expect(pill).toMatch(/color:\s*var\(--blok-database-timeline-text\)/);
+    expect(pill).toMatch(/white-space:\s*nowrap/);
+    // Same specificity as the mid-drag rule, so it must come after it.
+    expect(css.indexOf(`${selector} {`)).toBeGreaterThan(drag);
+  });
+
+  // notion-motion.md Round 90 §1 #4, #6: a split pill is span + 8 wide (the view sets it), first day at + 6, last day 6 from its end.
+  it('spreads a split date pill\'s two days to its ends, its width counting the pads', () => {
+    const pill = ruleBody('[data-blok-database-timeline] [data-blok-database-timeline-header] [data-blok-database-timeline-range][data-split]');
+
+    expect(pill).toMatch(/box-sizing:\s*border-box/);
+    expect(pill).toMatch(/display:\s*flex/);
+    expect(pill).toMatch(/justify-content:\s*space-between/);
+  });
+
+  // notion-motion.md Round 91 §1 #2: a compact pill is at least span + 8 wide; the view's min-width counts the pads.
+  it('counts the pads in a named date pill\'s width', () => {
+    const pill = ruleBody('[data-blok-database-timeline] [data-blok-database-timeline-header] [data-blok-database-timeline-range][data-label]');
+
+    expect(pill).toMatch(/box-sizing:\s*border-box/);
   });
 
   it('hides an off-screen arrow that the view marks hidden', () => {
@@ -445,6 +510,12 @@ describe('"+ New" lane (Round 24)', () => {
     expect(ruleBody('[data-blok-database-timeline-new-lane]:hover [data-blok-database-timeline-new]')).toMatch(/opacity:\s*0/);
   });
 
+  // notion-motion.md Round 90 §1 #3: Notion's ghost shows a crosshair at all 8 zooms.
+  it('shows a crosshair over the ghost bar at every zoom', () => {
+    expect(ruleBody('[data-blok-database-timeline-new-ghost]')).toMatch(/cursor:\s*crosshair/);
+    expect(css).not.toMatch(/\[data-zoom="quarter"\] \[data-blok-database-timeline-new-ghost\]/);
+  });
+
   it('draws the ghost bar 34 tall, radius 6, in the 0.06 fill, fading in over 200ms ease-out', () => {
     const ghost = ruleBody('[data-blok-database-timeline-new-ghost]');
 
@@ -541,6 +612,21 @@ describe('Hours zoom 15-minute lines and day period (Round 35)', () => {
       expect(ruleBody('[data-blok-database-no-date-row] > [data-blok-database-page-icon-placeholder] svg')).toMatch(/inline-size:\s*18px;\s*block-size:\s*18px/);
     });
 
+    // r46-n-nodate.raw: the note's text is 12/500 at +58.3. r24-cal-nodate.raw: the search text is centred at +26,
+    // so Blok's 28 field sits at +12 (panel 4 + 8). The note's 14 top puts its 16 line's text at +58.5.
+    // Both raws put the first row at +81.9, so the note ends 8 below its line.
+    it('places the No date search at +12, its 12/500 note at +58 and the rows at +82', () => {
+      const panel = '[data-blok-database-panel]:has(> [data-blok-database-no-date-list])';
+
+      expect(ruleBody(`${panel} > [data-blok-database-panel-input]`)).toContain('margin-block-start: var(--blok-space-2)');
+      expect(ruleBody(`${panel} > [data-blok-database-panel-note]`)).toMatch(/padding-block:\s*var\(--blok-space-3-5\) var\(--blok-space-2\);\s*font-weight:\s*500/);
+    });
+
+    // notion-motion.md Round 81 §1 (r81-n-tl-nodate.raw; r24-cal-nodate.raw): 28 rows step 29, 1px apart.
+    it('steps the No date rows 29, a 1px gap between 28 rows', () => {
+      expect(ruleBody('[data-blok-database-no-date-row] + [data-blok-database-no-date-row]')).toContain('margin-block-start: var(--blok-space-0-25)');
+    });
+
     // Round 47 A2: the day row is 32 in every zoom.
     it('makes the day row 32 tall in every zoom, the day line staying 28', () => {
       expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-header-under: 4px');
@@ -574,9 +660,26 @@ describe('Hours zoom 15-minute lines and day period (Round 35)', () => {
       expect(css.slice(at, css.indexOf('}', at))).toContain('margin-inline-start: calc(-1 * var(--blok-space-1))');
     });
 
-    it('gives the zoom chevron a 10 wide box 6 after the label', () => {
+    // Round 79 §5: Notion's Month ⌄ ink is 9.9x5.6 and ‹ › are 5.6x9.9; the 20-unit chevron at 28 draws 9.8x4.9.
+    it('gives the zoom chevron a 10 wide box 6 after the label, drawn at 28', () => {
+      const chevron = ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom] svg');
+
       expect(ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom]')).toContain('gap: var(--blok-space-1-5)');
-      expect(ruleBody('[data-blok-database-timeline-zoom] svg')).toContain('margin-inline: calc(-1 * var(--blok-space-0-75))');
+      expect(chevron).toMatch(/inline-size:\s*28px;\s*block-size:\s*28px;\s*max-block-size:\s*none/);
+      expect(chevron).toContain('margin-inline: calc(-1 * var(--blok-space-2-25))');
+    });
+
+    // r79-n-tl-nav.raw: Notion's Month ⌄ is ink 142,139,134, as ‹ › are. The label keeps its AA text ink.
+    // notion-motion.md Round 81 dark (r81-n-tl-month-dark.raw): in dark the ⌄ stays 142 while ‹ › go 173.
+    it('inks the zoom chevron 142, 139, 134 in light and dark, not like its label', () => {
+      expect(ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom] svg')).toContain('color: var(--blok-database-timeline-zoom-chevron)');
+      expect([...css.matchAll(/--blok-database-timeline-zoom-chevron:\s*([^;]+);/g)].map((m) => m[1].trim())).toEqual(Array(3).fill('rgb(142, 139, 134)'));
+    });
+
+    it('draws ‹ and › at 28 in their 24 buttons, like the calendar', () => {
+      ['prev', 'next'].forEach((arrow) => {
+        expect(ruleBody(`[data-blok-database-timeline-toolbar] [data-blok-database-timeline-${arrow}] svg`)).toMatch(/inline-size:\s*28px;\s*block-size:\s*28px;\s*max-block-size:\s*none/);
+      });
     });
 
     it('sets the zoom menu items 14px regular', () => {
@@ -743,5 +846,88 @@ describe('timeline Week and Bi-week weekday letters (Round 48 A4)', () => {
     expect(ruleBody('[data-blok-database-timeline-table-title] > [data-blok-database-table-open]')).toMatch(/inset-inline-end:\s*5px/);
     // The table's 18px glyph, not the timeline's 16px svg rule.
     expect(ruleBody('[data-blok-database-timeline-table-title] > [data-blok-database-table-open] svg')).toMatch(/inline-size:\s*18px;\s*block-size:\s*18px/);
+  });
+
+  // notion-motion.md Round 70 §3 "Timeline + New": no ⋮⋮ handle and no dependency dot while the name is typed.
+  // visibility, not opacity: the hover rules set opacity 1, and the see-through edge would still catch clicks on the field.
+  it('hides the row handle and the dependency dot while a bar\'s name is typed', () => {
+    expect(ruleBody('[data-blok-database-timeline-row]:has([data-blok-database-timeline-title-input]) > [data-blok-database-timeline-row-edge]')).toContain('visibility: hidden');
+    expect(ruleBody('[data-blok-database-timeline-bar]:has([data-blok-database-timeline-title-input]) [data-blok-database-timeline-link-handle]')).toContain('visibility: hidden');
+  });
+
+  // notion-motion.md Round 78 §1: with no dated row the panel still ends on its 36 Calculate row, so it gets no padding of its own.
+  it('gives the panel no extra room when no row is dated', () => {
+    expect(css).not.toContain('[data-no-dated]');
+  });
+
+  // notion-motion.md Round 76 §5 (r76-n-tl-fades.raw): two edge fades, always drawn, page colour 20% to clear.
+  describe('header edge fades (Round 76 §5)', () => {
+    const month = '[data-blok-database-timeline-month]::after';
+    const controls = '[data-blok-database-timeline-toolbar-spacer] + *::after';
+
+    it('fades 30x30 off the month box\'s end, 5px above the label (316.2 vs 321)', () => {
+      const body = ruleBody(month);
+
+      expect(body).toContain('inset-inline-start: 100%');
+      expect(body).toContain('inset-block-start: -4.8px');
+      expect(body).toContain('inline-size: 30px');
+      expect(body).toContain('block-size: 30px');
+      expect(body).toContain('background-image: linear-gradient(90deg, var(--blok-bg-primary) 20%, var(--blok-database-timeline-fade-end) 100%)');
+    });
+
+    it('fades 30x29 off the controls box\'s start, 3px above them (317.2 vs 320)', () => {
+      const body = ruleBody(controls);
+
+      expect(body).toContain('inset-inline-end: 100%');
+      expect(body).toContain('inset-block-start: -2.8px');
+      expect(body).toContain('inline-size: 30px');
+      expect(body).toContain('block-size: 29px');
+      expect(body).toContain('background-image: linear-gradient(-90deg, var(--blok-bg-primary) 20%, var(--blok-database-timeline-fade-end) 100%)');
+    });
+
+    it('ends on the measured clear colour in light and dark', () => {
+      expect(css).toContain('--blok-database-timeline-fade-end: rgba(255, 255, 255, 0);');
+      expect(darkValues('--blok-database-timeline-fade-end')).toEqual(['rgba(241, 241, 239, 0)', 'rgba(241, 241, 239, 0)']);
+    });
+
+    it('mirrors both fades in RTL', () => {
+      expect(ruleBody(`[dir="rtl"] ${month}`)).toContain('linear-gradient(-90deg');
+      expect(ruleBody(`[dir="rtl"] ${controls}`)).toContain('linear-gradient(90deg');
+    });
+  });
+
+  // notion-motion.md Round 72 §2 B "Height with no lanes": Notion's 212 canvas ends 108 under "+ New" (413.2 → 521.2).
+  it('ends the view 108px under "+ New" when it is the only lane (107 + the scroller\'s 1)', () => {
+    expect(ruleBody('[data-blok-database-timeline-canvas][data-no-lanes]')).toContain('padding-block-end: 107px');
+  });
+
+  // notion-motion.md Round 70 §3 "Timeline at rest": the view ends 4px under its last row.
+  it('ends the canvas 4px under its last row, with no fixed floor', () => {
+    const canvas = ruleBody('[data-blok-database-timeline-canvas]');
+
+    expect(canvas).toContain('padding-block-end: var(--blok-space-1)');
+    expect(canvas).toContain('min-block-size: 100%');
+    expect(canvas).not.toContain('120px');
+  });
+
+  // notion-motion.md Round 71 §3 "Draft card while typing": no "←" chip while the name field is focused, so the text sits at +6.
+  it('hides the start chip while a bar\'s name field is focused', () => {
+    expect(ruleBody('[data-blok-database-timeline-bar][data-clipped-start]:has(> [data-blok-database-timeline-title-input]) > [data-blok-database-timeline-bar-chip="start"]')).toContain('display: none');
+  });
+
+  // notion-motion.md Round 71 §1 "Bottom with one lane": the block ends 4 under "+ New"; the view's 16px bottom padding put the next block 22 under.
+  it('adds no bottom padding under the view', () => {
+    expect(ruleBody('[data-blok-database-timeline]')).not.toMatch(/padding-block-end|padding-bottom|padding:/);
+  });
+
+  // notion-motion.md Round 71 §3 "Escape on an empty draft": the untitled bar reads "New page" in primary ink.
+  it('draws an untitled bar\'s "New page" in primary ink', () => {
+    expect(ruleBody('[data-blok-database-timeline-bar-title]:empty::before')).toContain('color: var(--blok-database-timeline-text)');
+  });
+  // notion-motion.md Round 76 §6 "grouped by Status, table hidden": the group header row is 32 (lanes start 32 under it),
+  // and the view ends 12 under the last group's "+ New".
+  it('draws grouped lanes under a 32px group header and ends the view 12 under the last "+ New"', () => {
+    expect(ruleBody('[data-blok-database-timeline-canvas][data-grouped-lanes] > [data-blok-database-timeline-group]')).toContain('block-size: 32px');
+    expect(ruleBody('[data-blok-database-timeline-canvas][data-grouped-lanes]')).toContain('padding-block-end: 11px');
   });
 });

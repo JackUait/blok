@@ -527,4 +527,121 @@ describe('checkbox cell', () => {
       expect(editorRoot()?.style.minHeight).toBe('');
     });
   });
+
+  // notion-motion.md Round 75 §2: on macOS Home and End move the caret to the visual line's start and end.
+  // The textarea's own macOS Home/End only scroll, so the editor moves the caret itself there.
+  describe('Home and End in a Text editor', () => {
+    const MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)';
+    const LINUX = 'Mozilla/5.0 (X11; Linux x86_64)';
+
+    const stubModify = (): ReturnType<typeof vi.fn> => {
+      const modify = vi.fn();
+
+      Object.defineProperty(Selection.prototype, 'modify', { value: modify, configurable: true, writable: true });
+
+      return modify;
+    };
+
+    afterEach(() => {
+      Reflect.deleteProperty(Selection.prototype, 'modify');
+    });
+
+    it.each([
+      ['Home', 'backward'],
+      ['End', 'forward'],
+    ])('on macOS %s moves the caret to the %s line boundary', (key, direction) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC);
+      const modify = stubModify();
+
+      openCellEditor(makeProperty('text'), 'hello', makeAnchor(), makeEditorContext());
+      const event = press(field(), key);
+
+      expect(modify).toHaveBeenCalledWith('move', direction, 'lineboundary');
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it.each(['Home', 'End'])('off macOS %s is left to the browser', (key) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(LINUX);
+      const modify = stubModify();
+
+      openCellEditor(makeProperty('text'), 'hello', makeAnchor(), makeEditorContext());
+      const event = press(field(), key);
+
+      expect(modify).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    // notion-motion.md Round 76 §2: Shift+Home / Shift+End extend to the visual line's edge (Beta 56→33).
+    it.each([
+      ['Home', 'backward'],
+      ['End', 'forward'],
+    ])('on macOS Shift+%s extends the selection to the %s line boundary', (key, direction) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC);
+      const modify = stubModify();
+
+      openCellEditor(makeProperty('text'), 'hello', makeAnchor(), makeEditorContext());
+      const event = press(field(), key, { shiftKey: true });
+
+      expect(modify).toHaveBeenCalledWith('extend', direction, 'lineboundary');
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    // notion-motion.md Round 76 §2: the Title cell moves to 0 / 5; a richText cell is Notion's Text.
+    it.each([
+      ['title', 'Home', 'backward'],
+      ['title', 'End', 'forward'],
+      ['richText', 'Home', 'backward'],
+      ['richText', 'End', 'forward'],
+    ] as const)('on macOS a %s editor moves the caret on %s', (propertyType, key, direction) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC);
+      const modify = stubModify();
+
+      openCellEditor(makeProperty(propertyType), 'hello', makeAnchor(), makeEditorContext());
+      const event = press(field(), key);
+
+      expect(modify).toHaveBeenCalledWith('move', direction, 'lineboundary');
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    // notion-motion.md Round 78 §5: Number "1234.5" and Phone "12345" move to 0 / end, Shift+Home extends to 0.
+    it.each([
+      ['number', 'Home', false, 'move', 'backward'],
+      ['number', 'End', false, 'move', 'forward'],
+      ['number', 'Home', true, 'extend', 'backward'],
+      ['phone', 'Home', false, 'move', 'backward'],
+      ['phone', 'End', false, 'move', 'forward'],
+      ['phone', 'Home', true, 'extend', 'backward'],
+    ] as const)('on macOS a %s editor handles %s (Shift %s)', (propertyType, key, shiftKey, alter, direction) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC);
+      const modify = stubModify();
+
+      openCellEditor(makeProperty(propertyType), propertyType === 'number' ? 1234.5 : '12345', makeAnchor(), makeEditorContext());
+      const event = press(field(), key, { shiftKey });
+
+      expect(modify).toHaveBeenCalledWith(alter, direction, 'lineboundary');
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it.each(['metaKey', 'ctrlKey', 'altKey'] as const)('on macOS Home with %s is left to the browser', (modifier) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC);
+      const modify = stubModify();
+
+      openCellEditor(makeProperty('text'), 'hello', makeAnchor(), makeEditorContext());
+      const event = press(field(), 'Home', { [modifier]: true });
+
+      expect(modify).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it.each(['url', 'email'] as const)('on macOS a %s editor leaves Home to the browser', (propertyType) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC);
+      const modify = stubModify();
+
+      openCellEditor(makeProperty(propertyType), 'hello', makeAnchor(), makeEditorContext());
+      const event = press(field(), 'Home');
+
+      expect(modify).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    });
+  });
 });

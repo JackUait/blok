@@ -52,7 +52,7 @@ const ROWS: Array<{ id: string; properties: Record<string, unknown> }> = [
   { id: 'r2', properties: { 'p-title': 'B' } },
 ];
 
-const blocks = (): OutputBlockData[] => [
+const blocks = (rows = ROWS): OutputBlockData[] => [
   {
     id: 'db-1',
     type: 'database',
@@ -61,9 +61,9 @@ const blocks = (): OutputBlockData[] => [
       views: [{ id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], wrapCells: true }],
       activeViewId: 'v1',
     },
-    content: ROWS.map((r) => r.id),
+    content: rows.map((r) => r.id),
   },
-  ...ROWS.map((r, i) => ({
+  ...rows.map((r, i) => ({
     id: r.id,
     type: 'database-row',
     parent: 'db-1',
@@ -72,7 +72,7 @@ const blocks = (): OutputBlockData[] => [
   })),
 ];
 
-const mount = async (page: Page): Promise<void> => {
+const mount = async (page: Page, rows = ROWS): Promise<void> => {
   await page.evaluate(async (input) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
@@ -86,7 +86,7 @@ const mount = async (page: Page): Promise<void> => {
     document.body.appendChild(holder);
     window.blokInstance = new window.Blok({ holder, data: { blocks: input } });
     await window.blokInstance.isReady;
-  }, blocks());
+  }, blocks(rows));
   await expect(page.getByRole('grid')).toBeVisible();
 };
 
@@ -188,6 +188,22 @@ test('rows stay 37px with Status, Person, Created by, Last edited by and Relatio
   for (const rowId of ['r1', 'r2']) {
     expect((await page.locator(`[data-blok-database-table-row][data-row-id="${rowId}"]`).boundingBox())?.height).toBe(37);
   }
+});
+
+// notion-motion.md Round 47 §B7: a loaded Notion table's wrapped rows are 37, 57 and 78 for 1, 2 and 3 lines.
+test('wrapped title rows are 37, 57 and 78px for one, two and three lines (Round 47 §B7)', async ({ page }) => {
+  const words = (n: number): string => Array.from({ length: n }, () => 'word').join(' ');
+
+  await mount(page, [
+    { id: 'w1', properties: { 'p-title': 'A' } },
+    { id: 'w2', properties: { 'p-title': words(10) } },
+    { id: 'w3', properties: { 'p-title': words(16) } },
+  ]);
+  const lines = async (rowId: string): Promise<number> => Math.round(((await cell(page, rowId, 'p-title').locator('[data-blok-database-cell]').boundingBox())?.height ?? 0) / 21);
+  const height = async (rowId: string): Promise<number | undefined> => (await page.locator(`[data-blok-database-table-row][data-row-id="${rowId}"]`).boundingBox())?.height;
+
+  expect([await height('w1'), await height('w2'), await height('w3')]).toEqual([37, 57, 78]);
+  expect([await lines('w1'), await lines('w2'), await lines('w3')]).toEqual([1, 2, 3]);
 });
 
 test('Status, Created by, Last edited by and Relation cells pad 8px on every side (§18.1, §20.1, §21.5)', async ({ page }) => {

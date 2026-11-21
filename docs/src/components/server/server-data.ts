@@ -255,7 +255,7 @@ catch (BlokDocumentConversionException failure)
 }
 
 // A conversion is bounded by a timeout and by how much the interpreter may
-// allocate for one call. The budget is allocation churn, NOT resident memory,
+// allocate for one call. The budget is allocation churn, not resident memory,
 // and nothing is reserved — raise it for documents with large inline images.
 builder.Services.AddBlokDocuments(allocationBudgetBytes: 1024L * 1024 * 1024);`,
       },

@@ -181,6 +181,35 @@ test('"+ Filter" over a long schema keeps a 28px "Filter by…" field and its "A
   expect((box?.y ?? Infinity) + (box?.height ?? 0)).toBeLessThanOrEqual(717);
 });
 
+// notion-motion.md Round 89 §1 #9: a filter picker that runs past the window stops 8 from its bottom, not 12.
+test('the filter picker slides up to stop 8 from the window bottom', async ({ page }) => {
+  const many = [
+    { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+    ...Array.from({ length: 24 }, (_, i) => ({ id: `p-t${i}`, name: `Text ${String(i).padStart(2, '0')}`, type: 'text', position: `b${String(i).padStart(2, '0')}` })),
+  ];
+
+  await page.setViewportSize({ width: 1512, height: 717 });
+  await mount(page, undefined, [{
+    id: 'db-1',
+    type: 'database',
+    data: { schema: many, views: [{ id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }], activeViewId: 'v1' },
+  }]);
+  await page.evaluate(() => {
+    const holder = document.getElementById('blok');
+
+    if (holder !== null) holder.style.marginTop = '300px';
+  });
+  await page.getByTestId('database-toolbar-filter').click();
+  await expect(page.getByTestId('database-filter-picker-search')).toBeVisible();
+  const bottom = await page.evaluate(async () => {
+    await Promise.all(document.getAnimations().map((a) => a.finished));
+
+    return document.querySelector('[data-blok-testid="database-filter-picker-search"]')?.closest('[data-blok-popover-container]')?.getBoundingClientRect().bottom;
+  });
+
+  expect(717 - (bottom ?? 0)).toBeCloseTo(8, 0);
+});
+
 test('rows stay 37px with Files and Button columns and a long URL (research/07:70, 08:380)', async ({ page }) => {
   for (const rowId of ['r1', 'r2']) {
     expect((await page.locator(`[data-blok-database-table-row][data-row-id="${rowId}"]`).boundingBox())?.height).toBe(37);
@@ -411,7 +440,7 @@ test.describe('measured values the CSS snapshot used to pin alone (ledger OM6)',
     expect(Math.abs(gap)).toBeLessThanOrEqual(1);
   });
 
-  test('footer label: 10px/15px 500 uppercase, 1px tracking, tertiary ink, 4px before the value (research/08:215)', async ({ page }) => {
+  test('footer label: 10px/15px 500 in normal case, tertiary ink, 4px before the value (research/08:215)', async ({ page }) => {
     const label = page.locator('[data-blok-database-table-calc][data-property-id="p-amount"] [data-blok-database-table-calc-label]');
 
     await expect(label).toBeVisible();
@@ -419,12 +448,12 @@ test.describe('measured values the CSS snapshot used to pin alone (ledger OM6)',
       'font-size': '10px',
       'line-height': '15px',
       'font-weight': '500',
-      'text-transform': 'uppercase',
-      'letter-spacing': '1px',
+      'text-transform': 'none',
+      'letter-spacing': 'normal',
       'color': 'rgb(114, 111, 106)',
       'margin-right': '4px',
     });
-    expect(await label.evaluate((el) => (el instanceof HTMLElement ? el.innerText : ''))).toBe('SUM');
+    expect(await label.evaluate((el) => (el instanceof HTMLElement ? el.innerText : ''))).toBe('Sum');
   });
 
   test('a database menu grows from the anchor\'s corner: top-left under a header (research/08:125)', async ({ page }) => {

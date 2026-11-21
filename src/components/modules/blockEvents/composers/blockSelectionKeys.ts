@@ -14,7 +14,7 @@ import { canOutdent, getAdoptedSiblings, getIndentTarget } from './structural-si
 import { isChildToolAllowed } from '../../../utils/child-tools';
 import { carriesReadOnly } from '../../../utils/read-only-blocks';
 import { deleteWithTrashToast } from '../../../utils/trash-toast';
-import { askBeforeDelete, deleteAsker, isAskingBeforeDelete, selectionHoldsAsker } from '../../../utils/delete-confirm';
+import { askBeforeDelete, deleteAsker, holdsLockedRoot, isAskingBeforeDelete, selectionHoldsAsker } from '../../../utils/delete-confirm';
 
 const EDITING_HOST_SELECTOR = '[contenteditable]:not([contenteditable="false"])';
 
@@ -499,6 +499,15 @@ export class BlockSelectionKeys extends BlockEventComposer {
     }
 
     const selected = BlockManager.blocks.filter((block) => block.selected);
+
+    if (holdsLockedRoot(selectionRoots(selected))) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      event.stopPropagation();
+
+      return true;
+    }
+
     const asker = deleteAsker(selectionRoots(selected));
 
     if (asker === undefined) {

@@ -131,7 +131,7 @@ test.describe('timeline', () => {
     const three = await bar(page, 'r2').boundingBox();
 
     expect(one?.height).toBeCloseTo(34, 0);
-    // findings C23: 1.5px in from each day edge.
+    // notion-motion.md Round 71 §3: 2px in from the first day's start, 1px short of the last day's end.
     expect(one?.width).toBeCloseTo(37, 0);
     expect(three?.width).toBeCloseTo(117, 0);
     await expect(bar(page, 'r1')).toHaveCSS('border-radius', '6px');
@@ -424,6 +424,22 @@ test.describe('timeline', () => {
     expect(box.height).toBeCloseTo(6.6, 0);
   });
 
+  test('the table toggle keeps focus after the redraw, with a ring only from the keyboard', async ({ page }) => {
+    await mount(page, blocks({ type: 'timeline' }));
+    const toggle = page.locator('[data-blok-database-timeline-table-toggle]');
+    const ringOn = (): Promise<boolean> => toggle.evaluate((el) => el === document.activeElement && el.matches(':focus-visible'));
+
+    await toggle.click();
+    await expect(page.locator('[data-blok-database-timeline-table]')).toBeVisible();
+    await expect(toggle).toBeFocused();
+    expect(await ringOn()).toBe(false);
+
+    await page.keyboard.press('Enter');
+    await expect(page.locator('[data-blok-database-timeline-table]')).toHaveCount(0);
+    await expect(toggle).toBeFocused();
+    expect(await ringOn()).toBe(true);
+  });
+
   test('the table panel toggles and lists its own properties', async ({ page }) => {
     await mount(page, blocks({ type: 'timeline', tableProperties: [{ id: 'p-due', visible: true }] }));
 
@@ -515,6 +531,23 @@ test.describe('timeline', () => {
     }
   });
 
+  // notion-motion.md Round 78 §1: with no dated row Notion keeps the 36 Calculate row under "+ New"
+  // ("+ New" 485.2–521.2, row 521.2–557.2, panel 309.2–557.2), the same as with a dated row.
+  test('the table panel keeps its 36px Calculate row under "+ New" with no dated row', async ({ page }) => {
+    const undated = ROWS.map((seed) => ({ ...seed, properties: { ...seed.properties, 'p-due': undefined } }));
+
+    await mount(page, blocks({ type: 'timeline', showTimelineTable: true }, undated));
+    const add = await page.locator('[data-blok-database-timeline-table-new]').boundingBox();
+    const footer = await page.locator('[data-blok-database-timeline-table-footer]').boundingBox();
+    const panel = await page.locator('[data-blok-database-timeline-table]').boundingBox();
+
+    if (add === null || footer === null || panel === null) throw new Error('no layout');
+    expect(footer.y).toBeCloseTo(add.y + add.height, 0);
+    expect(footer.height).toBeCloseTo(36, 0);
+    expect(panel.y + panel.height).toBeCloseTo(footer.y + footer.height, 0);
+    expect(panel.height).toBeCloseTo(248, 0);
+  });
+
   // timeline.png (Alpha row): the "←" chip's 16px box (white edge, 14px grey fill) starts 8px into the chart.
   for (const readOnly of [false, true]) {
     test(`an off-screen "←" chip sits 8px into the chart${readOnly ? ' in a read-only view' : ''}`, async ({ page }) => {
@@ -586,7 +619,7 @@ test.describe('timeline', () => {
 
     if (first === null || lane === null || scroller === null) throw new Error('no layout');
     // r1 is on Oct 9; a month-zoom day is 40px wide. Oct 14 is 5 days later.
-    const x = first.x - 1.5 + 5 * 40 + 20;
+    const x = first.x - 2 + 5 * 40 + 20;
 
     expect(x).toBeLessThan(scroller.x + scroller.width);
     await page.mouse.move(x, lane.y + lane.height / 2);

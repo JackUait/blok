@@ -148,7 +148,7 @@ new Blok({
         option: 'uploadPreset',
         type: 'string',
         default: '(required)',
-        description: 'Must be an UNSIGNED upload preset — a signed one would need a server.',
+        description: 'Must be an unsigned upload preset — a signed one would need a server.',
       },
       {
         option: 'folder',

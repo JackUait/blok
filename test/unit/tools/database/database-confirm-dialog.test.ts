@@ -157,6 +157,16 @@ describe('openDatabaseConfirm', () => {
     expect(dialog()?.hasAttribute('data-large-title')).toBe(true);
   });
 
+  it('marks the title bold only when asked', () => {
+    void open();
+
+    expect(dialog()?.hasAttribute('data-bold-title')).toBe(false);
+    document.body.innerHTML = '';
+    void openDatabaseConfirm({ title: 'Delete?', confirmLabel: 'Delete', cancelLabel: 'Cancel', boldTitle: true });
+
+    expect(dialog()?.hasAttribute('data-bold-title')).toBe(true);
+  });
+
   // research/10 §5: Reset's Cancel has no border or fill and grey ink.
   it('draws a quiet Cancel only when asked', () => {
     void openDatabaseConfirm({ title: 'Delete?', confirmLabel: 'Delete', cancelLabel: 'Cancel', destructive: true });

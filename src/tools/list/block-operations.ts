@@ -4,12 +4,11 @@
  * Extracted from ListItem to reduce file size.
  */
 
-import type { MenuConfig } from '../../../types/tools/menu-config';
 import { stripFakeBackgroundElements } from '../../components/utils';
 import { listItemSavedFlags } from '../../shared/tool-actions/load-defaults';
 
 import { applyChecklistCheckedState, buildListItem } from './dom-builder';
-import type { ListItemStyle, ListItemData, StyleConfig } from './types';
+import type { ListItemStyle, ListItemData } from './types';
 
 /**
  * Context for rerender operations
@@ -200,23 +199,4 @@ export const mergeListItemData = (context: MergeContext, data: ListItemData): vo
     contentEl.appendChild(fragment);
     contentEl.normalize();
   }
-}
-
-/**
- * Render settings menu
- */
-export const renderListSettings = (
-  availableStyles: StyleConfig[],
-  currentStyle: ListItemStyle,
-  t: (key: string) => string,
-  setStyle: (style: ListItemStyle) => void
-): MenuConfig => {
-  return availableStyles.map(styleConfig => ({
-    icon: styleConfig.icon,
-    name: `list-style-${styleConfig.style}`,
-    title: t(`toolNames.${styleConfig.titleKey}`),
-    onActivate: (): void => setStyle(styleConfig.style),
-    closeOnActivate: true,
-    isActive: currentStyle === styleConfig.style,
-  }));
 }

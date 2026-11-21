@@ -136,6 +136,29 @@ describe('Popover: children.clickOnly and placement under', () => {
     expect(cover()).toBeNull();
   });
 
+  // notion-motion.md Round 83 §4: Escape on a searchable list leaves focus with the menu, on its row.
+  it('Escape on a searchable list moves focus back into the menu, its cursor on the row', () => {
+    const popover = new PopoverDesktop({
+      items: [{ title: 'Number format', name: 'format', children: { clickOnly: true, searchable: true, items: [{ title: 'Euro', name: 'euro', onActivate: vi.fn() }] } }],
+    });
+
+    popovers.push(popover);
+    document.body.appendChild(popover.getElement());
+    popover.show();
+    popover.escapeClosesSubmenuFirst = true;
+    itemEl('format')?.click();
+    const search = itemEl('euro')?.closest('[data-blok-popover-container]')?.querySelector<HTMLInputElement>('input');
+
+    search?.focus();
+    expect(search).toHaveFocus();
+
+    popover.closeSubmenuOnEscape();
+
+    expect(itemEl('euro')).toBeNull();
+    expect(itemEl('format')?.closest('[data-blok-popover-items]')).toHaveFocus();
+    expect(itemEl('format')?.getAttribute('data-blok-focused')).toBe('true');
+  });
+
   it('other rows still open on hover', () => {
     vi.useFakeTimers();
     open();

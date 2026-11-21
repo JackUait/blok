@@ -149,6 +149,16 @@ describe('DatabasePanel', () => {
       panel.close();
     });
 
+    it('with a dock gap, opens that far under the anchor', () => {
+      vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(new DOMRect(40, 300, 28, 28));
+      const panel = new DatabasePanel({ anchor, root: { build: () => [] }, testId: 'panel', width: 290, backLabel: 'Back', docked: true, dockGap: 3 });
+
+      panel.open();
+
+      expect(popoverOf()?.style.top).toBe('331px');
+      panel.close();
+    });
+
     // research/35 §2.3, research/27 18.png: on a full-page database it runs from under the toolbar row to the window's bottom, flush with its end edge.
     it('on a full-page database sits flush with the window\'s end edge, under the toolbar row', () => {
       const wrapper = document.createElement('div');
@@ -288,7 +298,7 @@ describe('DatabasePanel', () => {
 
       down(list, 'num', 189);
       move(186);
-      move(180);
+      move(183);
       expect(row('num').style.top).toBe('');
       expect(row('num').hasAttribute('data-dragging')).toBe(false);
 
@@ -314,6 +324,39 @@ describe('DatabasePanel', () => {
       expect(row('f').style.top).toBe('');
       expect(row('f').style.position).toBe('');
       expect(row('num').hasAttribute('data-dragging')).toBe(false);
+    });
+
+    // notion-motion.md Round 91 §1 #6 (r91-n-sort-ruledrag.raw), grabbed at the handle centre: the row follows from +8
+    // (not at +6); the next row swaps at +18, when the pointer crosses into its slot (its 8 gap, then its box), and is
+    // back at +16. The pointer rule is R91's hypothesis from one sample each way.
+    it('follows from 8px and passes the next row when the pointer enters its slot', () => {
+      const { list, row } = dragList(['a', 'b']);
+
+      down(list, 'a', 149);
+      move(155);
+      expect(row('a').hasAttribute('data-dragging')).toBe(false);
+
+      move(157);
+      expect(row('a').style.top).toBe('8px');
+
+      move(165);
+      expect(row('b').style.top).toBe('');
+      move(167);
+      expect(row('b').style.top).toBe('-40px');
+      move(165);
+      expect(row('b').style.top).toBe('');
+    });
+
+    // notion-motion.md Round 92 §1 #9 (r92-n-sort-ruledrag-up.raw): going up, the row above swaps once the pointer
+    // reaches its bottom (390.2), one 2px step before Blok did. Going down, that same point does not swap yet.
+    it('passes the row above once the pointer reaches its bottom', () => {
+      const { list, row } = dragList(['a', 'b']);
+
+      down(list, 'b', 189);
+      move(167);
+      expect(row('a').style.top).toBe('');
+      move(165);
+      expect(row('a').style.top).toBe('40px');
     });
 
     it('clamps at the list end and passes every row it crosses', () => {
@@ -360,8 +403,8 @@ describe('DatabasePanel', () => {
       const { list, row, onMove } = dragList(['a', 'b']);
 
       down(list, 'b', 189);
-      move(180);
-      up(180);
+      move(183);
+      up(183);
 
       expect(onMove).not.toHaveBeenCalled();
       expect(row('b').hasAttribute('data-dragging')).toBe(false);

@@ -991,6 +991,8 @@ export interface DatabaseViewConfig {
    * This view's own manual group order: option id to a fractional key, compared
    * with the options' shared `position` keys. An option without a key uses its
    * `position`. Read only when the groups are sorted Manual. Absent: the option order.
+   * Status: an option without a key goes last. A column drop writes this order
+   * and sets the sort to Manual.
    */
   groupOrder?: Record<string, string>;
   /** Groups this view hides, by option id. */
@@ -1187,6 +1189,8 @@ export interface ViewPropertySetting {
    * select and multi-select, `'dropdown'` for status.
    */
   showOptionsAs?: 'list' | 'dropdown';
+  /** Form: the text beside a checkbox question's box. Absent: no label. */
+  checkboxLabel?: string;
 }
 
 /** What a respondent may do with the page their answer becomes. */

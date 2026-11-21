@@ -1,12 +1,23 @@
+import { nanoid } from 'nanoid';
+
 import { IconCheck, IconChevronRight, IconEmojiFlag, IconGroup, IconTrash } from '../../../components/icons';
-import { getTabbables } from '../../../components/utils/modal-dialog';
+import { openDatabaseConfirm } from '../database-confirm-dialog';
+import type { DatabaseConfirmOptions } from '../database-confirm-dialog';
 import { DatabaseModel } from '../database-model';
 import { statusGroupOf } from '../property-values';
 import type { PropertyDefinition, SelectOption } from '../types';
-import { OPTION_COLORS, optionColorLabelKey, optionColorOf } from './option-colors';
+import { OPTION_COLORS, optionColorLabelKey, optionColorOf, pickOptionColor } from './option-colors';
 import type { OptionColor } from './option-colors';
 
 type Translate = (key: string) => string;
+
+/** A new option after the last one in `options`, in the next free colour. */
+export const newSelectOption = (options: SelectOption[], label: string): SelectOption => ({
+  id: nanoid(),
+  label,
+  color: pickOptionColor(options),
+  position: DatabaseModel.positionBetween(options.at(-1)?.position ?? null, null),
+});
 
 /**
  * The "⋯" panel of one option: name field, Delete, then the 10 colors.
@@ -128,44 +139,23 @@ export const buildOptionPanel = (option: SelectOption, handlers: {
   return { panel, name };
 };
 
-/** Notion asks before deleting an option (research/08); rows keep existing, the value is cleared. */
-export const buildDeletePrompt = (handlers: { t: Translate; onConfirm: () => void; onCancel: () => void }): { prompt: HTMLElement; confirm: HTMLButtonElement } => {
-  const { t } = handlers;
-  const prompt = document.createElement('div');
-  const text = document.createElement('p');
-  const confirm = document.createElement('button');
-  const cancel = document.createElement('button');
-
-  prompt.setAttribute('data-blok-database-option-delete-prompt', '');
-  prompt.setAttribute('role', 'alertdialog');
-  prompt.setAttribute('aria-modal', 'true');
-  text.textContent = t('tools.database.optionDeleteConfirm');
-  prompt.setAttribute('aria-label', text.textContent);
-  confirm.type = 'button';
-  confirm.setAttribute('data-blok-database-option-delete-confirm', '');
-  confirm.textContent = t('tools.database.optionDelete');
-  cancel.type = 'button';
-  cancel.setAttribute('data-blok-database-option-delete-cancel', '');
-  cancel.textContent = t('tools.database.optionDeleteCancel');
-  confirm.addEventListener('click', handlers.onConfirm);
-  cancel.addEventListener('click', handlers.onCancel);
-  prompt.addEventListener('keydown', (event) => {
-    if (event.key !== 'Tab') {
-      return;
-    }
-    const tabbables = getTabbables(prompt);
-    const first = tabbables[0];
-    const last = tabbables[tabbables.length - 1];
-
-    if (event.shiftKey ? document.activeElement === first : document.activeElement === last) {
-      event.preventDefault();
-      (event.shiftKey ? last : first)?.focus();
-    }
-  });
-  prompt.append(text, confirm, cancel);
-
-  return { prompt, confirm };
-};
+/**
+ * The centred "delete this option?" confirm, Delete focused. The form's Delete option
+ * (notion-motion.md Round 77 §4, Round 78 §2: a 600 title) and the cell editor's option
+ * menu (Round 79 §4) show the same one.
+ */
+export const confirmOptionDelete = (
+  t: Translate,
+  placement: Pick<DatabaseConfirmOptions, 'directionSource' | 'signal' | 'container' | 'topLayer'>
+): Promise<boolean> => openDatabaseConfirm({
+  title: t('tools.database.optionDeleteConfirm'),
+  confirmLabel: t('tools.database.optionDelete'),
+  cancelLabel: t('tools.database.optionDeleteCancel'),
+  destructive: true,
+  focusConfirm: true,
+  boldTitle: true,
+  ...placement,
+});
 
 /**
  * Where a dragged option lands. `others` is the shown order without it.
@@ -223,7 +213,9 @@ export class OptionDrag {
     private readonly body: HTMLElement,
     private readonly shown: () => SelectOption[],
     private readonly onDrop: (id: string, others: SelectOption[], index: number) => void,
-    private readonly onEnd: () => void
+    private readonly onEnd: () => void,
+    /** The attribute that names a row's option id. */
+    private readonly rowAttr = 'data-blok-database-select-option'
   ) {}
 
   start(event: PointerEvent, id: string): void {
@@ -283,7 +275,7 @@ export class OptionDrag {
   }
 
   private row(id: string): HTMLElement | null {
-    return this.body.querySelector<HTMLElement>(`[data-blok-database-select-option="${CSS.escape(id)}"]`);
+    return this.body.querySelector<HTMLElement>(`[${this.rowAttr}="${CSS.escape(id)}"]`);
   }
 
   private readonly handleMove = (event: PointerEvent): void => {

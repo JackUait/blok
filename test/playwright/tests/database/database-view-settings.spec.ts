@@ -471,6 +471,34 @@ test.describe('database view settings', () => {
     expect(locked).toBe(true);
   });
 
+  test('Enter on the focused Locked button opens its menu and inserts no block', async ({ page }) => {
+    await mount(page, blocks());
+    await byTestId(page, 'database-toolbar-settings').click();
+    await byTestId(page, 'database-settings-lock').click();
+    await page.keyboard.press('Escape');
+    const count = (): Promise<number | undefined> => page.evaluate(() => window.blokInstance?.blocks.getBlocksCount());
+    const before = await count();
+
+    await byTestId(page, 'database-toolbar-locked').focus();
+    await page.keyboard.press('Enter');
+
+    await expect(page.locator('[data-blok-popover-opened] [data-blok-item-name^="database-unlock"]').first()).toBeVisible();
+    expect(await count()).toBe(before);
+  });
+
+  test('Enter on the focused add-view "+" opens its menu once and inserts no block', async ({ page }) => {
+    await mount(page, blocks());
+    const count = (): Promise<number | undefined> => page.evaluate(() => window.blokInstance?.blocks.getBlocksCount());
+    const before = await count();
+
+    await page.locator('[data-blok-database-add-view]').first().focus();
+    await page.keyboard.press('Enter');
+
+    await expect(page.locator('[data-blok-database-view-option="board"]')).toHaveCount(1);
+    await expect(page.locator('[data-blok-database-view-option="board"]')).toBeVisible();
+    expect(await count()).toBe(before);
+  });
+
   test('A1a Active switch reads differently on and off without painting its row', async ({ page }) => {
     await page.evaluate(() => document.documentElement.setAttribute('data-blok-theme', 'light'));
     const data = blocks().map((block) => block.id === 'db-1' ? {
@@ -608,6 +636,51 @@ test.describe('database view settings', () => {
     await expect(name).toBeVisible();
     await expect(name).toHaveValue('');
   });
+
+  // research/27 §7 and research/36 §3.2: Notion's second ArrowDown from the name field lights the first row.
+  // The icon and ⓘ buttons beside the field took two more presses, with no visible highlight.
+  test('ArrowDown from a property\'s name field reaches the first row on the second press', async ({ page }) => {
+    await mount(page, blocks());
+    await byTestId(page, 'database-toolbar-settings').click();
+    await byTestId(page, 'database-settings-edit-properties').click();
+    await byTestId(page, 'database-edit-property-p-amount').click();
+    const panel = page.locator('[data-blok-popover-opened="true"]');
+
+    await expect(panel.getByRole('textbox', { name: 'Property name' })).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await expect(panel.locator('[data-blok-item-name="changeType"]')).toHaveAttribute('data-blok-focused', 'true');
+    await page.keyboard.press('Escape');
+
+    await page.getByRole('columnheader', { name: 'Amount', exact: true }).click();
+    await panel.getByRole('textbox', { name: 'Property name' }).click();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await expect(panel.locator('[data-blok-item-name="editProperty"]')).toHaveAttribute('data-blok-focused', 'true');
+  });
+
+  // notion-motion.md Round 80: the Sort picker's checkmark drew the global black, not the row's database ink.
+  for (const theme of ['light', 'dark'] as const) {
+    test(`a chosen row's checkmark takes its row's ink (${theme})`, async ({ page }) => {
+      await mount(page, blocks({ groupBy: 'p-stage' }));
+      if (theme === 'dark') {
+        await page.evaluate(() => window.blokInstance?.theme.set('dark'));
+      }
+      await byTestId(page, 'database-toolbar-settings').click();
+      await byTestId(page, 'database-settings-group').click();
+      await byTestId(page, 'database-group-sort').click();
+
+      const check = page.locator('[data-blok-database-panel-check]').filter({ visible: true }).first();
+
+      await expect(check).toBeVisible();
+      const inks = await check.evaluate((element) => ({
+        check: getComputedStyle(element).color,
+        row: getComputedStyle(element.closest('[data-blok-database-panel-row]') ?? element.parentElement ?? element).color,
+      }));
+
+      expect(inks.check).toBe(inks.row);
+    });
+  }
 
   test('Cmd/Ctrl+Alt+T folds every group', async ({ page }) => {
     await mount(page, blocks({ groupBy: 'p-stage' }));

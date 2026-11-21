@@ -158,19 +158,14 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
     reason: 'Text input: the shared field keys its focus look on the text input or textarea only (never a button inside the box), so it may look active however the field was focused.',
   },
   {
-    file: 'src/styles/database.css',
-    match: 'input[data-blok-database-picker-search]:focus',
-    reason: 'Text input: the Filter / Sort picker search takes the shared field\'s focus border, with no ring.',
+    file: 'src/styles/popover-animation.css',
+    match: 'textarea):focus',
+    reason: 'Text input: the block menu\'s search field keeps its fill while its input has focus, however it was focused.',
   },
   {
     file: 'src/styles/tables.css',
     match: 'input:focus)',
-    reason: 'Text input: the full-screen size stepper borders its box while its number field takes typing, the shared field\'s input-only focus border.',
-  },
-  {
-    file: 'src/styles/embed.css',
-    match: 'input:focus)',
-    reason: 'Text input: the embed address bar restates the shared field\'s input-only focus border at its own specificity.',
+    reason: 'Text input: the full-screen size stepper paints the field\'s 2px blue ring on its box while its number field takes typing.',
   },
   {
     file: 'src/styles/media-empty.css',
@@ -208,19 +203,34 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
     reason: 'Hides that same contenteditable placeholder while the toolbox is open.',
   },
   {
-    file: 'src/components/inline-tools/inline-tool-equation.ts',
-    match: 'focus-within:bg-popover-bg',
-    reason: 'Text input: the equation formula field (its box wraps the input).',
+    file: 'src/styles/database.css',
+    match: '[data-blok-database-autofill-instructions]):focus',
+    reason: "Text input: a boxed field paints Notion's 2px blue focus ring however it was focused (user rule, 2026-11-20).",
   },
   {
-    file: 'src/components/inline-tools/inline-tool-equation.ts',
-    match: 'focus-within:border-search-input-focus-border',
-    reason: 'Text input: the equation formula field (its box wraps the input).',
+    file: 'src/styles/database.css',
+    match: 'input):focus',
+    reason: "Text input: a boxed field paints Notion's 2px blue focus ring however it was focused (user rule, 2026-11-20).",
+  },
+  {
+    file: 'src/styles/database.css',
+    match: '[data-blok-database-ai-prompt]:has(textarea:focus)',
+    reason: "Text input: a boxed field paints Notion's 2px blue focus ring however it was focused (user rule, 2026-11-20).",
+  },
+  {
+    file: 'src/styles/database.css',
+    match: 'textarea):not([data-blok-database-form-checkbox-label]):focus',
+    reason: "Text input: a boxed field paints Notion's 2px blue focus ring however it was focused (user rule, 2026-11-20).",
   },
   {
     file: 'src/components/utils/notifier/draw.ts',
-    match: 'focus:border-white/20',
-    reason: 'Text input: the notifier prompt field.',
+    match: 'focus:border-focus-ring',
+    reason: "Text input: a boxed field paints Notion's 2px blue focus ring however it was focused (user rule, 2026-11-20).",
+  },
+  {
+    file: 'src/components/utils/notifier/draw.ts',
+    match: 'focus:shadow-[inset_0_0_0_1px_var(--blok-focus-ring)]',
+    reason: "Text input: a boxed field paints Notion's 2px blue focus ring however it was focused (user rule, 2026-11-20).",
   },
   {
     file: 'docs/src/components/ui/input.tsx',

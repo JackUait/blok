@@ -418,7 +418,11 @@ test.describe('feed view', () => {
         els.filter((el) => el.closest('[data-blok-nested="true"]') === null)
           .map((el) => el.getAttribute('data-blok-item-name') ?? '|'));
 
-      expect(layout.slice(0, 8)).toEqual(['database-lock', 'database-rename', 'database-merge-csv', '|', 'database-open-as-page', '|', 'copy-link', 'duplicate']);
+      // Round 65 §1: Edit icon comes before Lock database, Open in new tab after Open as page.
+      expect(layout.slice(0, 10)).toEqual([
+        'database-edit-icon', 'database-lock', 'database-rename', 'database-merge-csv', '|',
+        'database-open-as-page', 'database-open-in-new-tab', '|', 'copy-link', 'duplicate',
+      ]);
     });
 
     test('fades the selected database block\'s tint in over 200ms', async ({ page }) => {
@@ -432,12 +436,14 @@ test.describe('feed view', () => {
       expect(fades).toEqual([200]);
     });
 
-    test('Lock database switches in place and keeps the block selected', async ({ page }) => {
+    // Round 67 and Round 68: Lock rebuilds the open menu as the locked one, which has no Lock row.
+    test('Lock database swaps the menu for the locked one and keeps the block selected', async ({ page }) => {
       await openMenu(page);
       await row(page, 'database-lock').click();
 
-      await expect(row(page, 'database-lock')).toHaveAttribute('data-blok-popover-item-active', 'true');
+      await expect(row(page, 'database-lock')).toHaveCount(0);
       await expect(menu(page)).toBeVisible();
+      await expect(row(page, 'database-open-as-page')).toBeVisible();
       await expect(holder(page)).toHaveAttribute('data-blok-selected', 'true');
       const title = (await saved(page)).find((block) => block.id === 'db-1')?.data.schema as Array<{ type: string; databaseLocked?: boolean }>;
 

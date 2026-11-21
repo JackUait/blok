@@ -86,7 +86,7 @@ export const FrameworkToggle: React.FC = () => {
   return (
     <div data-blok-testid="framework-toggle">
       <div className="mb-2 flex items-baseline justify-between gap-2 px-4">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
+        <span className="text-[11px] font-semibold text-muted-foreground/70">
           {t('frameworkToggle.label')}
         </span>
         <span className="text-[11px] font-semibold text-foreground">

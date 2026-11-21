@@ -195,7 +195,7 @@ describe('createWontFit', () => {
 
     scene.paint(screen.ctx, COLORS);
 
-    expect(texture.texts).toEqual(['84 MB', 'MAX 50 MB']);
+    expect(texture.texts).toEqual(['84 MB', 'Max 50 MB']);
     expect(screen.images).toBe(1);
   });
 

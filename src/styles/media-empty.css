@@ -679,8 +679,6 @@
   background: var(--blok-bg-secondary);
   border: 1px solid var(--blok-border-subtle);
   border-radius: var(--blok-radius-control-sm);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .blok-media-empty__error {

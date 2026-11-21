@@ -662,7 +662,7 @@ describe('DatabaseTool', () => {
         expect(propertyWrites(row)).toEqual([]);
       });
 
-      it('deleting an option empties it on every row, and the rows stay', () => {
+      it('deleting an option empties it on every row, and the rows stay', async () => {
         const first = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One', 'prop-status': 'opt-b', 'prop-tags': ['tag-x'] }, position: 'a0' });
         const second = createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Two', 'prop-status': 'opt-a', 'prop-tags': ['tag-x', 'tag-y'] }, position: 'a1' });
         const third = createMockRowBlock({ id: 'row-3', properties: { 'prop-title': 'Three', 'prop-status': 'opt-a' }, position: 'a2' });
@@ -671,16 +671,16 @@ describe('DatabaseTool', () => {
         openValue(element, 'prop-status');
         document.querySelector<HTMLElement>('[data-blok-database-select-option="opt-a"] [data-blok-database-select-option-menu]')?.click();
         document.querySelector<HTMLElement>('[data-blok-database-option-delete]')?.click();
-        document.querySelector<HTMLElement>('[data-blok-database-option-delete-confirm]')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-confirm-action="confirm"]')?.click();
 
-        expect(propertyWrites(second)).toContainEqual({ 'prop-status': null });
+        await vi.waitFor(() => expect(propertyWrites(second)).toContainEqual({ 'prop-status': null }));
         expect(propertyWrites(third)).toContainEqual({ 'prop-status': null });
         expect(propertyWrites(first)).not.toContainEqual({ 'prop-status': null });
         expect(api.blocks.delete).not.toHaveBeenCalled();
         tool.destroy();
       });
 
-      it('deleting an option also empties it on a row a filter hides', () => {
+      it('deleting an option also empties it on a row a filter hides', async () => {
         const shown = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Shown', 'prop-status': 'opt-a' }, position: 'a0' });
         const hidden = createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Hidden', 'prop-status': 'opt-a' }, position: 'a1' });
         const options = createDatabaseOptions({
@@ -698,14 +698,14 @@ describe('DatabaseTool', () => {
         openValue(element, 'prop-status');
         document.querySelector<HTMLElement>('[data-blok-database-select-option="opt-a"] [data-blok-database-select-option-menu]')?.click();
         document.querySelector<HTMLElement>('[data-blok-database-option-delete]')?.click();
-        document.querySelector<HTMLElement>('[data-blok-database-option-delete-confirm]')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-confirm-action="confirm"]')?.click();
 
-        expect(propertyWrites(hidden)).toContainEqual({ 'prop-status': null });
+        await vi.waitFor(() => expect(propertyWrites(hidden)).toContainEqual({ 'prop-status': null }));
         expect(options.api.blocks.delete).not.toHaveBeenCalled();
         tool.destroy();
       });
 
-      it('deleting a multi-select option drops just that id from every row', () => {
+      it('deleting a multi-select option drops just that id from every row', async () => {
         const first = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One', 'prop-tags': ['tag-y'] }, position: 'a0' });
         const second = createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Two', 'prop-tags': ['tag-x', 'tag-y'] }, position: 'a1' });
         const { tool, element } = mount([first, second]);
@@ -713,9 +713,9 @@ describe('DatabaseTool', () => {
         openValue(element, 'prop-tags');
         document.querySelector<HTMLElement>('[data-blok-database-select-option="tag-x"] [data-blok-database-select-option-menu]')?.click();
         document.querySelector<HTMLElement>('[data-blok-database-option-delete]')?.click();
-        document.querySelector<HTMLElement>('[data-blok-database-option-delete-confirm]')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-confirm-action="confirm"]')?.click();
 
-        expect(propertyWrites(second)).toContainEqual({ 'prop-tags': ['tag-y'] });
+        await vi.waitFor(() => expect(propertyWrites(second)).toContainEqual({ 'prop-tags': ['tag-y'] }));
         expect(propertyWrites(first)).toEqual([]);
         tool.destroy();
       });
@@ -6497,6 +6497,39 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
+    // notion-motion.md Round 70 §3 "Gallery New page click": the new row opens in a centre peek, caret in its title.
+    it('opens the new row from "New page" in the view\'s peek, title focused', () => {
+      const drawerOf = (t: DatabaseTool): { openRowId: string | null; openMode: string } | null =>
+        (t as unknown as { cardDrawer: { openRowId: string | null; openMode: string } | null }).cardDrawer;
+      const clickNew = (view: Partial<DatabaseViewConfig>): { tool: DatabaseTool; newId: string } => {
+        const children = rowsWithDates();
+        const { tool, element, options } = galleryTool(view, children);
+
+        vi.mocked(options.api.blocks.insertAt).mockImplementation((_type, data, placement) => {
+          const row = data as DatabaseRowData;
+          const id = (placement as { id: string }).id;
+
+          children.push(createMockRowBlock({ id, properties: row.properties, position: row.position }));
+
+          return { id } as unknown as BlockAPI;
+        });
+        queryByData(element, 'data-blok-database-gallery-new')?.click();
+
+        return { tool, newId: children.at(-1)?.id ?? '' };
+      };
+      const center = clickNew({});
+
+      expect(drawerOf(center.tool)).toMatchObject({ openRowId: center.newId, openMode: 'center' });
+      expect(center.newId).not.toBe('row-2');
+      expect(document.activeElement?.hasAttribute('data-blok-database-drawer-title')).toBe(true);
+      center.tool.destroy();
+
+      const side = clickNew({ openPagesIn: 'side' });
+
+      expect(drawerOf(side.tool)).toMatchObject({ openRowId: side.newId, openMode: 'side' });
+      side.tool.destroy();
+    });
+
     it('shows the load limit, then more on "Load more"', () => {
       const many = Array.from({ length: 12 }, (_, i) =>
         createMockRowBlock({ id: `row-${i}`, properties: { 'prop-title': `Row ${i}` }, position: `a${String(i).padStart(2, '0')}` }));
@@ -7634,6 +7667,32 @@ describe('DatabaseTool — board sub-group lanes', () => {
     expect(updates(children[0])).toEqual([{ 'prop-team': 'team-b' }]);
     expect(children.flatMap((block) => vi.mocked(block.call).mock.calls.filter(([method]) => method === 'updatePosition'))).toEqual([]);
     expect(tool.save(element).views[0].sorts).toEqual(sorted.sorts);
+
+    tool.destroy();
+  });
+
+  // notion-motion.md Round 96 §1 #3 (r96-n-subgroup-only-drop.raw): a drop that only changes the lane leaves focus on body.
+  it.each([
+    ['unsorted', {}],
+    ['sorted', sorted],
+  ] as const)('an %s drop into another lane of the same column leaves focus on body', (_label, view) => {
+    const { tool, element } = mount(view);
+    const card = element.querySelector<HTMLElement>('[data-blok-database-card][data-row-id="row-1"]');
+
+    card?.focus();
+    drop(tool, { rowId: 'row-1', toOptionId: 'opt-todo', toSubGroup: 'team-b', beforeRowId: null, afterRowId: 'row-2' });
+
+    expect(document.body).toHaveFocus();
+
+    tool.destroy();
+  });
+
+  it('a drop in its own column and lane focuses the card', () => {
+    const { tool, element } = mount();
+
+    drop(tool, { rowId: 'row-1', toOptionId: 'opt-todo', toSubGroup: 'team-a', beforeRowId: null, afterRowId: null });
+
+    expect(element.querySelector('[data-blok-database-card][data-row-id="row-1"]')).toHaveFocus();
 
     tool.destroy();
   });

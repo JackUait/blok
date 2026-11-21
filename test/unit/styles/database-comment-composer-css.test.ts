@@ -63,10 +63,41 @@ describe('comment composer buttons', () => {
 
     expect(ruleBody(feed)).toContain('gap: 5.5px');
     expect(ruleBody(feed)).toContain('margin-inline-end: calc(var(--blok-space-6) + var(--blok-space-1-5))');
-    expect(ruleBody(`${feed} > [data-blok-database-comment-input]`)).toContain('margin-inline-end: 2.5px');
+    expect(ruleBody(`${feed} > [data-blok-database-comment-input]`)).toContain('margin-inline-end: var(--_blok-comment-inset)');
+    expect(ruleBody(feed)).toContain('--_blok-comment-inset: 2.5px');
     expect(ruleBody(feed)).toContain('--_blok-feed-tool-nudge: 0.5px');
     for (const name of BUTTONS) {
       expect(ruleBody(`${feed} > [data-blok-database-comment-${name}]`)).toContain('margin-inline-start: var(--_blok-feed-tool-nudge)');
     }
+  });
+
+  // Round 83 §7 and Round 26 (row page, rest): input 560 at x 869.5, 5.5 after the avatar and 2.5 before the row end;
+  // its text still starts at 872. The tools sit at the input's top. The focused look is the feed's (Round 62 §2), unread here.
+  describe('the row page composer', () => {
+    const section = '[data-blok-database-comments-section] [data-blok-database-comment-composer]';
+
+    it('leaves the input 560 wide at rest: tools hidden until it has focus', () => {
+      for (const name of BUTTONS) {
+        expect(ruleBody(`${section}:not(:has(:focus-visible)) > [data-blok-database-comment-${name}]`)).toContain('display: none');
+      }
+    });
+
+    it('puts the input 5.5 after the avatar and 2.5 before the row end, text at 872', () => {
+      expect(ruleBody(section)).toContain('gap: 5.5px');
+      expect(ruleBody(section)).toContain('--_blok-comment-inset: 2.5px');
+      expect(ruleBody(section)).toContain('--_blok-feed-tool-nudge: 0.5px');
+      expect(ruleBody(`${section} > [data-blok-database-comment-input]`)).toContain('margin-inline-end: var(--_blok-comment-inset)');
+      expect(ruleBody('[data-blok-database-comments-section] [data-blok-database-comment-input]')).toContain('padding-inline: var(--_blok-comment-inset)');
+      expect(ruleBody('[data-blok-database-comments-section] [data-blok-database-comment-input]')).toContain('min-block-size: 27px');
+    });
+
+    it('sets its tools 30 apart at the input top: Attach 1348, Mention 1378, Send 1408 when focused', () => {
+      for (const name of BUTTONS) {
+        const body = ruleBody(`${section} > [data-blok-database-comment-${name}]`);
+
+        expect(body).toContain('margin-inline-start: var(--_blok-feed-tool-nudge)');
+        expect(body).toContain('align-self: flex-start');
+      }
+    });
   });
 });

@@ -177,7 +177,12 @@ export class PopoverRegistry {
       this.removeDocumentListener();
     }
 
-    topmost.popover.hide();
+    // Every caller is an Escape press. The type check is for test mocks.
+    if (typeof topmost.popover.hideOnEscape === 'function') {
+      topmost.popover.hideOnEscape();
+    } else {
+      topmost.popover.hide();
+    }
 
     /**
      * Return keyboard focus to the element that opened the popover (Radix

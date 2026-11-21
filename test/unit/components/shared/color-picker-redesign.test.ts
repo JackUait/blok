@@ -8,6 +8,7 @@ const translations: Record<string, string> = {
   'tools.colorPicker.defaultSwatchLabel': '{default} {mode}',
   'tools.colorPicker.colorSwatchLabel': '{color} {mode}',
   'tools.colorPicker.recentlyUsed': 'Recently used',
+  'tools.colorPicker.backgroundColor': 'Background color',
   'tools.marker.default': 'Default',
   'tools.marker.textColor': 'Text color',
   'tools.marker.background': 'Background',
@@ -69,7 +70,7 @@ describe('color picker, one untabbed panel', () => {
     expect(getByRole(element, 'group', { name: 'Text color' })).toBe(
       queryByAttribute('data-blok-testid', element, 'redesign-section-color')
     );
-    expect(getByRole(element, 'group', { name: 'Background' })).toBe(
+    expect(getByRole(element, 'group', { name: 'Background color' })).toBe(
       queryByAttribute('data-blok-testid', element, 'redesign-section-background-color')
     );
   });
@@ -93,7 +94,7 @@ describe('color picker, one untabbed panel', () => {
     expect(onColorSelect).toHaveBeenCalledExactlyOnceWith(null, 'color');
   });
 
-  it('rings the swatches of the colors already applied', () => {
+  it('presses the rows of the colors already applied', () => {
     const { element } = mountPicker({ initialActiveColors: { color: '#d44c47', 'background-color': null } });
 
     expect(getByRole(element, 'button', { name: 'Red text color' })).toHaveAttribute('aria-pressed', 'true');
@@ -155,7 +156,7 @@ describe('color picker, one untabbed panel', () => {
       { name: 'blue', field: 'bg' },
       { name: 'red', field: 'text' },
     ]);
-    expect(getByRole(getByRole(picker.element, 'group', { name: 'Background' }), 'button', { name: 'Blue background' }))
+    expect(getByRole(getByRole(picker.element, 'group', { name: 'Background color' }), 'button', { name: 'Blue background' }))
       .toHaveAttribute('aria-pressed', 'true');
   });
 

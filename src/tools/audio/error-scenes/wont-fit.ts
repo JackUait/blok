@@ -32,7 +32,7 @@ const hash = (a: number, b: number): number => {
 export interface WontFitLabel {
   /** The file's size, already formatted: "84 MB". */
   size: string;
-  /** The limit, already worded: "max 50 MB". Printed in capitals. */
+  /** The limit, already worded: "max 50 MB". Printed with a capital first letter. */
   limit: string;
 }
 
@@ -96,7 +96,7 @@ const drawRecord = (ctx: CanvasRenderingContext2D, radius: number, label: WontFi
   c.fillText(label.size, 0, -radius * 0.13, radius * 0.52);
   c.fillStyle = 'rgba(60,14,8,0.78)';
   c.font = `600 ${radius * 0.044}px ${family}`;
-  c.fillText(label.limit.toLocaleUpperCase(), 0, radius * 0.15, radius * 0.46);
+  c.fillText(label.limit.charAt(0).toLocaleUpperCase() + label.limit.slice(1), 0, radius * 0.15, radius * 0.46);
 
   c.globalCompositeOperation = 'destination-out';
   c.beginPath();

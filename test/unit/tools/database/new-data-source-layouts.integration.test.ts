@@ -248,6 +248,39 @@ describe('New data source: every layout on a second source', () => {
     expect(layoutRoot('[data-blok-database-timeline]').getAttribute('data-zoom')).toBe('year');
   });
 
+  // notion-motion.md Round 90 §1 #1: a pick closes the zoom menu and leaves focus on the zoom button.
+  it('a timeline zoom pick closes the menu and puts focus back on the zoom button', async () => {
+    await make(doc('vb', {}, { type: 'timeline', timelineBy: 'due' }));
+
+    await click(layoutRoot('[data-blok-database-timeline]').querySelector('[data-blok-database-timeline-zoom]'));
+    expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+    await click(document.querySelector('[data-blok-item-name="database-timeline-zoom-quarter"]'));
+
+    expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    expect(layoutRoot('[data-blok-database-timeline]').querySelector('[data-blok-database-timeline-zoom]')).toHaveFocus();
+  });
+
+  it('a zoom pick on a database\'s own timeline also puts focus back on the redrawn zoom button', async () => {
+    await make([{
+      id: 'db', type: 'database', content: [],
+      data: {
+        title: 'Plain',
+        schema: [...parentSchema, { id: 'when', name: 'When', type: 'date', position: 'a2' }],
+        views: [table('v1', 'a0', { type: 'timeline', timelineBy: 'when' })],
+        activeViewId: 'v1',
+      },
+    }]);
+    const zoomButton = (): Element | null => own('[data-blok-database-timeline]').querySelector('[data-blok-database-timeline-zoom]');
+    const before = zoomButton();
+
+    await click(before);
+    await click(document.querySelector('[data-blok-item-name="database-timeline-zoom-year"]'));
+
+    expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    expect(zoomButton()).not.toBe(before);
+    expect(zoomButton()).toHaveFocus();
+  });
+
   it('a form answer in the Preview becomes a source row', async () => {
     const api = await make(doc('vb', {}, { type: 'form' }));
 

@@ -247,8 +247,8 @@ test('picking a sub-group shows a band per value with cards, and no band for an 
 
   await mount(page, [{ ...db, data: { ...db.data, schema: [...SCHEMA, priority] } }, ...ranked]);
   await page.getByTestId('database-toolbar-settings').click();
+  // notion-motion.md Round 82 §3: with no sub-group, Sub-group opens straight into the property list.
   await page.getByTestId('database-settings-subgroup').click();
-  await page.getByTestId('database-subgroup-by').click();
   await page.getByTestId('database-pick-property-p-priority').click();
 
   const lanes = page.locator('[data-blok-database-board-lane]');

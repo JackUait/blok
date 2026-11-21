@@ -253,7 +253,7 @@ describe("API_SECTIONS", () => {
       expect(stylesSection).toBeDefined();
 
       const description = stylesSection!.description ?? "";
-      expect(description).toContain("ALL Blok UI on the page");
+      expect(description).toContain("all Blok UI on the page");
     });
 
     it("documents the block wrapper padding tokens for compact read-only rendering", () => {

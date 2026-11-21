@@ -36,16 +36,6 @@ for (const [theme, width] of [['light', 1280], ['dark', 1280]] as const) {
       await page.evaluate(value => document.documentElement.setAttribute('data-blok-theme', value), theme);
     });
 
-    test('block settings search is the shared search field', async ({ page }) => {
-      await page.getByText(TEXT, { exact: true }).click();
-      await page.getByTestId('settings-toggler').click();
-      const menu = page.getByTestId('block-tunes-popover');
-      const field = menu.getByTestId('popover-search-field').first();
-
-      await expect(field).toBeVisible();
-      await expectBlokField(field, field.getByRole('combobox'), 'search', { radius: '6px' });
-    });
-
     test('"Turn into" search is the shared search field', async ({ page }) => {
       await selectAllInEditable(page.getByText(TEXT, { exact: true }));
       await page.getByTestId('inline-toolbar').getByRole('menuitem', { name: 'Text', exact: true }).click();

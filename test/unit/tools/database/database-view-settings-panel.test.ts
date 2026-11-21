@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, onTestFinished, vi } from 'vitest';
 import { DatabaseModel } from '../../../../src/tools/database/database-model';
-import { openFilterPill, openViewSettings } from '../../../../src/tools/database/database-view-settings-panel';
+import { openViewSettings } from '../../../../src/tools/database/database-view-settings-panel';
 import type { ViewSettingsContext, ViewSettingsStart } from '../../../../src/tools/database/database-view-settings-panel';
 import type { DatabasePanel } from '../../../../src/tools/database/database-panel';
 import type { ColorRule, DatabaseViewConfig, FilterGroup, FilterRule, PropertyDefinition } from '../../../../src/tools/database/types';
@@ -8,7 +8,7 @@ import { COLOR_RULE_TYPES } from '../../../../src/tools/database/view-data';
 import { IconPin, IconPinFilled, IconTable, IconViewBoard } from '../../../../src/components/icons';
 import { PopoverItemType } from '../../../../src/components/utils/popover/components/popover-item';
 import type { PopoverItemParams } from '../../../../types/utils/popover/popover-item';
-import { NUMBER_LIST_ROLLUP, PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
+import { NUMBER_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
 
 const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
@@ -30,10 +30,10 @@ const exists = (id: string): boolean => document.querySelector(`[data-blok-testi
 const q = (id: string): HTMLElement | null => document.querySelector<HTMLElement>(`[data-blok-testid="${id}"]`);
 
 interface Harness {
+  anchor: HTMLElement;
   ctx: ViewSettingsContext;
   state: { view: DatabaseViewConfig; locked: boolean };
   open: (start?: ViewSettingsStart) => DatabasePanel;
-  openPill: (filterId: string) => DatabasePanel;
 }
 
 const harness = (view: Partial<DatabaseViewConfig> = {}): Harness => {
@@ -69,15 +69,11 @@ const harness = (view: Partial<DatabaseViewConfig> = {}): Harness => {
   document.body.appendChild(anchor);
 
   return {
+    anchor,
     ctx,
     state,
     open: (start = 'root') => {
       holder.panel = openViewSettings(anchor, ctx, start);
-
-      return holder.panel;
-    },
-    openPill: (filterId) => {
-      holder.panel = openFilterPill(anchor, ctx, filterId);
 
       return holder.panel;
     },
@@ -109,6 +105,18 @@ describe('view settings panel', () => {
       expect(docked()).toBe(true);
       panel.close();
     }
+  });
+
+  // notion-motion.md Round 92 §1 #5: Notion opens its sub-pages 3px under the Settings button (bottom 299.2, page at 302.2), not over it.
+  it('opens 3px under the button that opened it', () => {
+    const h = harness();
+
+    vi.spyOn(h.anchor, 'getBoundingClientRect').mockReturnValue(new DOMRect(1128, 271, 28, 28));
+    const panel = h.open('group');
+    const popover = document.querySelector('[data-blok-testid="database-view-settings"]')?.closest<HTMLElement>('[data-blok-popover-custom-class]');
+
+    expect(popover?.style.top).toBe('302px');
+    panel.close();
   });
 
   // findings V11: every root row carries a glyph; Layout's follows the view's layout.
@@ -293,26 +301,49 @@ describe('view settings panel', () => {
       expect(exists('database-filter-advanced')).toBe(true);
     });
 
-    it('a Filter pick makes the filter and opens its editor; Back shows the filter list', () => {
+    // notion-motion.md Round 87 §1 #7 (r87 notes): the Filters page lists the new chip and its 220-wide rule popup
+    // opens beside the page, the value field focused.
+    it('a Filter pick makes the filter and opens its rule popover at its chip, the value focused', () => {
       const h = harness();
 
       h.open();
       click('database-settings-filter');
       click('database-pick-property-num');
 
+      const id = h.state.view.filters[0]?.id ?? '';
+      const popover = q('database-filter-popover');
+      const settings = q('database-view-settings');
+
       expect(h.state.view.filters).toHaveLength(1);
-      expect(document.querySelector('[data-blok-database-panel-header]')?.textContent).not.toContain('tools.database.settingsFilter');
-      click('database-panel-back');
-      expect(exists('database-filter-add')).toBe(true);
+      expect(popover).not.toBeNull();
+      expect(settings?.contains(popover)).toBe(false);
+      expect(popover?.style.width).toBe('220px');
+      expect(document.activeElement?.hasAttribute('data-blok-database-panel-input')).toBe(true);
+      expect(popover?.contains(document.activeElement)).toBe(true);
+      expect(settings?.querySelector(`[data-blok-testid="database-filter-row-${id}"]`)).not.toBeNull();
+      expect(settings?.querySelector('[data-blok-testid="database-filter-to-advanced"]')).toBeNull();
     });
 
-    it('a Filter page opened straight from the toolbar keeps the panel open after a pick', () => {
+    it('a Filter page opened straight from the toolbar stays on its page after a pick', () => {
       const h = harness();
       const panel = h.open('filter');
 
       click('database-pick-property-num');
       expect(h.state.view.filters).toHaveLength(1);
-      expect(panel.depth).toBe(2);
+      expect(panel.depth).toBe(1);
+      expect(q('database-filter-popover')).not.toBeNull();
+    });
+
+    it('an Add filter pick goes back to the Filters page and opens the new rule popover', () => {
+      const h = harness({ filters: [{ id: 'f1', propertyId: 'title', operator: 'contains', value: 'a' }] });
+      const panel = h.open('filter');
+
+      click('database-filter-add');
+      click('database-pick-property-num');
+
+      expect(h.state.view.filters).toHaveLength(2);
+      expect(panel.depth).toBe(1);
+      expect(q('database-filter-popover')?.contains(document.activeElement)).toBe(true);
     });
 
     it('Sort lists the properties in the same order, and a pick makes the sort', () => {
@@ -332,8 +363,10 @@ describe('view settings panel', () => {
     const search = (): HTMLInputElement | null => document.querySelector<HTMLInputElement>('[data-blok-testid="database-property-picker-search"]');
     const page = (): string | null | undefined => document.querySelector('[data-blok-testid="database-view-settings"]')?.getAttribute('data-blok-database-panel-page');
 
-    it('an empty Filter page reads "Add filter" over a "Filter by…" search, and reads "Filter" once a filter exists', () => {
+    // notion-motion.md Round 88 (r88-n-settext.raw): the page header reads "Filters"; the settings row stays "Filter".
+    it('an empty Filter page reads "Add filter" over a "Filter by…" search, and reads "Filters" once a filter exists', () => {
       harness().open();
+      expect(document.querySelector('[data-blok-testid="database-settings-filter"]')?.textContent).toContain('tools.database.settingsFilter');
       click('database-settings-filter');
 
       expect(title()).toContain('tools.database.filterAdd');
@@ -341,10 +374,10 @@ describe('view settings panel', () => {
       expect(search()?.getAttribute('aria-label')).toBe('tools.database.filterByPlaceholder');
       expect(page()).toBe('pick');
       click('database-pick-property-num');
-      click('database-panel-back');
-      expect(title()).toContain('tools.database.settingsFilter');
+      expect(title()).toContain('tools.database.settingsFiltersTitle');
       expect(title()).not.toContain('tools.database.filterAdd');
-      expect(page()).not.toBe('pick');
+      // database.css spaces this page's rules (notion-motion.md Round 88 §1 #4).
+      expect(page()).toBe('filters');
     });
 
     it('an empty Sort page reads "New sort" over a "Sort by…" search, and reads "Sort" once a sort exists', () => {
@@ -404,118 +437,6 @@ describe('view settings panel', () => {
 
       expect(h.state.view.groupBy).toBe('stage');
       expect(exists('database-group-by')).toBe(true);
-    });
-  });
-
-  // notion-motion.md Round 13: the rule editor picks a date's Start date / End date and a Name rollup's Any / None / Every too.
-  describe('rule editor lead parts', () => {
-    const ops = (): Array<string | undefined> => [...document.querySelectorAll('[data-blok-testid^="database-filter-op-"]')]
-      .map((el) => el.getAttribute('data-blok-testid')?.replace('database-filter-op-', ''));
-
-    it('keeps End date through the date editor and an operator pick, and goes back to Start date', () => {
-      const h = harness({ filters: [{ id: 'f1', propertyId: 'due', operator: 'end:this_week', value: null }] });
-
-      h.openPill('f1');
-      expect(document.querySelector('[data-blok-testid="database-filter-side"]')?.textContent).toContain('tools.database.dateEnd');
-
-      const unit = document.querySelector<HTMLSelectElement>('[data-blok-testid="database-filter-unit"]');
-
-      if (unit === null) throw new Error('no unit');
-      unit.value = 'month';
-      unit.dispatchEvent(new Event('change'));
-      expect(h.state.view.filters[0]).toMatchObject({ operator: 'end:relative_to_today', value: 'this:1:month' });
-
-      click('database-filter-operator');
-      click('database-filter-op-before');
-      expect(h.state.view.filters[0]).toMatchObject({ operator: 'end:before' });
-
-      click('database-filter-side');
-      expect(document.querySelector('[data-blok-testid="database-filter-side-end"]')?.getAttribute('aria-checked')).toBe('true');
-      click('database-filter-side-start');
-      expect(h.state.view.filters[0]).toMatchObject({ operator: 'before' });
-    });
-
-    it('edits a Name rollup rule with Any / None / Every, the text operators and a text field', () => {
-      const names = Object.assign(
-        { id: 'names', name: 'Names', type: 'relation', position: 'a6', rollup: { relationPropertyId: 'rel', targetPropertyId: 'title', function: 'show_original' } } as PropertyDefinition,
-        { [PAGE_LIST_ROLLUP]: true }
-      );
-      const h = harness({ filters: [{ id: 'f1', propertyId: 'names', operator: 'any:contains', value: '' }] });
-
-      h.ctx.schema = () => [...schema, names];
-      h.openPill('f1');
-
-      click('database-filter-quantifier');
-      expect([...document.querySelectorAll('[data-blok-testid^="database-filter-quantifier-"]')].map((el) => el.getAttribute('data-blok-testid')))
-        .toEqual(['database-filter-quantifier-any', 'database-filter-quantifier-none', 'database-filter-quantifier-every']);
-      click('database-filter-quantifier-none');
-      expect(h.state.view.filters[0]).toMatchObject({ operator: 'none:contains' });
-
-      click('database-filter-operator');
-      expect(ops()).toEqual(['equals', 'does_not_equal', 'contains', 'does_not_contain', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty']);
-      click('database-filter-op-starts_with');
-      expect(h.state.view.filters[0]).toMatchObject({ operator: 'none:starts_with' });
-
-      const input = document.querySelector<HTMLInputElement>('[data-blok-testid="database-filter-value"]');
-
-      if (input === null) throw new Error('no value field');
-      input.value = 'x';
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      expect(h.state.view.filters[0]).toMatchObject({ operator: 'none:starts_with', value: 'x' });
-    });
-  });
-
-  // filter-sort's date filter (findings V18): the settings rule editor reuses the chip's date editor.
-  describe('date rule editor', () => {
-    const openRule = (filter: { operator: string; value: unknown }): ReturnType<typeof harness> => {
-      const h = harness({ filters: [{ id: 'f1', propertyId: 'due', operator: filter.operator, value: filter.value as never }] });
-
-      h.openPill('f1');
-
-      return h;
-    };
-    const saved = (h: ReturnType<typeof harness>): unknown => h.state.view.filters[0];
-
-    it('edits a saved window filter with the This/Past/Next editor, not the old preset list', () => {
-      const h = openRule({ operator: 'this_week', value: null });
-
-      expect(exists('database-filter-within-this_week')).toBe(false);
-      expect(exists('database-filter-direction')).toBe(true);
-      const unit = document.querySelector<HTMLSelectElement>('[data-blok-testid="database-filter-unit"]');
-
-      if (unit === null) throw new Error('no unit');
-      unit.value = 'month';
-      unit.dispatchEvent(new Event('change'));
-      expect(saved(h)).toMatchObject({ operator: 'relative_to_today', value: 'this:1:month' });
-    });
-
-    it('picking "Is relative to today" starts a span, not a day', () => {
-      const h = openRule({ operator: 'equals', value: 'today' });
-
-      click('database-filter-operator');
-      click('database-filter-op-relative_to_today');
-      expect(saved(h)).toMatchObject({ operator: 'this_week', value: null });
-      expect(exists('database-filter-direction')).toBe(true);
-    });
-
-    it('"Is between" starts empty and saves a start/end range once both days are whole', () => {
-      const h = openRule({ operator: 'equals', value: 'today' });
-
-      click('database-filter-operator');
-      click('database-filter-op-is_between');
-      expect(saved(h)).toMatchObject({ operator: 'is_between', value: null });
-      const type = (which: string, text: string): void => {
-        const input = document.querySelector<HTMLInputElement>(`[data-blok-testid="database-filter-between-${which}"]`);
-
-        if (input === null) throw new Error(`no ${which}`);
-        input.value = text;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      };
-
-      type('start', '2026-10-01');
-      expect(saved(h)).toMatchObject({ value: null });
-      type('end', '2026-10-09');
-      expect(saved(h)).toMatchObject({ operator: 'is_between', value: '2026-10-01/2026-10-09' });
     });
   });
 
@@ -594,6 +515,7 @@ describe('view settings panel', () => {
       const h = harness();
 
       h.ctx.linked = () => true;
+      h.ctx.dataSourceTitles = { shown: () => true, toggle: vi.fn() };
       h.open('layout');
       const ids = [...document.querySelectorAll<HTMLElement>('[data-blok-testid="database-view-settings"] [data-blok-testid^="database-settings-"]')]
         .map((el) => el.getAttribute('data-blok-testid'));
@@ -847,17 +769,33 @@ describe('view settings panel', () => {
       return ids.slice(lastTile + 1);
     };
 
-    it.each(['table', 'map'] as const)('is the first row after the tiles on a linked %s, on by default, and turns off', (type) => {
+    // notion-motion.md Round 97 §1 #5: on a linked block it is one setting for the whole block, not one per view.
+    it.each(['table', 'map'] as const)('is the first row after the tiles on a linked %s, and toggles the block setting', (type) => {
       const h = harness({ type });
+      const toggle = vi.fn();
 
       h.ctx.linked = () => true;
+      h.ctx.dataSourceTitles = { shown: () => true, toggle, views: () => 1 };
       h.open();
       click('database-settings-layout');
 
       expect(rowsAfterTiles()[0]).toBe('database-settings-data-source-title');
       expect(document.querySelector('[data-blok-testid="database-settings-data-source-title"]')?.getAttribute('aria-checked')).toBe('true');
       click('database-settings-data-source-title');
-      expect(h.ctx.updateView).toHaveBeenCalledWith({ showDataSourceTitle: false });
+      expect(toggle).toHaveBeenCalledTimes(1);
+      expect(h.ctx.updateView).not.toHaveBeenCalled();
+    });
+
+    // notion-motion.md Round 97 (notes): the linked label reads "title" with one view and "titles" with two.
+    it.each([[1, 'tools.database.settingsShowDataSourceTitle'], [2, 'tools.database.showDataSourceTitles']] as const)('on a linked block with %i view(s) reads %s', (count, label) => {
+      const h = harness();
+
+      h.ctx.linked = () => true;
+      h.ctx.dataSourceTitles = { shown: () => true, toggle: vi.fn(), views: () => count };
+      h.open();
+      click('database-settings-layout');
+
+      expect(document.querySelector('[data-blok-testid="database-settings-data-source-title"]')?.textContent).toContain(label);
     });
 
     it('is not offered on a database that holds its own rows', () => {
@@ -1579,6 +1517,33 @@ describe('view settings panel', () => {
       expect(settings()).not.toBeNull();
     });
 
+    // notion-motion.md Round 87 §1 #6 (r87-n-settings-addadv.raw): the Filters page stays and the advanced panel opens.
+    it('Add to advanced filter from a chip\'s ⋯ opens the advanced filter at its chip, the page staying', () => {
+      const h = withFilter();
+
+      click('database-filter-row-f1');
+      click('database-filter-more');
+      click('database-filter-to-advanced');
+
+      expect(h.state.view.filterTree?.filterRules[0]).toEqual(expect.objectContaining({ propertyId: 'title', operator: 'contains', value: 'a' }));
+      expect(q('database-filter-popover')).toBeNull();
+      expect(q('database-advanced-filter')).not.toBeNull();
+      expect(settings()?.contains(q('database-advanced-filter'))).toBe(false);
+      expect(settings()?.querySelector('[data-blok-testid="database-filter-advanced-chip"]')).not.toBeNull();
+    });
+
+    // r87-n-settings-addadv.raw: after a click, focus is on the body and both panels stay.
+    it('a pointer Add to advanced filter leaves focus on the body, the page and the advanced filter open', () => {
+      withFilter();
+      click('database-filter-row-f1');
+      click('database-filter-more');
+      q('database-filter-to-advanced')?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+
+      expect(document.body).toHaveFocus();
+      expect(q('database-advanced-filter')).not.toBeNull();
+      expect(settings()).not.toBeNull();
+    });
+
     it('has no Advanced filter row while there is no advanced filter', () => {
       withFilter();
 
@@ -1842,32 +1807,28 @@ describe('view settings panel', () => {
     });
   });
 
-  // Ledger D30 (7f240977 · database-view-settings-panel.ts:1108): a date filter takes Today, One week ago… from its page.
-  it('picks a relative date value for a date filter from the filter page, and an exact date replaces it', () => {
-    const h = harness();
+  // Ledger D30 (7f240977): a date filter takes Today, One week ago… from the Filters page, now in its chip's rule popover.
+  it('picks a relative date value for a date filter from the filter page, and a typed date replaces it', () => {
+    const h = harness({ filters: [{ id: 'f1', propertyId: 'due', operator: 'equals', value: null }] });
 
     h.open('filter');
-    click('database-pick-property-due');
-    // A new date filter starts as "is within this week"; "Is" brings the value rows.
-    click('database-filter-operator');
-    click('database-filter-op-equals');
+    click('database-filter-row-f1');
+    click('database-filter-date-presets');
     click('database-filter-date-one_week_ago');
-
     expect(h.state.view.filters).toEqual([expect.objectContaining({ propertyId: 'due', operator: 'equals', value: 'one_week_ago' })]);
-    expect(document.querySelector('[data-blok-testid="database-filter-date-one_week_ago"]')?.getAttribute('aria-checked')).toBe('true');
-    expect(document.querySelector('[data-blok-testid="database-filter-date-today"]')?.getAttribute('aria-checked')).toBe('false');
 
+    click('database-filter-date-presets');
+    expect(q('database-filter-date-one_week_ago')?.getAttribute('aria-checked')).toBe('true');
     click('database-filter-date-today');
     expect(h.state.view.filters[0]?.value).toBe('today');
 
-    const exact = document.querySelector<HTMLInputElement>('[data-blok-testid="database-filter-value"]');
+    const field = document.querySelector<HTMLInputElement>('[data-blok-database-chip-date-input]');
 
-    if (exact === null) throw new Error('no exact date field');
-    exact.value = '2026-10-20';
-    exact.dispatchEvent(new Event('input', { bubbles: true }));
-
+    if (field === null) throw new Error('no date field');
+    field.value = '2026-10-20';
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect(h.state.view.filters[0]?.value).toBe('2026-10-20');
-    expect(document.querySelector('[data-blok-testid="database-filter-date-today"]')?.getAttribute('aria-checked')).toBe('false');
   });
 
   it('moves flat filters into the advanced tree on its first edit', () => {
@@ -2100,6 +2061,26 @@ describe('view settings panel', () => {
 
       expect(q('database-filter-rule-value-r')).toBeInstanceOf(HTMLInputElement);
     });
+
+    // notion-motion.md Round 83 §5 (r83-n-af-one.raw): Name's field reads "Value"; Round 19 §1: Number's too.
+    it('reads "Value" in an empty text or number rule field', () => {
+      const h = harness({
+        filterTree: {
+          id: 'root',
+          conjunction: 'and',
+          filterRules: [
+            { id: 'r', propertyId: 'title', operator: 'contains', value: '' },
+            { id: 'n', propertyId: 'num', operator: 'equals', value: null },
+          ],
+        },
+      });
+
+      h.open('filter');
+      click('database-filter-advanced-chip');
+
+      expect(q('database-filter-rule-value-r')?.getAttribute('placeholder')).toBe('tools.database.filterValue');
+      expect(q('database-filter-rule-value-n')?.getAttribute('placeholder')).toBe('tools.database.filterValue');
+    });
   });
 
   it('sets And or Or on a group', () => {
@@ -2142,6 +2123,80 @@ describe('view settings panel', () => {
     expect(h.state.view.hiddenGroups ?? []).toEqual([]);
     expect(rows()).toEqual([['Idea', false], ['No Stage', false]]);
     expect(eye('none')?.getAttribute('aria-label')).toBe('tools.database.groupHide');
+  });
+
+  // notion-motion.md Round 82 (r82-n-a2-hidden-eye.raw, -ms-before-repick.raw): a hidden group is listed after the
+  // shown ones. Only the list moves: the saved order and hiddenGroups stay as they were.
+  it('lists a hidden group after the shown ones', () => {
+    const h = harness({ type: 'board', groupBy: 'stage', hiddenGroups: [{ id: 'o1' }] });
+
+    h.open('group');
+    const rows = (): Array<string | undefined> => [...document.querySelectorAll('[data-blok-database-group-visibility-row]')]
+      .map((row) => row.textContent?.trim());
+
+    expect(rows()).toEqual(['No Stage', 'Idea']);
+    expect(h.state.view.hiddenGroups).toEqual([{ id: 'o1' }]);
+
+    click('database-group-visible-o1');
+
+    expect(rows()).toEqual(['Idea', 'No Stage']);
+  });
+
+  // notion-motion.md Round 82 (r82-n-a2-grouppage.raw, -sel-pick1.raw): Select group names and "No Select" are 14/500;
+  // Status group names stay 14/400.
+  it('marks the group rows of a Status so their names keep the regular weight', () => {
+    const select = harness({ type: 'board', groupBy: 'stage' });
+    const panel = select.open('group');
+
+    expect([...document.querySelectorAll('[data-blok-database-group-visibility-row]')].map((row) => row.hasAttribute('data-status')))
+      .toEqual([false, false]);
+    panel.close();
+
+    harness({ type: 'board', groupBy: 'prog' }).open('group');
+
+    expect([...document.querySelectorAll('[data-blok-database-group-visibility-row]')].every((row) => row.hasAttribute('data-status')))
+      .toBe(true);
+  });
+
+  // notion-motion.md Round 92 §1 #4 (r92-n-grp-drag-down.raw): each group row has a drag handle, hidden rows too. Shown
+  // and hidden rows reorder in their own lists, and a move names both new neighbours.
+  it('moves a group by its handle, naming the groups it lands between', () => {
+    const h = harness({ type: 'board', groupBy: 'stage', hiddenGroups: [{ id: 'o3' }] });
+    const move = vi.fn();
+
+    h.ctx.groups = () => ['o1', 'o2', 'o3', 'none'].map((key) => ({ key, label: key, count: 0 }));
+    h.ctx.moveGroup = { enabled: () => true, move };
+    h.open('group');
+    const lists = (): string[][] => [...document.querySelectorAll('[data-blok-testid="database-group-list"]')]
+      .map((list) => [...list.querySelectorAll('[data-item-id]')].map((item) => item.getAttribute('data-item-id') ?? ''));
+    const alt = (key: string, arrow: string): void => {
+      document.querySelector(`[data-blok-testid="database-group-list-handle-${key}"]`)
+        ?.dispatchEvent(new KeyboardEvent('keydown', { key: arrow, altKey: true, bubbles: true }));
+    };
+
+    expect(lists()).toEqual([['o1', 'o2', 'none'], ['o3']]);
+    alt('o1', 'ArrowDown');
+    expect(move).toHaveBeenLastCalledWith('o1', 'none', 'o2');
+    alt('o2', 'ArrowDown');
+    expect(move).toHaveBeenLastCalledWith('o2', null, 'none');
+    alt('o2', 'ArrowUp');
+    expect(move).toHaveBeenLastCalledWith('o2', 'o1', null);
+  });
+
+  it('has no group handles when the groups cannot move or the view is locked', () => {
+    const h = harness({ type: 'board', groupBy: 'stage' });
+
+    h.ctx.moveGroup = { enabled: () => false, move: vi.fn() };
+    const panel = h.open('group');
+
+    expect(document.querySelector('[data-blok-testid^="database-group-list-handle-"]')).toBeNull();
+    panel.close();
+    h.ctx.moveGroup = { enabled: () => true, move: vi.fn() };
+    h.state.locked = true;
+    h.open('group');
+
+    expect(document.querySelector('[data-blok-testid^="database-group-list-handle-"]')).toBeNull();
+    expect(document.querySelectorAll('[data-blok-database-group-visibility-row]')).toHaveLength(2);
   });
 
   // notion-motion.md Round 24 §1 (r24-grp.raw, r24-pinpz.raw): a board group row has a 24px "Pin group" button before
@@ -2197,6 +2252,35 @@ describe('view settings panel', () => {
     click('database-group-hide-all');
 
     expect(h.state.view.hiddenGroups).toEqual([{ id: 'o1' }, { id: 'none' }]);
+  });
+
+  // notion-motion.md Round 84b §3 (r84-n-grp-weights.raw): "Start week on" shows for Date by Week only;
+  // Relative, Day and Month have no such row.
+  it('shows "Start week on" only while a date groups by week', () => {
+    harness({ groupBy: 'due' }).open('group');
+
+    expect(exists('database-group-week-start')).toBe(false);
+
+    click('database-group-date-by');
+    click('database-group-date-by-week');
+
+    expect(exists('database-group-week-start')).toBe(true);
+
+    click('database-group-date-by');
+    click('database-group-date-by-day');
+
+    expect(exists('database-group-week-start')).toBe(false);
+
+    click('database-group-date-by');
+    click('database-group-date-by-month');
+
+    expect(exists('database-group-week-start')).toBe(false);
+
+    // notion-motion.md Round 85c §2: Year has no such row either.
+    click('database-group-date-by');
+    click('database-group-date-by-year');
+
+    expect(exists('database-group-week-start')).toBe(false);
   });
 
   // research/22 §7: "Number by: Unique" by default; Range shows 0 – 1000, every 100.
@@ -2335,25 +2419,27 @@ describe('view settings panel', () => {
       expect(exists('database-group-color-columns')).toBe(false);
     });
 
+    // notion-motion.md Round 78 §4: a picked Select starts with Hide empty groups on; the number's range settings go.
     it('resets the settings when a number grouping switches to a select', () => {
-      const h = harness({ type: 'board', groupBy: 'num', groupSettings: { hideEmptyGroups: true } });
+      const h = harness({ type: 'board', groupBy: 'num', groupSettings: { numberBy: 'range', hideEmptyGroups: false } });
 
       h.open('group');
       click('database-group-by');
       click('database-pick-property-stage');
 
-      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ groupBy: 'stage', groupSettings: {} });
-      expect(hideEmpty()).toBe('false');
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ groupBy: 'stage', groupSettings: { hideEmptyGroups: true } });
+      expect(hideEmpty()).toBe('true');
     });
 
-    it('keeps the settings when the same number property is picked again', () => {
-      const h = harness({ type: 'board', groupBy: 'num', groupSettings: { numberBy: 'range' } });
+    // notion-motion.md Round 79 §2: a re-pick turns Hide empty groups back on.
+    it('keeps the other settings and turns Hide empty groups on when the same number property is picked again', () => {
+      const h = harness({ type: 'board', groupBy: 'num', groupSettings: { numberBy: 'range', hideEmptyGroups: false } });
 
       h.open('group');
       click('database-group-by');
       click('database-pick-property-num');
 
-      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ groupBy: 'num' });
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ groupBy: 'num', groupSettings: { numberBy: 'range', hideEmptyGroups: true } });
     });
 
     it('does not touch a view already grouped by a number when it opens', () => {
@@ -2371,21 +2457,42 @@ describe('view settings panel', () => {
 
       h.open('root');
       click('database-settings-subgroup');
-      click('database-subgroup-by');
       click('database-pick-property-prog');
 
       expect(h.ctx.updateView).toHaveBeenLastCalledWith({ subGroupBy: 'prog', subGroupSettings: { hideEmptyGroups: true } });
     });
 
-    it('keeps the sub-group settings when the same sub-group is picked again', () => {
-      const h = harness({ type: 'board', groupBy: 'stage', subGroupBy: 'prog', subGroupSettings: { hideEmptyGroups: false } });
+    // notion-motion.md Round 82 (r82-n-a2-sub-repick.raw): a re-pick resets the sort to Manual and shows hidden sub-groups.
+    it('resets the sub-group sort, shows hidden sub-groups and turns Hide empty groups on when the same sub-group is picked again', () => {
+      const h = harness({
+        type: 'board', groupBy: 'stage', subGroupBy: 'prog',
+        subGroupSettings: { hideEmptyGroups: false, sort: 'descending' }, hiddenGroups: [{ id: 'o1' }, { id: 'sub:s1' }],
+      });
 
       h.open('root');
       click('database-settings-subgroup');
       click('database-subgroup-by');
       click('database-pick-property-prog');
 
-      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ subGroupBy: 'prog' });
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ subGroupBy: 'prog', subGroupSettings: { hideEmptyGroups: true }, hiddenGroups: [{ id: 'o1' }] });
+    });
+
+    // notion-motion.md Round 82 §3 (r82-n-a2-subgroup.raw, -sub-pick1.raw): unset, Sub-group opens straight into the
+    // property list titled "Sub-group by", None first. Set, its first row reads "Sub-group by / <property>".
+    it('opens straight into the "Sub-group by" picker when no sub-group is set, and names the row "Sub-group by" once set', () => {
+      const h = harness({ type: 'board', groupBy: 'stage' });
+
+      h.open('root');
+      click('database-settings-subgroup');
+
+      expect(document.querySelector('[data-blok-testid="database-subgroup-by"]')).toBeNull();
+      expect(document.querySelector('[data-blok-testid="database-subgroup-none"]')?.getAttribute('aria-checked')).toBe('true');
+      expect(document.body.textContent).toContain('tools.database.subGroupBy');
+
+      click('database-pick-property-prog');
+
+      expect(h.state.view.subGroupBy).toBe('prog');
+      expect(document.querySelector('[data-blok-testid="database-subgroup-by"]')?.textContent).toContain('tools.database.subGroupBy');
     });
   });
 
@@ -2689,6 +2796,68 @@ describe('view settings panel', () => {
       expect(add(h, 'txt')).toMatchObject({ operator: 'is_not_empty', value: null });
     });
 
+    // notion-motion.md Round 75 §2 (r75-n-ccfocus.raw): a new "is not empty" Text, Number, Select or Date rule leaves nothing focused, 4/4.
+    it.each(['txt', 'num', 'stage', 'due'])('leaves nothing focused after a new %s rule', (id) => {
+      const h = open();
+
+      const rule = add(h, id);
+
+      expect(document.body).toHaveFocus();
+      expect(q('database-color-add')).not.toHaveFocus();
+      expect(q(`database-color-rule-${rule.id}`)).not.toBeNull();
+    });
+
+    // notion-motion.md Round 76 §4 (r76-n-ccfocus.raw): Status, Multi-select and Checkbox leave nothing focused too.
+    it.each(['prog', 'tags', 'cb'])('leaves nothing focused after a new %s rule', (id) => {
+      const h = open();
+
+      const rule = add(h, id);
+
+      expect(document.body).toHaveFocus();
+      expect(q('database-color-add')).not.toHaveFocus();
+      expect(q(`database-color-rule-${rule.id}`)).not.toBeNull();
+    });
+
+    // notion-motion.md Round 76 §4: a new Formula rule focuses its "=" value input.
+    it('focuses the value input after a new Number formula rule', () => {
+      const h = open();
+
+      h.ctx.schema = () => [...typed, { id: 'fn', name: 'Double', type: 'number', position: 'c0' }];
+      h.ctx.storedType = (id) => (id === 'fn' ? 'formula' : typed.find((p) => p.id === id)?.type);
+
+      const rule = add(h, 'fn');
+
+      expect(q(`database-color-value-${rule.id}`)).toHaveFocus();
+    });
+
+    // notion-motion.md Round 77 §5 (r77-n-ccformula-text.raw): a text formula starts on "contains" with its value input focused.
+    it('starts a text formula on "contains" and focuses its value input', () => {
+      const h = open();
+
+      h.ctx.schema = () => [...typed, { id: 'ft', name: 'Label', type: 'text', position: 'c0' }];
+      h.ctx.storedType = (id) => (id === 'ft' ? 'formula' : typed.find((p) => p.id === id)?.type);
+
+      const rule = add(h, 'ft');
+
+      expect(q(`database-color-value-${rule.id}`)).toHaveFocus();
+      expect(rule).toMatchObject({ operator: 'contains', color: 'green' });
+      expect(add(h, 'txt')).toMatchObject({ operator: 'is_not_empty' });
+    });
+
+    // notion-motion.md Round 77 §5 (r77-n-ccformula-checkbox.raw): a checkbox formula starts on "is" and leaves nothing focused.
+    it('leaves nothing focused after a new checkbox formula rule', () => {
+      const h = open();
+
+      h.ctx.schema = () => [...typed, { id: 'fc', name: 'Flag', type: 'checkbox', position: 'c0' }];
+      h.ctx.storedType = (id) => (id === 'fc' ? 'formula' : typed.find((p) => p.id === id)?.type);
+
+      const rule = add(h, 'fc');
+
+      expect(document.body).toHaveFocus();
+      expect(q('database-color-add')).not.toHaveFocus();
+      expect(rule).toMatchObject({ operator: 'equals', value: null });
+    });
+
     // notion-motion.md Round 22 §3: a Number formula starts on "=" with its input. The panel gets it as its result type.
     it('starts a Number formula on "=", and a plain Number on "is not empty"', () => {
       const h = open();
@@ -2714,8 +2883,12 @@ describe('view settings panel', () => {
 
       const rule = add(h, 'hrs');
 
+      // notion-motion.md Round 74 §4: the new rule's value input takes the focus.
+      expect(q(`database-color-value-${rule.id}`)).toHaveFocus();
       expect(rule).toMatchObject({ operator: 'any:equals', value: null, color: 'green' });
       expect(q(`database-color-quantifier-${rule.id}`)?.querySelector('[data-blok-database-chip-operator-label]')?.textContent).toBe('tools.database.filteroperator.any');
+      expect(q(`database-color-quantifier-${rule.id}`)?.hasAttribute('data-blok-database-color-rule-quantifier')).toBe(true);
+      expect(q(`database-color-operator-${rule.id}`)?.hasAttribute('data-blok-database-color-rule-quantifier')).toBe(false);
       expect(q(`database-color-operator-${rule.id}`)?.querySelector('[data-blok-database-chip-operator-label]')?.textContent).toBe('tools.database.filteroperator.numberequals');
       expect(q(`database-color-rule-${rule.id}`)?.querySelector('[data-blok-database-color-rule-prefix]')?.textContent).toBe('=');
       expect(q(`database-color-value-${rule.id}`)).toBeInstanceOf(HTMLInputElement);
@@ -3149,27 +3322,6 @@ describe('view settings panel', () => {
     click('database-pick-property-num');
 
     expect(h.state.view.filters).toHaveLength(1);
-  });
-
-  it('opens a filter pill popover at its editor, 220 wide', () => {
-    const h = harness({ filters: [{ id: 'f1', propertyId: 'due', operator: 'this_week', value: null }] });
-
-    h.openPill('f1');
-
-    expect((document.querySelector('[data-blok-testid="database-filter-popover"]') as HTMLElement).style.width).toBe('220px');
-
-    // The window editor is filter-sort's This/Past/Next editor (findings V18).
-    const direction = document.querySelector<HTMLSelectElement>('[data-blok-testid="database-filter-direction"]');
-
-    if (direction === null) throw new Error('no direction');
-    direction.value = 'past';
-    direction.dispatchEvent(new Event('change'));
-
-    expect(h.state.view.filters[0]).toMatchObject({ operator: 'relative_to_today', value: 'past:1:week' });
-
-    click('database-filter-delete');
-
-    expect(h.state.view.filters).toEqual([]);
   });
 });
 

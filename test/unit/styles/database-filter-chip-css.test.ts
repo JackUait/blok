@@ -79,6 +79,19 @@ describe('advanced filter popover', () => {
     expect(declared(group, 'gap')).toEqual(['var(--blok-space-2)']);
   });
 
+  // notion-motion.md Round 83 §5 (r83-n-af-group-box.raw): border 0, a 1px ring rgba(42,28,0,0.07) drawn as a shadow.
+  it('rings a filter group box with a 1px shadow, not a border', () => {
+    expect(declared('[data-blok-database-filter-group]', 'box-shadow')).toEqual(['0 0 0 1px var(--blok-database-table-border)']);
+  });
+
+  // notion-motion.md Round 83 §5 (r83-n-af-one.raw) and Round 25 §3 (r25-addrule-btn.raw): the plus is 20×20 at +8.
+  it('draws the Add filter rule plus at 20px', () => {
+    const svg = '[data-blok-database-filter-add-rule] > [data-blok-database-panel-icon] svg';
+
+    expect(declared(svg, 'width')).toEqual(['20px']);
+    expect(declared(svg, 'height')).toEqual(['20px']);
+  });
+
   // r18-adv-addrule.raw, r19-adv-groupmore.raw, r19-adv-andor.raw: a flyout row with a hint line is 45 tall.
   it('makes a flyout row with a hint 45px tall', () => {
     expect(declared('[data-blok-database-panel-page="sort-flyout"] > [data-blok-database-panel-row]:has(> [data-blok-database-panel-text])', 'min-height')).toEqual(['45px']);
@@ -92,6 +105,14 @@ describe('advanced filter popover', () => {
     expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button] + [data-blok-database-filter-rule-more]', 'margin-inline-start')).toEqual([]);
     expect(declared('[data-blok-database-filter-rule]::after', 'content')).toEqual(["''"]);
     expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-more]', 'order')).toEqual(['1']);
+  });
+
+  // notion-motion.md R83 §5 (r83-n-af-one.raw, r83-n-af-group.raw): the rule and group ⋯ draw a 20 svg, 6 in from the 32 button.
+  it('draws the rule and group ⋯ glyphs at 20px', () => {
+    for (const more of ['[data-blok-database-filter-rule-more] svg', '[data-blok-database-filter-group-more] svg']) {
+      expect(declared(more, 'width')).toEqual(['20px']);
+      expect(declared(more, 'height')).toEqual(['20px']);
+    }
   });
 
   // notion-motion.md Round 23 §2 (r23-adv-btns.raw): "Select a date" is a fixed 165, its text left and its chevron right.
@@ -215,6 +236,12 @@ describe('sort and rule control chevrons', () => {
     expect(declared('[data-blok-database-filter-rule] > [data-blok-database-panel-note]', 'text-align')).toEqual([]);
   });
 
+  // notion-motion.md Round 83 §5 (r83-n-af-one.raw): "Where" is 14/400 in the dark ink 44,44,43.
+  it('writes "Where" in 14px dark ink', () => {
+    expect(declared('[data-blok-database-filter-where]', 'font-size')).toEqual(['14px']);
+    expect(declared('[data-blok-database-filter-where]', 'color')).toEqual(['var(--blok-database-ink)']);
+  });
+
   // Text 125,122,117 fails AA (4.27:1), so it takes Blok's AA step of that ink.
   it('draws Add filter rule with a 14px chevron box 6 after its text', () => {
     const chevron = '[data-blok-database-filter-add-rule] > [data-blok-database-chip-chevron]';
@@ -284,5 +311,68 @@ describe('select filter option rows', () => {
 describe('option tokens on a rule value button', () => {
   it('puts 6px after each token', () => {
     expect(declared('[data-blok-database-filter-rule-button] [data-blok-database-option-pill]', 'margin-inline-end')).toEqual(['var(--blok-space-1-5)']);
+  });
+});
+
+// notion-motion.md Round 52 §4 (r52-n-sort-chip-hover.raw, r52-n-sort-close.raw): an active chip's fill goes
+// 0.094 → 0.141 on hover and while its popover is open, background-color 20ms ease-in. Blok's chip stays gray (D3),
+// so the same 1.5× step is applied to the gray tint.
+describe('active chip hover and open fill', () => {
+  const states = '[data-blok-database-filter-pill][data-active]:is(:hover, [data-popover-open])';
+
+  it('steps the gray fill up on hover and while open', () => {
+    expect(declared(states, 'background-color')).toEqual(['var(--blok-database-chip-active-hover-bg)']);
+    expect(database).toMatch(/--blok-database-chip-active-hover-bg: rgba\(55, 53, 47, 0\.15\);/);
+    expect(database).toMatch(/--blok-database-chip-active-hover-bg: rgba\(255, 255, 255, 0\.135\);/);
+  });
+
+  it('eases the fill in over 20ms', () => {
+    expect(declared('[data-blok-database-filter-pill]', 'transition')).toEqual(['background-color 20ms ease-in']);
+  });
+});
+
+// notion-motion.md Round 52 §4: "+ Filter" sits at x 545 alone (chips start at 539) and 31 after a sort chip
+// (Blok 25: the divider's 12 plus the bar gap). After a filter chip it is the bar gap only (Round 26/38 modal reads).
+describe('"+ Filter" offset', () => {
+  it('moves 6px in when it is first or follows the sort divider', () => {
+    expect(declared(':is([data-blok-database-filter-add]:first-child, [data-blok-database-chip-divider] + [data-blok-database-filter-add])', 'margin-inline-start')).toEqual(['var(--blok-space-1-5)']);
+    expect(declared('[data-blok-database-filter-add]', 'margin-inline-start')).toEqual([]);
+  });
+});
+
+// notion-motion.md Round 52 §4 (r52-n-sort-rule-drag.raw): a rule passed by a drag slides over 200ms ease.
+describe('sort rule drag', () => {
+  it('slides a passed rule over 200ms ease, not the dragged one', () => {
+    expect(declared('[data-blok-database-panel-page="sort"] [data-blok-database-panel-list-item]:not([data-dragging])', 'transition').at(0)).toBe('top 200ms ease');
+  });
+
+  // A transition from top: auto does not run; the rule jumps.
+  it('starts every rule at top 0 so the slide has a number to run from', () => {
+    expect(declared('[data-blok-database-panel-page="sort"] [data-blok-database-panel-list-item]', 'top')).toEqual(['0']);
+  });
+});
+
+// notion-motion.md Round 92 §1 #3, §3 (r92-n-prop-drag-down.raw, r92-n-grp-drag-down.raw): the property and group lists
+// slide a passed row the same way, over ~184 ms.
+describe('property and group list drag', () => {
+  it.each(['properties', 'group'])('slides a passed row on the %s page over 200ms ease, from top 0', (page) => {
+    expect(declared(`[data-blok-database-panel-page="${page}"] [data-blok-database-panel-list-item]:not([data-dragging])`, 'transition').at(0)).toBe('top 200ms ease');
+    expect(declared(`[data-blok-database-panel-page="${page}"] [data-blok-database-panel-list-item]`, 'top')).toEqual(['0']);
+  });
+
+  // Round 92 §1 #4: a 16 handle glyph at +13 (y+6), the pill at +36, on rows 4 in from the panel.
+  it('puts the group handle glyph at +13 and the pill at +36', () => {
+    expect(declared('[data-blok-database-panel-page="group"] [data-blok-database-panel-list-item]', 'padding-inline-start')).toEqual(['var(--blok-space-2)']);
+    expect(declared('[data-blok-database-panel-page="group"] [data-blok-database-panel-handle] svg', 'width')).toEqual(['16px']);
+    expect(declared('[data-blok-database-panel-page="group"] [data-blok-database-group-visibility-row]', 'padding-inline-start')).toEqual(['var(--blok-space-1-5)']);
+  });
+
+  // Round 8c (motion-r8c-hidegroup.json): the handle is rgb(142,139,134), the pin's ink.
+  it('inks the group handle like the pin', () => {
+    expect(declared('[data-blok-database-panel-page="group"] [data-blok-database-panel-handle]', 'color')).toEqual(['var(--blok-database-table-header-icon)']);
+  });
+
+  it('keeps a fixed row\'s handle as an unseen spacer', () => {
+    expect(declared('[data-blok-database-panel-handle][data-fixed]', 'visibility')).toEqual(['hidden']);
   });
 });

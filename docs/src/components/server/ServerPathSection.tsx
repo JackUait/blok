@@ -15,7 +15,7 @@ const SampleGroup: React.FC<{ heading: string; samples: ServerCodeSample[] }> = 
   samples,
 }) => (
   <div className="mt-8">
-    <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">{heading}</h3>
+    <h3 className="mb-3 text-sm font-bold text-foreground">{heading}</h3>
     <div className="flex flex-col gap-4">
       {samples.map((sample) => (
         <div key={sample.label}>
@@ -75,7 +75,7 @@ export const ServerPathSection: React.FC<ServerPathSectionProps> = ({ section })
       <SampleGroup heading={t('server.editorConfig')} samples={[section.editorConfig]} />
 
       <div className="mt-8">
-        <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">
+        <h3 className="mb-3 text-sm font-bold text-foreground">
           {t('server.failureModes')}
         </h3>
         <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">

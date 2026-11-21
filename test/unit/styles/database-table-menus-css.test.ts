@@ -451,12 +451,21 @@ describe('row page property menu (research parity row 9)', () => {
     expect(declared(row, 'inline-size')).toEqual(['100%']);
   });
 
-  // notion-spec-2 §9: the header submenu's tiles fill a row 16px in from the panel, 6px apart (about 85 wide each).
+  // notion-spec-2 §9: the header submenu's tiles fill a row 16px in from the panel; 8px apart (notion-motion.md Round 83 §4).
   it('stretches the header submenu tiles across the row, as Notion', () => {
     expect(declared(`${SUB} [data-blok-database-show-as]`, 'padding-inline')).toEqual(['var(--blok-space-3)']);
     expect(declared(`${SUB} [data-blok-database-show-as-tiles]`, 'padding-inline')).toEqual(['0']);
-    expect(declared(`${SUB} [data-blok-database-show-as-tiles]`, 'gap')).toEqual(['var(--blok-space-1-5)']);
+    expect(declared(`${SUB} [data-blok-database-show-as-tiles]`, 'gap')).toEqual(['var(--blok-space-2)']);
     expect(declared(`${SUB} [data-blok-database-show-as-tile]`, 'flex')).toEqual(['1']);
+  });
+
+  // notion-motion.md Round 92 §1 #7 (r92-n-dark-editprop-number.raw): the line over Show as is 268 wide at x 16 of
+  // the 300 flyout, and the Bar tile's track is 59.3 of its 83.3 tile, so it spans the tile inside the 12px padding.
+  it('insets the Show as divider 16 and stretches the Bar tile track, as Notion', () => {
+    expect(declared(`${SUB} [data-blok-popover-item-separator]:has(+ [data-blok-item-name='showAs'])`, 'padding-inline')).toEqual(['var(--blok-space-3)']);
+    expect(declared(`${SUB} [data-blok-database-show-as-tile="bar"] > [data-blok-database-show-as-glyph]`, 'align-self')).toEqual(['stretch']);
+    expect(declared(`${SUB} [data-blok-database-show-as-tile="bar"] > [data-blok-database-show-as-glyph]`, 'inline-size')).toEqual(['auto']);
+    expect(declared(`${SUB} [data-blok-database-show-as-tile="bar"] [data-blok-database-number-bar]`, 'inline-size')).toEqual(['100%']);
   });
 
   // notion-spec-2 §9: Notion's Color value is swatch, name, then a down chevron 8px after the name.
@@ -840,5 +849,116 @@ describe('database block menu', () => {
 
   it('fills a hovered Move to Trash row with the neutral hover token, never red', () => {
     expect(rule(TRASH)).toContain('--blok-item-destructive-hover-bg: var(--blok-database-popover-hover)');
+  });
+});
+
+// notion-motion.md Round 69 §1 (r69-n-lockpop.raw): the Unlock menu is 181.5x65. Rows pad 0 8, a 20px icon
+// at +8 and the text 8 after it at +36; the box pads 4, rows 1 apart, no gap under the last one.
+describe('the Unlock menu (Round 69)', () => {
+  const LOCK = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-lock-menu']";
+
+  it('has a 20px icon and 8 to the text, as the card menu', () => {
+    expect(declared(`${LOCK} [data-blok-popover-item-icon]`, 'width')).toEqual(['20px']);
+    expect(declared(`${LOCK} [data-blok-popover-item-icon]`, 'margin-inline-end')).toEqual(['var(--blok-space-2)']);
+  });
+
+  it('pads its rows 0 8, with no gap under the last row', () => {
+    expect(declared(`${LOCK} [data-blok-popover-item]`, 'padding-inline')).toEqual(['var(--blok-space-2)']);
+    expect(declared(`${LOCK} [data-blok-popover-item]:last-child`, 'margin-block-end')).toEqual(['0']);
+  });
+
+  // Round 70 §2 (r70-n-lockpop.raw): its first row is filled color(srgb .129 .106 .090 / .051). Dark is unmeasured.
+  it('fills the keyboard row with Notion\'s lighter tint, and keeps the dark default', () => {
+    expect(declared(LOCK, '--blok-item-focus-bg')).toEqual(['rgba(33, 27, 23, 0.051)']);
+    expect(declared(`[data-blok-theme="dark"] ${LOCK}`, '--blok-item-focus-bg')).toEqual(['rgba(255, 255, 255, 0.055)']);
+  });
+});
+
+// notion-motion.md Round 81 §2 "Card ⋯, board" (r81-n-bd-cardmenu.raw; r35-cardmenu.raw: field 241x28, pad 3 6, no glyph).
+describe('card menu search field (Round 81)', () => {
+  const FIELD = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] > [data-blok-popover-container] > [data-blok-field='search']";
+
+  it('puts the 14px text 18 in: no search glyph, 5px padding inside the 1px border', () => {
+    expect(declared(`${FIELD}::before`, 'display')).toEqual(['none']);
+    expect(declared(FIELD, 'padding-inline')).toEqual(['var(--blok-space-1-25)']);
+    expect(declared(FIELD, 'font-size')).toEqual(['14px']);
+  });
+
+  it('draws the input 20 tall, so its text sits 16 under the menu top', () => {
+    expect(declared(`${FIELD} > input`, 'height')).toEqual(['20px']);
+    expect(declared(`${FIELD} > input`, 'line-height')).toEqual(['20px']);
+  });
+});
+
+// notion-motion.md Round 81 §1 "Header menu name field at rest" (r81-n-hdrmenu.raw): the input text is 14px.
+describe('header menu name field text (Round 81)', () => {
+  it('sets the name 14px, not the shared field\'s 13', () => {
+    expect(declared('[data-blok-database-property-menu-name] > [data-blok-database-property-menu-name-input]', 'font-size')).toEqual(['14px']);
+  });
+});
+
+// notion-motion.md Round 81 §1 "Calculate menu …chevrons" (r81-n-calc-menu.raw; dark r81-n-calc-sumset-dark.raw):
+// 16x16 at +168,+6 of a 192 row, ink rgb(142, 139, 134) (173 in dark), from the header and the footer alike.
+describe('Calculate menu chevrons (Round 81)', () => {
+  const CALC = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu']";
+
+  it('ends a group row 8px after its chevron', () => {
+    expect(declared(`${CALC} [data-blok-popover-item][data-blok-has-children]`, 'padding-inline-end')).toEqual(['var(--blok-space-2)']);
+  });
+
+  it('draws the chevron 16px in a 16px slot, in the header icon grey', () => {
+    expect(declared(`${CALC} [data-blok-popover-item-icon-chevron-right]`, 'width')).toEqual(['16px']);
+    expect(declared(`${CALC} [data-blok-popover-item-icon-chevron-right]`, 'margin-inline-end')).toEqual(['0']);
+    expect(declared(`${CALC} [data-blok-popover-item-icon-chevron-right]`, 'color')).toEqual(['var(--blok-database-table-header-icon)']);
+    expect(declared(`${CALC} [data-blok-popover-item-icon-chevron-right] svg`, 'width')).toEqual(['16px']);
+    expect(declared(`${CALC} [data-blok-popover-item-icon-chevron-right] svg`, 'height')).toEqual(['16px']);
+  });
+});
+
+// notion-motion.md Round 81 §2 "Card ⋯, board" (r81-n-bd-cardmenu.raw): the row glyphs paint rgb(56, 56, 54).
+// Only the menu's own rows: chevrons and submenus keep their inks.
+describe('card menu glyph ink (Round 81)', () => {
+  it('paints the card menu\'s own row glyphs in the strong glyph grey', () => {
+    const OWN = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item]:not([data-blok-popover-item-destructive]) > [data-blok-popover-item-icon]:not([data-blok-popover-item-icon-chevron-right])";
+
+    expect(declared(OWN, 'color')).toEqual(['var(--blok-database-peek-glyph-strong)']);
+  });
+});
+
+// notion-motion.md Round 82 §1 "Card ⋯ › chevron ink" (r82-n-a4-bd-cardmenu-chev.raw, r82-n-b-ga-cardmenu.raw):
+// Edit property / Open in chevrons are 16x16 at +233 of a 257 row, ink rgb(142, 139, 134), on board and gallery.
+describe('card menu chevrons (Round 82)', () => {
+  const CARD = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu']";
+
+  it('ends a group row 8px after its chevron', () => {
+    expect(declared(`${CARD} [data-blok-popover-item][data-blok-has-children]`, 'padding-inline-end')).toEqual(['var(--blok-space-2)']);
+  });
+
+  it('draws the chevron 16px in a 16px slot, in the header icon grey', () => {
+    expect(declared(`${CARD} [data-blok-popover-item-icon-chevron-right]`, 'width')).toEqual(['16px']);
+    expect(declared(`${CARD} [data-blok-popover-item-icon-chevron-right]`, 'margin-inline-end')).toEqual(['0']);
+    expect(declared(`${CARD} [data-blok-popover-item-icon-chevron-right]`, 'color')).toEqual(['var(--blok-database-table-header-icon)']);
+    expect(declared(`${CARD} [data-blok-popover-item-icon-chevron-right] svg`, 'width')).toEqual(['16px']);
+    expect(declared(`${CARD} [data-blok-popover-item-icon-chevron-right] svg`, 'height')).toEqual(['16px']);
+  });
+});
+
+// notion-motion.md Round 82 §1 "…Escape on the confirm" (r82-n-a1-prop-confirm-escape.raw): focus goes back to the
+// header menu list with outline none. The keyboard cursor stays on the Edit property row, so the list needs no ring.
+describe('header menu list after the option confirm (Round 82)', () => {
+  const LIST = `${HEADER} > [data-blok-popover-container] > [data-blok-popover-items]:focus-visible`;
+
+  it('paints no ring round the focused list', () => {
+    expect(declared(LIST, 'outline')).toEqual(['none']);
+  });
+});
+
+// notion-motion.md Round 94 §1 #6: Escape on Number format leaves the keyboard cursor on the Number format row.
+// The focused list then needs no ring. A list with no cursor row (reached by Tab) keeps its ring.
+describe('Edit property list after Escape on a submenu (Round 94)', () => {
+  const LIST = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] > [data-blok-popover-container] > [data-blok-popover-items]:focus-visible:has([data-blok-focused='true'])";
+
+  it('paints no ring round the focused list while a row holds the cursor', () => {
+    expect(declared(LIST, 'outline')).toEqual(['none']);
   });
 });

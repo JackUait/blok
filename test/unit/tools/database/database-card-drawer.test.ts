@@ -359,6 +359,22 @@ describe('DatabaseCardDrawer', () => {
       });
     });
 
+    // notion-motion.md Round 72 §4: the full page widens with its frame while the empty panel slides out.
+    it('widens the full page over the host\'s transition when a side peek expands', () => {
+      const { host, drawer, options } = openWithHost({ left: 100, right: 1412 });
+
+      options.wrapper.querySelector<HTMLElement>('[data-blok-database-peek-expand]')?.click();
+
+      expect(options.wrapper.querySelector('[data-blok-database-drawer]')?.getAttribute('data-peek-mode')).toBe('full');
+      expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
+      expect(inset(host)).toBe('0px');
+
+      host.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'padding-right' }));
+
+      expect(host.hasAttribute('data-blok-database-peek')).toBe(false);
+      drawer.destroy();
+    });
+
     it('drops its marks at once on destroy', () => {
       const { host, drawer } = openWithHost({ left: 100, right: 900 });
 

@@ -6,10 +6,10 @@ import type {
   SanitizerConfig
 } from '../../../types';
 import type { BlokConfig } from '../../../types/configs/blok-config';
-import type { Blocks, Notifier, Toolbar, I18n, InlineToolbar } from '../../../types/api';
+import type { Blocks, Notifier, Toolbar, I18n, InlineToolbar, Tools } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR, createSelector, INLINE_TOOLBAR_INTERFACE_VALUE } from '../constants';
-import { IconLink, IconGlobe, IconMail, IconHash, IconTrash, IconReturn, IconWarning, IconH1, IconH2, IconH3, IconH4, IconH5, IconH6 } from '../icons';
+import { IconLink, IconGlobe, IconMail, IconTableOfContents, IconTrash, IconReturn, IconWarning, IconPage, IconTable, IconPhone } from '../icons';
 import { SelectionUtils } from '../selection/index';
 import { log } from '../utils';
 import { PopoverItemType } from '../utils/popover';
@@ -21,36 +21,55 @@ import { isHttpUrl } from '../../tools/link/registry';
 import { MetadataFetcher } from '../../tools/link/metadata-fetcher';
 import { getRecentLinks, recordRecentLink, updateRecentLinkMeta, type RecentLink } from './link-history';
 import { PAGE_REFERENCE_ATTR } from '../../shared/page-reference';
+import { PAGE_PATH_SEPARATOR } from '../../tools/page/constants';
+import { pageIconNode } from '../../tools/page/icon-node';
+import { searchVisiblePages } from '../../tools/page/search-pages';
+import type { PageConfig, PageSearchResult } from '../../tools/page/types';
 
-const SUGGESTION_ROW_BASE = 'flex items-center gap-2.5 w-full mt-0.5 px-1.5 py-1.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) text-left appearance-none border-0 bg-transparent font-[inherit] outline-hidden';
-const SUGGESTION_ROW_VALID = `${SUGGESTION_ROW_BASE} cursor-pointer can-hover:hover:bg-item-hover-bg focus-visible:bg-item-hover-bg transition-colors`;
-const SUGGESTION_ROW_INVALID = `${SUGGESTION_ROW_BASE} pointer-events-none`;
+// ps-0.5 and gap-2 put its 24px icon box and its text on the list rows' columns.
+// The suggestion row and the error that takes its place share this box, so
+// the card keeps its height when an address is refused.
+const TYPED_ROW_BOX = 'flex items-start gap-2 min-h-[46px] ps-0.5 pe-2 py-[5px]';
+const SUGGESTION_ROW_BASE = `${TYPED_ROW_BOX} w-full mt-2 rounded-(--blok-radius-inner,var(--blok-radius-control)) text-left appearance-none border-0 font-[inherit] outline-hidden`;
+// Lit from the start: Enter adds this link.
+const SUGGESTION_ROW_VALID = `${SUGGESTION_ROW_BASE} cursor-pointer bg-item-hover-bg active:scale-[0.985]`;
+const SUGGESTION_ROW_INVALID = `${SUGGESTION_ROW_BASE} bg-transparent pointer-events-none`;
 
 /**
- * The suggestion's leading icon sits in the same fixed box the popover menus
- * use for their item icons, so the link card reads as part of one system.
+ * The leading sign sits in the 24px box the popover menus use for their item
+ * icons. -mt-0.5 centres that box on the 20px first line, not on the row.
  */
-const SUGGESTION_ICON_CLASSES = 'flex items-center justify-center size-6 shrink-0 text-gray-text transition-opacity duration-150 [&_svg]:size-4';
-const SUGGESTION_URL_TEXT = 'block text-[13px] leading-[18px] font-medium truncate';
-const SUGGESTION_TYPE_TEXT = 'block text-[11px] leading-[14px] text-gray-text mt-px';
+const TYPED_ROW_ICON = 'flex items-center justify-center size-6 shrink-0 -mt-0.5 [&_svg]:size-4';
+const SUGGESTION_ICON_CLASSES = `${TYPED_ROW_ICON} text-gray-text transition-opacity duration-150`;
+// The type of the Recents and Pages rows.
+const TYPED_ROW_TITLE = 'block text-sm leading-5 truncate';
+const TYPED_ROW_META = 'block text-xs leading-4 text-gray-text';
+const SUGGESTION_URL_TEXT = TYPED_ROW_TITLE;
+const SUGGESTION_TYPE_TEXT = TYPED_ROW_META;
 
 /**
- * ⏎ affordance on the confirmable suggestion row. Shown only when pressing
- * Enter would actually insert the link.
+ * ⏎ affordance on the option row picked with the arrow keys.
  */
-const ENTER_HINT_CLASSES = 'items-center justify-center size-5 shrink-0 text-gray-text [&_svg]:size-3.5';
+const ENTER_HINT_CLASSES = 'items-center justify-center self-center size-5 shrink-0 text-gray-text [&_svg]:size-3.5';
 
 const HEADING_LIMIT = 6;
-const HEADING_ICONS: Record<number, string> = { 1: IconH1, 2: IconH2, 3: IconH3, 4: IconH4, 5: IconH5, 6: IconH6 };
+const PAGE_LIMIT = 6;
+// Pause after the last keystroke before the host is asked for pages.
+const PAGE_SEARCH_DELAY = 150;
+// Headings step in under their parent, never deeper than this.
+const HEADING_MAX_DEPTH = 2;
 
 /**
  * Link kinds offered when the field has nothing else to show. Picking one
  * types its prefix into the field.
  */
 const LINK_KINDS = [
-  { icon: IconGlobe, titleKey: 'tools.link.webLink', prefix: 'https://' },
+  { icon: IconGlobe, titleKey: 'tools.link.webPage', prefix: 'https://' },
   { icon: IconMail, titleKey: 'tools.link.emailAddress', prefix: 'mailto:' },
 ] as const;
+
+/** A search hit, with the mark a host puts on a full-page database. */
+type LinkPage = PageSearchResult & { kind?: 'database' };
 
 /**
  * A heading in this document that a link can jump to.
@@ -59,30 +78,33 @@ interface HeadingTarget {
   blockId: string;
   level: number;
   text: string;
+  /** Steps in from the left edge: 0 for a heading with no parent above it. */
+  depth: number;
 }
 
 /**
  * Rows cascade in with the suggestion row's keyframes. Each row sets its own
  * animation-delay; motion-safe drops the whole cascade for reduced motion.
+ * The row starts 4px in from the field's edge and ends at the field's end.
  */
-const OPTION_ROW_CLASSES = 'group flex items-center gap-2.5 w-full h-8 px-2 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer can-hover:hover:bg-item-hover-bg aria-selected:bg-item-hover-bg transition-colors motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
-// One line per row: the title truncates first, the site name keeps its room.
-const OPTION_TEXT_CLASSES = 'flex-1 min-w-0 flex items-baseline gap-2';
+const OPTION_ROW_CLASSES = 'group flex items-start gap-2.5 w-full min-h-8 py-[5px] ps-1 pe-2 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer can-hover:hover:bg-item-hover-bg aria-selected:bg-item-hover-bg transition-colors motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
+// The title, with where it leads on a second line under it.
+const OPTION_TEXT_CLASSES = 'flex-1 min-w-0 flex flex-col';
 const OPTION_TITLE_CLASSES = 'min-w-0 text-sm leading-5 text-text-primary truncate';
-const OPTION_META_CLASSES = 'shrink-0 max-w-[45%] text-xs leading-4 text-gray-text truncate';
+const OPTION_META_CLASSES = 'min-w-0 text-xs leading-4 text-gray-text truncate';
 const OPTION_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 text-gray-text [&_svg]:size-5';
-const HEADING_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 text-gray-text opacity-60 [&_svg]:size-4';
 // A section that follows a visible one gets extra room above its label.
-const SECTION_CLASSES = 'w-0 min-w-full [[data-link-group]:not([hidden])~&]:pt-1.5';
-const SECTION_LABEL_CLASSES = 'px-2 pt-1.5 pb-1 text-xs leading-4 font-medium text-gray-text';
-// Recent links are cards in a row of three: tile, then title, then site.
-const RECENT_LIST_CLASSES = 'grid grid-cols-3 gap-1';
-const RECENT_CARD_CLASSES = 'group relative flex flex-col items-start gap-2 min-w-0 p-2 rounded-(--blok-radius-control-lg) cursor-pointer outline-1 outline-transparent can-hover:hover:bg-item-hover-bg can-hover:hover:-translate-y-px aria-selected:bg-item-hover-bg aria-selected:outline-search-input-focus-border transition-[background-color,outline-color,translate] duration-150 motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
-const RECENT_TILE_CLASSES = 'flex items-center justify-center size-9 shrink-0 rounded-(--blok-radius-control-lg) overflow-hidden shadow-[inset_0_0_0_1px_rgba(13,20,33,0.06)]';
-// Mixed toward the theme's text color, so one hue reads in light and dark.
-const RECENT_MONOGRAM_CLASSES = 'bg-[color-mix(in_oklch,hsl(var(--blok-link-tile-hue)_70%_55%)_18%,transparent)] text-[color:color-mix(in_oklch,hsl(var(--blok-link-tile-hue)_65%_45%)_55%,var(--blok-text-primary))] text-sm font-semibold';
-const RECENT_TITLE_CLASSES = 'block w-full text-[13px] leading-[18px] font-medium text-text-primary truncate';
-const RECENT_META_CLASSES = 'block w-full min-h-[14px] text-[11px] leading-[14px] text-gray-text truncate';
+const SECTION_CLASSES = 'w-0 min-w-full [[data-link-group]:not([hidden])~&]:pt-2';
+const SECTION_LABEL_CLASSES = 'px-1 pt-2 pb-1.5 text-xs leading-4 font-medium text-gray-text';
+const PAGE_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 text-base leading-none [&_img]:size-4 [&_img]:rounded-(--blok-radius-control-sm) [&_svg]:size-4 text-gray-text';
+// The sign's size and line weight live in link-picker.css.
+const RECENT_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 text-gray-text';
+// The list fades over its top and bottom edge (link-picker.css). The
+// highlighted row stops short of each fade, and the list ends this far
+// under its last whole row.
+const FADE_TOP_CLEARANCE = 24;
+const FADE_BOTTOM_CLEARANCE = 28;
+const LIST_TAIL = 22;
 
 /**
  * Link Tool
@@ -156,11 +178,14 @@ export class LinkInlineTool implements InlineTool {
     options: HTMLElement | null;
     recent: HTMLElement | null;
     recentList: HTMLElement | null;
+    pages: HTMLElement | null;
+    pageList: HTMLElement | null;
     headings: HTMLElement | null;
     headingList: HTMLElement | null;
     kinds: HTMLElement | null;
     error: HTMLElement | null;
     errorMessage: HTMLElement | null;
+    errorReason: HTMLElement | null;
     divider: HTMLElement | null;
     removeButton: HTMLButtonElement | null;
     button: HTMLButtonElement | null;
@@ -170,6 +195,8 @@ export class LinkInlineTool implements InlineTool {
       options: null,
       recent: null,
       recentList: null,
+      pages: null,
+      pageList: null,
       headings: null,
       headingList: null,
       kinds: null,
@@ -179,6 +206,7 @@ export class LinkInlineTool implements InlineTool {
       suggestion: null,
       error: null,
       errorMessage: null,
+      errorReason: null,
       divider: null,
       removeButton: null,
       button: null,
@@ -195,6 +223,28 @@ export class LinkInlineTool implements InlineTool {
    * the field: the popover's Flipper owns arrow keys on any other target.
    */
   private activeOptionIndex = -1;
+
+  /**
+   * The host's pages for the field's value, as last answered.
+   */
+  private pageHits: LinkPage[] = [];
+
+  /**
+   * Page rows by page id, reused so a row that stays never replays its entrance.
+   */
+  private pageRows = new Map<string, HTMLElement>();
+
+  /**
+   * Bumped on every new search and on close: an answer with an old number is dropped.
+   */
+  private pageSearchToken = 0;
+
+  private pageSearchTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Links with a lookup in flight, so one link is never asked for twice at once.
+   */
+  private lookups = new Set<string>();
 
   /**
    * Headings of this document, read on every open.
@@ -253,6 +303,11 @@ export class LinkInlineTool implements InlineTool {
   private blocks: Blocks;
 
   /**
+   * Tools API, read for the page tool's config
+   */
+  private tools: Tools;
+
+  /**
    * Global anchor-building config (target / rel / transformHref)
    */
   private linkConfig: NonNullable<BlokConfig['link']>;
@@ -266,12 +321,14 @@ export class LinkInlineTool implements InlineTool {
     this.notifier = api.notifier;
     this.i18n = api.i18n;
     this.blocks = api.blocks;
+    this.tools = api.tools;
     this.linkConfig = api.config.link ?? {};
     this.selection = new SelectionUtils();
     this.nodes.urlLabel = this.createFieldLabel(this.i18n.t('tools.link.pageOrUrl'), 'inline-tool-url-label', false);
     this.nodes.input = this.createInput();
     this.nodes.suggestion = this.createSuggestion();
     this.nodes.recent = this.createRecent();
+    this.nodes.pages = this.createPages();
     this.nodes.headings = this.createHeadings();
     this.nodes.kinds = this.createKinds();
     this.nodes.options = this.createOptions();
@@ -282,7 +339,8 @@ export class LinkInlineTool implements InlineTool {
     this.nodes.removeButton = this.createRemoveButton();
     this.nodes.inputWrapper = document.createElement('div');
     // One card width for every state, so the lists never make it jump.
-    this.nodes.inputWrapper.className = 'px-1 w-80 mobile:w-auto';
+    this.nodes.inputWrapper.className = 'pt-0.5 w-80 mobile:w-auto';
+    this.nodes.inputWrapper.setAttribute('data-link-field', '');
     this.nodes.inputWrapper.append(
       this.nodes.urlLabel,
       this.nodes.input,
@@ -306,9 +364,6 @@ export class LinkInlineTool implements InlineTool {
       isActive: () => !!this.selection.findParentTag('A'),
       children: {
         hideChevron: true,
-        // The link field reads as a continuation of the toolbar, so it opens
-        // under the toolbar card instead of beside it.
-        placement: 'below',
         items: [
           {
             type: PopoverItemType.Html,
@@ -364,6 +419,7 @@ export class LinkInlineTool implements InlineTool {
   private refreshForValue(): void {
     this.clearValidationError();
     this.updateSuggestion(this.nodes.input?.value ?? '');
+    this.searchPages();
     this.updateOptions();
   }
 
@@ -416,7 +472,7 @@ export class LinkInlineTool implements InlineTool {
   private createDivider(): HTMLElement {
     const divider = document.createElement('div');
 
-    divider.className = 'hidden mt-2.5 mb-1.5 -mx-1 h-px bg-link-input-border';
+    divider.className = 'hidden mt-2.5 mb-1.5 h-px bg-link-input-border';
     divider.setAttribute('data-blok-testid', 'inline-tool-link-divider');
 
     return divider;
@@ -465,25 +521,41 @@ export class LinkInlineTool implements InlineTool {
     error.id = this.errorId;
     // w-0 + min-w-full for the same reason as the suggestion wrapper: a long
     // localized message must not widen the content-driven card.
-    error.className = 'w-0 min-w-full mt-1.5 px-1.5';
+    error.className = 'w-0 min-w-full mt-2';
     error.setAttribute('data-blok-link-tool-error', '');
     error.setAttribute('role', 'alert');
     error.hidden = true;
 
     const row = document.createElement('span');
 
-    row.className = 'flex items-center gap-1.5 text-xs font-medium text-[var(--blok-color-danger)]';
+    row.className = TYPED_ROW_BOX;
 
     const iconEl = document.createElement('span');
 
-    iconEl.className = 'shrink-0 flex [&_svg]:size-3.5';
+    iconEl.className = `${TYPED_ROW_ICON} text-[var(--blok-color-danger)]`;
     iconEl.setAttribute('aria-hidden', 'true');
+    iconEl.setAttribute('data-link-error-icon', '');
     iconEl.innerHTML = IconWarning;
+
+    const textEl = document.createElement('span');
+
+    textEl.className = 'flex-1 min-w-0';
 
     const message = document.createElement('span');
 
+    message.className = `${TYPED_ROW_TITLE} text-[var(--blok-color-danger)]`;
+    message.setAttribute('data-link-error-title', '');
+
+    // Not truncated: a cut reason says nothing.
+    const reason = document.createElement('span');
+
+    reason.className = TYPED_ROW_META;
+    reason.setAttribute('data-link-error-reason', '');
+
     this.nodes.errorMessage = message;
-    row.append(iconEl, message);
+    this.nodes.errorReason = reason;
+    textEl.append(message, reason);
+    row.append(iconEl, textEl);
     error.append(row);
 
     return error;
@@ -493,17 +565,34 @@ export class LinkInlineTool implements InlineTool {
    * Surface a URL validation failure: fill and reveal the inline error and
    * mark the input aria-invalid, describing it by the error region.
    */
-  private showValidationError(): void {
+  private showValidationError(value: string): void {
     if (!this.nodes.input || !this.nodes.error || !this.nodes.errorMessage) {
       return;
     }
 
     this.nodes.errorMessage.textContent = this.i18n.t('tools.link.invalidLink');
+    if (this.nodes.errorReason) {
+      this.nodes.errorReason.textContent = this.i18n.t(this.invalidReasonKey(value));
+    }
     this.nodes.error.hidden = false;
     // The error and the suggestion row contradict each other — while the URL
     // is rejected, the row must not keep offering that same URL as confirmable.
     this.nodes.suggestion?.classList.add('hidden');
     setFieldValidity(this.nodes.input, false, this.errorId);
+  }
+
+  /**
+   * Why validateURL refused the value, as a message key.
+   * @param value - the field's value
+   */
+  private invalidReasonKey(value: string): 'tools.link.invalidSpaces' | 'tools.link.invalidUnsafe' | 'tools.link.invalidKind' {
+    const link = this.prepareLink(value);
+
+    if (/\s/.test(link)) {
+      return 'tools.link.invalidSpaces';
+    }
+
+    return /^(?:javascript|data|vbscript):/i.test(link) ? 'tools.link.invalidUnsafe' : 'tools.link.invalidKind';
   }
 
   /**
@@ -516,6 +605,9 @@ export class LinkInlineTool implements InlineTool {
 
     if (this.nodes.errorMessage) {
       this.nodes.errorMessage.textContent = '';
+    }
+    if (this.nodes.errorReason) {
+      this.nodes.errorReason.textContent = '';
     }
     this.nodes.error.hidden = true;
     setFieldValidity(this.nodes.input, true, this.errorId);
@@ -533,10 +625,6 @@ export class LinkInlineTool implements InlineTool {
     // renders at the card's resolved width, which is what lets it truncate.
     wrapper.className = 'hidden w-0 min-w-full';
     wrapper.setAttribute('data-link-suggestion', '');
-
-    const divider = document.createElement('div');
-
-    divider.className = 'mt-1 mb-0.5 h-px bg-link-input-border';
 
     const row = document.createElement('button');
 
@@ -563,16 +651,9 @@ export class LinkInlineTool implements InlineTool {
     typeEl.className = SUGGESTION_TYPE_TEXT;
     typeEl.setAttribute('data-link-suggestion-type', '');
 
-    const enterHint = document.createElement('span');
-
-    enterHint.className = `hidden ${ENTER_HINT_CLASSES}`;
-    enterHint.setAttribute('data-link-suggestion-enter-hint', '');
-    enterHint.setAttribute('aria-hidden', 'true');
-    enterHint.innerHTML = IconReturn;
-
     textEl.append(urlEl, typeEl);
-    row.append(iconEl, textEl, enterHint);
-    wrapper.append(divider, row);
+    row.append(iconEl, textEl);
+    wrapper.append(row);
 
     row.addEventListener('mousedown', (e) => e.preventDefault());
     row.addEventListener('click', () => this.confirmLink());
@@ -604,7 +685,6 @@ export class LinkInlineTool implements InlineTool {
     const urlEl = this.nodes.suggestion.querySelector<HTMLElement>('[data-link-suggestion-url]');
     const typeEl = this.nodes.suggestion.querySelector<HTMLElement>('[data-link-suggestion-type]');
     const row = this.nodes.suggestion.querySelector<HTMLElement>('[data-link-suggestion-row]');
-    const enterHint = this.nodes.suggestion.querySelector<HTMLElement>('[data-link-suggestion-enter-hint]');
 
     if (iconEl) {
       iconEl.innerHTML = icon;
@@ -623,9 +703,6 @@ export class LinkInlineTool implements InlineTool {
       // out of the tab order too.
       row.tabIndex = isComplete ? 0 : -1;
     }
-    if (enterHint) {
-      enterHint.className = `${isComplete ? 'flex' : 'hidden'} ${ENTER_HINT_CLASSES}`;
-    }
 
     this.nodes.suggestion.classList.remove('hidden');
   }
@@ -642,11 +719,11 @@ export class LinkInlineTool implements InlineTool {
     options.setAttribute('data-link-options', '');
     options.hidden = true;
 
-    const divider = document.createElement('div');
-
-    divider.className = 'mt-1.5 mb-1 h-px bg-link-input-border';
-
-    options.append(divider, ...[this.nodes.recent, this.nodes.headings, this.nodes.kinds].filter((node) => node !== null));
+    // Positioned, so a row's offsetTop is measured from the list itself.
+    options.className = 'relative pt-2 pb-0.5';
+    options.setAttribute(DATA_ATTR.popoverScroller, '');
+    options.addEventListener('scroll', () => this.markScrollEdges(), { passive: true });
+    options.append(...[this.nodes.recent, this.nodes.pages, this.nodes.headings, this.nodes.kinds].filter((node) => node !== null));
 
     return options;
   }
@@ -694,12 +771,12 @@ export class LinkInlineTool implements InlineTool {
    * field.
    * @param kind - names the row's data markers: data-link-<kind>-row/-title/-meta
    * @param id - element id, used by aria-activedescendant
-   * @param leading - icon or tile in front of the text
+   * @param leading - icon in front of the text, or null for none
    * @param title - main line
    * @param meta - second line, skipped when empty
    * @param onPick - what a click or Enter does
    */
-  private createOptionRow(kind: string, id: string, leading: HTMLElement, title: string, meta: string, onPick: () => void): HTMLElement {
+  private createOptionRow(kind: string, id: string, leading: HTMLElement | null, title: string, meta: string, onPick: () => void): HTMLElement {
     const row = document.createElement('div');
 
     row.id = id;
@@ -736,7 +813,7 @@ export class LinkInlineTool implements InlineTool {
     enterHint.setAttribute('data-link-option-enter-hint', '');
     enterHint.innerHTML = IconReturn;
 
-    row.append(leading, textEl, enterHint);
+    row.append(...(leading ? [leading] : []), textEl, enterHint);
     // Keep the saved selection and the field's focus while the row takes the click.
     row.addEventListener('mousedown', (event) => event.preventDefault());
     row.addEventListener('click', onPick);
@@ -760,10 +837,179 @@ export class LinkInlineTool implements InlineTool {
   private createRecent(): HTMLElement {
     const { section, list } = this.createSection(`${this.errorId}-recent`, 'data-link-recent', this.i18n.t('tools.link.recent'));
 
-    list.className = RECENT_LIST_CLASSES;
+    list.setAttribute('data-link-recent-list', '');
     this.nodes.recentList = list;
 
     return section;
+  }
+
+  /**
+   * "Pages": the host's pages a link can point at.
+   */
+  private createPages(): HTMLElement {
+    const { section, list } = this.createSection(`${this.errorId}-pages`, 'data-link-pages', this.i18n.t('tools.database.moveToPages'));
+
+    this.nodes.pageList = list;
+
+    return section;
+  }
+
+  /**
+   * The page tool's config, when the host can both search pages and give
+   * their addresses. Without either there is nothing to link to.
+   */
+  private pageHost(): PageConfig | null {
+    const page = this.tools.getBlockTools().find((tool) => tool.name === 'page')?.settings as PageConfig | undefined;
+
+    return page?.search !== undefined && page.href !== undefined ? page : null;
+  }
+
+  /**
+   * A page's address, or '' when the host gives none or an unsafe one.
+   * @param host - the page tool's config
+   * @param pageId - the page to link to
+   */
+  private pageHref(host: PageConfig, pageId: string): string {
+    try {
+      const href = host.href?.(pageId) ?? '';
+
+      return hasUnsafeScheme(href) ? '' : href;
+    } catch {
+      return '';
+    }
+  }
+
+  /**
+   * Drop the pending page search and any answer still on its way.
+   */
+  private cancelPageSearch(): void {
+    this.pageSearchToken += 1;
+
+    if (this.pageSearchTimer !== null) {
+      clearTimeout(this.pageSearchTimer);
+      this.pageSearchTimer = null;
+    }
+  }
+
+  /**
+   * Ask the host for the pages that fit the field's value: at once for an
+   * empty field (its recent pages), after a short pause while typing. A
+   * typed link, a "#" heading search and edit mode ask for nothing.
+   */
+  private searchPages(): void {
+    const host = this.pageHost();
+    const value = this.nodes.input?.value.trim() ?? '';
+
+    this.cancelPageSearch();
+
+    if (host === null || this.editing || value.startsWith('#') || (value !== '' && this.isLinkComplete(value))) {
+      this.pageHits = [];
+
+      return;
+    }
+
+    // Until the answer comes, keep the pages that still fit: the list does not blink on every key.
+    this.pageHits = this.pageHits.filter((hit) => (hit.title ?? '').toLowerCase().includes(value.toLowerCase()));
+
+    const token = this.pageSearchToken;
+    const ask = (): void => {
+      this.pageSearchTimer = null;
+      searchVisiblePages(host, value)
+        .then((hits) => {
+          if (token !== this.pageSearchToken) {
+            return;
+          }
+
+          this.pageHits = hits.filter((hit) => this.pageHref(host, hit.pageId) !== '').slice(0, PAGE_LIMIT);
+          // The row the user is on keeps Enter: late pages never take it.
+          this.updateOptions(this.getOptionRows()[this.activeOptionIndex]);
+        })
+        .catch(() => undefined);
+    };
+
+    if (value === '') {
+      ask();
+    } else {
+      this.pageSearchTimer = setTimeout(ask, PAGE_SEARCH_DELAY);
+    }
+  }
+
+  /**
+   * Bring the page rows in line with the last answer.
+   */
+  private renderPages(): void {
+    const list = this.nodes.pageList;
+    const host = this.pageHost();
+
+    if (!list || host === null) {
+      return;
+    }
+
+    const query = (this.nodes.input?.value ?? '').trim().toLowerCase();
+    const fresh = this.pageHits.filter((hit) => !this.pageRows.has(hit.pageId));
+    const rows = this.pageHits.map((hit) => {
+      const cached = this.pageRows.get(hit.pageId);
+      const title = hit.title || this.i18n.t('tools.page.unresolved');
+
+      if (cached) {
+        this.markMatch(cached, 'page', title, query);
+
+        return cached;
+      }
+
+      const icon = document.createElement('span');
+      const href = this.pageHref(host, hit.pageId);
+      const meta = [
+        hit.status === 'draft' ? this.i18n.t('tools.page.draft') : '',
+        (hit.path ?? []).join(PAGE_PATH_SEPARATOR),
+      ].filter((part) => part !== '').join(' · ');
+
+      icon.className = PAGE_ICON_CLASSES;
+      icon.setAttribute('aria-hidden', 'true');
+      icon.setAttribute('data-link-page-icon', '');
+      icon.append(pageIconNode(hit.icon, hit.kind === 'database' ? IconTable : IconPage));
+
+      const row = this.createOptionRow(
+        'page',
+        '',
+        icon,
+        title,
+        meta,
+        () => this.applyPageLink(href)
+      );
+
+      this.markMatch(row, 'page', title, query);
+      row.style.animationDelay = `${fresh.indexOf(hit) * 30}ms`;
+      this.pageRows.set(hit.pageId, row);
+
+      return row;
+    });
+
+    // Patched, not rebuilt, for the same reason as the heading rows.
+    Array.from(list.children).forEach((child) => {
+      if (!rows.includes(child as HTMLElement)) {
+        child.remove();
+      }
+    });
+    rows.forEach((row, index) => {
+      if (list.children[index] !== row) {
+        list.insertBefore(row, list.children[index] ?? null);
+      }
+      row.setAttribute('id', `${this.errorId}-page-${index}`);
+    });
+  }
+
+  /**
+   * Link the selection to a page. The address is the host's own, so it skips
+   * the typed-link rules, and a page is not a web link for the Recents list.
+   * @param href - the page's address
+   */
+  private applyPageLink(href: string): void {
+    this.clearValidationError();
+    this.selection.removeFakeBackground();
+    this.selection.restore();
+    this.insertLink(href);
+    this.inlineToolbar.close();
   }
 
   /**
@@ -828,14 +1074,36 @@ export class LinkInlineTool implements InlineTool {
    * added in another editor on the page shows up too.
    */
   private renderRecent(): void {
-    this.nodes.recentList?.replaceChildren(
-      ...getRecentLinks().map((entry, index) => this.createRecentRow(entry, index))
-    );
+    const rows = getRecentLinks().map((entry, index) => this.createRecentRow(entry, index));
+
+    this.nodes.recentList?.replaceChildren(...rows);
   }
 
   /**
-   * One recent link as a card: favicon or letter tile, the page title, then
-   * the site name. A title that only names the site ("YouTube") gives its
+   * Draw the rows again after a lookup answered, keeping the highlighted
+   * row where the user left it.
+   */
+  private redrawRecent(): void {
+    const list = this.nodes.recentList;
+
+    if (!list || this.nodes.input?.getAttribute(this.DATA_ATTRIBUTES.inputOpened) !== 'true') {
+      return;
+    }
+
+    this.renderRecent();
+
+    // The rows are already on screen: no second entrance.
+    Array.from(list.children).forEach((row) => {
+      if (row instanceof HTMLElement) {
+        row.style.setProperty('animation', 'none');
+      }
+    });
+    this.setActiveOption(this.activeOptionIndex);
+  }
+
+  /**
+   * One recent link as a row: the link sign, the page title and the site
+   * name under it. A title that only names the site ("YouTube") gives its
    * slot to the path, so two pages of one site stay apart. Without a title
    * the site name takes the title slot and the path goes under it.
    * @param entry - the stored link
@@ -856,80 +1124,23 @@ export class LinkInlineTool implements InlineTool {
     const namesOnlySite = entry.title !== undefined && squash(entry.title) === squash(brand);
     const title = namesOnlySite && path !== '' ? path : entry.title ?? site;
     const meta = entry.title !== undefined ? site : path;
+    const icon = this.createIcon(IconLink, RECENT_ICON_CLASSES);
 
-    const tile = document.createElement('span');
+    icon.setAttribute('data-link-recent-icon', '');
 
-    tile.className = `${RECENT_TILE_CLASSES} bg-item-hover-bg`;
-    tile.setAttribute('aria-hidden', 'true');
-    tile.setAttribute('data-link-recent-tile', '');
-    tile.style.setProperty('--blok-link-tile-hue', String(Array.from(site).reduce((hue, char) => (hue * 31 + (char.codePointAt(0) ?? 0)) % 360, 0)));
+    const row = this.createOptionRow(
+      'recent',
+      `${this.errorId}-recent-${index}`,
+      icon,
+      title,
+      meta,
+      () => this.applyLink(entry.url)
+    );
 
-    const showMonogram = (): void => {
-      const monogram = document.createElement('span');
+    row.title = entry.url;
+    row.style.animationDelay = `${index * 40}ms`;
 
-      monogram.setAttribute('data-link-recent-monogram', '');
-      monogram.textContent = (Array.from(site)[0] ?? '').toUpperCase();
-      // Joined, not twMerge'd: twMerge takes text-[color:…] and text-sm for
-      // the same utility and drops the color.
-      tile.className = `${RECENT_TILE_CLASSES} ${RECENT_MONOGRAM_CLASSES}`;
-      tile.replaceChildren(monogram);
-    };
-
-    if (entry.favicon !== undefined && isHttpUrl(entry.favicon)) {
-      const img = document.createElement('img');
-
-      img.className = 'size-5';
-      img.alt = '';
-      img.referrerPolicy = 'no-referrer';
-      img.addEventListener('error', showMonogram, { once: true });
-      img.src = entry.favicon;
-      tile.append(img);
-    } else {
-      showMonogram();
-    }
-
-    // Not a <button>: every button in a popover HTML item becomes a Flipper
-    // stop, and Flipper would steal the arrow keys from the field.
-    const card = document.createElement('div');
-
-    card.id = `${this.errorId}-recent-${index}`;
-    card.className = RECENT_CARD_CLASSES;
-    card.title = entry.url;
-    card.style.animationDelay = `${index * 40}ms`;
-    card.setAttribute('role', 'option');
-    card.setAttribute('aria-selected', 'false');
-    card.setAttribute('data-link-recent-row', '');
-
-    const textEl = document.createElement('span');
-
-    textEl.className = 'block w-full min-w-0';
-
-    const titleEl = document.createElement('span');
-
-    titleEl.className = RECENT_TITLE_CLASSES;
-    titleEl.setAttribute('data-link-recent-title', '');
-    titleEl.textContent = title;
-
-    const metaEl = document.createElement('span');
-
-    metaEl.className = RECENT_META_CLASSES;
-    metaEl.setAttribute('data-link-recent-meta', '');
-    metaEl.textContent = meta;
-
-    const enterHint = document.createElement('span');
-
-    enterHint.className = `hidden group-aria-selected:flex absolute top-1.5 right-1.5 ${ENTER_HINT_CLASSES}`;
-    enterHint.setAttribute('aria-hidden', 'true');
-    enterHint.setAttribute('data-link-option-enter-hint', '');
-    enterHint.innerHTML = IconReturn;
-
-    textEl.append(titleEl, metaEl);
-    card.append(tile, textEl, enterHint);
-    // Keep the saved selection and the field's focus while the card takes the click.
-    card.addEventListener('mousedown', (event) => event.preventDefault());
-    card.addEventListener('click', () => this.applyLink(entry.url));
-
-    return card;
+    return row;
   }
 
   /**
@@ -948,7 +1159,25 @@ export class LinkInlineTool implements InlineTool {
         return block !== undefined && heading && heading.closest(holderSelector) === block.holder && text !== ''
           ? [{ blockId: block.id, level: Number(heading.tagName.slice(1)), text }]
           : [];
-      });
+      })
+      .reduce<{ targets: HeadingTarget[]; parents: number[] }>((outline, heading) => {
+        // A heading sits one step under the nearest smaller level above it.
+        const parents = outline.parents.filter((level) => level < heading.level);
+
+        return {
+          targets: [...outline.targets, { ...heading, depth: Math.min(parents.length, HEADING_MAX_DEPTH) }],
+          parents: [...parents, heading.level],
+        };
+      }, { targets: [], parents: [] })
+      .targets;
+  }
+
+  /**
+   * The text a heading search looks for: the value without its "#".
+   * @param value - the trimmed field value
+   */
+  private headingQuery(value: string): string {
+    return (value.startsWith('#') ? value.slice(1) : value).trim().toLowerCase();
   }
 
   /**
@@ -957,7 +1186,7 @@ export class LinkInlineTool implements InlineTool {
    * @param value - the trimmed field value
    */
   private matchHeadings(value: string): HeadingTarget[] {
-    const query = (value.startsWith('#') ? value.slice(1) : value).trim().toLowerCase();
+    const query = this.headingQuery(value);
 
     return this.headingTargets
       .filter((heading) => heading.text.toLowerCase().includes(query))
@@ -965,9 +1194,39 @@ export class LinkInlineTool implements InlineTool {
   }
 
   /**
-   * @param matches - headings to list
+   * Set a row's title, with the part the search matched in bold.
+   * @param row - a heading's or a page's row
+   * @param kind - the row kind its data markers are named after
+   * @param text - the title
+   * @param query - lowercase search text, empty for none
    */
-  private renderHeadings(matches: HeadingTarget[]): void {
+  private markMatch(row: HTMLElement, kind: 'heading' | 'page', text: string, query: string): void {
+    const title = row.querySelector(`[data-link-${kind}-title]`);
+    const at = query === '' ? -1 : text.toLowerCase().indexOf(query);
+
+    if (!title) {
+      return;
+    }
+
+    if (at === -1) {
+      title.textContent = text;
+
+      return;
+    }
+
+    const match = document.createElement('span');
+
+    match.className = 'font-bold';
+    match.setAttribute(`data-link-${kind}-match`, '');
+    match.textContent = text.slice(at, at + query.length);
+    title.replaceChildren(text.slice(0, at), match, text.slice(at + query.length));
+  }
+
+  /**
+   * @param matches - headings to list
+   * @param query - lowercase search text, empty for none
+   */
+  private renderHeadings(matches: HeadingTarget[], query: string): void {
     const list = this.nodes.headingList;
 
     if (!list) {
@@ -980,20 +1239,30 @@ export class LinkInlineTool implements InlineTool {
       const cached = this.headingRows.get(heading.blockId);
 
       if (cached) {
+        this.markMatch(cached, 'heading', heading.text, query);
+
         return cached;
       }
 
       const row = this.createOptionRow(
         'heading',
         '',
-        this.createIcon(HEADING_ICONS[heading.level] ?? IconHash, HEADING_ICON_CLASSES),
+        null,
         heading.text,
         '',
         () => this.applyLink(`#${heading.blockId}`)
       );
+      const tag = document.createElement('span');
 
+      // Drawn by link-picker.css from the attribute, so the row's text stays the heading alone.
+      tag.setAttribute('aria-hidden', 'true');
+      tag.setAttribute('data-link-heading-tag', `H${heading.level}`);
+      row.lastElementChild?.before(tag);
       row.style.animationDelay = `${fresh.indexOf(heading) * 30}ms`;
+      row.style.setProperty('--_blok-link-heading-depth', String(heading.depth));
       row.setAttribute('data-link-heading-level', String(heading.level));
+      row.setAttribute('data-link-heading-depth', String(heading.depth));
+      this.markMatch(row, 'heading', heading.text, query);
       this.headingRows.set(heading.blockId, row);
 
       return row;
@@ -1015,14 +1284,15 @@ export class LinkInlineTool implements InlineTool {
   }
 
   /**
-   * Show the sections that fit the field's value. Empty field: recent links
-   * and headings, or the link kinds when there are neither. Typed value:
-   * the headings it matches.
+   * Show the sections that fit the field's value. Empty field: recent links,
+   * pages and headings, or the link kinds when there are none. Typed value:
+   * the pages and headings it matches.
+   * @param keep - the row that stays highlighted, when it is still listed
    */
-  private updateOptions(): void {
-    const { recent, headings, kinds, options, suggestion, input } = this.nodes;
+  private updateOptions(keep?: HTMLElement): void {
+    const { recent, pages, headings, kinds, options, suggestion, input } = this.nodes;
 
-    if (!recent || !headings || !kinds || !options || !input) {
+    if (!recent || !pages || !headings || !kinds || !options || !input) {
       return;
     }
 
@@ -1031,24 +1301,75 @@ export class LinkInlineTool implements InlineTool {
     const recentCount = this.nodes.recentList?.childElementCount ?? 0;
     const incomplete = value !== '' && !this.isLinkComplete(value);
 
-    this.renderHeadings(matches);
+    this.renderHeadings(matches, this.headingQuery(value));
+    this.renderPages();
     recent.hidden = this.editing || value !== '' || recentCount === 0;
+    pages.hidden = this.pageHits.length === 0;
     headings.hidden = matches.length === 0;
-    kinds.hidden = this.editing || value !== '' || !recent.hidden || !headings.hidden;
-    options.hidden = recent.hidden && headings.hidden && kinds.hidden;
+    kinds.hidden = this.editing || value !== '' || !recent.hidden || !pages.hidden || !headings.hidden;
+    options.hidden = recent.hidden && pages.hidden && headings.hidden && kinds.hidden;
     input.setAttribute('aria-expanded', String(!options.hidden));
 
-    // A typed search picks its first heading (row 0: the other sections hide
-    // once there is a value), so Enter jumps to it. The suggestion row would
-    // then promise a different Enter, so it hides. A typed web link keeps
-    // Enter for itself.
-    const searching = matches.length > 0 && (value.startsWith('#') || incomplete);
+    // A typed search picks its first row (row 0: Recent hides once there is
+    // a value), so Enter goes there. The suggestion row would then promise a
+    // different Enter, so it hides. A typed web link keeps Enter for itself.
+    const searching = (matches.length > 0 || !pages.hidden) && (value.startsWith('#') || incomplete);
+    const kept = keep ? this.getOptionRows().indexOf(keep) : -1;
 
     if (searching) {
       suggestion?.classList.add('hidden');
     }
 
-    this.setActiveOption(searching ? 0 : -1);
+    const first = searching ? 0 : -1;
+
+    this.setActiveOption(kept !== -1 ? kept : first);
+    this.fitOptions();
+    this.markScrollEdges();
+  }
+
+  /**
+   * End the list on a whole row with a sliver of the next one, so the bottom
+   * fade never cuts a row in half. Only while the list is at its top: a
+   * scrolled list must not jump.
+   */
+  private fitOptions(): void {
+    const options = this.nodes.options;
+
+    if (!options || options.scrollTop !== 0) {
+      return;
+    }
+
+    options.style.maxHeight = '';
+
+    const room = options.clientHeight;
+
+    if (options.scrollHeight <= room + 1) {
+      return;
+    }
+
+    const whole = this.getOptionRows()
+      .map((row) => row.offsetTop + row.offsetHeight)
+      .filter((bottom) => bottom <= room - LIST_TAIL);
+    const last = whole[whole.length - 1];
+
+    if (last !== undefined) {
+      options.style.maxHeight = `${last + LIST_TAIL}px`;
+    }
+  }
+
+  /**
+   * Tell the stylesheet which edges have more rows behind them, so it fades
+   * only those.
+   */
+  private markScrollEdges(): void {
+    const options = this.nodes.options;
+
+    if (!options) {
+      return;
+    }
+
+    options.toggleAttribute('data-link-more-up', options.scrollTop > 1);
+    options.toggleAttribute('data-link-more-down', options.scrollTop + options.clientHeight < options.scrollHeight - 1);
   }
 
   /**
@@ -1066,7 +1387,7 @@ export class LinkInlineTool implements InlineTool {
    * Option rows of the visible sections, in order.
    */
   private getOptionRows(): HTMLElement[] {
-    const sections = [this.nodes.recent, this.nodes.headings, this.nodes.kinds];
+    const sections = [this.nodes.recent, this.nodes.pages, this.nodes.headings, this.nodes.kinds];
 
     return sections
       .filter((section) => section !== null && !section.hidden)
@@ -1109,10 +1430,35 @@ export class LinkInlineTool implements InlineTool {
     if (active) {
       active.setAttribute('aria-selected', 'true');
       this.nodes.input?.setAttribute('aria-activedescendant', active.id);
-      active.scrollIntoView?.({ block: 'nearest' });
+
+      this.keepClearOfFades(active);
     } else {
       this.nodes.input?.removeAttribute('aria-activedescendant');
     }
+  }
+
+  /**
+   * Scroll the list just enough to show a row in full, clear of the faded
+   * top and bottom edges.
+   * @param row - the highlighted row
+   */
+  private keepClearOfFades(row: HTMLElement): void {
+    const options = this.nodes.options;
+
+    if (!options) {
+      return;
+    }
+
+    const top = row.offsetTop;
+    const bottom = top + row.offsetHeight;
+
+    if (top < options.scrollTop + FADE_TOP_CLEARANCE) {
+      options.scrollTop = top - FADE_TOP_CLEARANCE;
+    } else if (bottom > options.scrollTop + options.clientHeight - FADE_BOTTOM_CLEARANCE) {
+      options.scrollTop = bottom - options.clientHeight + FADE_BOTTOM_CLEARANCE;
+    }
+
+    this.markScrollEdges();
   }
 
   /**
@@ -1127,16 +1473,33 @@ export class LinkInlineTool implements InlineTool {
 
     recordRecentLink(url);
 
+    if (getRecentLinks()[0]?.checked !== true) {
+      this.lookUp(url);
+    }
+  }
+
+  /**
+   * Ask the unfurl endpoint for a link's title, once.
+   * @param url - a recorded href
+   */
+  private lookUp(url: string): void {
     const unfurl = this.linkConfig.unfurl;
 
-    if (unfurl === undefined || getRecentLinks()[0]?.title !== undefined) {
+    if (unfurl === undefined || this.lookups.has(url)) {
       return;
     }
 
+    this.lookups.add(url);
     new MetadataFetcher(unfurl)
       .fetch(url)
-      .then((meta) => updateRecentLinkMeta(url, { title: meta.title, favicon: meta.favicon }))
-      .catch(() => undefined);
+      .then((meta) => {
+        updateRecentLinkMeta(url, { title: meta.title });
+        this.redrawRecent();
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        this.lookups.delete(url);
+      });
   }
 
   /**
@@ -1188,10 +1551,17 @@ export class LinkInlineTool implements InlineTool {
       return { icon: IconMail, label: this.i18n.t('tools.link.emailAddress') };
     }
     if (url.startsWith('#')) {
-      return { icon: IconHash, label: this.i18n.t('tools.link.jumpToSection') };
+      return { icon: IconTableOfContents, label: this.i18n.t('tools.link.jumpToSection') };
     }
 
-    return { icon: IconGlobe, label: this.i18n.t('tools.link.webLink') };
+    if (/^tel:/i.test(url)) {
+      return { icon: IconPhone, label: this.i18n.t('tools.link.phoneNumber') };
+    }
+
+    // tel:, sms:, ftp: and the like lead to no web page.
+    const isWeb = !/^\w+:/.test(url) || /^https?:/i.test(url) || this.isHostWithPort(url);
+
+    return { icon: IconGlobe, label: this.i18n.t(isWeb ? 'tools.link.webPage' : 'tools.link.webLink') };
   }
 
   /**
@@ -1212,7 +1582,7 @@ export class LinkInlineTool implements InlineTool {
       // Surface the failure once, via the accessible inline field error
       // (aria-invalid + error region). A duplicate notifier toast would render
       // the same "Invalid link" text a second time.
-      this.showValidationError();
+      this.showValidationError(value);
 
       return;
     }
@@ -1271,9 +1641,19 @@ export class LinkInlineTool implements InlineTool {
     // suggestion chip — keep it hidden even though the URL is prefilled.
     this.updateSuggestion(this.nodes.input.value);
     this.renderRecent();
+
+    // A link that was never looked up, or one whose lookup failed, gets its lookup now.
+    if (!this.editing) {
+      getRecentLinks().filter((entry) => entry.checked !== true).forEach((entry) => this.lookUp(entry.url));
+    }
+
     this.headingTargets = this.editing ? [] : this.readHeadings();
     this.headingRows.clear();
     this.nodes.headingList?.replaceChildren();
+    this.pageHits = [];
+    this.pageRows.clear();
+    this.nodes.pageList?.replaceChildren();
+    this.searchPages();
     this.updateOptions();
 
     this.nodes.input.className = this.INPUT_OPEN_CLASSES;
@@ -1289,6 +1669,12 @@ export class LinkInlineTool implements InlineTool {
       this.focusInputWithRetry();
     }
     this.inputOpened = true;
+
+    // The popover has no size until it is laid out, a frame after it opens.
+    requestAnimationFrame(() => {
+      this.fitOptions();
+      this.markScrollEdges();
+    });
   }
 
   /**
@@ -1299,6 +1685,8 @@ export class LinkInlineTool implements InlineTool {
    */
   private setEditAffordancesVisible(visible: boolean, titleValue = ''): void {
     this.editing = visible;
+    // link-picker.css gives the typed row room under it only while adding a link.
+    this.nodes.inputWrapper?.toggleAttribute('data-link-editing', visible);
 
     if (this.nodes.titleInput) {
       this.nodes.titleInput.value = visible ? titleValue : '';
@@ -1427,7 +1815,11 @@ export class LinkInlineTool implements InlineTool {
     this.headingTargets = [];
     this.headingRows.clear();
     this.nodes.headingList?.replaceChildren();
-    [this.nodes.options, this.nodes.recent, this.nodes.headings, this.nodes.kinds].forEach((node) => node?.toggleAttribute('hidden', true));
+    this.cancelPageSearch();
+    this.pageHits = [];
+    this.pageRows.clear();
+    this.nodes.pageList?.replaceChildren();
+    [this.nodes.options, this.nodes.recent, this.nodes.pages, this.nodes.headings, this.nodes.kinds].forEach((node) => node?.toggleAttribute('hidden', true));
     this.nodes.input.setAttribute('aria-expanded', 'false');
     this.setActiveOption(-1);
     this.updateButtonStateAttributes(false);
@@ -1512,7 +1904,7 @@ export class LinkInlineTool implements InlineTool {
       // Surface the failure once, via the accessible inline field error
       // (aria-invalid + error region). A duplicate notifier toast would render
       // the same "Invalid link" text a second time.
-      this.showValidationError();
+      this.showValidationError(value);
 
       log('Incorrect Link pasted', 'warn', value);
 
@@ -1545,10 +1937,13 @@ export class LinkInlineTool implements InlineTool {
    * @returns {boolean}
    */
   private validateURL(str: string): boolean {
+    // Checked as it will be saved: trimmed, and with the protocol a bare site gets.
+    const link = this.prepareLink(str);
+
     /**
      * Don't allow spaces
      */
-    if (/\s/.test(str)) {
+    if (/\s/.test(link)) {
       return false;
     }
 
@@ -1559,7 +1954,7 @@ export class LinkInlineTool implements InlineTool {
      * clickable XSS. An allowlist of safe schemes is used because denylists
      * keep losing to scheme smuggling (e.g. `data:image/svg+xml`).
      */
-    if (hasUnsafeScheme(str)) {
+    if (hasUnsafeScheme(link)) {
       return false;
     }
 
@@ -1577,10 +1972,23 @@ export class LinkInlineTool implements InlineTool {
   }
 
   /**
+   * True for "localhost:3000" or "example.com:8080/docs": a site and its port,
+   * not a kind of link. "tel:911" is a kind of link.
+   * @param link - a trimmed value
+   */
+  private isHostWithPort(link: string): boolean {
+    return /^[a-z0-9.-]+:\d{1,5}(?:[/?#]|$)/i.test(link) && !/^(?:https?|mailto|tel|sms):/i.test(link);
+  }
+
+  /**
    * Add 'http' protocol to the links like 'vc.ru', 'google.com'
    * @param {string} link - string to process
    */
   private addProtocol(link: string): string {
+    if (this.isHostWithPort(link)) {
+      return 'http://' + link;
+    }
+
     /**
      * If protocol already exists, do nothing
      */

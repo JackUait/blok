@@ -979,7 +979,7 @@ test.describe('inline tool link', () => {
       }, { toolbarSelector: INLINE_TOOLBAR_SELECTOR });
     };
 
-    test('opens the link field below the toolbar card, lined up with the link button', async ({ page }) => {
+    test('drops the link field from the link button, over the toolbar card', async ({ page }) => {
       await createBlokWithBlocks(page, [
         {
           type: 'paragraph',
@@ -994,15 +994,20 @@ test.describe('inline tool link', () => {
       await selectText(paragraph, 'link field');
       await ensureLinkInputOpen(page);
 
-      const buttonLeft = await page.locator(LINK_BUTTON_SELECTOR)
-        .evaluate((el) => el.getBoundingClientRect().left);
+      const { left: buttonLeft, bottom: buttonBottom } = await page.locator(LINK_BUTTON_SELECTOR)
+        .evaluate((el) => {
+          const rect = el.getBoundingClientRect();
+
+          return { left: rect.left, bottom: rect.bottom };
+        });
       const { side, toolbar, field } = await readPlacementGeometry(page);
 
       // The button sits far from the toolbar's left edge, so the two
       // placements are told apart.
       expect(buttonLeft - toolbar.left).toBeGreaterThan(100);
       expect(side).toBe('bottom');
-      expect(field.top).toBeGreaterThan(toolbar.bottom);
+      expect(Math.abs(field.top - (buttonBottom + 4))).toBeLessThanOrEqual(1);
+      expect(field.top).toBeLessThan(toolbar.bottom);
       expect(Math.abs(field.left - buttonLeft)).toBeLessThanOrEqual(1);
     });
 

@@ -325,7 +325,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
           <PackageManagerToggle onChange={handlePackageManagerChange} />
         ) : (
           !embedded && (
-            <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <span className="pl-1 text-[11px] font-semibold text-muted-foreground">
               {displayLanguage}
             </span>
           )

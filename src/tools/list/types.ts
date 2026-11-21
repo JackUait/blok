@@ -32,8 +32,8 @@ export interface ListItemConfig {
   /** Default list style */
   defaultStyle?: ListItemStyle;
   /**
-   * Available list styles for the settings menu.
-   * When specified, only these styles will be available in the block settings dropdown.
+   * List styles a block may turn into.
+   * When specified, "Turn into" offers only these styles.
    */
   styles?: ListItemStyle[];
   /**

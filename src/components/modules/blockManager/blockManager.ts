@@ -47,6 +47,7 @@ import type { BlocksStore, BlockMutationEventDetailWithoutTarget, ComposeBlockOp
 import { BlockYjsSync } from './yjs-sync';
 import { carriesReadOnly } from '../../utils/read-only-blocks';
 import { selectionRoots } from '../../utils/selection-roots';
+import { holdsLockedRoot } from '../../utils/delete-confirm';
 import { captureDataKeySnapshot, type DataKeySnapshot } from '../yjs/document-store';
 import { agentAttribution, type Attribution } from '../../../shared/agent/attribution';
 import { REPARENT_IN_PLACE } from '../../utils/index-move-neighbours';
@@ -2191,7 +2192,7 @@ export class BlockManager extends Module {
 
     const selectedBlocks = this.selectedBlocksForMove();
 
-    if (this.movesReadOnly(selectedBlocks)) {
+    if (this.movesReadOnly(selectedBlocks) || this.movesLocked(selectedBlocks)) {
       return;
     }
 
@@ -2213,7 +2214,7 @@ export class BlockManager extends Module {
 
     const selectedBlocks = this.selectedBlocksForMove();
 
-    if (this.movesReadOnly(selectedBlocks)) {
+    if (this.movesReadOnly(selectedBlocks) || this.movesLocked(selectedBlocks)) {
       return;
     }
 
@@ -2231,6 +2232,18 @@ export class BlockManager extends Module {
    */
   private movesReadOnly(selectedBlocks: Block[] | undefined): boolean {
     return (selectedBlocks ?? [this.currentBlock]).some((block) => carriesReadOnly(block, (id) => this.getBlockById(id)));
+  }
+
+  /**
+   * Whether a keyboard move would carry a locked block (BlockTool.isLocked).
+   * Notion leaves a locked database in place (notion-motion.md Round 69 §1);
+   * a block may still move past it.
+   * @param selectedBlocks - the block selection, or undefined for the current block
+   */
+  private movesLocked(selectedBlocks: Block[] | undefined): boolean {
+    const blocks = selectedBlocks ?? (this.currentBlock === undefined ? [] : [this.currentBlock]);
+
+    return holdsLockedRoot(selectionRoots(blocks));
   }
 
   /**
@@ -2290,22 +2303,24 @@ export class BlockManager extends Module {
       return;
     }
 
-    void this.Blok.DragManager?.duplicateBlocksInPlace(anchor);
+    // notion-motion.md Round 68 §5: a database copy is titled " (1)", as the block menu's Duplicate does.
+    void this.Blok.DragManager?.duplicateBlocksInPlace(anchor, { numberCopies: true });
   }
 
   /**
    * Notion's Cmd/Ctrl+Shift+D: copies the one selected block without its
-   * content (a database without its rows). False when there is no such block.
+   * content (a database without its rows), titled " (1)" as Notion's copy is
+   * (notion-motion.md Round 69 §2). A database with no rows is still copied.
+   * False when no selected block has content to leave out.
    */
   public duplicateSelectedWithoutContent(): boolean {
     // A selected database may carry its selected rows: count roots only.
     const roots = selectionRoots(this.Blok.BlockSelection.selectedBlocks);
-    const content = roots.length === 1 ? roots[0].contentBlockIds() : [];
 
-    if (this.Blok.DragManager?.isDragging || content.length === 0) {
+    if (this.Blok.DragManager?.isDragging || roots.length !== 1 || !roots[0].hasContentBlocks) {
       return false;
     }
-    void this.Blok.DragManager?.duplicateBlocksInPlace(roots[0], { leaveOut: content });
+    void this.Blok.DragManager?.duplicateBlocksInPlace(roots[0], { leaveOut: roots[0].contentBlockIds(), numberCopies: true });
 
     return true;
   }

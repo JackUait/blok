@@ -67,14 +67,15 @@ export class DatabaseColumnDrag {
     document.addEventListener('pointermove', this.boundPointerMove);
     document.addEventListener('pointerup', this.boundPointerUp);
     document.addEventListener('pointercancel', this.boundPointerCancel);
-    document.addEventListener('keydown', this.boundKeyDown);
+    // Window capture runs before Blok's own keydown capture on document, so its Escape never enters navigation mode.
+    window.addEventListener('keydown', this.boundKeyDown, true);
   }
 
   public cleanup(): void {
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
     document.removeEventListener('pointercancel', this.boundPointerCancel);
-    document.removeEventListener('keydown', this.boundKeyDown);
+    window.removeEventListener('keydown', this.boundKeyDown, true);
 
     this.ghostEl?.remove();
     this.ghostEl = null;
@@ -133,9 +134,14 @@ export class DatabaseColumnDrag {
   }
 
   private handleKeyDown(e: KeyboardEvent): void {
-    if (e.key === 'Escape') {
-      this.cleanup();
+    if (e.key !== 'Escape') {
+      return;
     }
+    if (this.isDragging) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    this.cleanup();
   }
 
   private startActiveDrag(e: PointerEvent): void {

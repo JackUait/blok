@@ -7,6 +7,7 @@ import {
   numberFill,
 } from '../../../../../src/tools/database/cells/number-format';
 import { TIME_FORMATS, formatDateDisplay } from '../../../../../src/tools/database/cells/date-format';
+import en from '../../../../../src/components/i18n/locales/en.json';
 
 const nf = (options: Intl.NumberFormatOptions, value: number): string => new Intl.NumberFormat('en-US', options).format(value);
 
@@ -171,5 +172,23 @@ describe('number format schema', () => {
     const { NUMBER_FORMAT_ENUM } = await import('../../../../../src/shared/tool-descriptions/database');
 
     expect(NUMBER_FORMAT_ENUM).toEqual([...NUMBER_FORMATS]);
+  });
+});
+
+// notion-motion.md Round 83 §4: Notion names each currency with its ISO code, "Australian dollar (AUD)".
+describe('number format labels', () => {
+  const label = (format: string): string => (en as Record<string, string>)[`tools.database.numberFormat.${format}`];
+
+  it('names every currency format with its ISO code, in sentence case', () => {
+    expect(label('australian_dollar')).toBe('Australian dollar (AUD)');
+    expect(label('dollar')).toBe('US Dollar (USD)');
+    expect(label('bitcoin')).toBe('Bitcoin (BTC)');
+    for (const [format, code] of Object.entries(CURRENCY_CODES)) {
+      expect(label(format)).toMatch(new RegExp(`^[^ ]+( [a-z][^ ]*)* \\(${code}\\)$|^US Dollar \\(USD\\)$|^(Hong Kong|New Zealand|New Taiwan) dollar \\(${code}\\)$`));
+    }
+  });
+
+  it('keeps the plain formats without a code', () => {
+    expect(['number', 'number_with_commas', 'percent'].map(label)).toEqual(['Number', 'Number with separators', 'Percent']);
   });
 });

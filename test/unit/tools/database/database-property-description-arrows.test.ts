@@ -11,7 +11,10 @@ const arrowDown = (target: EventTarget): void => {
 
 const highlighted = (): Element | null => document.querySelector('[data-blok-popover-opened] [data-blok-focused="true"]');
 
-/** The collapsed description field is not a keyboard stop; the open one is. */
+/**
+ * The collapsed description field is not an arrow stop; the open one is.
+ * research/27 §7, research/36 §3.2: the next arrow stop after the name is the first row, so the (i) is not one.
+ */
 describe('property description: ArrowDown from the name, on the real menu', () => {
   const cb = { onRename: vi.fn(), onUpdate: vi.fn(), onOptionsChange: vi.fn(), onChangeType: vi.fn(), onDuplicate: vi.fn(), onDelete: vi.fn() };
   let menu: DatabasePropertyMenu | null = null;
@@ -60,11 +63,20 @@ describe('property description: ArrowDown from the name, on the real menu', () =
 
   it('skips the field while it is closed', () => {
     const { input, info, area } = open();
-    const stops = stopsAfterName(input, 2);
+    const stops = stopsAfterName(input, 1);
 
     expect(stops).not.toContain(area);
-    expect(stops[0]).toBe(info);
-    expect(stops[1]?.getAttribute('data-blok-item-name')).toBe('editProperty');
+    expect(stops).not.toContain(info);
+    expect(stops[0]?.getAttribute('data-blok-item-name')).toBe('editProperty');
+  });
+
+  it('keeps the (i) as a Tab stop after the name', () => {
+    const { input, info } = open();
+
+    stopsAfterName(input, 0);
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', code: 'Tab', bubbles: true, cancelable: true }));
+
+    expect(highlighted()).toBe(info);
   });
 
   it('stops on the field once the (i) opens it', () => {
@@ -72,10 +84,9 @@ describe('property description: ArrowDown from the name, on the real menu', () =
 
     info.click();
     expect(area).toHaveFocus();
-    const stops = stopsAfterName(input, 3);
+    const stops = stopsAfterName(input, 2);
 
-    expect(stops[0]).toBe(info);
-    expect(stops[1]).toBe(area);
-    expect(stops[2]?.getAttribute('data-blok-item-name')).toBe('editProperty');
+    expect(stops[0]).toBe(area);
+    expect(stops[1]?.getAttribute('data-blok-item-name')).toBe('editProperty');
   });
 });

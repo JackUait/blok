@@ -183,6 +183,43 @@ describe("InlineKeyboardHandler", () => {
       expect(toolbarClosed).toBe(true);
     });
 
+    describe("arrows typed in a text field", () => {
+      const pressIn = (target: HTMLElement, inside: boolean): void => {
+        const event = { ...createMockKeyboardEvent({ key: "ArrowDown" }), target } as unknown as KeyboardEvent;
+        const popover = { ...mockPopover, hasNode: (node: Node) => inside && node === target };
+        const handler = new InlineKeyboardHandler(
+          () => popover as unknown as ReturnType<NonNullable<InlineKeyboardHandler["getPopover"]>>,
+          closeToolbarSpy,
+        );
+
+        handler.handle(event, true);
+      };
+
+      it("keeps the toolbar open when the field is in the toolbar's own card", () => {
+        pressIn(document.createElement("input"), true);
+
+        expect(closeToolbarSpy).not.toHaveBeenCalled();
+      });
+
+      it("keeps the toolbar open for a textarea in the card too", () => {
+        pressIn(document.createElement("textarea"), true);
+
+        expect(closeToolbarSpy).not.toHaveBeenCalled();
+      });
+
+      it("closes the toolbar when the field is somewhere else on the page", () => {
+        pressIn(document.createElement("input"), false);
+
+        expect(closeToolbarSpy).toHaveBeenCalledTimes(1);
+      });
+
+      it("closes the toolbar when the key comes from a card element that is not a field", () => {
+        pressIn(document.createElement("div"), true);
+
+        expect(closeToolbarSpy).toHaveBeenCalledTimes(1);
+      });
+    });
+
     it("does not close toolbar on vertical arrow key when shift is pressed", () => {
       const event = createMockKeyboardEvent({
         key: "ArrowDown",

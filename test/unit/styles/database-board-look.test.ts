@@ -325,14 +325,6 @@ describe('board in dark (research/21 §1f)', () => {
   });
 });
 
-// notion-motion.md, Round 8c "Hidden groups": a hidden group's eye is gray, a shown one keeps the ink.
-describe('group eye on the Group page', () => {
-  it('grays the eye of a hidden group', () => {
-    expect(ruleBody(database, '[data-blok-database-group-visibility-row][data-hidden] > [data-blok-database-property-eye]'))
-      .toContain('color: var(--blok-database-table-gutter-icon)');
-  });
-});
-
 // notion-motion.md Round 24 §1 (r24-pinsec-1.raw): "+ New group" and "Pinned groups" share one strip. The header is
 // 28 tall, 4 under New group, padded 0 8 with a gap 8, radius 6. Rows are 28 tall, 24 in, the first 10 under the header,
 // pitch 32. A row holds a 20px pill (3px around it) and the count 11 after it; its Unpin (24px) sits right after the row.
@@ -409,6 +401,30 @@ describe('Settings › Group pin button', () => {
     expect(ruleBody(database, '[data-blok-database-group-pin-glyph="hover"]')).toContain('display: none');
     expect(ruleBody(database, '[data-blok-database-group-pin]:hover:not(:disabled) > [data-blok-database-group-pin-glyph="rest"]')).toContain('display: none');
     expect(ruleBody(database, '[data-blok-database-group-pin]:hover:not(:disabled) > [data-blok-database-group-pin-glyph="hover"]')).toContain('display: flex');
+  });
+});
+
+// notion-motion.md Round 81 §2 "Group page" (r81-n-bd-grouppage.raw): a shown group's eye is 16px in rgb(56, 56, 54).
+describe('group page eye (Round 81)', () => {
+  it('draws the group eye 16px, while the property list keeps 20', () => {
+    const svg = ruleBody(database, '[data-blok-database-group-visibility-row] > [data-blok-database-property-eye] svg');
+
+    expect(svg).toContain('width: 16px');
+    expect(svg).toContain('height: 16px');
+    expect(ruleBody(database, '[data-blok-database-property-eye] svg')).toContain('width: 20px');
+  });
+
+  // notion-motion.md Round 82 (r82-n-a2-sel-pick1.raw, -grouppage.raw): Select group names and "No Select" are 14/500,
+  // Status group names 14/400.
+  it('draws group names 500, except a Status\'s', () => {
+    expect(ruleBody(database, '[data-blok-database-group-visibility-row]:not([data-status]) > [data-blok-database-panel-label]'))
+      .toContain('font-weight: 500');
+  });
+
+  // notion-motion.md Round 82 (r82-n-a2-hidden-eye.raw): a hidden group's eye is rgb(56, 56, 54) too.
+  it('inks every group eye the strong glyph grey, hidden or shown', () => {
+    expect(ruleBody(database, '[data-blok-database-group-visibility-row] > [data-blok-database-property-eye]')).toContain('color: var(--blok-database-peek-glyph-strong)');
+    expect(ruleBody(database, '[data-blok-database-group-visibility-row][data-hidden] > [data-blok-database-property-eye]')).toBe('');
   });
 });
 

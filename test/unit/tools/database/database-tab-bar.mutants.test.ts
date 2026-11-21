@@ -1216,8 +1216,8 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       const { dropdown } = openDropdown(views, 'v1');
       const items = Array.from(dropdown.querySelectorAll('[data-blok-database-tab-overflow-item]'));
 
-      // handle, icon slot, name, "•••"
-      expect(items[0].children.length).toBe(4);
+      // handle, icon slot, name, the current view's check, "•••"
+      expect(items[0].children.length).toBe(5);
       expect(items[0].children[1].querySelector('svg')).not.toBeNull();
       expect(items[1].children.length).toBe(4);
       expect(items[1].children[1].innerHTML).toBe('');
@@ -1478,10 +1478,10 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       const { el } = mount(threeViews(), 'v1');
 
       dragFrom(el, 'v1', 50);
-      document.dispatchEvent(pointer('pointermove', 60));
+      document.dispatchEvent(pointer('pointermove', 57));
 
       expect(el.getAttribute('data-dragging')).toBe('');
-      expect(tabOf(el, 'v1').style.transform).toBe('translateX(10px)');
+      expect(tabOf(el, 'v1').style.transform).toBe('translateX(7px)');
       expect(ghost()).toBeNull();
     });
 
@@ -1489,7 +1489,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       const { el } = mount(threeViews(), 'v1');
 
       dragFrom(el, 'v1', 50);
-      document.dispatchEvent(pointer('pointermove', 59));
+      document.dispatchEvent(pointer('pointermove', 56));
 
       expect(ghost()).toBeNull();
       expect(el.hasAttribute('data-dragging')).toBe(false);
@@ -1511,9 +1511,9 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
 
       dragFrom(el, 'v1', 50);
       document.dispatchEvent(pointer('pointermove', 200));
-      document.dispatchEvent(pointer('pointermove', 260));
+      document.dispatchEvent(pointer('pointermove', 230));
 
-      expect(tabOf(el, 'v1').style.transform).toBe('translateX(210px)');
+      expect(tabOf(el, 'v1').style.transform).toBe('translateX(180px)');
     });
 
     it('survives the dragged tab disappearing mid-gesture', () => {
@@ -1555,12 +1555,12 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(el.hasAttribute('data-dragging')).toBe(false);
     });
 
-    it('drops before the tab whose left half the pointer is over', () => {
+    it('drops before the next tab while the pointer is short of the halfway point to its centre', () => {
       const { el } = mount(threeViews(), 'v1');
 
       dragFrom(el, 'v1', 50);
-      document.dispatchEvent(pointer('pointermove', 120));
-      document.dispatchEvent(pointer('pointerup', 120));
+      document.dispatchEvent(pointer('pointermove', 95));
+      document.dispatchEvent(pointer('pointerup', 95));
 
       expect(onReorder).toHaveBeenCalledTimes(1);
       expect(onReorder).toHaveBeenCalledWith('v1', positionBetween(null, 'a1'));
@@ -1579,8 +1579,8 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(positionBetween(null, 'a2')).not.toBe(positionBetween(null, null));
 
       dragFrom(el, 'v1', 50);
-      document.dispatchEvent(pointer('pointermove', 120));
-      document.dispatchEvent(pointer('pointerup', 120));
+      document.dispatchEvent(pointer('pointermove', 95));
+      document.dispatchEvent(pointer('pointerup', 95));
 
       expect(onReorder).toHaveBeenCalledWith('v1', positionBetween(null, 'a2'));
     });
@@ -1589,8 +1589,8 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       const { el } = mount(threeViews(), 'v1');
 
       dragFrom(el, 'v1', 50);
-      document.dispatchEvent(pointer('pointermove', 220));
-      document.dispatchEvent(pointer('pointerup', 220));
+      document.dispatchEvent(pointer('pointermove', 180));
+      document.dispatchEvent(pointer('pointerup', 180));
 
       expect(onReorder).toHaveBeenCalledWith('v1', positionBetween('a1', 'a2'));
     });
@@ -1612,13 +1612,15 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       });
 
       tabOf(el, 'v0').dispatchEvent(pointer('pointerdown', 50));
-      document.dispatchEvent(pointer('pointermove', 220));
-      document.dispatchEvent(pointer('pointerup', 220));
+      document.dispatchEvent(pointer('pointermove', 180));
+      document.dispatchEvent(pointer('pointerup', 180));
 
       expect(onReorder).toHaveBeenCalledWith('v0', positionBetween('a1', 'a2'));
     });
 
-    it('drops after every view when the pointer is past a folded row', () => {
+    // notion-motion.md Round 85c §2: past the last shown tab, the tab lands
+    // right after it and stays shown; it does not fold away at the end.
+    it('drops right after the last shown tab when the pointer is past a folded row', () => {
       const views = Array.from({ length: 8 }, (_, i) => makeView({ id: `v${i}`, name: `View ${i}`, position: `a${i}` }));
       const { el } = mount(views, 'v4');
 
@@ -1637,7 +1639,34 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       document.dispatchEvent(pointer('pointermove', 350));
       document.dispatchEvent(pointer('pointerup', 350));
 
-      expect(onReorder).toHaveBeenCalledWith('v0', positionBetween('a7', null));
+      expect(onReorder).toHaveBeenCalledWith('v0', positionBetween('a4', 'a5'));
+    });
+
+    // notion-motion.md Round 85c §2: Table, Timeline shown, two folded; Table dropped past Timeline lands right after it.
+    it('drops right after the last shown tab, ahead of the folded ones', () => {
+      const views = Array.from({ length: 4 }, (_, i) => makeView({ id: `v${i}`, name: `View ${i}`, position: `a${i}` }));
+      const { el } = mount(views, 'v0');
+
+      for (const tab of Array.from(el.querySelectorAll('[data-blok-database-tab]'))) {
+        Object.defineProperty(tab, 'offsetWidth', { value: 100, configurable: true });
+      }
+      Object.defineProperty(el, 'clientWidth', { value: 246, configurable: true });
+      lastResizeProbe().fire();
+      const shownIds = Array.from(el.querySelectorAll<HTMLElement>('[data-blok-database-tab]'))
+        .filter((tab) => tab.style.display !== 'none').map((tab) => tab.getAttribute('data-view-id'));
+
+      expect(shownIds).toEqual(['v0', 'v1']);
+      Array.from(el.querySelectorAll<HTMLElement>('[data-blok-database-tab]')).forEach((tab) => {
+        const slot = ['v0', 'v1'].indexOf(tab.getAttribute('data-view-id') ?? '');
+
+        vi.spyOn(tab, 'getBoundingClientRect').mockReturnValue(slot === -1 ? makeRect(0, 0) : makeRect(slot * 100, slot * 100 + 100));
+      });
+
+      tabOf(el, 'v0').dispatchEvent(pointer('pointerdown', 50));
+      document.dispatchEvent(pointer('pointermove', 350));
+      document.dispatchEvent(pointer('pointerup', 350));
+
+      expect(onReorder).toHaveBeenCalledWith('v0', positionBetween('a1', 'a2'));
     });
 
     it('drops after the last tab when the pointer is past the row', () => {

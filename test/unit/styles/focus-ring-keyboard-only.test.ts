@@ -40,6 +40,31 @@ const paints = (body: string, property: 'outline' | 'box-shadow'): boolean =>
   [ ...body.matchAll(new RegExp(`(?:^|;|\\s)${property}\\s*:\\s*([^;]+)`, 'g')) ]
     .some(([ , value ]) => !/^(none|0|0px)(\s*!important)?$/.test(value.trim()));
 
+/**
+ * A text field's own focus ring is the exception: it shows however focus came,
+ * as in Notion (user rule, 2026-11-20). It lives inside the box, so every layer
+ * is inset; an outer layer on a click is still a keyboard ring painted wrongly.
+ */
+const isFieldRing = (selector: string, body: string): boolean => {
+  const value = body.match(/(?:^|;|\s)box-shadow\s*:\s*([^;]+)/)?.[1] ?? '';
+
+  const layers: string[] = [ '' ];
+  let depth = 0;
+
+  for (const char of value) {
+    if (char === '(') depth += 1;
+    if (char === ')') depth -= 1;
+    if (char === ',' && depth === 0) {
+      layers.push('');
+    } else {
+      layers[layers.length - 1] += char;
+    }
+  }
+
+  return /input|textarea|contenteditable/.test(selector)
+    && layers.every(layer => layer.trim().startsWith('inset '));
+};
+
 const KEYBOARD_GATE = ':not([data-blok-modality="pointer"])';
 
 describe('focus rings are keyboard-only', () => {
@@ -65,7 +90,8 @@ describe('focus rings are keyboard-only', () => {
 
   it('paints no ring on plain :focus, which a click matches', () => {
     const offenders = walk(SRC_ROOT).flatMap(file => rules(file)
-      .filter(({ selector, body }) => /:focus(?![-\w])/.test(selector) && (paints(body, 'outline') || paints(body, 'box-shadow')))
+      .filter(({ selector, body }) => /:focus(?![-\w])/.test(selector)
+        && (paints(body, 'outline') || (paints(body, 'box-shadow') && !isFieldRing(selector, body))))
       .map(({ selector }) => `${relative(REPO_ROOT, file)}: ${selector}`));
 
     expect(offenders).toEqual([]);

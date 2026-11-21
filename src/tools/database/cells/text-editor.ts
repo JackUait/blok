@@ -1,3 +1,4 @@
+import { getUserOS } from '../../../components/utils/browser';
 import type { PropertyDefinition, PropertyValue } from '../types';
 import { CellPopover, coverMinHeight, coverMinWidth } from './cell-popover';
 import { resolveLocale } from './date-format';
@@ -13,11 +14,10 @@ const parseNumberEntry = (text: string, property: PropertyDefinition, locale: st
   return parsed === undefined ? null : { kind: 'commit', value: parsed };
 };
 
-/** database.css: 38px tall and no entrance motion. */
-const POINT_EDITOR_CLASS = 'blok-database-point-editor';
-
 /** research/16 §4: Notion's url, email and phone editors. */
 const INPUT_TYPES: Partial<Record<PropertyDefinition['type'], string>> = { url: 'url', email: 'email', phone: 'tel' };
+
+const LINE_KEY_TYPES: ReadonlySet<PropertyDefinition['type']> = new Set(['title', 'text', 'richText', 'number', 'phone']);
 
 /** research/22 §3, research/23 §3c, research/30 B20: Escape saves every text-like value. */
 const escapeCommits = (type: PropertyDefinition['type']): boolean =>
@@ -95,7 +95,7 @@ export const openTextEditor = (
     content,
     minWidth: coverMinWidth(anchor, ctx.coverCell, 240),
     // notion-motion.md Round 67 §3: the top on the point; above it, its bottom there, when the window's 12px margin would cut it.
-    ...(ctx.atPoint === true ? { gap: 0, flip: true, surfaceClass: POINT_EDITOR_CLASS } : {}),
+    point: ctx.atPoint === true,
     onEscape: () => finish(!escapeCancels && escapeCommits(property.type) ? resolve() ?? { kind: 'cancel' } : { kind: 'cancel' }),
     onDismiss: () => finish(resolve() ?? { kind: 'cancel' }, false),
   });
@@ -143,6 +143,18 @@ export const openTextEditor = (
     if (event.key === 'Tab' && ctx.tabCloses === true && header === undefined && footer === undefined) {
       event.preventDefault();
       finish(resolve() ?? { kind: 'cancel' });
+
+      return;
+    }
+    // notion-motion.md Rounds 75–76 §2, Round 78 §5: Notion moves (Shift: extends) to the visual line's edge in
+    // Title, Text, Number and Phone; macOS Home/End only scroll a field. Other platforms already move the caret;
+    // ⌘/Ctrl/⌥ chords and the url and email fields were not measured.
+    const edge = ({ Home: 'backward', End: 'forward' } as const)[event.key as 'Home' | 'End'];
+    const plain = !event.metaKey && !event.ctrlKey && !event.altKey;
+
+    if (edge !== undefined && plain && LINE_KEY_TYPES.has(property.type) && getUserOS().mac) {
+      event.preventDefault();
+      window.getSelection()?.modify(event.shiftKey ? 'extend' : 'move', edge, 'lineboundary');
 
       return;
     }

@@ -1815,6 +1815,14 @@ export const IconLock = `
 </svg>
 `;
 
+export const IconLockOpen = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M7.25 8V5.75a2.75 2.75 0 0 1 5.5 0" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="4.5" y="8" width="11" height="8.5" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="10" cy="12.25" r="1" fill="currentColor"/>
+</svg>
+`;
+
 // ============================================================================
 // File-type icons (20×20 / 1.25 house spec) — chosen by File block per
 // extension/MIME category. Monochrome currentColor; the File block tints them

@@ -81,9 +81,16 @@ export class BuiltInCommentsUi {
     const title = rowMenu && anchor.matches('[data-blok-database-table-row]')
       ? anchor.querySelector<HTMLElement>('[data-blok-database-table-cell][data-type="title"]')
       : null;
-    // Round 61 §2: 4px from a board card or list row, centred on it. A calendar event's anchor is unread.
-    const centred = title !== null || (rowMenu && anchor.matches(CENTRED_ANCHORS));
+    // Round 61 §2: 4px from a board card or list row, centred on it. A calendar event's box
+    // hangs off its week row instead: 4 from it, centred on the week's right edge (RTL unmeasured).
+    const week = rowMenu ? anchor.closest<HTMLElement>('[data-blok-database-calendar-week]') : null;
+    const weekRect = week?.getBoundingClientRect();
+    const weekEdge = week !== null && weekRect !== undefined
+      ? { position: new DOMRect(weekRect.right, weekRect.top, 0, weekRect.height), positionContext: week }
+      : {};
+    const centred = title !== null || week !== null || (rowMenu && anchor.matches(CENTRED_ANCHORS));
     const popover = new PopoverDesktop({
+      ...weekEdge,
       class: rowMenu ? `${DATABASE_MENU_CLASS} blok-database-comment-box` : DATABASE_MENU_CLASS,
       animateClose: true,
       trigger: title ?? anchor,

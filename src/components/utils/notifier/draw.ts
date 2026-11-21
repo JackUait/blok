@@ -40,7 +40,7 @@ export const CSS = {
     // px, not the rem-based `max-w-35`: the toast must not resize with the host's root font-size.
     'max-w-[140px] py-[5px] px-3 bg-white/10 border border-white/10 rounded-(--blok-radius-field)',
     'text-[13px] text-[#e4e4e7] outline-hidden',
-    'placeholder:text-white/30 focus:border-white/20'
+    'placeholder:text-white/30 focus:border-focus-ring focus:shadow-[inset_0_0_0_1px_var(--blok-focus-ring)]'
   ),
   dismissBtn: twJoin(
     'shrink-0 ms-3 -me-2 grid place-items-center w-6 h-6 rounded-full',

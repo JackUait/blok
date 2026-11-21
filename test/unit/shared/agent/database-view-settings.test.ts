@@ -174,10 +174,29 @@ describe.each(sessions)('database view settings on a %s session', (_name, open) 
       expect((await viewOf(session)).groupSettings).toEqual({ hideEmptyGroups: true });
       await update(session, { groupBy: 'n', groupSettings: { numberBy: 'range' } });
       expect((await viewOf(session)).groupSettings).toEqual({ numberBy: 'range' });
+      // Round 79 §2: a re-pick turns Hide empty groups on and keeps the rest.
       await update(session, { groupBy: 'n' });
-      expect((await viewOf(session)).groupSettings).toEqual({ numberBy: 'range' });
+      expect((await viewOf(session)).groupSettings).toEqual({ numberBy: 'range', hideEmptyGroups: true });
       await update(session, { subGroupBy: 'st' });
       expect((await viewOf(session)).subGroupSettings).toEqual({ hideEmptyGroups: true });
+    } finally {
+      await session.close();
+    }
+  });
+
+  // notion-motion.md Round 82: re-picking the grouping and the sub-grouping together clears both kinds of hidden groups.
+  it('re-picking groupBy and subGroupBy together shows every hidden group and sub-group', async () => {
+    const session = open(seedOf(databaseBlock([{
+      ...baseView, type: 'board', groupBy: 'st', subGroupBy: 'n',
+      subGroupSettings: { sort: 'descending' }, hiddenGroups: [{ id: 'o1' }, { id: 'sub:x' }],
+    }])));
+
+    try {
+      await update(session, { groupBy: 'st', subGroupBy: 'n' });
+      const view = await viewOf(session);
+
+      expect(view.hiddenGroups ?? []).toEqual([]);
+      expect(view.subGroupSettings).toEqual({ hideEmptyGroups: true });
     } finally {
       await session.close();
     }

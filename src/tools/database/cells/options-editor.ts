@@ -8,7 +8,7 @@ import { sortedSelectOptions } from '../../../shared/database/value-helpers';
 import type { PropertyDefinition, SelectOption } from '../types';
 import { createOptionPill } from './display';
 import { pickOptionColor, shownStatusOption } from './option-colors';
-import { OptionDrag, buildDeletePrompt, buildOptionPanel, placeDroppedOption } from './option-editing';
+import { OptionDrag, buildOptionPanel, confirmOptionDelete, placeDroppedOption } from './option-editing';
 import { CellPopover } from './cell-popover';
 import { openDatabaseConfirm } from '../database-confirm-dialog';
 
@@ -20,8 +20,11 @@ export interface OptionsEditorOptions {
   onChange: (options: SelectOption[]) => void;
   /** Status only: "Set as default" picked another option (research/30 §10f). */
   onSetDefault?: (optionId: string) => void;
-  /** Keeps the menu around the list open under a status option's menu, until the release. */
-  hold?: () => () => void;
+  /**
+   * Keeps the menu around the list open under an option's menu or a dialog, until the release.
+   * `refocus`: the cursor goes back to that menu's row the list hangs from.
+   */
+  hold?: (() => (refocus?: boolean) => void);
   /** The menu around the list calls `close` when it closes, so a status option's menu goes with it. */
   onHostClose?: (close: () => void) => void;
 }
@@ -40,7 +43,6 @@ interface Flyout {
   optionId: string;
   release: () => void;
   groupMenu: { popover: CellPopover; release: () => void; row: HTMLElement } | null;
-  deletePrompt: boolean;
 }
 
 const byPosition = (options: SelectOption[]): SelectOption[] =>
@@ -71,6 +73,8 @@ class OptionsEditor {
   private readonly drag: OptionDrag;
   private defaultId: string | undefined;
   private flyout: Flyout | null = null;
+  /** Takes the delete confirm away when the menu around closes under it, or its modal leaves the page inert. */
+  private deleteConfirm: AbortController | null = null;
 
   constructor(private readonly opts: OptionsEditorOptions) {
     this.options = this.sorted(opts.property.config?.options ?? []);
@@ -86,7 +90,10 @@ class OptionsEditor {
         this.set(this.options.map((option) => (option.id === id ? placed : option)));
       }
     }, () => this.render());
-    opts.onHostClose?.(() => this.closeFlyout());
+    opts.onHostClose?.(() => {
+      this.deleteConfirm?.abort();
+      this.closeFlyout();
+    });
     this.render();
   }
 
@@ -344,11 +351,11 @@ class OptionsEditor {
       alignEnd: true,
       // An edit redraws the list and drops this row; the list itself stays.
       positionContext: this.root,
-      onEscape: () => (this.flyout?.deletePrompt === true ? this.renderFlyout() : this.closeFlyout()),
+      onEscape: () => this.closeFlyout(),
       onDismiss: () => this.closeFlyout(),
     });
 
-    this.flyout = { popover, root, optionId, release, groupMenu: null, deletePrompt: false };
+    this.flyout = { popover, root, optionId, release, groupMenu: null };
     this.markOpen(optionId, true);
     popover.show();
     this.renderFlyout();
@@ -378,7 +385,6 @@ class OptionsEditor {
     const flyout = this.flyout;
 
     if (flyout === null) return;
-    flyout.deletePrompt = false;
     const optionId = flyout.optionId;
     const option = this.options.find((o) => o.id === optionId);
 
@@ -406,25 +412,44 @@ class OptionsEditor {
           onOpen: (groupRow: HTMLElement) => this.openGroupMenu(groupRow),
         },
       } : {}),
-      onDelete: () => {
-        const { prompt, confirm } = buildDeletePrompt({
-          t: (key) => this.t(key),
-          onConfirm: () => {
-            this.closeFlyout();
-            this.set(this.options.filter((o) => o.id !== optionId));
-            this.render();
-          },
-          onCancel: () => this.renderFlyout(),
-        });
-
-        flyout.root.replaceChildren(prompt);
-        flyout.deletePrompt = true;
-        confirm.focus();
-      },
+      onDelete: () => this.confirmDelete(optionId),
     });
 
     flyout.root.replaceChildren(panel);
     name.focus();
+  }
+
+  /**
+   * notion-motion.md Round 81 §1: the cell path's centred confirm. The option menu closes as it
+   * opens; after it the cursor goes back to the menu around the list. It mounts in that menu:
+   * focus on a dialog outside it would close the menus. The hold starts after the option
+   * menu's release, which would undo it.
+   */
+  private confirmDelete(optionId: string): void {
+    const host = this.root.closest<HTMLElement>('[data-blok-popover]');
+
+    this.closeFlyout();
+    const release = this.opts.hold?.() ?? ((): void => undefined);
+    const confirm = new AbortController();
+
+    this.deleteConfirm = confirm;
+    void confirmOptionDelete((key) => this.t(key), {
+      directionSource: this.root,
+      signal: confirm.signal,
+      ...(host === null ? {} : { container: host, topLayer: true }),
+    }).then((confirmed) => {
+      if (this.deleteConfirm !== confirm || confirm.signal.aborted) {
+        release();
+
+        return;
+      }
+      this.deleteConfirm = null;
+      if (confirmed) {
+        this.set(this.options.filter((o) => o.id !== optionId));
+        this.render();
+      }
+      release(true);
+    });
   }
 
   /** Group ›: the status groups, the option's own checked (notion-motion.md Round 57 §4). */

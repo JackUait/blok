@@ -325,6 +325,41 @@ describe('PopoverDesktop close motion (animateClose)', () => {
   });
 
   // notion-motion.md Round 10 "Edit property flyout": a submenu of a fading menu fades out too when it closes.
+  describe('escapeClosesAtOnce', () => {
+    it('an Escape close leaves the top layer at once, with no motion', () => {
+      const popover = open({ animateClose: true });
+
+      popover.escapeClosesAtOnce = true;
+      stubAnimations(popover, [controllableAnimation().animation]);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(popover.isShown).toBe(false);
+      expect(isInTopLayer(popover)).toBe(false);
+      expect(popover.isClosing).toBe(false);
+    });
+
+    it('any other close still plays the motion', () => {
+      const popover = open({ animateClose: true });
+
+      popover.escapeClosesAtOnce = true;
+      stubAnimations(popover, [controllableAnimation().animation]);
+      popover.hide();
+
+      expect(isInTopLayer(popover)).toBe(true);
+      expect(popover.isClosing).toBe(true);
+    });
+
+    it('is off by default: an Escape close plays the motion', () => {
+      const popover = open({ animateClose: true });
+
+      stubAnimations(popover, [controllableAnimation().animation]);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(popover.isShown).toBe(false);
+      expect(isInTopLayer(popover)).toBe(true);
+    });
+  });
+
   describe('a submenu', () => {
     const openWithSubmenu = (animateClose: boolean): { root: PopoverDesktop; nested: HTMLElement } => {
       const trigger = document.createElement('button');

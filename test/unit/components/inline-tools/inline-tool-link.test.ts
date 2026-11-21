@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
-import { IconLink } from '../../../../src/components/icons';
+import { IconGlobe, IconLink, IconPage, IconPhone, IconTable, IconTableOfContents } from '../../../../src/components/icons';
 
 import defaultDictionary from '../../../../src/components/i18n/locales/en.json';
 import { LinkInlineTool } from '../../../../src/components/inline-tools/inline-tool-link';
@@ -115,9 +115,30 @@ const ENGLISH_LINK_TRANSLATIONS: Record<string, string> = {
   'tools.link.emailAddress': defaultDictionary['tools.link.emailAddress'],
   'tools.link.jumpToSection': defaultDictionary['tools.link.jumpToSection'],
   'tools.link.webLink': defaultDictionary['tools.link.webLink'],
+  'tools.link.webPage': defaultDictionary['tools.link.webPage'],
+  'tools.link.phoneNumber': defaultDictionary['tools.link.phoneNumber'],
+  'tools.link.invalidLink': defaultDictionary['tools.link.invalidLink'],
+  'tools.link.invalidSpaces': defaultDictionary['tools.link.invalidSpaces'],
+  'tools.link.invalidUnsafe': defaultDictionary['tools.link.invalidUnsafe'],
+  'tools.link.invalidKind': defaultDictionary['tools.link.invalidKind'],
   'tools.link.recent': defaultDictionary['tools.link.recent'],
   'tools.link.onThisPage': defaultDictionary['tools.link.onThisPage'],
+  'tools.database.moveToPages': defaultDictionary['tools.database.moveToPages'],
+  'tools.page.unresolved': defaultDictionary['tools.page.unresolved'],
+  'tools.page.draft': defaultDictionary['tools.page.draft'],
 };
+
+type PageHit = { pageId: string; title?: string; icon?: { type: 'emoji'; value: string }; access?: 'none'; kind?: 'database'; path?: string[]; status?: 'draft' | 'published' };
+
+type PageHost = {
+  search?: (query: string) => Promise<readonly PageHit[]>;
+  href?: (pageId: string) => string;
+};
+
+/**
+ * The page tool's config the tool sees through `api.tools`. Reset before every test.
+ */
+const pageHost: { config: PageHost | null } = { config: null };
 
 type DocumentBlock = { id: string; name: string; holder: HTMLElement };
 
@@ -164,6 +185,9 @@ const createTool = (
     blocks: {
       getBlocksCount: () => documentBlocks.length,
       getBlockByIndex: (index: number) => documentBlocks[index],
+    },
+    tools: {
+      getBlockTools: () => pageHost.config === null ? [] : [{ name: 'page', settings: pageHost.config }],
     },
     config: {
       link: linkConfig,
@@ -216,6 +240,7 @@ describe('LinkInlineTool', () => {
     setDocumentCommand(vi.fn());
     localStorage.removeItem('blok-recent-links');
     documentBlocks.length = 0;
+    pageHost.config = null;
   });
 
   afterEach(() => {
@@ -254,11 +279,11 @@ describe('LinkInlineTool', () => {
     expect(config.children.width).toBeUndefined();
   });
 
-  it('opens the link field below the inline toolbar, not beside it', () => {
+  it('leaves the link field placement to the inline toolbar, which drops it over the card', () => {
     const { tool } = createTool();
     const config = tool.render() as unknown as { children: { placement?: string } };
 
-    expect(config.children.placement).toBe('below');
+    expect(config.children.placement).toBeUndefined();
   });
 
   it('stretches the input to fill the popover width instead of a fixed pixel width', () => {
@@ -291,7 +316,7 @@ describe('LinkInlineTool', () => {
     const { tool } = createTool(undefined, { 'tools.link.addLink': defaultDictionary['tools.link.addLink'] });
     const renderResult = tool.render() as unknown as LinkToolRenderResult;
 
-    expect(getInputFromWrapper(renderResult.children.items[0].element).placeholder).toBe('Paste a link or search headings');
+    expect(getInputFromWrapper(renderResult.children.items[0].element).placeholder).toBe('Paste link or search pages');
   });
 
   it('renders actions input and invokes enter handler when Enter key is pressed', () => {
@@ -404,9 +429,9 @@ describe('LinkInlineTool', () => {
     expect(input.getAttribute('aria-invalid')).toBe('true');
     expect(error).not.toBeNull();
     expect(error?.hidden).toBe(false);
-    // trim(): the decorative warning icon's SVG markup contributes formatting
-    // whitespace to textContent; the announced message is what matters.
-    expect(error?.textContent?.trim()).toBe('tools.link.invalidLink');
+    // The title, then the reason: both are announced.
+    expect(error?.querySelector('[data-link-error-title]')?.textContent).toBe('Invalid link');
+    expect(error?.querySelector('[data-link-error-reason]')?.textContent).toBe('An address cannot have spaces');
     expect(error?.id).toBeTruthy();
     expect(input.getAttribute('aria-describedby')).toContain(error?.id ?? '');
   });
@@ -731,6 +756,11 @@ describe('LinkInlineTool', () => {
       },
       {
         value: 'https://example.com',
+        key: 'tools.link.webPage',
+        translation: 'Lien vers une page web',
+      },
+      {
+        value: 'sms:+15551234567',
         key: 'tools.link.webLink',
         translation: 'Lien',
       },
@@ -747,13 +777,35 @@ describe('LinkInlineTool', () => {
 
     it.each([
       'https://example.com',
-      'ftp://files.example.com',
-      'tel:+15551234567',
-      'sms:+15551234567',
+      'HTTP://example.com',
       '//cdn.example.com/file.js',
       '/docs/getting-started',
       'example.com',
-    ])('uses the generic English link label for %s', value => {
+      'localhost:3000/docs',
+    ])('says a web address leads to a web page: %s', value => {
+      const { tool } = createTool();
+      const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion(value);
+
+      const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
+
+      expect(typeEl?.textContent).toBe('Link to web page');
+    });
+
+    it.each(['tel:+15551234567', 'TEL:911'])('says %s is a link to a phone number', value => {
+      const { tool } = createTool();
+      const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion(value);
+
+      expect(itemWrapper.querySelector('[data-link-suggestion-type]')?.textContent).toBe('Link to phone number');
+    });
+
+    it.each([
+      'ftp://files.example.com',
+      'sms:+15551234567',
+    ])('keeps the plain link label for %s, which is no web page', value => {
       const { tool } = createTool();
       const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
 
@@ -784,7 +836,7 @@ describe('LinkInlineTool', () => {
 
       expect(chip?.classList.contains('hidden')).toBe(false);
       expect(urlEl?.textContent).toBe('https://example.com');
-      expect(typeEl?.textContent).toBe('Link');
+      expect(typeEl?.textContent).toBe('Link to web page');
     });
 
     it('hides chip when input is cleared', () => {
@@ -799,7 +851,7 @@ describe('LinkInlineTool', () => {
       expect(chip?.classList.contains('hidden')).toBe(true);
     });
 
-    it('labels mailto: links as Email address', () => {
+    it('labels mailto: links as a link to an email address', () => {
       const { tool } = createTool();
       const wrapper = tool.render() as unknown as LinkToolRenderResult;
       const itemWrapper = wrapper.children.items[0].element;
@@ -808,7 +860,7 @@ describe('LinkInlineTool', () => {
 
       const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
 
-      expect(typeEl?.textContent).toBe('Email address');
+      expect(typeEl?.textContent).toBe('Link to email address');
     });
 
     it('shows invalid label and disables row for incomplete URLs', () => {
@@ -820,7 +872,7 @@ describe('LinkInlineTool', () => {
       const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
       const row = itemWrapper.querySelector('[data-link-suggestion-row]');
 
-      expect(typeEl?.textContent).toBe('Keep typing to add a link');
+      expect(typeEl?.textContent).toBe('Keep typing to add link');
       expect(row?.className).toContain('pointer-events-none');
     });
 
@@ -833,11 +885,11 @@ describe('LinkInlineTool', () => {
       const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
       const row = itemWrapper.querySelector('[data-link-suggestion-row]');
 
-      expect(typeEl?.textContent).toBe('Link');
+      expect(typeEl?.textContent).toBe('Link to web page');
       expect(row?.className).toContain('cursor-pointer');
     });
 
-    it('labels anchor links as Jump to section', () => {
+    it('labels anchor links as a link to a section', () => {
       const { tool } = createTool();
       const wrapper = tool.render() as unknown as LinkToolRenderResult;
       const itemWrapper = wrapper.children.items[0].element;
@@ -846,42 +898,98 @@ describe('LinkInlineTool', () => {
 
       const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
 
-      expect(typeEl?.textContent).toBe('Jump to section');
+      expect(typeEl?.textContent).toBe('Link to section');
     });
 
-    it('shows the enter-key hint only when the URL is confirmable', () => {
+    it.each([
+      ['tel:+15551234567', IconPhone],
+      ['TEL:911', IconPhone],
+      ['sms:+15551234567', IconGlobe],
+      ['telegram.org', IconGlobe],
+    ])('draws the sign for %s: a telephone for a phone number only', (value, svg) => {
       const { tool } = createTool();
       const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
-      const update = tool as unknown as { updateSuggestion(v: string): void };
+      const expected = document.createElement('span');
 
-      update.updateSuggestion('asd');
+      expected.innerHTML = svg;
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion(value);
 
-      const hint = itemWrapper.querySelector<HTMLElement>('[data-link-suggestion-enter-hint]');
-
-      expect(hint).not.toBeNull();
-      // Incomplete URL: pressing Enter would fail, so the hint must not promise it.
-      expect(hint?.classList.contains('hidden')).toBe(true);
-
-      update.updateSuggestion('https://example.com');
-
-      expect(hint?.classList.contains('hidden')).toBe(false);
+      expect(itemWrapper.querySelector('[data-link-suggestion-icon]')?.innerHTML).toBe(expected.innerHTML);
     });
 
-    it('shows the suggestion icon and the enter-key hint as bare glyphs, with no chip behind them', () => {
+    it('is the row alone: no line above it and no Enter mark in it', () => {
+      const { tool } = createTool();
+      const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion('https://example.com');
+
+      const suggestion = itemWrapper.querySelector('[data-link-suggestion]');
+
+      expect(Array.from(suggestion?.children ?? []).map((child) => child.hasAttribute('data-link-suggestion-row'))).toEqual([true]);
+      expect(itemWrapper.querySelector('[data-link-suggestion-enter-hint]')).toBeNull();
+      expect(suggestion?.querySelectorAll('svg')).toHaveLength(1);
+    });
+
+    it.each([
+      ['https://example.com', true],
+      ['mailto:a@b.co', true],
+      ['exam', false],
+      ['https://', false],
+    ])('lights the row for %s only when it can be added: %s', (value, lit) => {
+      const { tool } = createTool();
+      const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion(value);
+
+      const classes = itemWrapper.querySelector('[data-link-suggestion-row]')?.className.split(' ') ?? [];
+
+      expect(classes.includes('bg-item-hover-bg')).toBe(lit);
+    });
+
+    it('marks a section link with the contents sign and says where it leads', () => {
+      const { tool } = createTool();
+      const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+      const expected = document.createElement('span');
+
+      expected.innerHTML = IconTableOfContents;
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion('#pricing');
+
+      expect(itemWrapper.querySelector('[data-link-suggestion-icon]')?.innerHTML).toBe(expected.innerHTML);
+      expect(itemWrapper.querySelector('[data-link-suggestion-type]')?.textContent).toBe('Link to section');
+    });
+
+    it.each([
+      ['https://google .com', 'An address cannot have spaces'],
+      ['javascript:alert(1)', 'This link is not safe to open'],
+      ['data:text/html,hi', 'This link is not safe to open'],
+      ['file:///Users/me/notes.pdf', 'Only web, email and phone links work'],
+      ['ftp://files.example.com', 'Only web, email and phone links work'],
+    ])('says why %s is refused, under "Invalid link"', (value, reason) => {
+      const { tool } = createTool();
+      const wrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+      const input = getInputFromWrapper(wrapper);
+
+      input.value = value;
+      (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+
+      const error = wrapper.querySelector<HTMLElement>('[data-blok-link-tool-error]');
+
+      expect(error?.querySelector('[data-link-error-reason]')?.textContent).toBe(reason);
+      expect(error?.querySelector('[data-link-error-title]')?.textContent).toBe('Invalid link');
+      expect(error?.hidden).toBe(false);
+    });
+
+    it('shows the suggestion icon as a bare glyph, with no chip behind it', () => {
       const { tool } = createTool();
       const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
 
       (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion('https://example.com');
 
       const icon = itemWrapper.querySelector<HTMLElement>('[data-link-suggestion-icon]');
-      const hint = itemWrapper.querySelector<HTMLElement>('[data-link-suggestion-enter-hint]');
 
       expect(icon?.className).toContain('size-6');
       expect(icon?.className).not.toContain('bg-popover-icon-bg');
       expect(icon?.className).not.toContain('rounded-md');
-      expect(hint?.className).toContain('size-5');
-      expect(hint?.className).not.toContain('bg-popover-icon-bg');
-      expect(hint?.className).not.toContain('rounded-md');
     });
 
     it('prefills the URL field and suppresses the suggestion chip when editing an existing link', () => {
@@ -946,6 +1054,65 @@ describe('LinkInlineTool', () => {
       expect(input.getAttribute('aria-invalid')).toBe('true');
       expect(notifier.show).not.toHaveBeenCalled();
       expect(insertLinkSpy).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['Enter', (tool: unknown): void => (tool as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent)],
+      ['a click on the row', (tool: unknown): void => (tool as { confirmLink(): void }).confirmLink()],
+    ])('drops the spaces around a pasted address instead of refusing it, on %s', (_name, confirm) => {
+      const { tool } = createTool();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+      const input = getInputFromWrapper(renderResult.children.items[0].element);
+      const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
+
+      input.value = ' \thttps://google.com/page \n';
+
+      confirm(tool);
+
+      expect(insertLinkSpy).toHaveBeenCalledWith('https://google.com/page');
+      expect(input.hasAttribute('aria-invalid')).toBe(false);
+    });
+
+    it.each([
+      ['localhost:3000/docs', 'http://localhost:3000/docs'],
+      ['example.com:8080', 'http://example.com:8080'],
+      ['192.168.0.1:8080?x=1', 'http://192.168.0.1:8080?x=1'],
+    ])('reads %s as a site with a port and adds the protocol, instead of refusing it', (typed, href) => {
+      const { tool } = createTool();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+      const input = getInputFromWrapper(renderResult.children.items[0].element);
+      const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
+
+      input.value = typed;
+      (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+
+      expect(insertLinkSpy).toHaveBeenCalledWith(href);
+      expect(input.hasAttribute('aria-invalid')).toBe(false);
+    });
+
+    it.each(['tel:911', 'sms:12345', 'mailto:1'])('leaves %s alone: a short number after a known kind is no port', (typed) => {
+      const { tool } = createTool();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+      const input = getInputFromWrapper(renderResult.children.items[0].element);
+      const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
+
+      input.value = typed;
+      (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+
+      expect(insertLinkSpy).toHaveBeenCalledWith(typed);
+    });
+
+    it('still refuses an address that can run code, port-like or not', () => {
+      const { tool } = createTool();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+      const input = getInputFromWrapper(renderResult.children.items[0].element);
+      const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
+
+      input.value = 'javascript:alert(1)';
+      (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+
+      expect(insertLinkSpy).not.toHaveBeenCalled();
+      expect(input.getAttribute('aria-invalid')).toBe('true');
     });
 
     it('confirmLink does nothing silently for incomplete URLs', () => {
@@ -1143,7 +1310,7 @@ describe('LinkInlineTool', () => {
       return { ...setup, itemWrapper, input: getInputFromWrapper(itemWrapper) };
     };
 
-    const seed = (entries: { url: string; title?: string; favicon?: string }[]): void => {
+    const seed = (entries: { url: string; title?: string; image?: string; checked?: boolean }[]): void => {
       localStorage.setItem('blok-recent-links', JSON.stringify(entries));
     };
 
@@ -1189,31 +1356,71 @@ describe('LinkInlineTool', () => {
       expect(recentRows(itemWrapper).map((row) => rowText(row, 'title'))).toEqual(['From another tab']);
     });
 
-    it('labels the list "Recent"', () => {
+    it('labels the list "Recents"', () => {
       seed([{ url: 'https://a.com', title: 'A' }]);
 
       const { itemWrapper } = openCreating();
 
-      expect(itemWrapper.querySelector('[data-link-recent-label]')?.textContent).toBe('Recent');
+      expect(itemWrapper.querySelector('[data-link-recent-label]')?.textContent).toBe('Recents');
     });
 
-    it('lays the recent links out as cards: icon tile, then title, then site', () => {
+    it('lays each recent link out as a row: the link sign, then the title with the site under it', () => {
       seed([
         { url: 'https://github.com/jackuait/blok', title: 'Blok editor' },
         { url: 'https://www.figma.com/file/1', title: 'Design tokens' },
       ]);
 
       const { itemWrapper } = openCreating();
-      const [card] = recentRows(itemWrapper);
-      const tile = card.firstElementChild;
-      const title = card.querySelector('[data-link-recent-title]');
-      const meta = card.querySelector('[data-link-recent-meta]');
+      const [row] = recentRows(itemWrapper);
+      const title = row.querySelector('[data-link-recent-title]');
+      const meta = row.querySelector('[data-link-recent-meta]');
 
-      expect(card.parentElement?.className.split(' ')).toEqual(expect.arrayContaining(['grid', 'grid-cols-3']));
-      expect(card.className.split(' ')).toContain('flex-col');
-      expect(tile?.hasAttribute('data-link-recent-tile')).toBe(true);
+      expect(row.parentElement?.hasAttribute('data-link-recent-list')).toBe(true);
+      expect(row.firstElementChild?.hasAttribute('data-link-recent-icon')).toBe(true);
+      expect(row.firstElementChild?.querySelector('svg')).not.toBeNull();
+      expect(row.firstElementChild).toHaveAttribute('aria-hidden', 'true');
+      expect(title?.parentElement).toBe(meta?.parentElement);
       expect(title?.compareDocumentPosition(meta as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-      expect(card.querySelector('[data-link-option-enter-hint]')).not.toBeNull();
+      expect(row.querySelector('[data-link-option-enter-hint]')).not.toBeNull();
+      expect(row.title).toBe('https://github.com/jackuait/blok');
+    });
+
+    it('draws every recent link with the same sign: no cover, no letter, no color of its own', () => {
+      seed([
+        { url: 'https://alpha.dev/one', title: 'One' },
+        { url: 'https://zeta.io', title: 'Zeta' },
+      ]);
+
+      const { itemWrapper } = openCreating();
+      const rows = recentRows(itemWrapper);
+      const signs = rows.map((row) => row.querySelector('[data-link-recent-icon]')?.innerHTML);
+
+      expect(signs[0]).toBe(signs[1]);
+      expect(itemWrapper.querySelector('[data-link-recent-cover], [data-link-recent-letter], [data-link-recent-caption], [data-link-recent-open], [data-link-recent-plain]')).toBeNull();
+      expect(rows.every((row) => row.style.getPropertyValue('--_blok-link-cover-bg') === '')).toBe(true);
+    });
+
+    it('shows the three newest links, even when storage still holds more', () => {
+      seed([
+        { url: 'https://a.com', title: 'A' },
+        { url: 'https://b.com', title: 'B' },
+        { url: 'https://c.com', title: 'C' },
+        { url: 'https://d.com', title: 'D' },
+      ]);
+
+      const { itemWrapper } = openCreating();
+
+      expect(recentRows(itemWrapper).map((row) => rowText(row, 'title'))).toEqual(['A', 'B', 'C']);
+    });
+
+    it('leaves a link with no title and no path on one line', () => {
+      seed([{ url: 'https://youtube.com' }]);
+
+      const { itemWrapper } = openCreating();
+      const [row] = recentRows(itemWrapper);
+
+      expect(rowText(row, 'title')).toBe('youtube.com');
+      expect(row.querySelector('[data-link-recent-meta]')).toBeNull();
     });
 
     it('names a page by its path when its title only repeats the site name', () => {
@@ -1229,26 +1436,6 @@ describe('LinkInlineTool', () => {
       expect(rowText(video, 'meta')).toBe('youtube.com');
       expect(rowText(home, 'title')).toBe('YouTube');
       expect(rowText(home, 'meta')).toBe('youtube.com');
-    });
-
-    it('tints a letter tile with a hue that follows the site', () => {
-      seed([
-        { url: 'https://alpha.dev/one', title: 'One' },
-        { url: 'https://alpha.dev/two', title: 'Two' },
-        { url: 'https://zeta.io', title: 'Zeta' },
-      ]);
-
-      const { itemWrapper } = openCreating();
-      const hues = recentRows(itemWrapper).map((card) =>
-        card.querySelector<HTMLElement>('[data-link-recent-tile]')?.style.getPropertyValue('--blok-link-tile-hue'));
-
-      // `text-[color-mix(…)]` is ambiguous to Tailwind (color or size?) and
-      // compiles to nothing; the `color:` hint is what makes it a color.
-      expect(recentRows(itemWrapper)[0].querySelector('[data-link-recent-tile]')?.className)
-        .toContain('text-[color:color-mix(');
-      expect(hues[0]).toMatch(/^\d+$/);
-      expect(hues[1]).toBe(hues[0]);
-      expect(hues[2]).not.toBe(hues[0]);
     });
 
     it('falls back to the site name and path when the title is unknown', () => {
@@ -1334,7 +1521,7 @@ describe('LinkInlineTool', () => {
     it('looks up the page title through the unfurl endpoint and stores it', async () => {
       const fetchMock = vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ success: 1, meta: { title: 'Example Domain', favicon: 'https://example.com/favicon.ico' } }),
+        json: async () => ({ success: 1, meta: { title: 'Example Domain', image: { url: 'https://example.com/cover.png' }, favicon: 'https://example.com/favicon.ico' } }),
       });
 
       vi.stubGlobal('fetch', fetchMock);
@@ -1348,17 +1535,74 @@ describe('LinkInlineTool', () => {
         expect(readStored()[0]).toEqual({
           url: 'https://example.com',
           title: 'Example Domain',
-          favicon: 'https://example.com/favicon.ico',
+          checked: true,
         });
       });
       expect(fetchMock).toHaveBeenCalledWith('/unfurl?url=https%3A%2F%2Fexample.com', { headers: undefined });
     });
 
-    it('does not look the title up again for a link that already has one', () => {
+    it('looks up a link that was never looked up when the field opens, and shows its title', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: 1, meta: { title: 'Escaping the Underworld', image: { url: 'https://i.example.com/cover.jpg' } } }),
+      });
+
+      vi.stubGlobal('fetch', fetchMock);
+      seed([
+        { url: 'https://www.youtube.com/watch?v=abc', title: 'YouTube' },
+        { url: 'https://b.com', title: 'B', checked: true },
+      ]);
+
+      const { itemWrapper } = openCreating({ unfurl: { endpoint: '/unfurl' } });
+
+      await vi.waitFor(() => {
+        expect(rowText(recentRows(itemWrapper)[0], 'title')).toBe('Escaping the Underworld');
+      });
+      expect(recentRows(itemWrapper)[0].querySelector('img')).toBeNull();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledWith('/unfurl?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc', { headers: undefined });
+    });
+
+    it('keeps the row the user was on when a late title arrives', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: 1, meta: { title: 'Alpha' } }),
+      }));
+      seed([
+        { url: 'https://a.com', title: 'A' },
+        { url: 'https://b.com', title: 'B', checked: true },
+      ]);
+
+      const { itemWrapper, input } = openCreating({ unfurl: { endpoint: '/unfurl' } });
+
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+
+      await vi.waitFor(() => {
+        expect(rowText(recentRows(itemWrapper)[0], 'title')).toBe('Alpha');
+      });
+
+      const rows = recentRows(itemWrapper);
+
+      expect(rows[1]).toHaveAttribute('aria-selected', 'true');
+      expect(input.getAttribute('aria-activedescendant')).toBe(rows[1].id);
+    });
+
+    it('does not look a link up without a lookup endpoint', () => {
       const fetchMock = vi.fn();
 
       vi.stubGlobal('fetch', fetchMock);
       seed([{ url: 'https://example.com', title: 'Example Domain' }]);
+      openCreating();
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('does not look up again a link that was already looked up', () => {
+      const fetchMock = vi.fn();
+
+      vi.stubGlobal('fetch', fetchMock);
+      seed([{ url: 'https://example.com', title: 'Example Domain', checked: true }]);
 
       const { itemWrapper } = openCreating({ unfurl: { endpoint: '/unfurl' } });
 
@@ -1392,18 +1636,159 @@ describe('LinkInlineTool', () => {
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
-    it('shows a web favicon and falls back to a letter tile for anything else', () => {
-      seed([
-        { url: 'https://a.com', title: 'Alpha', favicon: 'https://a.com/icon.png' },
-        { url: 'https://b.com', title: 'Beta', favicon: 'javascript:alert(1)' },
-      ]);
+    it('never draws a page picture, even for a link stored with one', () => {
+      seed([{ url: 'https://a.com', title: 'Alpha', image: 'https://a.com/cover.png' }]);
 
       const { itemWrapper } = openCreating();
-      const [first, second] = recentRows(itemWrapper);
 
-      expect(first.querySelector('img')?.getAttribute('src')).toBe('https://a.com/icon.png');
-      expect(second.querySelector('img')).toBeNull();
-      expect(second.querySelector('[data-link-recent-monogram]')?.textContent).toBe('B');
+      expect(recentRows(itemWrapper)[0].querySelector('img')).toBeNull();
+    });
+
+    it('never draws a site icon, even for a link stored with one', () => {
+      localStorage.setItem('blok-recent-links', JSON.stringify([
+        { url: 'https://a.com', title: 'Alpha', favicon: 'https://a.com/icon.png' },
+      ]));
+
+      const { itemWrapper } = openCreating();
+
+      expect(recentRows(itemWrapper)[0].querySelector('img')).toBeNull();
+    });
+
+    describe('the scrolling list', () => {
+      const THREE = [
+        { url: 'https://a.com', title: 'A' },
+        { url: 'https://b.com', title: 'B' },
+        { url: 'https://c.com', title: 'C' },
+      ];
+
+      /** jsdom lays nothing out, so the list and its rows get their sizes by hand. */
+      const sized = (itemWrapper: HTMLElement, box: { clientHeight: number; scrollHeight: number }): HTMLElement => {
+        const listbox = itemWrapper.querySelector<HTMLElement>('[role="listbox"]');
+
+        if (!listbox) {
+          throw new Error('no listbox');
+        }
+
+        Object.defineProperty(listbox, 'clientHeight', { configurable: true, value: box.clientHeight });
+        Object.defineProperty(listbox, 'scrollHeight', { configurable: true, value: box.scrollHeight });
+
+        return listbox;
+      };
+
+      const placed = (row: HTMLElement, offsetTop: number, offsetHeight: number): void => {
+        Object.defineProperty(row, 'offsetTop', { configurable: true, value: offsetTop });
+        Object.defineProperty(row, 'offsetHeight', { configurable: true, value: offsetHeight });
+      };
+
+      it('marks the edges that have more rows behind them', () => {
+        seed(THREE);
+
+        const { itemWrapper } = openCreating();
+        const listbox = sized(itemWrapper, { clientHeight: 300, scrollHeight: 600 });
+        const edges = (): string[] => ['up', 'down'].filter((edge) => listbox.hasAttribute(`data-link-more-${edge}`));
+
+        listbox.dispatchEvent(new Event('scroll'));
+        expect(edges()).toEqual(['down']);
+
+        listbox.scrollTop = 120;
+        listbox.dispatchEvent(new Event('scroll'));
+        expect(edges()).toEqual(['up', 'down']);
+
+        listbox.scrollTop = 300;
+        listbox.dispatchEvent(new Event('scroll'));
+        expect(edges()).toEqual(['up']);
+      });
+
+      it('marks no edge when every row fits', () => {
+        seed(THREE);
+
+        const { itemWrapper } = openCreating();
+        const listbox = sized(itemWrapper, { clientHeight: 300, scrollHeight: 300 });
+
+        listbox.dispatchEvent(new Event('scroll'));
+
+        expect(listbox.hasAttribute('data-link-more-up')).toBe(false);
+        expect(listbox.hasAttribute('data-link-more-down')).toBe(false);
+      });
+
+      it('scrolls a row picked with the arrows clear of the bottom fade', () => {
+        seed(THREE);
+
+        const { itemWrapper, input } = openCreating();
+        const listbox = sized(itemWrapper, { clientHeight: 100, scrollHeight: 400 });
+        const rows = recentRows(itemWrapper);
+
+        placed(rows[0], 38, 46);
+        placed(rows[1], 84, 46);
+
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+        expect(listbox.scrollTop).toBe(12);
+
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+        // The row ends at 130; the last 28px of the 100px list are fade.
+        expect(listbox.scrollTop).toBe(58);
+        expect(listbox.hasAttribute('data-link-more-up')).toBe(true);
+      });
+
+      it('scrolls a row picked with the arrows clear of the top fade', () => {
+        seed(THREE);
+
+        const { itemWrapper, input } = openCreating();
+        const listbox = sized(itemWrapper, { clientHeight: 100, scrollHeight: 400 });
+        const rows = recentRows(itemWrapper);
+
+        placed(rows[0], 150, 46);
+        placed(rows[1], 196, 46);
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+        listbox.scrollTop = 200;
+
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+
+        // The row starts at 150 and stays 24px under the list's top edge.
+        expect(listbox.scrollTop).toBe(126);
+      });
+
+      it('ends a list that overflows on a whole row, with a sliver of the next', () => {
+        seed(THREE);
+
+        const { itemWrapper, input } = openCreating();
+        const listbox = sized(itemWrapper, { clientHeight: 300, scrollHeight: 600 });
+        const rows = recentRows(itemWrapper);
+
+        placed(rows[0], 10, 90);
+        placed(rows[1], 110, 90);
+        placed(rows[2], 210, 90);
+        input.dispatchEvent(new Event('input'));
+
+        // Row 2 ends at 200 and row 3 at 300, past the 300px list less its 22px tail.
+        expect(listbox.style.maxHeight).toBe('222px');
+      });
+
+      it('leaves a list that fits at its own height', () => {
+        seed(THREE);
+
+        const { itemWrapper, input } = openCreating();
+        const listbox = sized(itemWrapper, { clientHeight: 300, scrollHeight: 300 });
+
+        listbox.style.maxHeight = '120px';
+        input.dispatchEvent(new Event('input'));
+
+        expect(listbox.style.maxHeight).toBe('');
+      });
+
+      it('does not resize a list the user has scrolled', () => {
+        seed(THREE);
+
+        const { itemWrapper, input } = openCreating();
+        const listbox = sized(itemWrapper, { clientHeight: 300, scrollHeight: 600 });
+
+        listbox.style.maxHeight = '222px';
+        listbox.scrollTop = 40;
+        input.dispatchEvent(new Event('input'));
+
+        expect(listbox.style.maxHeight).toBe('222px');
+      });
     });
 
     it('walks the rows with the arrow keys while focus stays in the field', () => {
@@ -1464,6 +1849,8 @@ describe('LinkInlineTool', () => {
 
       expect(input).toHaveAttribute('role', 'combobox');
       expect(input).toHaveAttribute('aria-controls', listbox?.id);
+      // The lists scroll under the field, and the popover draws their scrollbar.
+      expect(listbox?.hasAttribute('data-blok-popover-scroller')).toBe(true);
       expect(input).toHaveAttribute('aria-expanded', 'true');
       expect(recentRows(itemWrapper)[0]).toHaveAttribute('role', 'option');
       expect(itemWrapper.querySelectorAll('[data-link-recent] button')).toHaveLength(0);
@@ -1484,6 +1871,409 @@ describe('LinkInlineTool', () => {
       input.dispatchEvent(new Event('input'));
 
       expect(input.hasAttribute('aria-activedescendant')).toBe(false);
+    });
+  });
+
+  describe('pages', () => {
+    type PagesTool = { insertLink(link: string): void };
+
+    const PAGES: PageHit[] = [
+      { pageId: 'p1', title: 'Roadmap', path: ['Home', 'Plans'] },
+      { pageId: 'p2', title: 'Release notes', icon: { type: 'emoji', value: '📝' } },
+    ];
+
+    const hostWith = (search: PageHost['search']): PageHost => ({
+      search,
+      href: (pageId) => `https://app.test/p/${pageId}`,
+    });
+
+    const openCreating = (): ToolSetup & { itemWrapper: HTMLElement; input: HTMLInputElement; close: () => void; open: () => void } => {
+      const setup = createTool();
+
+      vi.spyOn(setup.tool as unknown as PagesTool, 'insertLink').mockImplementation(() => undefined);
+
+      const renderResult = setup.tool.render() as unknown as LinkToolRenderResult;
+      const itemWrapper = renderResult.children.items[0].element;
+
+      document.body.appendChild(itemWrapper);
+      renderResult.children.onOpen();
+
+      return {
+        ...setup,
+        itemWrapper,
+        input: getInputFromWrapper(itemWrapper),
+        close: () => renderResult.children.onClose(),
+        open: () => renderResult.children.onOpen(),
+      };
+    };
+
+    const pageSection = (itemWrapper: HTMLElement): HTMLElement | null =>
+      itemWrapper.querySelector<HTMLElement>('[data-link-pages]');
+
+    const pageRows = (itemWrapper: HTMLElement): HTMLElement[] =>
+      Array.from(itemWrapper.querySelectorAll<HTMLElement>('[data-link-page-row]'));
+
+    const pageTitles = (itemWrapper: HTMLElement): string[] =>
+      pageRows(itemWrapper).map((row) => row.querySelector('[data-link-page-title]')?.textContent ?? '');
+
+    const type = (field: HTMLInputElement, value: string): void => {
+      const input = field;
+
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+    };
+
+    const press = (input: HTMLInputElement, key: string): void => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    };
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('asks the host for pages when the field opens and lists them under "Pages"', async () => {
+      const search = vi.fn().mockResolvedValue(PAGES);
+
+      pageHost.config = hostWith(search);
+      localStorage.setItem('blok-recent-links', JSON.stringify([{ url: 'https://a.com', title: 'A', checked: true }]));
+      addHeading(2, 'Intro');
+
+      const { itemWrapper } = openCreating();
+
+      expect(pageSection(itemWrapper)?.hidden).toBe(true);
+      await vi.waitFor(() => expect(pageTitles(itemWrapper)).toEqual(['Roadmap', 'Release notes']));
+
+      expect(search).toHaveBeenCalledWith('');
+      expect(pageSection(itemWrapper)?.hidden).toBe(false);
+      expect(itemWrapper.querySelector('[data-link-pages-label]')?.textContent).toBe('Pages');
+      expect(pageRows(itemWrapper)[0].querySelector('[data-link-page-meta]')?.textContent).toBe('Home / Plans');
+      expect(Array.from(itemWrapper.querySelectorAll('[data-link-group]')).map((group) =>
+        ['data-link-recent', 'data-link-pages', 'data-link-headings', 'data-link-kinds'].find((name) => group.hasAttribute(name))))
+        .toEqual(['data-link-recent', 'data-link-pages', 'data-link-headings', 'data-link-kinds']);
+    });
+
+    it('shows a page\'s own icon, and the page glyph for a page without one', async () => {
+      pageHost.config = hostWith(vi.fn().mockResolvedValue(PAGES));
+
+      const { itemWrapper } = openCreating();
+
+      await vi.waitFor(() => expect(pageRows(itemWrapper)).toHaveLength(2));
+
+      const [plain, withIcon] = pageRows(itemWrapper);
+      const glyph = document.createElement('span');
+
+      glyph.innerHTML = IconPage;
+
+      expect(plain.querySelector('[data-link-page-icon]')?.innerHTML).toBe(glyph.innerHTML);
+      expect(withIcon.querySelector('[data-link-page-icon]')?.textContent).toBe('📝');
+    });
+
+    it('shows the table glyph for a full-page database without an icon', async () => {
+      pageHost.config = hostWith(vi.fn().mockResolvedValue([{ pageId: 'd1', title: 'Tasks', kind: 'database' }]));
+
+      const { itemWrapper } = openCreating();
+
+      await vi.waitFor(() => expect(pageRows(itemWrapper)).toHaveLength(1));
+
+      const glyph = document.createElement('span');
+
+      glyph.innerHTML = IconTable;
+
+      expect(pageRows(itemWrapper)[0].querySelector('[data-link-page-icon]')?.innerHTML).toBe(glyph.innerHTML);
+    });
+
+    it('names an untitled page "Page" and marks a draft', async () => {
+      pageHost.config = hostWith(vi.fn().mockResolvedValue([{ pageId: 'p9', status: 'draft', path: ['Home'] }]));
+
+      const { itemWrapper } = openCreating();
+
+      await vi.waitFor(() => expect(pageTitles(itemWrapper)).toEqual(['Page']));
+      expect(pageRows(itemWrapper)[0].querySelector('[data-link-page-meta]')?.textContent).toBe('Draft · Home');
+    });
+
+    it('links the selected words to the page address and keeps the page out of Recent', async () => {
+      pageHost.config = hostWith(vi.fn().mockResolvedValue(PAGES));
+
+      const { tool, itemWrapper, inlineToolbar } = openCreating();
+
+      await vi.waitFor(() => expect(pageRows(itemWrapper)).toHaveLength(2));
+      pageRows(itemWrapper)[1].click();
+
+      expect((tool as unknown as PagesTool).insertLink).toHaveBeenCalledWith('https://app.test/p/p2');
+      expect(inlineToolbar.close).toHaveBeenCalled();
+      expect(localStorage.getItem('blok-recent-links')).toBeNull();
+    });
+
+    it('links to an address the typed-link rules would refuse, as the host gave it', async () => {
+      pageHost.config = { search: vi.fn().mockResolvedValue(PAGES), href: (pageId) => `page?id=${pageId}` };
+
+      const { tool, itemWrapper } = openCreating();
+
+      await vi.waitFor(() => expect(pageRows(itemWrapper)).toHaveLength(2));
+      pageRows(itemWrapper)[0].click();
+
+      expect((tool as unknown as PagesTool).insertLink).toHaveBeenCalledWith('page?id=p1');
+    });
+
+    it('leaves out a page with no address or an unsafe one', async () => {
+      pageHost.config = {
+        search: vi.fn().mockResolvedValue([...PAGES, { pageId: 'p3', title: 'Empty' }]),
+        href: (pageId) => ({ p1: 'javascript:alert(1)', p2: 'https://app.test/p/p2' } as Record<string, string>)[pageId] ?? '',
+      };
+
+      const { itemWrapper } = openCreating();
+
+      await vi.waitFor(() => expect(pageTitles(itemWrapper)).toEqual(['Release notes']));
+    });
+
+    it('leaves out a page the user may not see', async () => {
+      pageHost.config = hostWith(vi.fn().mockResolvedValue([{ pageId: 'p0', title: 'Secret', access: 'none' }, ...PAGES]));
+
+      const { itemWrapper } = openCreating();
+
+      await vi.waitFor(() => expect(pageTitles(itemWrapper)).toEqual(['Roadmap', 'Release notes']));
+    });
+
+    it.each([
+      ['no page tool', null],
+      ['no search', { href: (pageId: string) => `/p/${pageId}` }],
+      ['no address', { search: vi.fn().mockResolvedValue(PAGES) }],
+    ] as [string, PageHost | null][])('shows no Pages section with %s', async (_name, config) => {
+      pageHost.config = config;
+
+      const { itemWrapper } = openCreating();
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(pageSection(itemWrapper)?.hidden).toBe(true);
+      expect(config?.search ?? vi.fn()).not.toHaveBeenCalled();
+    });
+
+    it('searches as the user types, after a short pause, with the latest text only', async () => {
+      vi.useFakeTimers();
+
+      const search = vi.fn().mockResolvedValue([]);
+
+      pageHost.config = hostWith(search);
+
+      const { input } = openCreating();
+
+      search.mockClear();
+      type(input, 'r');
+      type(input, 'ro');
+      type(input, 'roa');
+
+      expect(search).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(150);
+
+      expect(search).toHaveBeenCalledTimes(1);
+      expect(search).toHaveBeenCalledWith('roa');
+    });
+
+    it('drops an answer that arrives after a newer one', async () => {
+      vi.useFakeTimers();
+
+      const answers: Record<string, (hits: PageHit[]) => void> = {};
+      const search = vi.fn((query: string) => new Promise<readonly PageHit[]>((resolve) => {
+        answers[query] = resolve;
+      }));
+
+      pageHost.config = hostWith(search);
+
+      const { itemWrapper, input } = openCreating();
+
+      type(input, 'ro');
+      await vi.advanceTimersByTimeAsync(150);
+      type(input, 'rel');
+      await vi.advanceTimersByTimeAsync(150);
+
+      answers.rel([PAGES[1]]);
+      await vi.advanceTimersByTimeAsync(0);
+      answers.ro([PAGES[0]]);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(pageTitles(itemWrapper)).toEqual(['Release notes']);
+    });
+
+    it('keeps showing the pages that still match while a new search is on its way', async () => {
+      vi.useFakeTimers();
+
+      const search = vi.fn().mockResolvedValueOnce(PAGES).mockReturnValue(new Promise(() => undefined));
+
+      pageHost.config = hostWith(search);
+
+      const { itemWrapper, input } = openCreating();
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(pageTitles(itemWrapper)).toEqual(['Roadmap', 'Release notes']);
+
+      type(input, 'road');
+
+      expect(pageTitles(itemWrapper)).toEqual(['Roadmap']);
+    });
+
+    it('marks the part of a page title the search matched', async () => {
+      vi.useFakeTimers();
+      pageHost.config = hostWith(vi.fn().mockResolvedValue(PAGES));
+
+      const { itemWrapper, input } = openCreating();
+
+      await vi.advanceTimersByTimeAsync(0);
+      type(input, 'road');
+
+      const title = pageRows(itemWrapper)[0].querySelector('[data-link-page-title]');
+
+      expect(title?.querySelector('[data-link-page-match]')?.textContent).toBe('Road');
+      expect(title?.textContent).toBe('Roadmap');
+    });
+
+    it('picks the first page on Enter when the search finds pages and no heading', async () => {
+      vi.useFakeTimers();
+      pageHost.config = hostWith(vi.fn().mockResolvedValue([PAGES[0]]));
+
+      const { tool, itemWrapper, input } = openCreating();
+
+      type(input, 'road');
+      await vi.advanceTimersByTimeAsync(150);
+
+      expect(pageRows(itemWrapper)[0]).toHaveAttribute('aria-selected', 'true');
+      expect(input.getAttribute('aria-activedescendant')).toBe(pageRows(itemWrapper)[0].id);
+
+      press(input, 'Enter');
+
+      expect((tool as unknown as PagesTool).insertLink).toHaveBeenCalledWith('https://app.test/p/p1');
+    });
+
+    it('keeps Enter on the heading already picked when pages arrive late', async () => {
+      vi.useFakeTimers();
+      pageHost.config = hostWith(vi.fn().mockResolvedValue([{ pageId: 'p5', title: 'Setup notes' }]));
+      addHeading(2, 'Setup guide', 'h-setup');
+
+      const { tool, itemWrapper, input } = openCreating();
+
+      type(input, 'setup');
+
+      const heading = itemWrapper.querySelector<HTMLElement>('[data-link-heading-row]');
+
+      expect(heading).toHaveAttribute('aria-selected', 'true');
+
+      await vi.advanceTimersByTimeAsync(150);
+
+      expect(pageTitles(itemWrapper)).toEqual(['Setup notes']);
+      expect(heading).toHaveAttribute('aria-selected', 'true');
+      expect(input.getAttribute('aria-activedescendant')).toBe(heading?.id);
+
+      press(input, 'Enter');
+
+      expect((tool as unknown as PagesTool).insertLink).toHaveBeenCalledWith('#h-setup');
+    });
+
+    it('leaves Enter to a typed web link, and does not search pages for it', async () => {
+      vi.useFakeTimers();
+
+      const search = vi.fn().mockResolvedValue(PAGES);
+
+      pageHost.config = hostWith(search);
+
+      const { tool, itemWrapper, input } = openCreating();
+
+      await vi.advanceTimersByTimeAsync(0);
+      search.mockClear();
+      type(input, 'https://example.com');
+      await vi.advanceTimersByTimeAsync(150);
+
+      expect(search).not.toHaveBeenCalled();
+      expect(pageSection(itemWrapper)?.hidden).toBe(true);
+
+      press(input, 'Enter');
+
+      expect((tool as unknown as PagesTool).insertLink).toHaveBeenCalledWith('https://example.com');
+    });
+
+    it('does not search pages for a "#" heading search', async () => {
+      vi.useFakeTimers();
+
+      const search = vi.fn().mockResolvedValue(PAGES);
+
+      pageHost.config = hostWith(search);
+
+      const { itemWrapper, input } = openCreating();
+
+      await vi.advanceTimersByTimeAsync(0);
+      search.mockClear();
+      type(input, '#road');
+      await vi.advanceTimersByTimeAsync(150);
+
+      expect(search).not.toHaveBeenCalled();
+      expect(pageSection(itemWrapper)?.hidden).toBe(true);
+    });
+
+    it('walks from the recent links through the pages to the headings with the arrows', async () => {
+      pageHost.config = hostWith(vi.fn().mockResolvedValue([PAGES[0]]));
+      localStorage.setItem('blok-recent-links', JSON.stringify([{ url: 'https://a.com', title: 'A', checked: true }]));
+      addHeading(2, 'Intro');
+
+      const { itemWrapper, input } = openCreating();
+
+      await vi.waitFor(() => expect(pageRows(itemWrapper)).toHaveLength(1));
+
+      const picked = (): string | undefined => itemWrapper.querySelector('[aria-selected="true"]')?.id;
+
+      press(input, 'ArrowDown');
+      expect(picked()).toBe(itemWrapper.querySelector('[data-link-recent-row]')?.id);
+      press(input, 'ArrowDown');
+      expect(picked()).toBe(pageRows(itemWrapper)[0].id);
+      press(input, 'ArrowDown');
+      expect(picked()).toBe(itemWrapper.querySelector('[data-link-heading-row]')?.id);
+    });
+
+    it('drops an answer that arrives after the field closed, and a pending search with it', async () => {
+      vi.useFakeTimers();
+
+      const answers: ((hits: PageHit[]) => void)[] = [];
+      const search = vi.fn(() => new Promise<readonly PageHit[]>((resolve) => {
+        answers.push(resolve);
+      }));
+
+      pageHost.config = hostWith(search);
+
+      const { itemWrapper, input, close } = openCreating();
+
+      type(input, 'ro');
+      close();
+      await vi.advanceTimersByTimeAsync(150);
+
+      expect(search).toHaveBeenCalledTimes(1);
+
+      answers[0](PAGES);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(pageRows(itemWrapper)).toHaveLength(0);
+      expect(pageSection(itemWrapper)?.hidden).toBe(true);
+    });
+
+    it('shows no pages when the host search fails', async () => {
+      pageHost.config = hostWith(vi.fn().mockRejectedValue(new Error('offline')));
+
+      const { itemWrapper } = openCreating();
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(pageSection(itemWrapper)?.hidden).toBe(true);
+    });
+
+    it('offers the link kinds only when there are no pages either', async () => {
+      pageHost.config = hostWith(vi.fn().mockResolvedValue(PAGES));
+
+      const { itemWrapper } = openCreating();
+      const kinds = itemWrapper.querySelector<HTMLElement>('[data-link-kinds]');
+
+      expect(kinds?.hidden).toBe(false);
+      await vi.waitFor(() => expect(pageRows(itemWrapper)).toHaveLength(2));
+      expect(kinds?.hidden).toBe(true);
     });
   });
 
@@ -1542,6 +2332,52 @@ describe('LinkInlineTool', () => {
       expect(itemWrapper.querySelector('[data-link-headings-label]')?.textContent).toBe('On this page');
       expect(headingTitles(itemWrapper)).toEqual(['Intro', 'Setup', 'Install']);
       expect(headingRows(itemWrapper).map((row) => row.getAttribute('data-link-heading-level'))).toEqual(['1', '2', '3']);
+    });
+
+    it('sets the headings as an outline: no icons, stepped in by depth, the level at the edge', () => {
+      addHeading(2, 'Pages');
+      addHeading(6, 'Smallest');
+      addHeading(3, 'Ordered');
+      addHeading(3, 'Checklist');
+      addHeading(5, 'Toggles');
+      addHeading(1, 'Top');
+
+      const { itemWrapper } = openCreating();
+      const rows = headingRows(itemWrapper);
+
+      expect(rows.map((row) => row.getAttribute('data-link-heading-depth'))).toEqual(['0', '1', '1', '1', '2', '0']);
+      expect(rows.map((row) => row.querySelector('[data-link-heading-tag]')?.getAttribute('data-link-heading-tag'))).toEqual(['H2', 'H6', 'H3', 'H3', 'H5', 'H1']);
+      expect(rows.map((row) => row.textContent?.trim())).toEqual(['Pages', 'Smallest', 'Ordered', 'Checklist', 'Toggles', 'Top']);
+      expect(rows[0].firstElementChild?.querySelector('[data-link-heading-title]')).not.toBeNull();
+      expect(rows[0].querySelectorAll('svg')).toHaveLength(1);
+      expect(rows[0].querySelector('[data-link-option-enter-hint] svg')).not.toBeNull();
+    });
+
+    it('never steps a heading in more than two levels', () => {
+      [1, 2, 3, 4, 5].forEach((level) => addHeading(level, `Level ${level}`));
+
+      const { itemWrapper } = openCreating();
+
+      expect(headingRows(itemWrapper).map((row) => row.getAttribute('data-link-heading-depth'))).toEqual(['0', '1', '2', '2', '2']);
+    });
+
+    it('marks the part of a heading the search matched, and clears it with the search', () => {
+      addHeading(2, 'Inline Formatting');
+
+      const { itemWrapper, input } = openCreating();
+      const title = (): Element | null => headingRows(itemWrapper)[0].querySelector('[data-link-heading-title]');
+
+      input.value = 'form';
+      input.dispatchEvent(new Event('input'));
+
+      expect(title()?.querySelector('[data-link-heading-match]')?.textContent).toBe('Form');
+      expect(title()?.textContent).toBe('Inline Formatting');
+
+      input.value = '';
+      input.dispatchEvent(new Event('input'));
+
+      expect(title()?.querySelector('[data-link-heading-match]')).toBeNull();
+      expect(title()?.textContent).toBe('Inline Formatting');
     });
 
     it('skips empty headings and reads a nested child\'s heading only once, from the child', () => {
@@ -1810,7 +2646,7 @@ describe('LinkInlineTool', () => {
 
       expect(kindSection(itemWrapper)?.hidden).toBe(false);
       expect(kindRows(itemWrapper).map((row) => row.querySelector('[data-link-kind-title]')?.textContent)).toEqual([
-        defaultDictionary['tools.link.webLink'],
+        defaultDictionary['tools.link.webPage'],
         defaultDictionary['tools.link.emailAddress'],
       ]);
       expect(kindRows(itemWrapper).map((row) => row.getAttribute('data-link-kind-prefix'))).toEqual(['https://', 'mailto:']);

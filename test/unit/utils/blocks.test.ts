@@ -1208,6 +1208,50 @@ describe('blocks utilities', () => {
     });
   });
 
+  describe('a tool\'s `styles` config limits its Turn into targets', () => {
+    const mockSave = vi.fn();
+    const createMockBlock = (name: string): BlockAPI => ({
+      id: 'block-1',
+      name,
+      save: mockSave,
+    } as unknown as BlockAPI);
+
+    const listTool = {
+      name: 'list',
+      settings: { styles: ['unordered', 'ordered'] },
+      conversionConfig: { export: 'text', import: 'text' },
+      toolbox: [
+        { icon: 'B', title: 'Bulleted', data: { style: 'unordered' } },
+        { icon: 'N', title: 'Numbered', data: { style: 'ordered' } },
+        { icon: 'T', title: 'To-do', data: { style: 'checklist' } },
+      ],
+    } as unknown as BlockToolAdapter;
+    const paragraphTool = {
+      name: 'paragraph',
+      conversionConfig: { export: 'text', import: 'text' },
+      toolbox: [ { icon: 'P', title: 'Paragraph' } ],
+    } as unknown as BlockToolAdapter;
+    const titles = (tools: BlockToolAdapter[]): string[] =>
+      tools.flatMap(tool => (tool.toolbox ?? []).map(item => String(item.title)));
+
+    it('for one block', async () => {
+      mockSave.mockResolvedValue({ id: 'test-block-id', tool: 'paragraph', data: { text: 'Test' }, time: Date.now() });
+
+      const result = await getConvertibleToolsForBlock(createMockBlock('paragraph'), [listTool, paragraphTool]);
+
+      expect(titles(result)).toEqual(['Bulleted', 'Numbered']);
+    });
+
+    it('for several blocks', async () => {
+      const result = await getConvertibleToolsForBlocks(
+        [createMockBlock('paragraph'), createMockBlock('paragraph')],
+        [listTool, paragraphTool]
+      );
+
+      expect(titles(result)).toEqual(['Bulleted', 'Numbered']);
+    });
+  });
+
   describe('getConvertibleToolsForBlocks', () => {
     const mockSave = vi.fn();
     const createMockBlock = (name: string): BlockAPI => ({

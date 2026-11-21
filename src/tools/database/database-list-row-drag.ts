@@ -69,14 +69,15 @@ export class DatabaseListRowDrag {
     document.addEventListener('pointermove', this.boundPointerMove);
     document.addEventListener('pointerup', this.boundPointerUp);
     document.addEventListener('pointercancel', this.boundPointerCancel);
-    document.addEventListener('keydown', this.boundKeyDown);
+    // Window capture runs before Blok's own keydown capture on document, so its Escape never enters navigation mode.
+    window.addEventListener('keydown', this.boundKeyDown, true);
   }
 
   public cleanup(): void {
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
     document.removeEventListener('pointercancel', this.boundPointerCancel);
-    document.removeEventListener('keydown', this.boundKeyDown);
+    window.removeEventListener('keydown', this.boundKeyDown, true);
 
     this.autoScroll?.destroy();
     this.autoScroll = null;
@@ -91,6 +92,7 @@ export class DatabaseListRowDrag {
       this.sourceRow.removeAttribute('data-blok-database-drag-source');
       this.sourceRow = null;
     }
+    this.wrapper.removeAttribute('data-blok-database-list-row-dragging');
 
     this.isDragging = false;
     this.rowId = '';
@@ -142,6 +144,8 @@ export class DatabaseListRowDrag {
       return;
     }
     if (this.isDragging) {
+      e.preventDefault();
+      e.stopPropagation();
       swallowClickAfterCancel();
     }
     this.cleanup();
@@ -155,6 +159,7 @@ export class DatabaseListRowDrag {
       this.ghostOffsetX = this.startX - rect.left;
       this.sourceRow.setAttribute('data-blok-database-drag-source', '');
     }
+    this.wrapper.setAttribute('data-blok-database-list-row-dragging', '');
 
     this.createGhost(e);
     this.autoScroll = createDatabaseAutoScroll(this.sourceRow ?? this.wrapper, 'y', listAutoScrollSpeed, () => {
@@ -182,6 +187,8 @@ export class DatabaseListRowDrag {
       const clone = this.sourceRow.cloneNode(true) as HTMLElement;
 
       clone.removeAttribute('data-blok-database-drag-source');
+      // The ghost clips its content, so the row's 1px margins would make it 32 tall (Notion: 30).
+      clone.style.margin = '0';
       ghost.appendChild(clone);
 
       copyGhostRadius(this.sourceRow, ghost);
@@ -210,20 +217,18 @@ export class DatabaseListRowDrag {
 
   private updateDropIndicator(e: PointerEvent): void {
     const beforeEl = this.getDropPosition(e.clientY).beforeEl;
-    // The source row stays in place, so it counts as a neighbour for the line.
-    const visible = Array.from(this.wrapper.querySelectorAll<HTMLElement>('[data-blok-database-list-row]'));
 
     if (beforeEl instanceof HTMLElement) {
       const rect = beforeEl.getBoundingClientRect();
-      const above = visible[visible.indexOf(beforeEl) - 1];
-      const centerY = above === undefined ? rect.top : (above.getBoundingClientRect().bottom + rect.top) / 2;
 
-      this.dropLine.showHorizontal({ left: rect.left, centerY, width: rect.width });
+      // notion-motion.md Round 52 §1: the 4px line's top is the target row's top − 2.
+      this.dropLine.showHorizontal({ left: rect.left, centerY: rect.top, width: rect.width });
 
       return;
     }
 
-    const last = visible.at(-1);
+    // The source row stays in place, so it can be the last row the line sits under.
+    const last = Array.from(this.wrapper.querySelectorAll<HTMLElement>('[data-blok-database-list-row]')).at(-1);
 
     if (last === undefined) {
       this.dropLine.hide();

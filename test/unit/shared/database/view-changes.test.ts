@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { applyViewChanges, layoutChange } from '../../../../src/shared/database/view-changes';
+import { applyViewChanges, groupByChange, layoutChange, subGroupByChange } from '../../../../src/shared/database/view-changes';
 
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/shared/database/types';
 
@@ -37,6 +37,83 @@ describe('applyViewChanges', () => {
     applyViewChanges(view, { properties: [{ id: 's', visible: true }, { id: 'n', visible: false }] }, schema);
 
     expect(view.visibleProperties).toEqual(['s']);
+  });
+});
+
+describe('groupByChange', () => {
+  // notion-motion.md Round 42 §1 (a board regrouped to Status) and Round 77 §2 (a timeline grouped by Status).
+  it('a new Status grouping starts with Hide empty groups on', () => {
+    expect(groupByChange({ ...table(), type: 'timeline' }, schema[2])).toEqual({ groupBy: 's', groupSettings: { hideEmptyGroups: true } });
+    expect(groupByChange({ ...table(), type: 'board', groupBy: 'n' }, schema[2])).toEqual({ groupBy: 's', groupSettings: { hideEmptyGroups: true } });
+  });
+
+  // notion-motion.md Round 78 §4 (r78-n-hideempty.raw): picking Select turned the switch from off to on, on a board and a timeline.
+  it('a new Select grouping starts with Hide empty groups on', () => {
+    const kind: PropertyDefinition = { id: 'k', name: 'Kind', type: 'select', position: 'a3' };
+
+    expect(groupByChange({ ...table(), type: 'timeline' }, kind)).toEqual({ groupBy: 'k', groupSettings: { hideEmptyGroups: true } });
+    expect(groupByChange({ ...table(), type: 'board', groupBy: 's', groupSettings: {} }, kind)).toEqual({ groupBy: 'k', groupSettings: { hideEmptyGroups: true } });
+  });
+
+  // notion-motion.md Round 79 §2 (r79-n-hideempty.raw): with the switch off, every pick turned it on, whatever the type.
+  it('a new grouping of any type starts with Hide empty groups on', () => {
+    const types: PropertyDefinition['type'][] = ['multiSelect', 'checkbox', 'date', 'text', 'number'];
+
+    for (const type of types) {
+      const property: PropertyDefinition = { id: 'x', name: 'X', type, position: 'a3' };
+
+      expect(groupByChange({ ...table(), type: 'board', groupBy: 's', groupSettings: { hideEmptyGroups: false } }, property)).toEqual({ groupBy: 'x', groupSettings: { hideEmptyGroups: true } });
+      expect(groupByChange({ ...table(), type: 'timeline' }, property)).toEqual({ groupBy: 'x', groupSettings: { hideEmptyGroups: true } });
+    }
+  });
+
+  // Round 79 §2: Status → Status on a board and Select → Select on a timeline both turned the switch back on.
+  it('re-picking the same property turns Hide empty groups on and keeps its other settings', () => {
+    expect(groupByChange({ ...table(), groupBy: 's', groupSettings: { hideEmptyGroups: false, colorColumns: false } }, schema[2]))
+      .toEqual({ groupBy: 's', groupSettings: { hideEmptyGroups: true, colorColumns: false } });
+  });
+
+  // notion-motion.md Round 81 (r81-n-bd-repick.raw): Status re-picked on a board, Sort Descending became Ascending
+  // and the hidden "Not started" came back. Sub-group states were not read, so they stay.
+  it('re-picking the same property resets the group sort and shows hidden groups again', () => {
+    const change = groupByChange({
+      ...table(), type: 'board', groupBy: 's', groupSettings: { sort: 'descending' },
+      hiddenGroups: [{ id: 'todo' }, { id: 'sub:x' }],
+    }, schema[2]);
+
+    expect(change.groupSettings?.sort).toBeUndefined();
+    expect(change.hiddenGroups).toEqual([{ id: 'sub:x' }]);
+  });
+
+  it('picking another property leaves the hidden groups alone', () => {
+    expect(groupByChange({ ...table(), groupBy: 'n', hiddenGroups: [{ id: 'todo' }] }, schema[2])).not.toHaveProperty('hiddenGroups');
+  });
+});
+
+describe('subGroupByChange', () => {
+  // notion-motion.md Round 82 (r82-n-a2-sub-before-repick.raw, -sub-repick.raw): Sub-group by Select,
+  // Reverse alphabetical with "Red" hidden; re-picking Select gave Sort Manual and showed Red.
+  it('re-picking the same property resets the sub-group sort and shows hidden sub-groups again', () => {
+    const change = subGroupByChange({
+      ...table(), type: 'board', groupBy: 'n', subGroupBy: 's', subGroupSettings: { sort: 'descending', hideEmptyGroups: true },
+      hiddenGroups: [{ id: 'todo' }, { id: 'sub:red' }],
+    }, schema[2]);
+
+    expect(change.subGroupSettings).toEqual({ hideEmptyGroups: true });
+    expect(change.hiddenGroups).toEqual([{ id: 'todo' }]);
+  });
+
+  // Round 84b §3 (r84-n-subgroup.raw): switch off, re-pick Select → on.
+  it('re-picking the same property turns Hide empty groups back on', () => {
+    const change = subGroupByChange({
+      ...table(), type: 'board', groupBy: 'n', subGroupBy: 's', subGroupSettings: { hideEmptyGroups: false, showAggregation: true },
+    }, schema[2]);
+
+    expect(change.subGroupSettings).toEqual({ hideEmptyGroups: true, showAggregation: true });
+  });
+
+  it('picking another property leaves the hidden groups alone', () => {
+    expect(subGroupByChange({ ...table(), subGroupBy: 'n', hiddenGroups: [{ id: 'sub:x' }] }, schema[2])).not.toHaveProperty('hiddenGroups');
   });
 });
 

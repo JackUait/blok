@@ -12,7 +12,7 @@ import { KeyboardNavigation } from './composers/keyboardNavigation';
 import { MarkdownShortcuts } from './composers/markdownShortcuts';
 import { NavigationMode } from './composers/navigationMode';
 import { PageReferenceTrigger } from './composers/pageReferenceTrigger';
-import { horizontalArrowIntent, isPrintableKeyEvent, isInsideKeyboardOwner, keyCodeFromEvent } from './utils/keyboard';
+import { horizontalArrowIntent, isPrintableKeyEvent, isFocusedControl, isInsideKeyboardOwner, keyCodeFromEvent } from './utils/keyboard';
 import { isTextLikeBlock } from './utils/text-like-block';
 import { restoreDeletedBoundarySpace } from '../../utils/delete-boundary-nbsp';
 
@@ -222,31 +222,34 @@ export class BlockEvents extends Module {
      * one — all while preventDefault() swallows the keystroke the field expected.
      * "/" would likewise open the toolbox instead of typing a slash.
      *
+     * A focused button, link, select or other non-text control owns the same keys:
+     * Enter must reach it so the browser clicks it.
+     *
      * Everything else stays handled: Escape (navigation mode), arrows, Tab and the
      * Cmd shortcuts are how a user leaves a field, not how they edit inside one.
      */
-    const isInNativeInput = $.isNativeInput(event.target);
+    const isInNativeControl = $.isNativeInput(event.target) || isFocusedControl(event.target);
 
     /**
      * Fire keydown processor by normalized keyboard code
      */
     switch (keyCode) {
       case keyCodes.BACKSPACE:
-        if (isInNativeInput) {
+        if (isInNativeControl) {
           break;
         }
         this.keyboardNavigation.handleBackspace(event);
         break;
 
       case keyCodes.DELETE:
-        if (isInNativeInput) {
+        if (isInNativeControl) {
           break;
         }
         this.keyboardNavigation.handleDelete(event);
         break;
 
       case keyCodes.ENTER:
-        if (isInNativeInput) {
+        if (isInNativeControl) {
           break;
         }
         /**
@@ -304,7 +307,7 @@ export class BlockEvents extends Module {
      * We check for "key" here since on different keyboard layouts "/" can be typed as "Shift + 7" etc
      * @todo probably using "beforeInput" event would be better here
      */
-    if (event.key === '/' && !event.ctrlKey && !event.metaKey && !isInNativeInput) {
+    if (event.key === '/' && !event.ctrlKey && !event.metaKey && !isInNativeControl) {
       this.slashPressed(event);
     }
 

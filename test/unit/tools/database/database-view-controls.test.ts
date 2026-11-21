@@ -5,8 +5,9 @@ import { operatorPick } from '../../../../src/tools/database/database-filter-chi
 import type { DatabaseViewConfig, FilterRule, PropertyDefinition } from '../../../../src/tools/database/types';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { hover, shownHint } from './hint-harness';
+import { PopoverDesktop } from '../../../../src/components/utils/popover/popover-desktop';
 import { PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
-import { IconSigma } from '../../../../src/components/icons';
+import { IconLockOpen, IconPencilLine, IconSigma } from '../../../../src/components/icons';
 
 const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
@@ -18,6 +19,15 @@ const q = (id: string): HTMLElement | null => document.querySelector(`[data-blok
 
 /** Text as a reader sees it: icon markup leaves whitespace nodes. */
 const text = (el: Element | null | undefined): string | undefined => el?.textContent?.replace(/\s+/g, ' ').trim();
+
+/** The next control a reader sees: hidden ones (the lock on an unlocked database) are skipped. */
+const nextShown = (el: Element | null | undefined): Element | null => {
+  let next = el?.nextElementSibling ?? null;
+
+  while (next instanceof HTMLElement && next.hidden) next = next.nextElementSibling;
+
+  return next;
+};
 
 const click = (id: string): void => {
   const el = q(id);
@@ -91,6 +101,23 @@ describe('DatabaseViewControls', () => {
     expect(saved.view.colorRules?.[0]).toMatchObject({ propertyId: 'fn', operator: 'equals' });
   });
 
+  // notion-motion.md Round 86 §1 #7 (r86-n-tip-sort.raw): the Sort hint sits above the button, its bottom 6 over the button's top.
+  it('shows a toolbar icon button\'s hint above it, 6 clear, after the hover delay', () => {
+    destroyTooltip();
+    vi.useFakeTimers();
+    try {
+      setup();
+      hover(q('database-toolbar-sort'));
+      vi.advanceTimersByTime(HINT_DELAY - 1);
+      expect(shownHint()).toBeNull();
+      vi.advanceTimersByTime(1);
+      expect(shownHint()?.placement).toBe('top');
+      expect(document.querySelector<HTMLElement>('[data-blok-testid="tooltip"]')?.style.top).toBe('294px');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('draws Filter, Sort, search and settings as named icon buttons, as Notion does (research/07:53)', () => {
     setup();
 
@@ -103,6 +130,12 @@ describe('DatabaseViewControls', () => {
     }
     expect(q('database-toolbar-filter')?.getAttribute('aria-label')).toBe('tools.database.settingsFilter');
     expect(q('database-toolbar-sort')?.getAttribute('aria-label')).toBe('tools.database.settingsSort');
+  });
+
+  it('marks the Search button so the stylesheet can size its glyph', () => {
+    setup();
+
+    expect(q('database-toolbar-search')?.hasAttribute('data-blok-database-toolbar-search')).toBe(true);
   });
 
   // The fold probes write on it on every resize; they are not edits.
@@ -148,7 +181,7 @@ describe('DatabaseViewControls', () => {
 
       expect(button?.hidden).toBe(false);
       expect(text(button)).toBe('No date (2)');
-      expect(button?.nextElementSibling).toBe(q('database-toolbar-filter'));
+      expect(nextShown(button)).toBe(q('database-toolbar-filter'));
       button?.click();
       expect(open).toHaveBeenCalledWith(button);
     });
@@ -241,7 +274,7 @@ describe('DatabaseViewControls', () => {
   it('turns Hide empty groups on when a column header groups by a number', () => {
     const { controls, host } = setup();
 
-    controls.groupBy('num', document.body.appendChild(document.createElement('button')));
+    controls.groupBy('num');
 
     expect(host.updateView).toHaveBeenCalledWith({ groupBy: 'num', groupSettings: { hideEmptyGroups: true } });
   });
@@ -388,6 +421,25 @@ describe('DatabaseViewControls', () => {
     expect(q('database-filter-bar-add')?.hasAttribute('data-popover-open')).toBe(false);
   });
 
+  // notion-motion.md Round 83 §5 (r83-n-af-group.raw): a pick in "+ Add filter rule ⌄" keeps the panel open.
+  it.each([
+    ['database-filter-add-rule', 2],
+    ['database-filter-add-group', 2],
+  ])('keeps the advanced filter open after %s from the toolbar route', (pick, rules) => {
+    const { controls, saved } = setup();
+
+    click('database-toolbar-filter');
+    click('database-filter-picker-advanced');
+    const rootId = String(controls.effective(saved.view).filterTree?.id);
+
+    click(`database-filter-add-rule-${rootId}`);
+    click(pick);
+
+    expect(q('database-advanced-filter')).not.toBeNull();
+    expect(controls.effective(saved.view).filterTree?.filterRules).toHaveLength(rules);
+    expect(q(`database-filter-add-rule-${rootId}`)).toHaveFocus();
+  });
+
   // notion-motion.md Round 18 §2 (r18-adv-open.raw, -prop.raw, -op.raw): each rule is edited inline, its pickers are flyouts.
   describe('advanced filter rules edited inline', () => {
     const openAdvanced = (): { controls: DatabaseViewControls; saved: { view: DatabaseViewConfig }; ruleId: () => string; rule: () => Record<string, unknown> | undefined } => {
@@ -479,6 +531,53 @@ describe('DatabaseViewControls', () => {
         expect.objectContaining({ propertyId: 'title', operator: 'contains' }),
         expect.objectContaining({ propertyId: 'title', operator: 'contains', value: '' }),
       ]);
+    });
+
+    // notion-motion.md Round 83 §5 (r83-n-af-one.raw): after "Add advanced filter" focus stays on the toolbar Filter button.
+    it('leaves focus on the toolbar Filter button when the advanced filter opens from it', () => {
+      openAdvanced();
+
+      expect(q('database-advanced-filter')).not.toBeNull();
+      expect(q('database-toolbar-filter')).toHaveFocus();
+    });
+
+    // notion-motion.md Round 65 §2 (r65-n-advfilter.raw): "Al", then Add filter rule, gives rules ["Al", "Al"].
+    it('"Add filter rule" copies the value of the rule above', () => {
+      const { controls, saved, ruleId } = openAdvanced();
+      const tree = (): DatabaseViewConfig['filterTree'] => controls.effective(saved.view).filterTree;
+      const input = q(`database-filter-rule-value-${ruleId()}`);
+
+      if (!(input instanceof HTMLInputElement)) throw new Error('no value field');
+      input.value = 'Al';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      click(`database-filter-add-rule-${tree()?.id ?? ''}`);
+      click('database-filter-add-rule');
+
+      expect(tree()?.filterRules[1]).toEqual(expect.objectContaining({ propertyId: 'title', operator: 'contains', value: 'Al' }));
+    });
+
+    // notion-motion.md Round 86 §1 #2 (r86-n-advrule-copy.raw): "Name Starts with zzq" is copied whole, by a new rule and by a new group's rule.
+    it('a new rule and a new group\'s rule copy the operator and value of the rule above, not only on the default operator', () => {
+      const { controls, saved, ruleId } = openAdvanced();
+      const tree = (): DatabaseViewConfig['filterTree'] => controls.effective(saved.view).filterTree;
+      const id = ruleId();
+
+      click(`database-filter-rule-operator-${id}`);
+      click('database-filter-op-starts_with');
+      const input = q(`database-filter-rule-value-${id}`);
+
+      if (!(input instanceof HTMLInputElement)) throw new Error('no value field');
+      input.value = 'zzq';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      click(`database-filter-add-rule-${tree()?.id ?? ''}`);
+      click('database-filter-add-rule');
+      click(`database-filter-add-rule-${tree()?.id ?? ''}`);
+      click('database-filter-add-group');
+
+      const copy = { propertyId: 'title', operator: 'starts_with', value: 'zzq' };
+
+      expect(tree()?.filterRules[1]).toEqual(expect.objectContaining(copy));
+      expect(tree()?.filterRules[2]).toEqual(expect.objectContaining({ filterRules: [expect.objectContaining(copy)] }));
     });
 
     it('"Add filter group" adds a group that holds one Name rule', () => {
@@ -989,6 +1088,142 @@ describe('DatabaseViewControls', () => {
     expect(q('database-toolbar-locked')?.hidden).toBe(false);
   });
 
+  // notion-motion.md Round 68 §1: Notion's "Locked" is a text button with a menu: Unlock for me, Unlock for everyone.
+  describe('Locked button', () => {
+    const lockLevers = (state: { forMe: boolean }, canUnlock = true): Partial<ViewControlsHost> => ({
+      lock: {
+        unlockedForMe: () => state.forMe,
+        setUnlockedForMe: vi.fn(),
+        canUnlock: () => canUnlock,
+      },
+    });
+    const item = (name: string): HTMLElement | null => document.querySelector(`[data-blok-popover-opened] [data-blok-item-name="${name}"]`);
+
+    it('is a button reading "Locked" that opens Unlock for me and Unlock for everyone, the first row filled', () => {
+      setup({ locked: true, levers: lockLevers({ forMe: false }) });
+      const lock = q('database-toolbar-locked');
+
+      expect(lock?.tagName).toBe('BUTTON');
+      expect(text(lock)).toBe('tools.database.lockedButton');
+      expect(lock?.querySelector('svg')).not.toBeNull();
+      click('database-toolbar-locked');
+
+      expect(text(item('database-unlock-for-me'))).toBe('tools.database.unlockForMe');
+      expect(text(item('database-unlock-for-everyone'))).toBe('tools.database.unlockForEveryone');
+      expect(item('database-unlock-for-me')?.getAttribute('data-blok-focused')).toBe('true');
+      expect(lock?.hasAttribute('data-popover-open')).toBe(true);
+    });
+
+    // notion-motion.md Round 69 §1: Notion's "Unlock for me" has a pencil, "Unlock for everyone" the open lock.
+    it('draws a pencil on Unlock for me and the open lock on Unlock for everyone, in a menu of its own look', () => {
+      setup({ locked: true, levers: lockLevers({ forMe: false }) });
+      click('database-toolbar-locked');
+
+      const drawing = (svg: string | undefined): string | undefined => svg === undefined ? undefined : new DOMParser().parseFromString(svg, 'image/svg+xml').querySelector('svg')?.innerHTML.replace(/\s+/g, ' ');
+      const iconOf = (name: string): string | undefined => drawing(item(name)?.querySelector('svg')?.outerHTML);
+
+      expect(iconOf('database-unlock-for-me')).toBe(drawing(IconPencilLine));
+      expect(iconOf('database-unlock-for-everyone')).toBe(drawing(IconLockOpen));
+      expect(item('database-unlock-for-me')?.closest('[data-blok-popover]')?.getAttribute('data-blok-popover-custom-class')).toContain('blok-database-lock-menu');
+    });
+
+    // notion-motion.md Round 70 §2: Notion moves focus into the menu (role=menu), the first row filled.
+    it('puts focus in the menu on open, and the arrows still move the fill', () => {
+      setup({ locked: true, levers: lockLevers({ forMe: false }) });
+      click('database-toolbar-locked');
+
+      const menu = item('database-unlock-for-me')?.closest('[role="menu"]');
+
+      expect(menu).toHaveFocus();
+      expect(item('database-unlock-for-me')?.getAttribute('data-blok-focused')).toBe('true');
+      document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      expect(item('database-unlock-for-everyone')?.getAttribute('data-blok-focused')).toBe('true');
+    });
+
+    it('closes its menu on a second click', () => {
+      setup({ locked: true, levers: lockLevers({ forMe: false }) });
+      click('database-toolbar-locked');
+      click('database-toolbar-locked');
+
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+      expect(q('database-toolbar-locked')?.hasAttribute('data-popover-open')).toBe(false);
+    });
+
+    it('unlocks for this viewer only from Unlock for me, and for everyone from Unlock for everyone', () => {
+      const levers = lockLevers({ forMe: false });
+      const { host } = setup({ locked: true, levers });
+
+      click('database-toolbar-locked');
+      item('database-unlock-for-me')?.click();
+      expect(levers.lock?.setUnlockedForMe).toHaveBeenCalledWith(true);
+      expect(host.setLocked).not.toHaveBeenCalled();
+
+      click('database-toolbar-locked');
+      item('database-unlock-for-everyone')?.click();
+      expect(host.setLocked).toHaveBeenCalledWith(false);
+    });
+
+    it('reads "Re-lock" once unlocked for this viewer, and one click locks again with no menu', () => {
+      const levers = lockLevers({ forMe: true });
+
+      setup({ locked: false, levers });
+      const lock = q('database-toolbar-locked');
+
+      expect(lock?.hidden).toBe(false);
+      expect(text(lock)).toBe('tools.database.relockButton');
+      // r68-n-unlockforme.raw: Minimize, Re-lock, Filter.
+      expect(nextShown(lock)).toBe(q('database-toolbar-filter'));
+      expect(lock?.hasAttribute('data-blok-database-relock')).toBe(true);
+      click('database-toolbar-locked');
+
+      expect(levers.lock?.setUnlockedForMe).toHaveBeenCalledWith(false);
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    });
+
+    it('is hidden on an unlocked database', () => {
+      setup({ locked: false, levers: lockLevers({ forMe: false }) });
+
+      expect(q('database-toolbar-locked')?.hidden).toBe(true);
+    });
+
+    it('opens nothing when no unlock is allowed, as under a host\'s structure denial', () => {
+      setup({ locked: true, levers: lockLevers({ forMe: false }, false) });
+      click('database-toolbar-locked');
+
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    });
+
+    // Notion's hint names who locked it; Blok keeps no lock owner, so it names no one.
+    it('hints why it is locked and how to unlock, on hover after the delay', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        setup({ locked: true, levers: lockLevers({ forMe: false }) });
+        hover(q('database-toolbar-locked'));
+        vi.advanceTimersByTime(HINT_DELAY - 1);
+        expect(shownHint()).toBeNull();
+        vi.advanceTimersByTime(1);
+        expect(shownHint()?.text).toBe('tools.database.lockedHinttools.database.lockedHintAction');
+        expect(shownHint()?.placement).toBe('top');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('hints only that it is locked when no unlock is allowed', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        setup({ locked: true, levers: lockLevers({ forMe: false }, false) });
+        hover(q('database-toolbar-locked'));
+        vi.advanceTimersByTime(HINT_DELAY);
+        expect(shownHint()?.text).toBe('tools.database.lockedLabel');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
   it('opens the filter of an old id-less pill, not a "deleted property" one', () => {
     const { controls, saved } = setup();
 
@@ -997,6 +1232,22 @@ describe('DatabaseViewControls', () => {
     document.querySelector<HTMLElement>('[data-blok-database-filter-pill][data-filter-id]')?.click();
 
     expect((q('database-filter-value') as HTMLInputElement | null)?.value).toBe('5');
+  });
+
+  // notion-motion.md Round 88 §1 #3 (r88-n-setnum-kids.raw), Round 89 §1 #7 (r89-n-chipid.raw): Number and ID rule
+  // popups are 75 tall, so database.css marks their value field. Text's is 71.
+  it.each([
+    ['num', 'number', true],
+    ['uid', 'uniqueId', true],
+    ['txt', 'text', false],
+  ] as const)('marks the %s rule value field as a Number one: %s', (id, type, marked) => {
+    const env = setup({ schema: () => [...schema, { id: 'uid', name: 'ID', type: 'uniqueId', position: 'a3' }, { id: 'txt', name: 'Text', type: 'text', position: 'a4' }] });
+
+    env.saved.view = { ...env.saved.view, filters: [{ id: 'f1', propertyId: id, operator: type === 'text' ? 'contains' : 'equals', value: null }] };
+    env.controls.refresh();
+    click('database-filter-pill-f1');
+
+    expect(q('database-filter-value')?.hasAttribute('data-blok-database-filter-number-value')).toBe(marked);
   });
 
   it('marks an active filter pill only once it has a value', () => {
@@ -1347,12 +1598,77 @@ describe('DatabaseViewControls', () => {
       expect(q('database-filter-popover')).toBeNull();
     });
 
+    // notion-motion.md Round 86 §1 #12: the advanced filter panel stays open at the chip.
+    it('Add to advanced filter moves the rule and opens the advanced filter at its chip', () => {
+      const { controls, saved } = open();
+
+      click('database-filter-to-advanced');
+
+      expect(controls.effective(saved.view).filterTree?.filterRules[0]).toEqual(expect.objectContaining({ propertyId: 'title', operator: 'contains', value: 'a' }));
+      expect(q('database-filter-popover')).toBeNull();
+      expect(q('database-advanced-filter')).not.toBeNull();
+      expect(q('database-advanced-pill')?.hasAttribute('data-popover-open')).toBe(true);
+    });
+
     it('Escape closes only the flyout', () => {
       open();
       document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
       expect(q('database-filter-more-menu')).toBeNull();
       expect(q('database-filter-popover')).not.toBeNull();
+    });
+
+    // notion-motion.md Round 87 §1 #12 (r87-n-chip-addadv.raw, a pointer click): focus goes to the page body.
+    it('a pointer pick of Add to advanced filter leaves focus on the body, the panel open, Escape closing it', () => {
+      open();
+      q('database-filter-to-advanced')?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+
+      expect(document.body).toHaveFocus();
+      expect(q('database-advanced-filter')).not.toBeNull();
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(q('database-advanced-filter')).toBeNull();
+    });
+
+    // A keyboard pick keeps focus in the panel it opens (user-approved: keyboard focus moves into popovers).
+    it('a keyboard pick of Add to advanced filter keeps focus in the advanced filter', () => {
+      open();
+      q('database-filter-to-advanced')?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
+
+      expect(q('database-advanced-filter')?.contains(document.activeElement)).toBe(true);
+    });
+
+    const openAt = (more: DOMRect): HTMLElement | null => {
+      vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
+      vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+      vi.spyOn(PopoverDesktop.prototype, 'size', 'get').mockReturnValue({ width: 240, height: 65 });
+      const env = setup();
+
+      env.saved.view = { ...env.saved.view, filters: [{ id: 'f1', propertyId: 'title', operator: 'contains', value: 'a' }] };
+      env.controls.refresh();
+      click('database-filter-pill-f1');
+      const button = q('database-filter-more');
+
+      if (button === null) throw new Error('no ⋯');
+      button.getBoundingClientRect = () => more;
+      button.click();
+
+      return q('database-filter-more-menu')?.closest<HTMLElement>('[data-blok-popover]') ?? null;
+    };
+
+    // notion-motion.md Round 87 §1 #8 (r87 notes): with no room on the right, Notion's 240x65 menu sits at 1192,388,
+    // its right edge 2 left of the ⋯ at 1434, its top on the ⋯ top.
+    it('opens left of the ⋯ when its right has no room', () => {
+      const box = openAt(new DOMRect(1434, 388, 24, 24));
+
+      expect(parseFloat(box?.style.left ?? '')).toBeCloseTo(1192);
+      expect(parseFloat(box?.style.top ?? '')).toBeCloseTo(388);
+    });
+
+    it('opens right of the ⋯ when its right has room', () => {
+      const box = openAt(new DOMRect(793, 358, 24, 24));
+
+      expect(parseFloat(box?.style.left ?? '')).toBeCloseTo(819);
+      expect(parseFloat(box?.style.top ?? '')).toBeCloseTo(358);
     });
   });
 
@@ -2230,6 +2546,28 @@ describe('DatabaseViewControls', () => {
       expect(q('database-sort-panel')?.querySelectorAll('[data-blok-database-sort-row]')).toHaveLength(2);
     });
 
+    // notion-motion.md Round 91 §1 #8 (r91-n-dark-addsort.raw: 230 in dark) and r11-picker-vs-addsort.raw
+    // (56,56,54 in light): the Add sort picker's glyphs take the sort picker's strong ink.
+    it('marks the Add sort list as a sort picker for its glyph ink', () => {
+      withSort();
+      click('database-sort-pill');
+      click('database-sort-add');
+
+      expect(q('database-sort-add-picker')?.querySelector('[data-blok-database-picker-list]')?.getAttribute('data-blok-database-picker-list')).toBe('sort');
+    });
+
+    // notion-motion.md Round 91 §1 #4 (r91-n-sort-2rules.raw): the panel grows at once to fit the new rule.
+    // data-fit-content lets the popover box follow the panel (database.css), so the rule's × is not cut off.
+    it('lets the popover box grow with the panel when a rule is added', () => {
+      withSort();
+      click('database-sort-pill');
+      click('database-sort-add');
+      click('database-pick-property-title');
+
+      expect(q('database-sort-panel')?.hasAttribute('data-fit-content')).toBe(true);
+      expect(q('database-sort-panel')?.style.width).toBe('max-content');
+    });
+
     it('moves focus to "Delete sort" when the last unsorted property is added', () => {
       withSort();
       click('database-sort-pill');
@@ -2249,6 +2587,52 @@ describe('DatabaseViewControls', () => {
       expect(q('database-sort-add-picker')).toBeNull();
       expect(q('database-sort-panel')).not.toBeNull();
       expect(q('database-sort-add')).toHaveFocus();
+    });
+
+    // notion-motion.md Round 52 §4 (r52-n-sort-add.raw, origin 0px 287px with 3 rows) and Rounds 10/17: the box is
+    // 280×287 whatever it lists. Under the row when 287 fits, else above it, its bottom on the row's top.
+    describe('Add sort picker side', () => {
+      const openAt = (rowTop: number): HTMLElement | null => {
+        vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+        // The popover measures a clone; it is as tall as the picker's own fixed height.
+        vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+          const picker = this.querySelector<HTMLElement>('[data-blok-testid="database-sort-add-picker"]');
+
+          return picker === null ? 0 : parseFloat(picker.style.height) || 0;
+        });
+        withSort();
+        click('database-sort-pill');
+        const row = q('database-sort-add');
+
+        if (row === null) throw new Error('no Add sort row');
+        row.getBoundingClientRect = () => new DOMRect(543, rowTop, 317.6, 28);
+        click('database-sort-add');
+
+        return q('database-sort-add-picker')?.closest<HTMLElement>('[data-blok-popover]') ?? null;
+      };
+
+      it('is 287 tall even with few properties', () => {
+        openAt(351);
+
+        expect(q('database-sort-add-picker')?.style.height).toBe('287px');
+      });
+
+      it('opens under the row when it fits', () => {
+        expect(openAt(351)?.style.top).toBe('379px');
+      });
+
+      it('opens above the row, its bottom on the row top, when it does not fit under', () => {
+        expect(parseFloat(openAt(396.2)?.style.top ?? '')).toBeCloseTo(396.2 - 287, 1);
+      });
+
+      // notion-motion.md Round 91 §1 #3 (r91-n-sort-side.raw): under with 299.8 below the row, above with 298.8.
+      it('stays under with 299.8 below the row', () => {
+        expect(parseFloat(openAt(717 - 28 - 299.8)?.style.top ?? '')).toBeCloseTo(717 - 299.8, 1);
+      });
+
+      it('flips above with 298.8 below the row', () => {
+        expect(parseFloat(openAt(717 - 28 - 298.8)?.style.top ?? '')).toBeCloseTo(717 - 28 - 298.8 - 287, 1);
+      });
     });
 
     it('closes the picker when the sort panel closes another way', () => {
@@ -2396,7 +2780,7 @@ describe('DatabaseViewControls', () => {
 
       expect(minimize?.hidden).toBe(false);
       expect(minimize?.getAttribute('aria-label')).toBe('tools.database.filterBarMinimize');
-      expect(q('database-toolbar-no-date')?.nextElementSibling).toBe(q('database-toolbar-filter'));
+      expect(nextShown(q('database-toolbar-no-date'))).toBe(q('database-toolbar-filter'));
 
       click('database-toolbar-minimize');
 
@@ -2725,7 +3109,7 @@ describe('DatabaseViewControls', () => {
       expect(minimize?.hidden).toBe(false);
       // A calendar or timeline's "No date" sits between them (findings C03); here it is hidden.
       expect(minimize?.nextElementSibling).toBe(q('database-toolbar-no-date'));
-      expect(q('database-toolbar-no-date')?.nextElementSibling).toBe(q('database-toolbar-filter'));
+      expect(nextShown(q('database-toolbar-no-date'))).toBe(q('database-toolbar-filter'));
       expect(minimize?.getAttribute('aria-label')).toBe('tools.database.filterBarMinimize');
       expect(minimize?.querySelector('svg')).not.toBeNull();
 

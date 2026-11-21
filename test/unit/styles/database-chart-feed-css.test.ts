@@ -52,6 +52,45 @@ describe('database chart and feed styles', () => {
     expect(ruleBody('[data-blok-database-feed-author]')).toMatch(/font-weight:\s*500/);
   });
 
+  // notion-motion.md Round 72 §5 Feed: Notion's avatar, name and time sit 2px lower (avatar at card + 18); the title and the rest do not move.
+  it('draws the byline 2px lower without moving what follows it', () => {
+    const byline = ruleBody('[data-blok-database-feed-byline]');
+
+    expect(byline).toContain('position: relative');
+    expect(byline).toContain('inset-block-start: var(--blok-space-0-5)');
+    expect(byline).not.toMatch(/margin|padding|translate|transform/);
+  });
+
+  // notion-motion.md Round 72 §5, Round 73 §1: Notion's time is a 12/16 box at card + 23, 1 under the
+  // byline's centre (avatar 24 at + 18). A 2px top margin in the centred row puts the 16 box there.
+  it('sets the byline time as a 12/16 box at card + 23', () => {
+    for (const part of ['time', 'edited']) {
+      const rule = ruleBody(`[data-blok-database-feed-${part}]`);
+
+      expect(rule).toContain('line-height: 16px');
+      expect(rule).toContain('margin-block-start: var(--blok-space-0-5)');
+    }
+  });
+
+  // notion-motion.md Round 72 §5: Notion's title under a byline is a 30.5 box at card + 45.5; Blok's was 26 at + 48.
+  // The box grows 2.25 each side and pulls 2.5 up, 2 in below, so what follows stays put.
+  it('boxes the title under a byline as Notion\'s: 30.5 tall at card + 45.5, nothing under it moves', () => {
+    const title = ruleBody('[data-blok-database-feed-byline] + [data-blok-database-feed-title]');
+
+    expect(title).toContain('padding-block: 2.25px');
+    expect(title).toContain('margin-block: -2.5px calc(var(--blok-space-0-5) * -1)');
+  });
+
+  // notion-motion.md Round 72 §5 Feed (notion-live/r45-n-feed-svg.raw): "More actions" is a 16px glyph at 1192, React stays 20.
+  it('draws the "More actions" glyph at 16px and leaves React at 20', () => {
+    const more = ruleBody('[data-blok-database-feed-more-actions] > svg');
+
+    expect(more).toContain('inline-size: 16px');
+    expect(more).toContain('block-size: 16px');
+    expect(ruleBody('[data-blok-database-feed-react] > svg')).toBe('');
+    expect(ruleBody('[data-blok-database-feed-react] svg')).toBe('');
+  });
+
   // notion-motion.md Round 32 §3 Feed (notion-live/r32-b-feed-geom.raw): avatar 24 at 555, name at 587, time 12px 6 after it, title at 587, cards 24 apart.
   it('lays out the byline and cards as Notion\'s feed', () => {
     const avatar = ruleBody('[data-blok-database-feed-byline] > [data-blok-database-person-avatar]');

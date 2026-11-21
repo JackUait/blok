@@ -39,6 +39,11 @@ describe('view tabs (research/07:45-50, 222)', () => {
     expect(ruleBody('[data-blok-database-tab] svg')).toContain('width: 20px');
   });
 
+  it('show the pointer cursor at rest and while dragged (notion-motion.md Round 85c §3)', () => {
+    expect(ruleBody('[data-blok-database-tab]')).toContain('cursor: pointer');
+    expect(ruleBody('[data-blok-database-tab-bar][data-dragging] [data-blok-database-tab]')).not.toContain('cursor:');
+  });
+
   it('take the 0.076 pressed fill while their menu is open (notion-motion.md Round 27 §3)', () => {
     expect(ruleBody('[data-blok-database-tab][aria-expanded="true"]')).toContain('background-color: var(--blok-database-button-pressed-bg)');
     expect(tokenValues('--blok-database-button-pressed-bg')[0]).toBe('rgba(33, 27, 23, 0.076)');
@@ -79,6 +84,14 @@ describe('toolbar Filter and Sort (research/07:53)', () => {
 
     expect(body).toContain('padding: var(--blok-space-1)');
     expect(ruleBody('[data-blok-database-view-toolbar] [data-blok-database-toolbar-icon] svg')).toMatch(/width: 20px;\s*height: 20px/);
+  });
+
+  // notion-motion.md R59 §8: Notion's Search ink is 12.5x12.5 and Settings 13x11. At 20px Blok's are 15x15
+  // and 14x15; at 18px they measure 13x13 and 13x14 (Settings' sliders stay taller than wide).
+  it('draw Search and Settings at 18px so their ink matches Notion\'s', () => {
+    for (const button of ['[data-blok-database-toolbar-search]', '[data-blok-database-toolbar-settings]']) {
+      expect(ruleBody(`[data-blok-database-view-toolbar] ${button} svg`)).toMatch(/width: 18px;\s*height: 18px/);
+    }
   });
 });
 
@@ -239,6 +252,11 @@ describe('row page peek in dark (research/21 §1m)', () => {
     expect(ruleBody('[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-props-spaced]')).toContain('padding-top: var(--blok-space-2)');
   });
 
+  // notion-motion.md Round 84b §9 (r84-n-fullpage.raw): h1 156 + 48, first property row at 212.
+  it('puts a full page\'s first property 8px under the title', () => {
+    expect(ruleBody('[data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-title]')).toContain('margin-bottom: var(--blok-space-2)');
+  });
+
   it('inks the title in the database ink: rgb(44, 44, 43) light (research/26 §1e), rgb(240, 239, 237) dark', () => {
     expect(ruleBody('[data-blok-database-drawer-title]')).toContain('color: var(--blok-database-peek-title)');
     expect(tokenValues('--blok-database-peek-title')).toEqual(['var(--blok-database-ink)', 'rgb(240, 239, 237)', 'rgb(240, 239, 237)']);
@@ -327,6 +345,66 @@ describe('view overflow list (research/13:81, notion-measure5/51-one-more.json)'
     expect(buttons).not.toContain('opacity: 0');
   });
 
+  // notion-motion.md Round 74 §3: opacity 0 → 1 and scale 0.96 → 1, 200ms ease, from the top-left corner.
+  it('opens with a fade and a 0.96 scale from its top corner, and not under reduced motion', () => {
+    const dropdown = '[data-blok-database-tab-overflow-dropdown]';
+
+    expect(ruleBody(dropdown)).toContain('animation: blok-prop-popover-in 200ms ease backwards');
+    expect(ruleBody(dropdown)).toContain('transform-origin: top left');
+    expect(ruleBody(`${dropdown}[dir="rtl"]`)).toContain('transform-origin: top right');
+    expect(reducedMotion()).toMatch(/\[data-blok-database-tab-overflow-dropdown\][^{]*\{[^}]*animation: none/);
+  });
+
+  // notion-motion.md Round 75 §2: the close is the open in reverse, 200ms ease, every run.
+  it('closes with the open in reverse, and not under reduced motion', () => {
+    const closing = '[data-blok-database-tab-overflow-dropdown][data-blok-closing]';
+
+    expect(ruleBody(closing)).toContain('animation: blok-prop-popover-out 200ms ease both');
+    expect(ruleBody(closing)).toContain('pointer-events: none');
+    expect(reducedMotion()).toMatch(/\[data-blok-database-tab-overflow-dropdown\]\[data-blok-closing\][^{]*\{[^}]*animation: none/);
+  });
+
+  // notion-motion.md Round 74 §3: field 12 under the top, rows 12 under the field, New data source 29 after New view (318 tall).
+  it('spaces the search and the rows as Notion\'s 318px menu', () => {
+    const search = ruleBody('[data-blok-database-tab-overflow-dropdown] > [data-blok-field="search"]');
+
+    expect(search).toContain('margin-block: var(--blok-space-2) var(--blok-space-3)');
+    expect(search).not.toContain('margin-bottom');
+    expect(ruleBody('[data-blok-database-tab-overflow-new-second]')).toContain('margin-block-start: var(--blok-space-0-25)');
+  });
+
+  // Round 74 §3: in a 282 row, handle glyph +10, view icon +36, check 16 at -60, ••• in a 24 box at -40.
+  it('lays a row out at Notion\'s offsets', () => {
+    const row = ruleBody('[data-blok-database-tab-overflow-item]');
+
+    expect(row).toContain('min-height: 28px');
+    expect(row).toContain('padding-block: 0');
+    expect(row).toContain('padding-inline: var(--blok-space-2) var(--blok-space-4)');
+    expect(row).toContain('gap: var(--blok-space-2)');
+    expect(ruleBody('[data-blok-database-tab-overflow-handle]')).toContain('width: 20px');
+    expect(ruleBody('[data-blok-database-tab-overflow-menu]')).toContain('width: 24px');
+    expect(ruleBody('[data-blok-database-tab-overflow-menu]')).toContain('height: 24px');
+    expect(ruleBody('[data-blok-database-tab-overflow-check]')).toContain('margin-inline-end: calc(-1 * var(--blok-space-1))');
+    expect(ruleBody('[data-blok-database-tab-overflow-check] svg')).toContain('width: 16px');
+  });
+
+  // Round 74 §3 (foldmenu-4): "New view" and "New data source" text 36 into the row, as the view names' icons.
+  it('starts the new-item rows\' text 36 into the row', () => {
+    const row = ruleBody('[data-blok-database-tab-overflow-new]');
+
+    expect(row).toContain('gap: var(--blok-space-2)');
+    expect(row).toContain('padding: var(--blok-space-1) var(--blok-space-2)');
+  });
+
+  // No blue selected states (CLAUDE.md): the check is primary ink on no fill, the ink of every row.
+  it('draws the current view\'s check in the row ink, with no fill', () => {
+    const check = ruleBody('[data-blok-database-tab-overflow-check]');
+
+    expect(check).toContain('color: var(--blok-database-ink)');
+    expect(ruleBody('[data-blok-database-tab-overflow-item]')).toContain('color: var(--blok-database-ink)');
+    expect(check).not.toMatch(/background/);
+  });
+
   // notion-motion.md Round 38 §5: the menu is capped at 50vh; its list scrolls, with New view in it.
   it('caps the menu at half the window and scrolls its list, not the search', () => {
     expect(ruleBody('[data-blok-database-tab-overflow-dropdown][data-blok-top-layer][popover]')).toContain('max-height: 50vh');
@@ -394,6 +472,11 @@ describe('row page property drag handle', () => {
   const head = '[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head]';
   const hoveredHead = '[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]):hover > [data-blok-database-drawer-prop-head]';
   const overIcon = '[data-blok-database-drawer-prop-handle]:has(+ [data-blok-database-drawer-prop-icon])';
+
+  // notion-motion.md Round 83 §7: Notion's name cell reads cursor pointer; only the handle reads grab.
+  it('points over the name cell when it opens the property menu', () => {
+    expect(ruleBody(`${head} > [data-blok-database-drawer-prop-label][role="button"]::before`)).toContain('cursor: pointer');
+  });
 
   it('is hidden at rest, so touch screens never get one', () => {
     expect(ruleBody('[data-blok-database-drawer-prop-handle]')).toContain('display: none');
@@ -546,6 +629,18 @@ describe('row page header hover row', () => {
   });
 });
 
+// notion-motion.md Round 74 §2: with no icon and no cover a full page shows the row from just under the 44px bar.
+describe('full page icon row zone (Round 74 §2)', () => {
+  // Only as the content's first child: a template banner above it keeps its clicks.
+  it('lets the head reach up over the content\'s 40px top padding, keeping the row 80 under the bar', () => {
+    const head = ruleBody('[data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-page-head]:first-child:not(:has(> :is([data-blok-database-drawer-cover], [data-blok-database-drawer-icon])))');
+
+    expect(head).toContain('margin-block-start: calc(-1 * var(--blok-space-10))');
+    expect(head).toContain('padding-block-start: calc(2 * var(--blok-space-10))');
+    expect(ruleBody('[data-blok-database-drawer-content]')).toContain('padding: var(--blok-space-10) 60px var(--blok-space-5)');
+  });
+});
+
 // feel/findings-rowpage R29, R32: a row page file chip is at most 200 wide; its name ends in "…" and is not underlined.
 describe('row page file chip', () => {
   it('caps the chip at 200px and ellipsizes the name at its end', () => {
@@ -660,6 +755,12 @@ describe('map view chrome', () => {
     // Notion's 6 sides; the shared field's 1px border adds one.
     expect(field).toContain('padding-inline: var(--blok-space-1-5)');
     expect(field).toContain('font-size: 14px');
+  });
+
+  // Round 53 §8a: Notion's "No place" list caps at 70vh (501.9 in a 717 window), not the editors' window height.
+  it('caps the "No place" list at 70vh', () => {
+    expect(ruleBody("[data-blok-popover-custom-class~='blok-database-map-no-place-menu'] [data-blok-popover-container]"))
+      .toContain('--max-height: 70vh');
   });
 
   it('holds Add pin in a 28px white pill, radius 6, padding 2, 8 in from the corner', () => {

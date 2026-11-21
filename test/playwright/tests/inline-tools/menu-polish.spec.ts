@@ -44,8 +44,8 @@ for (const width of [1280, 390]) {
 
         expect(sizes.length).toBeGreaterThanOrEqual(4);
         for (const size of sizes) {
-          expect(size.height).toBeGreaterThanOrEqual(width < 650 ? 40 : 32);
-          expect(size.height).toBeGreaterThanOrEqual(size.titleHeight + 12);
+          expect(size.height).toBeGreaterThanOrEqual(width < 650 ? 40 : 28);
+          expect(size.height).toBeGreaterThanOrEqual(size.titleHeight + (width < 650 ? 12 : 8));
         }
       });
 
@@ -112,7 +112,7 @@ for (const width of [1280, 390]) {
         await expect.poll(() => container.getByTestId('popover-items').first().evaluate(items =>
           items.firstElementChild?.getAttribute('data-blok-item-name')
         )).toBe('block-color');
-        await expect(container).toHaveCSS('padding-left', '4px');
+        await expect(container).toHaveCSS('padding-left', width === 1280 ? '6px' : '4px');
       });
 
       if (width === 1280) {

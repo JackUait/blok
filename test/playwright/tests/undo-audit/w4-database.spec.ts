@@ -111,7 +111,7 @@ const deleteOption = async (page: Page, rowId: string, optionId: string): Promis
   await page.locator('[data-blok-database-drawer-prop-value][data-property-id="prop-status"]').click();
   await page.locator(`[data-blok-database-select-option="${optionId}"] [data-blok-database-select-option-menu]`).click();
   await page.locator('[data-blok-database-option-delete]').click();
-  await page.locator('[data-blok-database-option-delete-confirm]').click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
 };
 
 /** What the database shows: title, tabs, board columns with cards, list rows. */

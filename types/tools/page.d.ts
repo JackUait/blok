@@ -151,6 +151,10 @@ export interface PageConfig {
   /**
    * Searches visible pages for an inline reference. The "@" menu asks with
    * `''` as soon as "@" is typed: answer with recent pages.
+   *
+   * The Link field uses it too when `href` is also set. It lists the pages
+   * in a "Pages" section and links the selected text to `href(pageId)` as an
+   * ordinary link. It asks with `''` on open, then with the typed text.
    */
   search?(query: string): Promise<readonly PageSearchResult[]>;
   /**

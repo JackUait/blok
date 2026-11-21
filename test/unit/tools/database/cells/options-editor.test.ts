@@ -142,7 +142,7 @@ describe('options editor (Edit property for select, multi-select and status)', (
     expect(menus.every((menu) => menu.innerHTML === chevron.innerHTML)).toBe(true);
   });
 
-  it('renames, recolours and deletes an option from its menu', () => {
+  it('renames, recolours and deletes an option from its menu', async () => {
     const { root, onChange } = mount(selectProp());
 
     root.querySelector<HTMLElement>('[data-blok-database-select-option="o2"] [data-blok-database-select-option-menu]')?.click();
@@ -157,10 +157,104 @@ describe('options editor (Edit property for select, multi-select and status)', (
     expect(last(onChange).find((o) => o.id === 'o2')).toMatchObject({ label: 'Make', color: 'pink' });
 
     optionMenu()?.querySelector<HTMLElement>('[data-blok-database-option-delete]')?.click();
-    optionMenu()?.querySelector<HTMLElement>('[data-blok-database-option-delete-confirm]')?.click();
+    confirmAction('confirm').click();
+    await settle();
     expect(last(onChange).map((o) => o.id)).toEqual(['o1', 'o3']);
     expect(rowIds(root)).toEqual(['o1', 'o3']);
     expect(optionMenu()).toBeNull();
+  });
+
+  describe('Delete asks in the centred confirm (notion-motion.md Round 81 §1)', () => {
+    const mountHeld = (): { root: HTMLElement; onChange: ReturnType<typeof vi.fn<(options: SelectOption[]) => void>>; releases: Array<boolean | undefined>; closeHost: () => void } => {
+      const onChange = vi.fn<(options: SelectOption[]) => void>();
+      const releases: Array<boolean | undefined> = [];
+      const closers: Array<() => void> = [];
+      const root = createOptionsEditor({
+        property: selectProp(),
+        i18n,
+        onChange,
+        hold: () => (refocus) => {
+          releases.push(refocus);
+        },
+        onHostClose: (close) => closers.push(close),
+      });
+
+      document.body.appendChild(root);
+
+      return { root, onChange, releases, closeHost: () => closers.forEach((close) => close()) };
+    };
+    const askDelete = (root: HTMLElement): void => {
+      root.querySelector<HTMLElement>('[data-blok-database-select-option="o2"]')?.click();
+      optionMenu()?.querySelector<HTMLElement>('[data-blok-database-option-delete]')?.click();
+    };
+    const confirmDialog = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-database-confirm-dialog]');
+
+    it('opens the cell path\'s dialog: 600 title, red Delete focused, bordered Cancel; the option menu closes', () => {
+      const { root, onChange } = mountHeld();
+
+      askDelete(root);
+
+      expect(document.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('tools.database.optionDeleteConfirm');
+      expect(confirmDialog()?.hasAttribute('data-bold-title')).toBe(true);
+      expect(confirmAction('confirm').hasAttribute('data-destructive')).toBe(true);
+      expect(confirmAction('confirm')).toHaveFocus();
+      expect(confirmAction('cancel').hasAttribute('data-quiet')).toBe(false);
+      expect(optionMenu()).toBeNull();
+      expect(document.querySelector('[data-blok-database-option-delete-prompt]')).toBeNull();
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('Cancel keeps the option and gives the cursor back to the menu around the list', async () => {
+      const { root, onChange, releases } = mountHeld();
+
+      askDelete(root);
+      confirmAction('cancel').click();
+      await settle();
+
+      expect(releases.at(-1)).toBe(true);
+      expect(confirmDialog()).toBeNull();
+      expect(optionMenu()).toBeNull();
+      expect(onChange).not.toHaveBeenCalled();
+      expect(rowIds(root)).toEqual(['o1', 'o2', 'o3']);
+    });
+
+    it('Escape on the confirm acts as Cancel', async () => {
+      const { root, onChange, releases } = mountHeld();
+
+      askDelete(root);
+      press(confirmAction('confirm'), 'Escape');
+      await settle();
+
+      expect(releases.at(-1)).toBe(true);
+      expect(confirmDialog()).toBeNull();
+      expect(optionMenu()).toBeNull();
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('Delete removes the option and gives the cursor back to the menu around the list', async () => {
+      const { root, onChange, releases } = mountHeld();
+
+      askDelete(root);
+      confirmAction('confirm').click();
+      await settle();
+
+      expect(last(onChange).map((o) => o.id)).toEqual(['o1', 'o3']);
+      expect(rowIds(root)).toEqual(['o1', 'o3']);
+      expect(releases.at(-1)).toBe(true);
+      expect(confirmDialog()).toBeNull();
+    });
+
+    it('the menu around closing under the confirm takes it away and leaves nothing inert', async () => {
+      const { root, onChange, closeHost } = mountHeld();
+
+      askDelete(root);
+      expect(confirmDialog()).not.toBeNull();
+      closeHost();
+
+      await vi.waitFor(() => expect(confirmDialog()).toBeNull());
+      expect(document.querySelectorAll('body > [inert]')).toHaveLength(0);
+      expect(onChange).not.toHaveBeenCalled();
+    });
   });
 
   it('Escape in the option menu closes only the menu; the list stays', () => {

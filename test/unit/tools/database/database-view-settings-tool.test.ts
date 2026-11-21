@@ -52,7 +52,7 @@ const tableView = (overrides: Partial<DatabaseViewConfig> = {}): DatabaseViewCon
   id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], ...overrides,
 });
 
-const mount = (view: Partial<DatabaseViewConfig> = {}, config: DatabaseConfig = {}, extra: Partial<DatabaseData> = {}): {
+const mount = (view: Partial<DatabaseViewConfig> = {}, config: DatabaseConfig = {}, extra: Partial<DatabaseData> = {}, children = rows()): {
   tool: DatabaseTool;
   root: HTMLElement;
   dispatchChange: ReturnType<typeof vi.fn>;
@@ -61,7 +61,7 @@ const mount = (view: Partial<DatabaseViewConfig> = {}, config: DatabaseConfig = 
   const options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig> = {
     data: { schema, views: [tableView(view)], activeViewId: 'v1', ...extra },
     config,
-    api: createApi(rows()),
+    api: createApi(children),
     readOnly: false,
     block: { id: 'db1', dispatchChange } as never,
   };
@@ -116,6 +116,15 @@ describe('DatabaseTool — view settings', () => {
     field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
     expect(root.querySelector('[data-blok-database-tab][data-view-id="v1"] [data-blok-database-tab-name]')?.textContent).toBe('Roadmap');
+  });
+
+  // notion-motion.md Round 95 §1 #6 (r95-n-board-settingsbtn-focus.raw): the Settings button opens View settings on Close, like Edit view.
+  it('the Settings button opens view settings with Close focused', () => {
+    mount();
+
+    click('database-toolbar-settings');
+
+    expect(q('database-panel-close')).toHaveFocus();
   });
 
   // findings V08: the tab menu's Rename opens View settings with the name field focused.
@@ -253,6 +262,17 @@ describe('DatabaseTool — view settings', () => {
     expect(dispatchChange).toHaveBeenCalled();
   });
 
+  // notion-motion.md Round 93 §1 #1 (r93-n-hdr-group-mo.raw): Group only groups; no View settings opens.
+  it('groups from a column header without opening View settings', () => {
+    const { tool, root } = mount();
+
+    headerAction(root, 'p-stage', 'tools.database.tableGroup');
+
+    expect(q('database-view-settings')).toBeNull();
+    expect(document.querySelector('[data-blok-popover-custom-class~="blok-database-header-menu"][data-blok-popover-opened="true"]')).toBeNull();
+    expect(tool.save(root).views[0].groupBy).toBe('p-stage');
+  });
+
   it('searches titles and property text', () => {
     const { root } = mount();
 
@@ -291,6 +311,59 @@ describe('DatabaseTool — view settings', () => {
     expect(tool.save(root).views[0].groupSettings).toEqual({ hideEmptyGroups: true });
   });
 
+  // notion-motion.md Round 81 (r81-n-bd-repick.raw): the same property re-picked drops the sort and shows hidden groups.
+  it('saves a re-pick of the grouped property with the sort reset and no hidden groups', () => {
+    const { tool, root } = mount({ type: 'board', groupBy: 'p-stage', groupSettings: { sort: 'descending', colorColumns: false }, hiddenGroups: [{ id: 'o-idea' }] });
+
+    click('database-toolbar-settings');
+    click('database-settings-group');
+    click('database-group-by');
+    click('database-pick-property-p-stage');
+
+    expect(tool.save(root).views[0].groupSettings).toEqual({ hideEmptyGroups: true, colorColumns: false });
+    expect(tool.save(root).views[0].hiddenGroups ?? []).toEqual([]);
+  });
+
+  // notion-motion.md Round 84b §3 (r84-n-grp-checkbox.raw): each checkbox group shows a 14x14 box, ticked first.
+  it('draws a checkbox before each checkbox group name, the checked group first', () => {
+    const done: PropertyDefinition = { id: 'p-done', name: 'Done', type: 'checkbox', position: 'a3' };
+
+    mount({ type: 'board', groupBy: 'p-done' }, {}, { schema: [...schema, done] }, [rowBlock('r1', 'a0', { 'p-done': false }), rowBlock('r2', 'a1', { 'p-done': true })]);
+    click('database-toolbar-settings');
+    click('database-settings-group');
+
+    const groups = [...document.querySelectorAll('[data-blok-database-group-visibility-row]')].map((row) => [
+      row.querySelector('[data-blok-database-checkbox]')?.getAttribute('data-state'),
+      row.querySelector('[data-blok-database-panel-label]')?.textContent?.trim(),
+    ]);
+
+    // notion-motion.md Round 85c §2 (r85c-n-grp-flag-panel.raw): both groups read the property name.
+    expect(groups).toEqual([['checked', 'Done'], ['unchecked', 'Done']]);
+    // The box still tells a screen reader which group it is.
+    expect([...document.querySelectorAll('[data-blok-database-group-visibility-row] [data-blok-database-checkbox]')].map((box) => box.getAttribute('aria-label')))
+      .toEqual(['tools.database.filterChecked', 'tools.database.filterUnchecked']);
+  });
+
+  // notion-motion.md Round 85c §2 (r85c-n-board-flag-cols.raw, r85c-n-list-flag-hdr.raw): a 14x14 box, then the property name.
+  it.each([
+    ['board', '[data-blok-database-column-header]'],
+    ['list', '[data-blok-database-list-group-header]'],
+  ] as const)('heads each checkbox group of a %s with a checkbox and the property name', (type, header) => {
+    const done: PropertyDefinition = { id: 'p-done', name: 'Done', type: 'checkbox', position: 'a3' };
+
+    const { root } = mount({ type, groupBy: 'p-done' }, {}, { schema: [...schema, done] }, [rowBlock('r1', 'a0', { 'p-done': false }), rowBlock('r2', 'a1', { 'p-done': true })]);
+    const heads = [...root.querySelectorAll(header)].map((el) => {
+      const box = el.querySelector('[data-blok-database-group-checkbox] > [data-blok-database-checkbox]');
+
+      return [box?.getAttribute('data-state'), box?.getAttribute('aria-label'), box?.parentElement?.textContent?.trim()];
+    });
+
+    expect(heads).toEqual([
+      ['checked', 'tools.database.filterChecked', 'Done'],
+      ['unchecked', 'tools.database.filterUnchecked', 'Done'],
+    ]);
+  });
+
   // research/23 §2e: a select starts with Hide empty groups off.
   it('resets the group settings when the grouping switches from a number to a select', () => {
     const { tool, root } = mount({ type: 'board', groupBy: 'p-num', groupSettings: { hideEmptyGroups: true, numberBy: 'range' } });
@@ -301,7 +374,8 @@ describe('DatabaseTool — view settings', () => {
     click('database-pick-property-p-stage');
 
     expect(tool.save(root).views[0].groupBy).toBe('p-stage');
-    expect(tool.save(root).views[0].groupSettings).toEqual({});
+    // notion-motion.md Round 78 §4: a picked Select hides empty groups; the number's range goes.
+    expect(tool.save(root).views[0].groupSettings).toEqual({ hideEmptyGroups: true });
   });
 
   it('does the same from a column header\'s Group', () => {
@@ -410,6 +484,82 @@ describe('DatabaseTool — view settings', () => {
 
     expect(tool.save(root).views.map((v) => v.name)).toEqual(['Table']);
     expect(q('database-toolbar-locked')?.hidden).toBe(false);
+  });
+
+  // notion-motion.md Round 68 §1: "Unlock for me" unlocks for this viewer only; "Re-lock" locks again.
+  describe('Locked button', () => {
+    const lockedSchema = (): PropertyDefinition[] => schema.map((p) => (p.type === 'title' ? { ...p, databaseLocked: true } : p));
+    const menuItem = (name: string): HTMLElement | null => document.querySelector(`[data-blok-popover-opened] [data-blok-item-name="${name}"]`);
+    const unlockForMe = (): void => {
+      click('database-toolbar-locked');
+      const item = menuItem('database-unlock-for-me');
+
+      if (item === null) throw new Error('no Unlock for me');
+      item.click();
+    };
+
+    it('unlocks for this viewer without saving it, and Re-lock locks again', () => {
+      const { tool, root } = mount({}, {}, { schema: lockedSchema() });
+
+      unlockForMe();
+
+      expect(tool.isLocked()).toBe(false);
+      expect(tool.save(root).schema.find((p) => p.type === 'title')?.databaseLocked).toBe(true);
+      tool.renameView('v1', 'Renamed');
+      expect(tool.save(root).views.map((v) => v.name)).toEqual(['Renamed']);
+      expect(q('database-toolbar-locked')?.hasAttribute('data-blok-database-relock')).toBe(true);
+
+      click('database-toolbar-locked');
+
+      expect(tool.isLocked()).toBe(true);
+      expect(q('database-toolbar-locked')?.hasAttribute('data-blok-database-relock')).toBe(false);
+      tool.renameView('v1', 'Again');
+      expect(tool.save(root).views.map((v) => v.name)).toEqual(['Renamed']);
+    });
+
+    it('gives back the full block menu with Lock database off while unlocked for this viewer, and Lock database locks again', () => {
+      const { tool, root } = mount({}, {}, { schema: lockedSchema() });
+
+      unlockForMe();
+      const lock = tool.renderSettings().find((item) => 'name' in item && item.name === 'database-lock');
+
+      if (lock === undefined || !('onActivate' in lock) || lock.onActivate === undefined) throw new Error('no Lock database');
+      expect('isActive' in lock && typeof lock.isActive === 'function' ? lock.isActive() : undefined).toBe(false);
+      lock.onActivate(lock, undefined);
+
+      expect(tool.isLocked()).toBe(true);
+      expect(tool.save(root).schema.find((p) => p.type === 'title')?.databaseLocked).toBe(true);
+      expect(q('database-toolbar-locked')?.hasAttribute('data-blok-database-relock')).toBe(false);
+    });
+
+    it('lets this viewer turn on sub-items once unlocked for them, and not before', () => {
+      const { tool, root } = mount({}, {}, { schema: lockedSchema() });
+
+      tool.setSubItemsEnabled(true);
+      expect(tool.save(root).schema.some((p) => p.type === 'relation')).toBe(false);
+      unlockForMe();
+      tool.setSubItemsEnabled(true);
+
+      expect(tool.save(root).schema.some((p) => p.type === 'relation')).toBe(true);
+    });
+
+    it('unlocks for everyone from Unlock for everyone', () => {
+      const { tool, root } = mount({}, {}, { schema: lockedSchema() });
+
+      click('database-toolbar-locked');
+      menuItem('database-unlock-for-everyone')?.click();
+
+      expect(tool.save(root).schema.find((p) => p.type === 'title')?.databaseLocked).toBeUndefined();
+      expect(q('database-toolbar-locked')?.hidden).toBe(true);
+    });
+
+    it('offers no unlock when the host denies structure edits', () => {
+      mount({}, { permissions: { can: (action) => action !== 'editStructure' } }, { schema: lockedSchema() });
+
+      click('database-toolbar-locked');
+
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    });
   });
 
   it('offers no new option in a locked table, so no cell can point at an option that was never saved', () => {
@@ -556,6 +706,73 @@ describe('DatabaseTool — view settings', () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyT', key: '†', altKey: true, metaKey: true, ctrlKey: true, bubbles: true }));
 
     expect(tool.save(root).views[0].collapsedGroups).toEqual([]);
+    tool.destroy();
+  });
+});
+
+// notion-motion.md Round 93 §1 #4 (r93-n-v2-drag-bar.raw): with several views the "1 selected" bar sits on
+// the title row, so the view tabs stay clickable.
+describe('DatabaseTool — selection bar place', () => {
+  afterEach(() => {
+    PopoverRegistry.resetForTests();
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  it('puts the table selection bar on the title row when there are several views', () => {
+    const { tool, root } = mount({}, {}, { views: [tableView(), tableView({ id: 'v2', name: 'Two', position: 'a1' })] });
+
+    root.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-row-checkbox]')?.click();
+    const bar = root.querySelector('[data-blok-database-table-selection-bar]');
+
+    expect(bar?.parentElement?.hasAttribute('data-blok-database-title-row')).toBe(true);
+    expect(root.querySelector('[data-blok-database-view-bar]')?.hasAttribute('data-blok-database-selecting')).toBe(false);
+    tool.destroy();
+  });
+});
+
+// notion-motion.md Round 94 §1 #7 and §2 (r94-n-hidden-title-selbar.raw): with no title to show, the title row
+// goes away and the tabs move up. The "1 selected" bar sits on the first row shown.
+describe('DatabaseTool — hidden title row', () => {
+  afterEach(() => {
+    PopoverRegistry.resetForTests();
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  const twoViews = [tableView(), tableView({ id: 'v2', name: 'Two', position: 'a1' })];
+  const titleRow = (root: HTMLElement): HTMLElement | null => root.querySelector('[data-blok-database-title-row]');
+  const pickRow = (root: HTMLElement): Element | null => {
+    root.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-row-checkbox]')?.click();
+
+    return root.querySelector('[data-blok-database-table-selection-bar]');
+  };
+
+  it.each([
+    ['hidden data source titles', { hideDataSourceTitles: true }],
+    ['a full page', { fullPage: true }],
+  ] as const)('drops the title row with %s, and puts the selection bar on the tab row', (_, extra) => {
+    const { tool, root } = mount({}, {}, { views: twoViews, ...extra });
+
+    expect(titleRow(root)).not.toBeVisible();
+    expect(pickRow(root)?.parentElement?.hasAttribute('data-blok-database-view-bar')).toBe(true);
+    tool.destroy();
+  });
+
+  it('keeps the title row with one view, since it holds the view toolbar', () => {
+    const { tool, root } = mount({}, {}, { hideDataSourceTitles: true });
+
+    expect(titleRow(root)).toBeVisible();
+    tool.destroy();
+  });
+
+  it('brings the title row back when the titles are shown again', () => {
+    const { tool, root } = mount({}, {}, { views: twoViews, hideDataSourceTitles: true });
+
+    tool.setData({ ...tool.save(root), hideDataSourceTitles: false });
+
+    expect(titleRow(root)).toBeVisible();
+    expect(pickRow(root)?.parentElement?.hasAttribute('data-blok-database-title-row')).toBe(true);
     tool.destroy();
   });
 });

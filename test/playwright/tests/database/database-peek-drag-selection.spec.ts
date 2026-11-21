@@ -482,7 +482,9 @@ test.describe('D7 in a sorted table', () => {
 });
 
 test.describe('selection bar', () => {
-  test('takes the place of the view toolbar row, and "1 selected" stays on one line', async ({ page }) => {
+  // notion-motion.md Round 93 §1 #4 (r93-n-v2-drag-bar.raw): with several views the bar sits on the title row,
+  // so the view tabs stay visible and clickable.
+  test('sits on the title row with the tabs still clickable, and "1 selected" stays on one line', async ({ page }) => {
     await mount(page, blocks());
     await tableRow(page, 'r1').hover();
     await tableRow(page, 'r1').locator('[data-blok-database-table-row-checkbox]').click();
@@ -491,20 +493,59 @@ test.describe('selection bar', () => {
 
     await expect(bar).toBeVisible();
     const barBox = await bar.boundingBox();
-    const viewBar = await page.locator('[data-blok-database-view-bar]').boundingBox();
-    const header = await page.locator('[data-blok-database-table-header]').boundingBox();
+    const titleRow = await page.locator('[data-blok-database-title-row]').boundingBox();
     const count = await boxOf(page, '[data-blok-database-table-selection-count]');
 
-    if (barBox === null || viewBar === null || header === null) throw new Error('no layout');
-    expect(barBox.y + barBox.height).toBeLessThanOrEqual(header.y);
-    expect(barBox.y).toBeGreaterThanOrEqual(viewBar.y);
-    expect(barBox.y + barBox.height).toBeLessThanOrEqual(viewBar.y + viewBar.height);
+    if (barBox === null || titleRow === null) throw new Error('no layout');
+    expect(barBox.y).toBeGreaterThanOrEqual(titleRow.y);
+    expect(barBox.y + barBox.height).toBeLessThanOrEqual(titleRow.y + titleRow.height);
     expect(count?.height).toBe(21);
-    await expect(page.locator('[data-blok-database-tab-bar]')).toBeHidden();
-
-    await tableRow(page, 'r1').locator('[data-blok-database-table-row-checkbox]').click();
-    await expect(bar).toHaveCount(0);
     await expect(page.locator('[data-blok-database-tab-bar]')).toBeVisible();
+    await page.getByRole('tab', { name: 'Board' }).click();
+    await expect(page.getByRole('tab', { name: 'Board' })).toHaveAttribute('aria-selected', 'true');
+  });
+  // notion-motion.md Round 94 §1 #7 and §2 (r94-n-hidden-title-selbar.raw, r94-n-fullpage-selbar.raw): with no title
+  // the title row goes, the tabs move up to 4px under the database's top, and the bar's top is the database's top.
+  for (const [label, extra] of [['shown titles', {}], ['hidden titles', { hideDataSourceTitles: true }], ['a full page', { fullPage: true }]] as const) {
+    test(`with ${label} the bar's top is the database's top, 4px above the first row`, async ({ page }) => {
+      await mount(page, blocks().map((block) => (block.type === 'database' ? { ...block, data: { ...block.data, ...extra } } : block)));
+      const hidden = label !== 'shown titles';
+
+      await expect(page.locator('[data-blok-database-title-row]')).toBeVisible({ visible: !hidden });
+      // Read before the pick: the bar hides the tabs it covers.
+      const tab = await page.getByRole('tab', { name: 'Table' }).boundingBox();
+
+      await tableRow(page, 'r1').hover();
+      await tableRow(page, 'r1').locator('[data-blok-database-table-row-checkbox]').click();
+
+      const bar = await page.locator('[data-blok-database-table-selection-bar]').boundingBox();
+      const top = await page.locator('[data-blok-database-wrapper]').boundingBox();
+      const title = await page.locator('[data-blok-database-title-row]').boundingBox();
+
+      if (bar === null || top === null || tab === null) throw new Error('no layout');
+      const firstRowTop = hidden || title === null ? tab.y - 4 : title.y;
+
+      expect(Math.abs(bar.y - firstRowTop)).toBeLessThanOrEqual(0.5);
+      expect(Math.abs(bar.y - top.y)).toBeLessThanOrEqual(0.5);
+    });
+  }
+  // notion-motion.md Round 97 §1 #4 (r97-n-selbar-oneview.raw): with one view the bar's top is the database's top,
+  // and it starts 8px left of the title text.
+  test('with one view the bar sits at the database top, 8px left of the title', async ({ page }) => {
+    await mount(page, blocks().map((block) => (block.type === 'database'
+      ? { ...block, data: { ...block.data, views: (block.data as { views: unknown[] }).views.slice(0, 1) } }
+      : block)));
+    const title = await page.locator('[data-blok-database-title]').boundingBox();
+
+    await tableRow(page, 'r1').hover();
+    await tableRow(page, 'r1').locator('[data-blok-database-table-row-checkbox]').click();
+
+    const bar = await page.locator('[data-blok-database-table-selection-bar]').boundingBox();
+    const top = await page.locator('[data-blok-database-wrapper]').boundingBox();
+
+    if (bar === null || top === null || title === null) throw new Error('no layout');
+    expect(Math.abs(bar.y - top.y)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(title.x - 8 - bar.x)).toBeLessThanOrEqual(0.5);
   });
   // With tabs the bar sat at the view bar's edge, 316px left of the table (sweep9a motion-rowdrag.json).
   test('starts at the table content with tabs, as it does with one view', async ({ page }) => {

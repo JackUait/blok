@@ -4,14 +4,16 @@ import { EmojiPicker } from '../callout/emoji-picker';
 import { chooseLanding, playLanding } from '../callout/emoji-landing';
 import { isPageCover } from '../../shared/page-cover';
 import { readIcon } from '../page/page-values';
-import { IconChevronUpDown, IconDotsHorizontal, IconLock, IconPlus } from '../../components/icons';
+import { IconCalendar, IconChevronUpDown, IconDotsHorizontal, IconLock, IconMenu, IconPlus, IconTrash } from '../../components/icons';
 import { formatBytes } from '../../components/utils/format-bytes';
+import { getUserOS } from '../../components/utils/browser';
 import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import { onHover } from '../../components/utils/tooltip';
 import type { I18n } from '../../../types';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { DEFAULT_MAX_SIZE } from '../file/constants';
 import { openCellEditor, renderCellValue } from './cells';
+import { OptionDrag, confirmOptionDelete, newSelectOption, placeDroppedOption } from './cells/option-editing';
 import type { CellContext, CellEditorHandle } from './cells';
 import { accessLine, openFormShare } from './database-form-share';
 import type { FormShareHost } from './database-form-share';
@@ -43,6 +45,8 @@ export interface DatabaseFormViewOptions {
   /** Makes an existing property the last question. */
   showQuestion?: (propertyId: string) => void;
   renameProperty?: (propertyId: string, name: string) => void;
+  /** The property's whole new option list after a builder option edit, as the property menu's options list sends it. */
+  changeOptions?: (propertyId: string, options: SelectOption[]) => void;
   /** Another property of this database already has `name`. Such a rename is refused (research/14 §3). */
   isNameTaken?: (propertyId: string, name: string) => boolean;
   changePropertyType?: (propertyId: string, type: PropertyType) => void;
@@ -131,6 +135,8 @@ export class DatabaseFormView implements DatabaseViewRenderer {
   /** The header's icon and cover controls: their pickers live in <body> and close with them. */
   private headerControls: Array<{ destroy(): void }> = [];
   private drag: DatabaseFormQuestionDrag | null = null;
+  /** Closes an open Delete option prompt when the view goes away. */
+  private confirmAbort: AbortController | null = null;
 
   constructor(private readonly options: DatabaseFormViewOptions) {
     this.submitted = options.submitted === true;
@@ -147,7 +153,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     return this.building || this.pressing || this.panel !== null || this.editor?.isOpen === true
       // The icon and cover pickers mark their button while open.
       || this.root?.querySelector('[data-blok-database-form-header] [aria-expanded="true"]') != null
-      || (active?.matches('[data-blok-database-form-question-name], input[data-blok-database-form-header-title], input[data-blok-database-form-header-description]') === true
+      || (active?.matches('[data-blok-database-form-question-name], [data-blok-database-form-option-name], [data-blok-database-form-checkbox-label], input[data-blok-database-form-header-title], input[data-blok-database-form-header-description]') === true
         && this.root?.contains(active) === true);
   }
 
@@ -195,7 +201,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       } else if (field instanceof HTMLFieldSetElement) {
         const chosen = Array.isArray(value) ? value : [value];
 
-        for (const box of field.querySelectorAll<HTMLInputElement>('input')) {
+        for (const box of field.querySelectorAll<HTMLInputElement>('input:is([type="radio"], [type="checkbox"])')) {
           box.checked = chosen.some((selected) => selected === box.value);
         }
       } else if (field instanceof HTMLInputElement && field.type === 'checkbox') {
@@ -214,6 +220,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     this.editor?.cancel();
     this.editor = null;
     this.drag?.cleanup();
+    this.confirmAbort?.abort();
   }
 
   createView(): HTMLDivElement {
@@ -694,7 +701,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     } else {
       field.required = required;
     }
-    wrapper.appendChild(field);
+    wrapper.appendChild(this.answerBox(property, field, setting));
 
     const maxSelections = PICKS_MANY.includes(property.type) ? setting.maxSelections : undefined;
 
@@ -705,9 +712,19 @@ export class DatabaseFormView implements DatabaseViewRenderer {
 
   private field(property: PropertyDefinition, id: string, setting: ViewPropertySetting): Field {
     const options = [...(property.config?.options ?? [])].sort((a, b) => (a.position < b.position ? -1 : 1));
+    const builder = this.isBuilder();
 
-    if (property.type === 'person' || property.type === 'files' || property.type === 'relation') {
+    // notion-motion.md Round 75 §2: the builder's date answer is a picker field, not a native date box.
+    if (property.type === 'person' || property.type === 'files' || property.type === 'relation' || (builder && property.type === 'date')) {
       return this.providerField(property, id, setting);
+    }
+    if (builder && this.options.changeOptions !== undefined && (property.type === 'select' || property.type === 'multiSelect')
+      && showOptionsAs(property, setting) === 'list') {
+      return this.optionRows(property, options, id, property.type === 'select' ? 'radio' : 'checkbox');
+    }
+    // notion-motion.md Round 76 §3, Round 77 §4: a dropdown keeps editable rows, with no mark, under a hint field.
+    if (builder && this.options.changeOptions !== undefined && (property.type === 'select' || property.type === 'multiSelect')) {
+      return this.optionRows(property, options, id, null);
     }
     if (property.type === 'select' && showOptionsAs(property, setting) === 'list') {
       return this.choiceList(options, id, 'radio');
@@ -756,6 +773,252 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       : propertyTypeMeta(type).labelKey);
   }
 
+  /** The builder: a writable form that edits its questions. A respondent's form, and the Preview, answer them. */
+  private isBuilder(): boolean {
+    return !this.options.readOnly && this.options.setQuestionSetting !== undefined;
+  }
+
+  /**
+   * notion-motion.md Round 75 §2: the builder edits a choice question's options in place, one row per
+   * option, then "Add option". Each edit sends the property's whole option list.
+   */
+  private optionRows(property: PropertyDefinition, options: SelectOption[], id: string, kind: 'radio' | 'checkbox' | null): HTMLFieldSetElement {
+    const set = document.createElement('fieldset');
+    const add = document.createElement('button');
+    const label = document.createElement('span');
+    // The list as last sent: the host redraws only once the builder is idle, so a second edit builds on the first.
+    const state = { options };
+    const taken = (name: string, except?: string): boolean =>
+      state.options.some((option) => option.id !== except && option.label.toLowerCase() === name.toLowerCase());
+    const send = (next: SelectOption[]): void => {
+      state.options = next;
+      this.write(() => this.options.changeOptions?.(property.id, next));
+    };
+    const ROW = 'data-blok-database-form-option';
+    const rowOf = (optionId: string): HTMLElement | null => set.querySelector<HTMLElement>(`[${ROW}="${CSS.escape(optionId)}"]`);
+    const drag = new OptionDrag(set, () => state.options, (dropped, others, index) => {
+      const dragged = state.options.find((option) => option.id === dropped);
+      const row = rowOf(dropped);
+
+      if (dragged === undefined || row === null) return;
+      const placed = placeDroppedOption(property, others, index, dragged);
+      const before = others[index];
+
+      set.insertBefore(row, before === undefined ? add : rowOf(before.id));
+      send(state.options.map((option) => (option.id === dropped ? placed : option)).sort((a, b) => (a.position < b.position ? -1 : 1)));
+    }, () => undefined, ROW);
+
+    // A row names an option; a new row gets its option on its first name, then renames it like the others.
+    const nameRow = (optionId: string | null): HTMLElement => {
+      const { row, name, handle, remove } = this.optionRow(kind);
+      const owner = { id: optionId };
+      const saved = (): string => state.options.find((entry) => entry.id === owner.id)?.label ?? '';
+
+      if (optionId !== null) row.setAttribute(ROW, optionId);
+      // A sorted list puts a dropped option straight back, as in the property menu.
+      handle.addEventListener('pointerdown', (event) => {
+        if (owner.id !== null && property.optionSort === undefined) drag.start(event, owner.id);
+      });
+      remove.addEventListener('click', () => {
+        const doomed = owner.id;
+
+        // An unnamed new row holds no option, so it goes without asking (Notion's case is unmeasured).
+        if (doomed === null) {
+          row.remove();
+
+          return;
+        }
+        void this.confirmDeleteOption(set).then((confirmed) => {
+          if (!confirmed) return;
+          row.remove();
+          send(state.options.filter((entry) => entry.id !== doomed));
+        });
+      });
+
+      name.defaultValue = saved();
+      name.setAttribute('aria-label', this.options.i18n.t(optionId === null ? 'tools.database.addOption' : 'tools.database.optionName'));
+      name.addEventListener('change', () => {
+        const next = name.value.trim();
+
+        if (next === '' || next === saved() || taken(next, owner.id ?? undefined)) {
+          name.value = saved();
+
+          return;
+        }
+        if (owner.id === null) {
+          const option = newSelectOption(state.options, next);
+
+          owner.id = option.id;
+          row.setAttribute(ROW, option.id);
+          send([...state.options, option]);
+
+          return;
+        }
+        send(state.options.map((entry) => (entry.id === owner.id ? { ...entry, label: next } : entry)));
+      });
+      // Notion's label for a new option is unmeasured, so an empty new row waits for one and leaves when blurred.
+      name.addEventListener('focusout', () => {
+        if (owner.id === null && name.value.trim() === '') row.remove();
+      });
+
+      return row;
+    };
+
+    set.id = id;
+    set.setAttribute('data-blok-database-form-options', '');
+    if (kind === null) set.appendChild(this.dropdownHint());
+    options.forEach((option) => set.appendChild(nameRow(option.id)));
+    add.type = 'button';
+    add.setAttribute('data-blok-database-form-add-option', '');
+    add.setAttribute('data-blok-testid', 'database-form-add-option');
+    add.innerHTML = IconPlus;
+    label.textContent = this.options.i18n.t('tools.database.formAddOption');
+    add.appendChild(label);
+    add.addEventListener('click', () => {
+      const row = nameRow(null);
+
+      set.insertBefore(row, add);
+      row.querySelector<HTMLInputElement>('[data-blok-database-form-option-name]')?.focus();
+    });
+    set.appendChild(add);
+
+    return set;
+  }
+
+  /** notion-motion.md Round 77 §4 "Delete option": Notion asks first. */
+  private confirmDeleteOption(source: Element): Promise<boolean> {
+    this.confirmAbort?.abort();
+    this.confirmAbort = new AbortController();
+
+    return confirmOptionDelete((key) => this.options.i18n.t(key), { directionSource: source, signal: this.confirmAbort.signal });
+  }
+
+  /**
+   * One builder option row: a radio or checkbox that only shows the kind (none in a dropdown), then the option's name.
+   * notion-motion.md Round 76 §3: hovered, it shows "Drag to move" and "Delete option".
+   */
+  private optionRow(kind: 'radio' | 'checkbox' | null): { row: HTMLElement; name: HTMLInputElement; handle: HTMLButtonElement; remove: HTMLButtonElement } {
+    const row = document.createElement('div');
+    const name = document.createElement('input');
+    const control = (attr: string, icon: string, label: string): HTMLButtonElement => {
+      const button = document.createElement('button');
+
+      button.type = 'button';
+      button.setAttribute(attr, '');
+      button.setAttribute('aria-label', this.options.i18n.t(label));
+      button.innerHTML = icon;
+
+      return button;
+    };
+    const handle = control('data-blok-database-form-option-handle', IconMenu, 'blockSettings.dragToMove');
+    const remove = control('data-blok-database-form-option-delete', IconTrash, 'tools.database.formDeleteOption');
+
+    row.setAttribute('data-blok-database-form-option', '');
+    row.appendChild(handle);
+    if (kind !== null) row.appendChild(this.inertBox(kind));
+    name.type = 'text';
+    name.setAttribute('data-blok-database-form-option-name', '');
+    name.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || event.isComposing) return;
+      event.preventDefault();
+      name.blur();
+    });
+    name.addEventListener('focusout', (event) => this.endEdit(event));
+    row.append(name, remove);
+
+    return { row, name, handle, remove };
+  }
+
+  /** A radio or checkbox that only shows a question's kind in the builder. */
+  private inertBox(kind: 'radio' | 'checkbox'): HTMLInputElement {
+    const box = document.createElement('input');
+
+    box.type = kind;
+    box.tabIndex = -1;
+    box.setAttribute('aria-hidden', 'true');
+    box.addEventListener('click', (event) => event.preventDefault());
+
+    return box;
+  }
+
+  /** notion-motion.md Round 76 §3: a Select dropdown's builder field reads a hint and ends in a chevron. */
+  private dropdownHint(): HTMLElement {
+    const hint = document.createElement('div');
+
+    hint.setAttribute('data-blok-database-form-dropdown-hint', '');
+    hint.append(this.options.i18n.t('tools.database.formDropdownHint'), this.dropdownChevron());
+
+    return hint;
+  }
+
+  /**
+   * notion-motion.md Round 75 §2: the builder's checkbox answer sits in a 36-tall row.
+   * Round 76 §3: a label field follows the box; the label is the question's, not the property's.
+   */
+  private checkboxRow(property: PropertyDefinition, field: Field, setting: ViewPropertySetting): HTMLElement {
+    const row = document.createElement('div');
+    const label = document.createElement('textarea');
+
+    row.setAttribute('data-blok-database-form-checkbox-row', '');
+    // notion-motion.md Round 77 §4 "Builder checkbox": the builder's box is disabled.
+    if (field instanceof HTMLInputElement) field.setAttribute('disabled', '');
+    label.rows = 1;
+    label.value = setting.checkboxLabel ?? '';
+    label.placeholder = this.options.i18n.t('tools.database.formCheckboxLabelPlaceholder');
+    label.setAttribute('data-blok-database-form-checkbox-label', '');
+    label.setAttribute('aria-label', this.options.i18n.t('tools.database.formCheckboxLabelPlaceholder'));
+    label.addEventListener('change', () => {
+      const next = label.value.trim();
+
+      label.value = next;
+      this.write(() => this.options.setQuestionSetting?.(property.id, { checkboxLabel: next === '' ? undefined : next }));
+    });
+    label.addEventListener('focusout', (event) => this.endEdit(event));
+    // notion-motion.md Round 77 §4: Enter in the label does nothing; the label stays one line.
+    // Rounds 78–79 §3: Home and End move the caret to the label's ends and the page stays;
+    // macOS Home/End in a one-line textarea scroll the page instead. Chords were matched natively, so they stay the browser's.
+    label.addEventListener('keydown', (event) => {
+      if (event.isComposing) return;
+      if (event.key === 'Enter') {
+        event.preventDefault();
+
+        return;
+      }
+      const plain = !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey;
+      const caret = ({ Home: 0, End: label.value.length } as Record<string, number>)[event.key];
+
+      if (caret === undefined || !plain || !getUserOS().mac) return;
+      event.preventDefault();
+      label.setSelectionRange(caret, caret);
+    });
+    row.append(field, label);
+
+    return row;
+  }
+
+  /** What a question shows under its title: the field, or a checkbox row around it. */
+  private answerBox(property: PropertyDefinition, field: Field, setting: ViewPropertySetting): HTMLElement {
+    if (property.type !== 'checkbox') return field;
+    if (this.isBuilder()) return this.checkboxRow(property, field, setting);
+
+    // notion-motion.md Round 77 §4 "Respondents": the label shows as text 12 after the box.
+    // It wraps the box, not `for`: a Preview's ids repeat the builder's behind it.
+    // Round 79 §3: with no label the row still holds the box, so it keeps its 18 slot and mark.
+    const row = document.createElement('label');
+
+    row.setAttribute('data-blok-database-form-checkbox-answer', '');
+    row.append(field);
+    if (setting.checkboxLabel !== undefined) {
+      const text = document.createElement('span');
+
+      text.setAttribute('data-blok-database-form-checkbox-text', '');
+      text.textContent = setting.checkboxLabel;
+      row.append(text);
+    }
+
+    return row;
+  }
+
   private choiceList(options: SelectOption[], id: string, kind: 'radio' | 'checkbox', maxSelections?: number): HTMLFieldSetElement {
     const set = document.createElement('fieldset');
 
@@ -782,10 +1045,17 @@ export class DatabaseFormView implements DatabaseViewRenderer {
   private paintProviderField(property: PropertyDefinition, field: HTMLButtonElement): void {
     const value = this.answers.get(property.id);
     // Only a Dropdown multiple choice reaches a provider field as multiSelect.
-    const chevron = property.type === 'multiSelect' ? [this.dropdownChevron()] : [];
+    const chevron: HTMLSpanElement[] = [];
 
+    if (property.type === 'multiSelect') chevron.push(this.dropdownChevron());
+    if (property.type === 'date') chevron.push(this.dateGlyph());
+
+    field.toggleAttribute('data-empty', value === undefined);
     if (value === undefined) {
-      field.replaceChildren(this.options.i18n.t('tools.database.formChooseAnswer'), ...chevron);
+      // notion-motion.md Round 76 §3: the builder's empty date reads "Respondent's answer". Other provider fields there are unmeasured.
+      const empty = property.type === 'date' && this.isBuilder() ? 'tools.database.formAnswerPlaceholder' : 'tools.database.formChooseAnswer';
+
+      field.replaceChildren(this.options.i18n.t(empty), ...chevron);
 
       return;
     }
@@ -807,6 +1077,17 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     return chevron;
   }
 
+  /** notion-motion.md Round 75 §2: Notion's date answer ends in a 16px calendar glyph. */
+  private dateGlyph(): HTMLSpanElement {
+    const glyph = document.createElement('span');
+
+    glyph.setAttribute('data-blok-database-form-date-glyph', '');
+    glyph.setAttribute('aria-hidden', 'true');
+    glyph.innerHTML = IconCalendar;
+
+    return glyph;
+  }
+
   private providerField(property: PropertyDefinition, id: string, setting: ViewPropertySetting): HTMLButtonElement {
     const field = document.createElement('button');
     const context = { ...this.options.cellContext, i18n: this.options.i18n, readOnly: false, openRelated: undefined };
@@ -816,6 +1097,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     field.id = id;
     field.setAttribute('data-blok-database-form-provider-answer', '');
     if (property.type === 'multiSelect') field.setAttribute('data-blok-database-form-dropdown', '');
+    if (property.type === 'date') field.setAttribute('data-blok-database-form-date', '');
     field.setAttribute('aria-label', setting.questionName ?? property.name);
     field.addEventListener('click', () => {
       if (this.destroying) return;
@@ -992,6 +1274,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       besideFlip: true,
       testId: 'database-form-select-type',
       width: 290,
+      surfaceClass: 'blok-database-form-type-menu',
       backLabel: i18n.t('tools.database.peekBack'),
       onClose: () => {
         if (anchor.hasAttribute('data-blok-database-form-slot')) anchor.remove();
@@ -1006,16 +1289,22 @@ export class DatabaseFormView implements DatabaseViewRenderer {
             : this.options.schema.filter((property) => isAutoQuestion(property) && !asked.has(property.id));
           const rows: HTMLElement[] = existing.length === 0 ? [] : [
             panelLabel(i18n.t('tools.database.formExistingProperties')),
-            ...existing.map((property) => panelRow({
-              label: property.name,
-              description: i18n.t(propertyTypeMeta(property.type).labelKey),
-              icon: propertyTypeMeta(property.type).icon,
-              testId: `database-form-existing-${property.id}`,
-              onClick: () => {
-                panel.close();
-                this.options.showQuestion?.(property.id);
-              },
-            })),
+            ...existing.map((property) => {
+              const row = panelRow({
+                label: property.name,
+                description: i18n.t(propertyTypeMeta(property.type).labelKey),
+                icon: propertyTypeMeta(property.type).icon,
+                testId: `database-form-existing-${property.id}`,
+                onClick: () => {
+                  panel.close();
+                  this.options.showQuestion?.(property.id);
+                },
+              });
+
+              row.setAttribute('data-blok-database-form-existing-row', '');
+
+              return row;
+            }),
           ];
 
           return [

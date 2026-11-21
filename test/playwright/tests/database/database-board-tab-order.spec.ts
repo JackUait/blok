@@ -165,8 +165,10 @@ test('a pill reached by Tab rings like the count beside it', async ({ page }) =>
 });
 
 for (const key of ['Enter', 'Space']) {
-  test(`${key} on a pill renames the group, and Escape gives focus back to the pill`, async ({ page }) => {
+  // notion-motion.md Round 98 §1 #1: a rename popup 4 below the pill, its left edge on the pill's, 240 wide.
+  test(`${key} on a pill opens the rename popup under it, and Escape gives focus back to the pill`, async ({ page }) => {
     const pill = page.locator('[data-blok-database-column-pill]', { hasText: 'Not started' });
+    const field = page.locator('[data-blok-database-group-name-field] input');
     const before = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks.map((b) => b.id));
     const scrollY = await page.evaluate(() => window.scrollY);
 
@@ -175,16 +177,41 @@ for (const key of ['Enter', 'Space']) {
     await page.keyboard.press('Tab');
     await page.keyboard.press(key);
 
-    await expect(page.locator('[data-blok-database-column-title-input]')).toBeFocused();
+    await expect(field).toBeFocused();
+    await expect(field).toHaveValue('Not started');
+    expect(await field.evaluate((el: HTMLInputElement) => [el.selectionStart, el.selectionEnd])).toEqual([0, 11]);
+    await expect(page.locator('[data-blok-database-column-title-input]')).toHaveCount(0);
+    await expect(page.getByTestId('popover-item-html').getByRole('button', { name: 'Done' })).toBeVisible();
     expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
+
+    const pillBox = await pill.boundingBox();
+    const popupBox = await page.locator('[data-blok-popover]:has([data-blok-database-group-name-field]) [data-blok-popover-container]').boundingBox();
+
+    expect(Math.round((popupBox?.x ?? 0) - (pillBox?.x ?? 0))).toBe(0);
+    expect(Math.round((popupBox?.y ?? 0) - (pillBox?.y ?? 0) - (pillBox?.height ?? 0))).toBe(4);
+    expect(Math.round(popupBox?.width ?? 0)).toBe(240);
 
     await page.keyboard.press('Escape');
 
-    await expect(page.locator('[data-blok-database-column-title-input]')).toHaveCount(0);
+    await expect(field).toHaveCount(0);
     await expect(pill).toBeFocused();
     expect(await page.evaluate(async () => (await window.blokInstance?.save())?.blocks.map((b) => b.id))).toEqual(before);
   });
 }
+
+test('Done in the rename popup renames the group and gives focus back to the pill', async ({ page }) => {
+  const pill = page.locator('[data-blok-database-column-pill]', { hasText: 'Not started' });
+
+  await pill.focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Queued');
+  await page.getByTestId('popover-item-html').getByRole('button', { name: 'Done' }).click();
+
+  const renamed = page.locator('[data-blok-database-column-pill]', { hasText: 'Queued' });
+
+  await expect(renamed).toBeFocused();
+  await expect(page.locator('[data-blok-database-group-name-field]')).toHaveCount(0);
+});
 
 test('a click on a pill shows no ring', async ({ page }) => {
   const pill = page.locator('[data-blok-database-column-pill]', { hasText: 'Not started' });

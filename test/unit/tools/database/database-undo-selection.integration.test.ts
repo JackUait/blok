@@ -641,6 +641,18 @@ describe('row selection after undo', () => {
     expect(picked(type)).toEqual([]);
   });
 
+  // notion-motion.md Round 95 §1 #4: a drop into another board column leaves focus on body.
+  it('leaves focus on body after a board drop into another column', async () => {
+    const blok = await make('board');
+
+    itemOf('board', 'r3')?.focus();
+    await dragItemToTop('board', 'r3');
+
+    expect(((await blok.blocks.getById('r3')?.save())?.data as { properties: Record<string, unknown> }).properties.x).not.toBe('c');
+    expect(document.body).toHaveFocus();
+    expect(picked('board')).toEqual(['r3']);
+  });
+
   // notion-motion.md Round 93 §1 #2 (r93-n-caret-bdrag.raw): the drop clears the caret, so Escape clears the item.
   it.each([
     ['board', 'board-one-group'],

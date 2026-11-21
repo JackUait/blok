@@ -11691,6 +11691,10 @@ export class DatabaseTool implements BlockTool {
     }
     releaseCaret();
 
+    // notion-motion.md Round 95 §1 #4: only a drop in its own column focuses the card; one into another column leaves body.
+    const fromRow = this.model.getRow(rowId);
+    const sameGroup = fromRow !== undefined
+      && this.model.groupKeysOf(groupByPropId, { statusBy: viewConfig?.groupByStatus, settings: viewConfig?.groupSettings })(fromRow).includes(toOptionId);
     const subGroupBy = viewConfig?.subGroupBy;
     const subChange: Record<string, PropertyValue> = subGroupBy !== undefined && subGroupBy !== groupByPropId && result.toSubGroup !== undefined
       ? { [subGroupBy]: this.droppedSubGroupValue(subGroupBy, rowId, result.toSubGroup) }
@@ -11700,17 +11704,14 @@ export class DatabaseTool implements BlockTool {
     // The card takes the new group's value and lands where the sort puts it, so a
     // drop inside its own group snaps back. Either way it is left picked.
     if (viewConfig !== undefined && this.controls.effective(viewConfig).sorts.length > 0) {
-      const row = this.model.getRow(rowId);
       const sortedChanges = { ...this.changedValues(rowId, subChange) };
-      const sameGroup = row !== undefined
-        && this.model.groupKeysOf(groupByPropId, { statusBy: viewConfig.groupByStatus, settings: viewConfig.groupSettings })(row).includes(toOptionId);
 
       if (!sameGroup) {
         Object.assign(sortedChanges, this.changedValues(rowId, { [groupByPropId]: this.droppedGroupValue(groupByPropId, rowId, toOptionId) }));
       }
       this.writeRowValues(rowId, sortedChanges);
       this.landRow(rowId);
-      this.focusLandedItem(rowId);
+      if (sameGroup) this.focusLandedItem(rowId);
 
       return;
     }
@@ -11726,7 +11727,7 @@ export class DatabaseTool implements BlockTool {
     });
     this.rerenderView();
     this.landRow(rowId);
-    this.focusLandedItem(rowId);
+    if (sameGroup) this.focusLandedItem(rowId);
   }
 
   /** The sorts this person sees: their own (D4) or the saved ones. */

@@ -11107,29 +11107,64 @@ export class DatabaseTool implements BlockTool {
     if (this.shownView()?.groupBy === undefined || this.structureLocked()) {
       return;
     }
+    const field = this.groupNameField('', (label) => {
+      this.groupMenuPopover?.hide();
+      if (label === '' || this.destroyed || this.readOnly) return;
+      this.addGroupColumn(boardEl, label);
+    });
+
+    field.wrap.setAttribute('data-blok-database-new-group', '');
+    field.input.placeholder = this.api.i18n.t('tools.database.newGroup');
+    field.input.setAttribute('aria-label', field.input.placeholder);
+    // Round 16 §3: 300 wide, its left edge on the button's and its top on the button's bottom.
+    this.showGroupPopover(anchor, [{ type: PopoverItemType.Html, element: field.wrap, name: 'new-group' }], anchor, {
+      class: `${DATABASE_MENU_CLASS} blok-database-new-group-menu`,
+      minWidth: '300px',
+      offset: 0,
+    });
+    field.input.focus();
+  }
+
+  /**
+   * notion-motion.md Round 98 §1 #1: Enter or Space on a column pill opens this under the pill:
+   * 240 wide, 4 below it, the name selected, and the same field and "Done ↵" as "+ New group".
+   * `done` gets the trimmed name on Done or Enter, and null on any other close.
+   */
+  private openGroupRename(pill: HTMLElement, label: string, done: (label: string | null) => void): void {
+    const result: { label: string | null } = { label: null };
+    const field = this.groupNameField(label, (value) => {
+      result.label = value === '' ? null : value;
+      this.groupMenuPopover?.hide();
+    });
+
+    field.input.setAttribute('aria-label', this.api.i18n.t('tools.database.renameColumn'));
+    this.showGroupPopover(pill, [{ type: PopoverItemType.Html, element: field.wrap, name: 'rename-group' }], pill, {
+      class: `${DATABASE_MENU_CLASS} blok-database-new-group-menu`,
+      minWidth: '240px',
+      offset: 4,
+    });
+    this.groupMenuPopover?.on(PopoverEvent.Closed, () => done(result.label));
+    field.input.focus();
+    field.input.select();
+  }
+
+  /** The bare group name field and its "Done ↵" (notion-motion.md Round 16 §3). Done or Enter hands `commit` the trimmed name. */
+  private groupNameField(value: string, commit: (label: string) => void): { wrap: HTMLElement; input: HTMLInputElement } {
     const wrap = document.createElement('div');
     const input = document.createElement('input');
     const done = document.createElement('button');
     const enter = document.createElement('span');
-    const name = this.api.i18n.t('tools.database.newGroup');
-    const commit = (): void => {
-      const label = input.value.trim();
-
-      this.groupMenuPopover?.hide();
-      if (label === '' || this.destroyed || this.readOnly) return;
-      this.addGroupColumn(boardEl, label);
-    };
+    const submit = (): void => commit(input.value.trim());
 
     // The section rename's look: a bare field and a 28px "Done".
     wrap.setAttribute('data-blok-database-layout-section-rename', '');
-    wrap.setAttribute('data-blok-database-new-group', '');
+    wrap.setAttribute('data-blok-database-group-name-field', '');
     input.type = 'text';
-    input.placeholder = name;
-    input.setAttribute('aria-label', name);
+    input.value = value;
     input.addEventListener('keydown', (event) => {
       if (event.key !== 'Enter' || event.isComposing) return;
       event.preventDefault();
-      commit();
+      submit();
     });
     done.type = 'button';
     done.setAttribute('data-blok-database-layout-section-done', '');
@@ -11140,15 +11175,10 @@ export class DatabaseTool implements BlockTool {
     enter.setAttribute('aria-hidden', 'true');
     enter.innerHTML = IconReturn;
     done.appendChild(enter);
-    done.addEventListener('click', commit);
+    done.addEventListener('click', submit);
     wrap.append(input, done);
-    // Round 16 §3: 300 wide, its left edge on the button's and its top on the button's bottom.
-    this.showGroupPopover(anchor, [{ type: PopoverItemType.Html, element: wrap, name: 'new-group' }], anchor, {
-      class: `${DATABASE_MENU_CLASS} blok-database-new-group-menu`,
-      minWidth: '300px',
-      offset: 0,
-    });
-    input.focus();
+
+    return { wrap, input };
   }
 
   private addGroupColumn(boardEl: HTMLDivElement, label: string): void {
@@ -11542,6 +11572,7 @@ export class DatabaseTool implements BlockTool {
       this.columnControls = new DatabaseColumnControls({
         i18n: this.api.i18n,
         onRename: (optionId, label) => this.handleOptionRename(optionId, label),
+        openRename: (pill, label, done) => this.openGroupRename(pill, label, done),
         onRenameInput: (optionId, label) => {
           // Instant local save — update the model immediately so save() captures latest value
           this.handleOptionRename(optionId, label);

@@ -8,6 +8,8 @@ export interface ColumnControlsOptions {
   onRenameInput?: (optionId: string, label: string) => void;
   /** Called on blur/Enter — for debounced backend persist. Optional. */
   onRenameCommit?: (optionId: string, label: string) => void;
+  /** Opens the rename popup under the pill. `done` gets the new name, or null when it closes without one. */
+  openRename?: (pill: HTMLElement, label: string, done: (label: string | null) => void) => void;
 }
 
 export class DatabaseColumnControls {
@@ -36,8 +38,12 @@ export class DatabaseColumnControls {
       pill.addEventListener('keydown', (e) => {
         if (e.target !== pill || (e.key !== 'Enter' && e.key !== ' ')) return;
         e.preventDefault();
-        pill.querySelector<HTMLElement>('[data-blok-database-column-title]')?.click();
         this.keyPill = pill;
+        if (this.options.openRename === undefined) {
+          pill.querySelector<HTMLElement>('[data-blok-database-column-title]')?.click();
+          return;
+        }
+        this.openRenamePopup(pill, optionId);
       });
     }
 
@@ -84,6 +90,22 @@ export class DatabaseColumnControls {
           this.refocusKeyPill();
         },
       });
+    });
+  }
+
+  /** notion-motion.md Round 98 §1 #1: a key opens the rename popup under the pill. */
+  private openRenamePopup(pill: HTMLElement, optionId: string): void {
+    const titleEl = pill.querySelector<HTMLElement>('[data-blok-database-column-title]');
+    const originalLabel = titleEl?.textContent ?? '';
+
+    this.options.openRename?.(pill, originalLabel, (label) => {
+      if (label !== null && label !== originalLabel && titleEl !== null) {
+        titleEl.textContent = label;
+        this.options.onRenameCommit?.(optionId, label);
+        this.options.onRename(optionId, label);
+      }
+      this.keyPill = null;
+      if (pill.isConnected) pill.focus();
     });
   }
 

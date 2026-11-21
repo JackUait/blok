@@ -7780,6 +7780,10 @@ button[data-blok-database-board-lane-count]:hover {
   outline: none;
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] > [data-blok-popover-container] > [data-blok-popover-items]:focus-visible:has([data-blok-focused='true']) {
+  outline: none;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item-icon], [data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-item-icon], [data-blok-popover][data-blok-popover-custom-class~='blok-database-page-actions-menu'] [data-blok-popover-item-icon], [data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] [data-blok-popover-item-icon], [data-blok-popover][data-blok-popover-custom-class~='blok-database-lock-menu'] [data-blok-popover-item-icon] {
   width: 20px;
   margin-inline-end: var(--blok-space-2);

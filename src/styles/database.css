@@ -3837,6 +3837,12 @@ button[data-blok-database-board-lane-count]:hover {
   outline: none;
 }
 
+/* notion-motion.md Round 94 §1 #6: Escape on Number format leaves the cursor on its row, so the list needs no ring.
+   Only while a row holds the cursor: a list reached by Tab keeps its ring. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] > [data-blok-popover-container] > [data-blok-popover-items]:focus-visible:has([data-blok-focused='true']) {
+  outline: none;
+}
+
 /* notion-motion.md, Round 8b "Board group ⋯ menu": the 20px icon at x 8, the text at x 36.
    Round 9: the column menu and its Edit property flyout too. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item-icon],

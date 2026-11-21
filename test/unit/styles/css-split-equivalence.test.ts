@@ -1971,6 +1971,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R248_BYTES = 1445;
     // Lane r253: Round 93 §1 #5 Change type list height and fade. Net database.css growth against origin/main.
     const DATABASE_R253_BYTES = 496;
+    // Lane r256: Round 94 §1 #6 no ring round the Edit property list after a submenu Escape. Net database.css growth against origin/main.
+    const DATABASE_R256_BYTES = 408;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2650,6 +2652,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R250_BYTES
       + DATABASE_R248_BYTES
       + DATABASE_R253_BYTES
+      + DATABASE_R256_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

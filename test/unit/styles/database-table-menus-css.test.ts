@@ -952,3 +952,13 @@ describe('header menu list after the option confirm (Round 82)', () => {
     expect(declared(LIST, 'outline')).toEqual(['none']);
   });
 });
+
+// notion-motion.md Round 94 §1 #6: Escape on Number format leaves the keyboard cursor on the Number format row.
+// The focused list then needs no ring. A list with no cursor row (reached by Tab) keeps its ring.
+describe('Edit property list after Escape on a submenu (Round 94)', () => {
+  const LIST = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] > [data-blok-popover-container] > [data-blok-popover-items]:focus-visible:has([data-blok-focused='true'])";
+
+  it('paints no ring round the focused list while a row holds the cursor', () => {
+    expect(declared(LIST, 'outline')).toEqual(['none']);
+  });
+});

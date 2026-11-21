@@ -2004,8 +2004,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // +190: the database name in Delete property's title is 700.
     const DATABASE_R274_BYTES = 1321 + 503 + 190;
     // Lane r275: » shows only on hover with any rule and in a title row, with no fade; « stays in a view bar;
-    // the toolbar fills its 40px row.
-    const DATABASE_R275_BYTES = 388;
+    // the toolbar fills its 40px row. +435: a hidden » stays focusable, so Shift+Tab reaches it.
+    const DATABASE_R275_BYTES = 388 + 435;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

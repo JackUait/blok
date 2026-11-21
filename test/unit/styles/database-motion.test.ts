@@ -418,12 +418,14 @@ describe('minimized database toolbar', () => {
 
   // notion-motion.md Round 100 §1 #7, Round 102 §1 #6 (r102-n-search-open-minimize-motion.raw): with the search open, » keeps
   // its room. It shows at once and leaves ~200ms after the pointer, and a keyboard focus on a control shows it too.
+  // Hidden, it stays focusable, so Shift+Tab from Filter can land on it (database-toolbar-minimize.spec.ts).
   it('hides a » kept for the search until the pointer or a keyboard focus is on the controls, 200ms after they leave', () => {
     const rule = body(database, `[data-blok-database-view-bar] > ${TOOLBAR}:not(:hover):not(:has(> :not([data-blok-database-search-input]):focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only=""]`);
 
-    expect(rule).toContain('visibility: hidden');
-    expect(rule).not.toContain('opacity');
-    expect(rule).toContain('transition: background-color 0.1s ease-in-out, visibility 0s 0.2s');
+    expect(rule).not.toContain('visibility');
+    expect(rule).toContain('opacity: 0');
+    expect(rule).toContain('pointer-events: none');
+    expect(rule).toContain('transition: background-color 0.1s ease-in-out, opacity 0s 0.2s, pointer-events 0s 0.2s allow-discrete');
   });
 
   // notion-motion.md Round 101 §1 #2, §3, Round 102 §1 #1-#3: with a sort, filters or no rule, Notion mounts » while the
@@ -435,18 +437,21 @@ describe('minimized database toolbar', () => {
       expect(body(outsideReducedMotion, `${TOOLBAR} > ${IDLE}`)).toContain('margin-inline-start: calc(-1 * var(--blok-database-toolbar-icon-size))');
     });
 
-    it('leaves 200ms after the pointer and the keyboard focus leave the controls', () => {
+    // Hidden, it stays focusable, so Shift+Tab from Filter can land on it (database-toolbar-minimize.spec.ts).
+    it('leaves 200ms after the pointer and the keyboard focus leave the controls, staying focusable', () => {
       const rule = body(outsideReducedMotion, `${TOOLBAR}:not(:hover):not(:has(> :focus-visible)) > ${IDLE}`);
 
-      expect(rule).toContain('display: none');
-      expect(rule).toContain('transition: background-color 0.1s ease-in-out, display 0s allow-discrete 0.2s');
+      expect(rule).not.toContain('display: none');
+      expect(rule).toContain('opacity: 0');
+      expect(rule).toContain('pointer-events: none');
+      expect(rule).toContain('transition: background-color 0.1s ease-in-out, opacity 0s 0.2s, pointer-events 0s 0.2s allow-discrete, margin-inline-start 0s 0.2s');
     });
 
     // r102-n-minimize-hover-titlerow.raw: a one-view title row shows it too. The row folds by its own width
-    // (database-view-bar-fold.ts), so » takes its room there and never lies over the title.
-    it('shows in a title row, taking its room, and stays off tabs that run up to the toolbar', () => {
-      expect(body(database, `[data-blok-database-title-row] > ${TOOLBAR} > ${IDLE}`)).toContain('margin-inline-start: 0');
-      expect(body(database, `[data-blok-database-title-row] > ${TOOLBAR} > ${IDLE}`)).not.toContain('display: none');
+    // (database-view-bar-fold.ts), so a shown » takes its room there and never lies over the title.
+    it('takes its room in a title row while shown, and stays off tabs that run up to the toolbar', () => {
+      expect(body(database, `[data-blok-database-title-row] > ${TOOLBAR}:hover > ${IDLE}`)).toContain('margin-inline-start: 0');
+      expect(body(database, `[data-blok-database-title-row] > ${TOOLBAR}:has(> :focus-visible) > ${IDLE}`)).toContain('margin-inline-start: 0');
       expect(body(database, `[data-blok-database-view-bar][data-blok-database-fold-minimize] > ${TOOLBAR} > ${IDLE}`)).toContain('display: none');
     });
 

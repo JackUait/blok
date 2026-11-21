@@ -84,7 +84,10 @@ const MOVING_KEYFRAME = /(?:^|[;{\s])(transform|translate|scale|rotate|width|hei
  * Motion allowed to run under reduced motion, keyed by `selector: property`.
  * Every entry needs a reason.
  */
-const EXEMPT: Record<string, string> = {};
+const EXEMPT: Record<string, string> = {
+  '[data-blok-database-view-toolbar]:not(:hover):not(:has(> :focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"]: transition':
+    '0s durations only: the title-row margin flips after the 200ms leave delay, it never slides',
+};
 
 interface Motion {
   line: number;

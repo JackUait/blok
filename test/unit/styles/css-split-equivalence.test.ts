@@ -2008,7 +2008,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // +279: with a chip bar » keeps its room, so the tab fold leaves space for it.
     const DATABASE_R275_BYTES = 388 + 435 + 279;
     // Lane r276: "No date (N)" sits flush on its neighbours.
-    const DATABASE_R276_BYTES = 83;
+    // +459: the filtered-empty "New page" takes Notion's 8 inset, 6 gap and a box round the plus ink.
+    const DATABASE_R276_BYTES = 83 + 459;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

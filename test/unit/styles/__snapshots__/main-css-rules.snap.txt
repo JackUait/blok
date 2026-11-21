@@ -15098,8 +15098,21 @@ a[data-blok-database-comment-mention-chip] {
   cursor: pointer;
 }
 
-[data-blok-database-table-edit-filters], [data-blok-database-table-empty] [data-blok-database-table-add-row] {
+[data-blok-database-table-edit-filters] {
   padding-inline-start: var(--blok-space-1-5);
+}
+
+[data-blok-database-table-empty] [data-blok-database-table-add-row] {
+  gap: var(--blok-space-1-5);
+}
+
+[data-blok-database-table-empty] [data-blok-database-table-add-row] > span {
+  justify-content: center;
+  width: 10.6px;
+}
+
+[data-blok-database-table-empty] [data-blok-database-table-add-row] svg {
+  flex: none;
 }
 
 [data-blok-database-table-edit-filters] svg {

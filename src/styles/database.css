@@ -12086,9 +12086,23 @@ a[data-blok-database-comment-mention-chip] {
 }
 
 /* Notion's glyph ink sits 9px in from the border (r41-n-filter-nohit.png). */
-[data-blok-database-table-edit-filters],
-[data-blok-database-table-empty] [data-blok-database-table-add-row] {
+[data-blok-database-table-edit-filters] {
   padding-inline-start: var(--blok-space-1-5);
+}
+
+/* notion-motion.md Round 102 §2 Row 68: Notion pads "New page" 8 with a 6 gap, and its plus box is its 10.5 of ink.
+   10.6px is the ink of Blok's 16px plus, so the ink lands 9 in and the text 6 after it. */
+[data-blok-database-table-empty] [data-blok-database-table-add-row] {
+  gap: var(--blok-space-1-5);
+}
+
+[data-blok-database-table-empty] [data-blok-database-table-add-row] > span {
+  justify-content: center;
+  width: 10.6px;
+}
+
+[data-blok-database-table-empty] [data-blok-database-table-add-row] svg {
+  flex: none;
 }
 
 [data-blok-database-table-edit-filters] svg {

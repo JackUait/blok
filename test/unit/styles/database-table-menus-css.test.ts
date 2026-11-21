@@ -664,6 +664,18 @@ describe('filtered-empty table', () => {
     expect(declared(EMPTY, 'width')).toEqual(['100cqi']);
     expect(declared(EMPTY, 'justify-content')).toEqual(['center']);
   });
+
+  // notion-motion.md Round 102 §2 Row 68 (r102-n-row68-empty.raw, r86-n-noresults.png): "New page" is 100.38 wide, pads 8 with
+  // a 6 gap, and its plus ink (10.5 wide) sits 9 in from the outer edge. Blok's 16px plus draws 10.6 of ink, so its box hugs that.
+  it('draws "New page" as Notion does: 8 in, the box round the plus ink, 6 to the text', () => {
+    const NEW = `${EMPTY} [data-blok-database-table-add-row]`;
+
+    expect(declared(NEW, 'gap').at(-1)).toBe('var(--blok-space-1-5)');
+    expect(declared(NEW, 'padding-inline-start')).toEqual([]);
+    expect(declared(`${NEW} > span`, 'width')).toEqual(['10.6px']);
+    expect(declared(`${NEW} > span`, 'justify-content')).toEqual(['center']);
+    expect(declared(`${NEW} svg`, 'flex')).toEqual(['none']);
+  });
 });
 
 // notion-motion.md Round 16 §3: the "+ New group" popover is 300x36 with a 6px inset, a 21px field and a 24px Done.

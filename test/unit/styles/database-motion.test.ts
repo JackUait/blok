@@ -313,8 +313,9 @@ describe('database toolbar search', () => {
   // notion-motion.md Round 100 §1 #6 (r100-n-fold-pill-menu.raw): Notion's input narrows 146→126 for a query, so the field takes no
   // more room. The × sits over the field's end: a wider toolbar would fold the icons at the first keystroke.
   it('lays the clear × over the field\'s end, so a query adds no width', () => {
-    expect(body(database, `[data-blok-database-view-toolbar] > [data-blok-database-search-clear]`)).toContain('margin-inline-start: -28px');
-    expect(body(database, `${INPUT}:has(+ [data-blok-database-search-clear]:not([hidden]))`)).toContain('padding-inline-end: 28px');
+    expect(database).toContain('--blok-database-search-clear-size: 28px;');
+    expect(body(database, `[data-blok-database-view-toolbar] > [data-blok-database-search-clear]`)).toContain('margin-inline-start: calc(-1 * var(--blok-database-search-clear-size))');
+    expect(body(database, `${INPUT}:has(+ [data-blok-database-search-clear]:not([hidden]))`)).toContain('padding-inline-end: var(--blok-database-search-clear-size)');
   });
 });
 

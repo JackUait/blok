@@ -4694,6 +4694,7 @@ span[data-blok-slash-search] {
 :where([data-blok-interface]), :where([data-blok-popover]), :where([data-blok-top-layer]:not([data-blok-interface] *)) {
   --blok-database-ink: rgb(44, 44, 43);
   --blok-database-picker-head-padding-block: 9.25px;
+  --blok-database-search-clear-size: 28px;
   --blok-database-ink-secondary: rgb(114, 111, 106);
   --blok-database-ink-tertiary: rgb(114, 111, 106);
   --blok-database-search-match-bg: rgba(255, 205, 56, 0.4);
@@ -15754,14 +15755,14 @@ button[data-blok-database-table-group-count]:hover {
 }
 
 [data-blok-database-view-toolbar] > [data-blok-database-search-clear] {
-  width: 28px;
-  min-width: 28px;
+  width: var(--blok-database-search-clear-size);
+  min-width: var(--blok-database-search-clear-size);
   padding: 0;
-  margin-inline-start: -28px;
+  margin-inline-start: calc(-1 * var(--blok-database-search-clear-size));
 }
 
 [data-blok-database-search-input]:has(+ [data-blok-database-search-clear]:not([hidden])) {
-  padding-inline-end: 28px;
+  padding-inline-end: var(--blok-database-search-clear-size);
 }
 
 [data-blok-database-search-clear] svg {

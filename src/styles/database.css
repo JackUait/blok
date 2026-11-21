@@ -12,6 +12,8 @@
   --blok-database-ink: rgb(44, 44, 43);
   /* notion-spec-2 §18.3: the status and person pickers' 38.5px head (4 + 5.25 around a 20px line). */
   --blok-database-picker-head-padding-block: 9.25px;
+  /* The search ×: it lies over the field's end by its own width. */
+  --blok-database-search-clear-size: 28px;
   --blok-database-ink-secondary: rgb(114, 111, 106);
   --blok-database-ink-tertiary: rgb(114, 111, 106);
   /* Search match tint: Notion's, measured (findings V22). */
@@ -12939,15 +12941,15 @@ button[data-blok-database-table-group-count]:hover {
 }
 
 [data-blok-database-view-toolbar] > [data-blok-database-search-clear] {
-  width: 28px;
-  min-width: 28px;
+  width: var(--blok-database-search-clear-size);
+  min-width: var(--blok-database-search-clear-size);
   padding: 0;
   /* Over the field's end: a query must not widen the toolbar, or the icons fold at the first key (notion-motion.md Round 100). */
-  margin-inline-start: -28px;
+  margin-inline-start: calc(-1 * var(--blok-database-search-clear-size));
 }
 
 [data-blok-database-search-input]:has(+ [data-blok-database-search-clear]:not([hidden])) {
-  padding-inline-end: 28px;
+  padding-inline-end: var(--blok-database-search-clear-size);
 }
 
 [data-blok-database-search-clear] svg {

@@ -171,9 +171,10 @@ describe('board: column pill rename popup', () => {
 
 /**
  * notion-motion.md Round 99 §1 #2-#4 (r99-n-band-pill-enter.raw, r99-n-select-col-pill-click.raw, r99-n-pill-click.raw):
- * the popup is 240 wide for a Status option and 300 for a Select one, its empty field reads "Rename group".
+ * the popup is 240 wide for a Status option and 300 for a Select one, its empty field reads "Rename group",
+ * and Enter on a sub-group band pill opens it too.
  */
-describe('board: rename popup by property type', () => {
+describe('board: rename popup by property type, and on a band pill', () => {
   const statusGroups = [
     { id: 'todo', kind: 'todo', name: 'To-do', color: 'gray', position: 'a0' },
     { id: 'ip', kind: 'inProgress', name: 'In progress', color: 'blue', position: 'a1' },
@@ -209,6 +210,13 @@ describe('board: rename popup by property type', () => {
   };
   // jsdom measures 0, so the popover's --width is its minWidth floor.
   const popupWidth = (): string | undefined => field()?.closest<HTMLElement>('[data-blok-popover]')?.style.getPropertyValue('--width');
+  const bandPill = (): HTMLElement | null => q('[data-blok-database-board-lane-label][role="button"]');
+  const optionLabels = async (propertyId: string): Promise<string[]> => {
+    const db = ((await editor?.save())?.blocks ?? []).find((block) => block.id === 'db');
+    const saved = (db?.data as { schema: Array<{ id: string; config?: { options: Array<{ label: string }> } }> }).schema;
+
+    return (saved.find((p) => p.id === propertyId)?.config?.options ?? []).map((option) => option.label);
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -239,4 +247,45 @@ describe('board: rename popup by property type', () => {
 
     expect(field()?.placeholder).toBe('Rename group');
   });
+
+  it('Enter on a band pill opens a 300 popup under it, and Enter in it renames the sub-group', async () => {
+    await mount({ groupBy: 'st', subGroupBy: 'sel' });
+    await openBand();
+
+    expect(field()).toHaveFocus();
+    expect(field()?.value).toBe('Red');
+    expect(popupWidth()).toBe('300px');
+
+    await type('Crimson');
+    await key(field() ?? document.body, 'Enter');
+
+    expect(await optionLabels('sel')).toEqual(['Crimson']);
+    await vi.waitFor(() => expect(field()).toBeNull());
+    await vi.waitFor(() => expect(bandPill()).toHaveFocus());
+    expect(bandPill()?.textContent).toContain('Crimson');
+  });
+
+  it('Escape in the band popup keeps the name, and the band pill takes focus back', async () => {
+    await mount({ groupBy: 'st', subGroupBy: 'sel' });
+    await openBand();
+    await type('Crimson');
+    await key(field() ?? document.body, 'Escape');
+
+    await vi.waitFor(() => expect(field()).toBeNull());
+    expect(await optionLabels('sel')).toEqual(['Red']);
+    expect(bandPill()).toHaveFocus();
+  });
+
+  it('a click on a band pill renames nothing, as before (Notion\'s click is unread)', async () => {
+    await mount({ groupBy: 'st', subGroupBy: 'sel' });
+    bandPill()?.click();
+    await quiet();
+
+    expect(field()).toBeNull();
+  });
+
+  async function openBand(): Promise<void> {
+    bandPill()?.focus();
+    await key(bandPill() ?? document.body, 'Enter');
+  }
 });

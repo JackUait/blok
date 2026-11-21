@@ -393,7 +393,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
     label.setAttribute('data-blok-database-board-lane-label', '');
     if (lane.option !== undefined) {
-      // notion-motion.md Round 98 §1 #2: a band's pill is a Tab stop. What Enter does on it is unread, so it does nothing.
+      // notion-motion.md Round 98 §1 #2: a band's pill is a Tab stop. Round 99 §1 #2: Enter on it opens the rename popup (the owner listens).
       if (!this.readOnly) {
         label.tabIndex = 0;
         label.setAttribute('role', 'button');

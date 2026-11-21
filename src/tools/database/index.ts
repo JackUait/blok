@@ -10276,6 +10276,14 @@ export class DatabaseTool implements BlockTool {
         this.pressButton(rowId, propertyId);
       }
     }, true);
+    // notion-motion.md Round 99 §1 #2: Enter on a band pill opens the rename popup under it. Space and a click are unread.
+    boardEl.addEventListener('keydown', (event) => {
+      const label = event.target instanceof HTMLElement && event.target.matches('[data-blok-database-board-lane-label][role="button"]') ? event.target : null;
+
+      if (label === null || event.key !== 'Enter' || event.isComposing) return;
+      event.preventDefault();
+      this.renameLane(label);
+    });
     boardEl.addEventListener('click', (event) => {
       const target = event.target as HTMLElement;
 
@@ -10841,6 +10849,22 @@ export class DatabaseTool implements BlockTool {
       class: DATABASE_GROUP_MENU_CLASS,
       // notion-motion.md Round 39 §4 (r39-subgroup-menu.raw): opens with its first row filled, like a column's.
       highlight: 'edit-groups',
+    });
+  }
+
+  private renameLane(label: HTMLElement): void {
+    const key = label.closest('[data-blok-database-board-lane]')?.getAttribute('data-sub-group') ?? null;
+    const subGroupBy = this.shownView()?.subGroupBy;
+    const option = key === null || subGroupBy === undefined ? undefined : this.model.getProperty(subGroupBy)?.config?.options?.find((o) => o.id === key);
+
+    if (key === null || option === undefined || !this.isOptionGroup(subGroupBy) || this.structureLocked()) return;
+    this.openGroupRename(label, option.label, subGroupBy, (name) => {
+      if (name !== null && name !== option.label) {
+        this.handleOptionRename(key, name, subGroupBy);
+        this.rerenderView({ keepDrawer: true });
+      }
+      // A rename redraws the bands, so the pill is found again by its band.
+      this.element?.querySelector<HTMLElement>(`[data-blok-database-board-lane][data-sub-group="${CSS.escape(key)}"] [data-blok-database-board-lane-label][role="button"]`)?.focus();
     });
   }
 
@@ -12126,9 +12150,8 @@ export class DatabaseTool implements BlockTool {
     }
   }
 
-  private handleOptionRename(optionId: string, label: string): void {
-    const viewConfig = this.shownView();
-    const groupByPropId = viewConfig?.groupBy;
+  /** `groupByPropId`: whose option to rename; a sub-group band passes the view's subGroupBy. */
+  private handleOptionRename(optionId: string, label: string, groupByPropId = this.shownView()?.groupBy): void {
 
     if (groupByPropId === undefined || this.structureLocked()) {
       return;

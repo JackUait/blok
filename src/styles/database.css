@@ -3310,6 +3310,13 @@ button[data-blok-database-board-lane-count]:hover {
   padding-right: 0;
 }
 
+/* A full-page database shares its page title's column, and the title follows contentAlign
+   (page-title.css), so the gutters do too (notion-motion.md Round 99 #9). 0.5 each centres.
+   A nested inline database goes back to centred: the factors inherit. */
+[data-blok-content-align="left"] [data-blok-database-page] { --_blok-database-lead: 0; --_blok-database-trail: 1; }
+[data-blok-content-align="right"] [data-blok-database-page] { --_blok-database-lead: 1; --_blok-database-trail: 0; }
+[data-blok-database-page] [data-blok-database-wrapper]:not([data-blok-database-page]) { --_blok-database-lead: 0.5; --_blok-database-trail: 0.5; }
+
 /* A full-page database's description (notion-motion.md Round 15 C): 14px/21px, under the title, in its column. */
 [data-blok-database-description] {
   padding-block: var(--blok-space-0-75) var(--blok-space-1);

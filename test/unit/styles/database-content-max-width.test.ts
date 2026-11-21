@@ -46,4 +46,23 @@ describe('database.css content max-width', () => {
 
     expect(bareUsages).toHaveLength(chainedUsages.length);
   });
+
+  // notion-motion.md Round 99 #9: a full-page database's tabs start at its page title's text,
+  // and the title follows contentAlign (page-title.css).
+  it.each([
+    ['left', '0', '1'],
+    ['right', '1', '0'],
+  ])('puts a full-page database on the title column when contentAlign is %s', (align, lead, trail) => {
+    const body = DATABASE_CSS.match(new RegExp(`\\[data-blok-content-align="${align}"\\] \\[data-blok-database-page\\] \\{([^}]*)\\}`))?.[1] ?? '';
+
+    expect(body).toContain(`--_blok-database-lead: ${lead}`);
+    expect(body).toContain(`--_blok-database-trail: ${trail}`);
+  });
+
+  it('keeps an inline database inside a full-page one centred', () => {
+    const body = DATABASE_CSS.match(/\[data-blok-database-page\] \[data-blok-database-wrapper\]:not\(\[data-blok-database-page\]\) \{([^}]*)\}/)?.[1] ?? '';
+
+    expect(body).toContain('--_blok-database-lead: 0.5');
+    expect(body).toContain('--_blok-database-trail: 0.5');
+  });
 });

@@ -11954,8 +11954,14 @@ export class DatabaseTool implements BlockTool {
   /**
    * Status columns draw by status group first, and each group keeps its own position keys.
    * So a column moves only among its own group; a drop outside it would not show, and writes nothing.
+   * A descending board draws them reversed, so no saved order would show the drop either.
    */
   private dropStatusColumn(prop: PropertyDefinition, { optionId, beforeOptionId, afterOptionId }: GroupDragResult): void {
+    const sort = this.shownView()?.groupSettings?.sort ?? defaultGroupSort(prop.type);
+
+    if (sort !== 'manual' && sort !== 'ascending') {
+      return;
+    }
     const groupId = statusGroupOf(prop, optionId)?.id;
     const peers = orderedStatusOptions(prop).filter((o) => o.id !== optionId && statusGroupOf(prop, o.id)?.id === groupId);
     const after = peers.find((o) => o.id === afterOptionId);

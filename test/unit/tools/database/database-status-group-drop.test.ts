@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { DatabaseData } from '../../../../src/tools/database/types';
+import type { DatabaseData, DatabaseViewConfig } from '../../../../src/tools/database/types';
 import { buildDatabase, makeDoc, rowSeed } from './structure-harness';
 
 vi.mock('../../../../src/blok', () => ({
@@ -15,7 +15,7 @@ vi.mock('../../../../src/blok', () => ({
 }));
 
 // The playground's Status: one option in each status group, each at 'a0' of its own group.
-const data = (): DatabaseData => ({
+const data = (extra: Partial<DatabaseViewConfig> = {}): DatabaseData => ({
   schema: [
     { id: 'title', name: 'Name', type: 'title', position: 'a0' },
     { id: 'st', name: 'Status', type: 'status', position: 'a1', config: { options: [
@@ -25,7 +25,7 @@ const data = (): DatabaseData => ({
       { id: 'dn', label: 'Done', color: 'green', position: 'a0', groupId: 'complete' },
     ] } },
   ],
-  views: [{ id: 'v', name: 'Board', type: 'board', position: 'a0', sorts: [], filters: [], visibleProperties: ['st'], groupBy: 'st' }],
+  views: [{ id: 'v', name: 'Board', type: 'board', position: 'a0', sorts: [], filters: [], visibleProperties: ['st'], groupBy: 'st', ...extra }],
   activeViewId: 'v',
 });
 
@@ -63,6 +63,7 @@ describe('a Status board column dropped among its status groups', () => {
 
     expect(JSON.stringify(tool.save(document.createElement('div')).schema)).toBe(saved);
     expect(boardColumns(el)).toEqual(before);
+    expect(doc.transact).not.toHaveBeenCalled();
   });
 
   it('a drop inside its own group moves it, even when the next column is in another group', () => {
@@ -77,5 +78,18 @@ describe('a Status board column dropped among its status groups', () => {
     const todo = options.filter((o) => o.groupId === 'todo').sort((a, b) => (a.position < b.position ? -1 : 1));
 
     expect(todo.map((o) => o.id)).toEqual(['ns2', 'ns']);
+  });
+
+  it('a descending board keeps its drawn order: a drop there writes nothing that the reversed draw would undo', () => {
+    const doc = seed();
+    const { tool, el } = buildDatabase(doc, 'db', data({ groupSettings: { sort: 'descending' } }));
+    const before = boardColumns(el);
+    const saved = JSON.stringify(tool.save(document.createElement('div')).schema);
+
+    expect(before.slice(0, 4)).toEqual(['dn', 'ip', 'ns2', 'ns']);
+    drop(tool, 'ns', 'ns2', 'ip');
+
+    expect(JSON.stringify(tool.save(document.createElement('div')).schema)).toBe(saved);
+    expect(boardColumns(el)).toEqual(before);
   });
 });

@@ -294,6 +294,8 @@ export class DatabaseViewControls {
     this.noDateButton.addEventListener('click', () => this.host.noDate?.()?.open(this.noDateButton));
     this.minimizeButton = iconButton('database-toolbar-minimize', this.t('filterBarMinimize'), IconChevronDoubleRight);
     this.minimizeButton.setAttribute('data-blok-database-toolbar-minimize', '');
+    // Set before `hidden` ever is, so the markup's attribute order does not depend on which sync came first.
+    this.minimizeButton.setAttribute('data-blok-database-toolbar-hover-only', '');
     this.sortButton = iconButton('database-toolbar-sort', this.t('settingsSort'), IconSort);
     this.automationsButton = iconButton('database-toolbar-automations', this.t('automationTitle'), IconBolt);
     this.autofillButton = iconButton('database-toolbar-autofill', this.t('aiAutofill'), IconWand);

@@ -10751,9 +10751,9 @@ export class DatabaseTool implements BlockTool {
       items,
       ...(layout.scopeElement !== undefined ? { scopeElement: layout.scopeElement } : {}),
     };
-    const placed: PopoverDesktopParams = layout.position === undefined ? params : { ...params, position: layout.position, positionContext: anchor };
+    const groupParams: PopoverDesktopParams = layout.position === undefined ? params : { ...params, position: layout.position, positionContext: anchor };
     const popover = new PopoverDesktop(layout.edgeMargin === undefined
-      ? placed
+      ? groupParams
       : { ...params, ...groupMenuCoverPlacement(anchor, layout.edgeMargin, layout.offset ?? 0) });
 
     // Escape closes only the open submenu, as measured on Notion's other menus (research/23:33, 26:78, 27:299, 35:418).

@@ -108,6 +108,10 @@ const BOX_START_BLOCKERS = [
 /** Pixels a press must move before it draws a box, as in the calendar. */
 const BOX_THRESHOLD = 4;
 
+/** Tab stops in DOM order. A collapsed band hides its columns with CSS, not `hidden`. */
+const tabbables = (root: Element): HTMLElement[] => [...root.querySelectorAll<HTMLElement>('button, a[href], [tabindex]')]
+  .filter((el) => el.tabIndex >= 0 && !el.matches(':disabled') && el.closest('[hidden], [data-collapsed] > [data-blok-database-board-lane-columns]') === null);
+
 type Band = { left: number; top: number; right: number; bottom: number };
 
 const isBand = (value: unknown): value is Band =>
@@ -227,7 +231,8 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     wrapper.appendChild(boardArea);
     boardArea.addEventListener('click', this.onCardPropertyClick);
     boardArea.addEventListener('keydown', this.onCardKeyDown);
-    if (lanes === undefined) boardArea.addEventListener('keydown', this.onBoardTab);
+    boardArea.addEventListener('keydown', this.onBoardTab);
+    if (lanes !== undefined) boardArea.addEventListener('focusin', this.onBandsEnter);
     if (!this.readOnly && this.settings.lassoRows !== undefined) {
       // Core leaves Shift-click inside to the tool and hands a margin lasso to onLasso.
       boardArea.setAttribute('data-blok-selection-owner', '');
@@ -388,6 +393,11 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
     label.setAttribute('data-blok-database-board-lane-label', '');
     if (lane.option !== undefined) {
+      // notion-motion.md Round 98 §1 #2: a band's pill is a Tab stop. What Enter does on it is unread, so it does nothing.
+      if (!this.readOnly) {
+        label.tabIndex = 0;
+        label.setAttribute('role', 'button');
+      }
       label.appendChild(createGroupPill(lane.option, this.settings.schema?.find((p) => p.id === this.settings.view?.subGroupBy)));
     } else {
       label.textContent = lane.label;
@@ -531,7 +541,9 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   /**
    * notion-motion.md Round 97 §1 #1: Tab walks every column header first, then each column's cards and buttons.
    * The headers sit inside their columns, so DOM order would interleave them. The two ends stay native,
-   * so Tab enters and leaves the board as usual. A sub-grouped board keeps its heads row first in the DOM.
+   * so Tab enters and leaves the board as usual.
+   * Round 98 §1 #2: a sub-grouped board keeps its heads row first in the DOM, with "New group" in it,
+   * but "New group" is the last stop. Tab from it leaves the board past the bands.
    */
   private readonly onBoardTab = (event: KeyboardEvent): void => {
     const target = event.target;
@@ -541,23 +553,54 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       return;
     }
 
-    const board = event.currentTarget;
-    const tabbables = (root: Element): HTMLElement[] => [...root.querySelectorAll<HTMLElement>('button, a[href], [tabindex]')]
-      .filter((el) => el.tabIndex >= 0 && !el.matches(':disabled') && el.closest('[hidden]') === null);
-    const columns = [...board.querySelectorAll<HTMLElement>(':scope > [data-blok-database-column]')];
-    const order = [
-      ...columns.flatMap((column) => [...column.querySelectorAll(':scope > [data-blok-database-column-header]')].flatMap(tabbables)),
-      ...columns.flatMap((column) => tabbables(column).filter((el) => el.closest('[data-blok-database-column-header]') === null)),
-    ];
+    const order = this.tabOrder(event.currentTarget);
     const index = order.indexOf(target);
     const next = index === -1 ? undefined : order[index + (event.shiftKey ? -1 : 1)];
 
-    if (next === undefined) {
+    if (next !== undefined) {
+      event.preventDefault();
+      next.focus();
       return;
     }
-    event.preventDefault();
-    next.focus();
+    // From the DOM's last stop, the browser's own Tab goes on past the board.
+    if (index !== -1 && !event.shiftKey && target.hasAttribute('data-blok-database-add-column')) {
+      tabbables(event.currentTarget).at(-1)?.focus();
+    }
   };
+
+  /** Round 98 §1 #2: Shift+Tab from past a sub-grouped board lands on "New group", its last stop, not the last band's last button. */
+  private readonly onBandsEnter = (event: FocusEvent): void => {
+    const board = event.currentTarget;
+    const from = event.relatedTarget;
+
+    if (!(board instanceof HTMLElement) || !(from instanceof Node) || board.contains(from) || event.target !== tabbables(board).at(-1)
+      || !(board.compareDocumentPosition(from) & Node.DOCUMENT_POSITION_FOLLOWING) || !(event.target instanceof HTMLElement)
+      || !event.target.matches(':focus-visible')) {
+      return;
+    }
+    board.querySelector<HTMLElement>(':scope > [data-blok-database-board-heads] > [data-blok-database-add-column]')?.focus();
+  };
+
+  private tabOrder(board: HTMLElement): HTMLElement[] {
+    const heads = board.querySelector(':scope > [data-blok-database-board-heads]');
+
+    if (heads === null) {
+      const columns = [...board.querySelectorAll<HTMLElement>(':scope > [data-blok-database-column]')];
+
+      return [
+        ...columns.flatMap((column) => [...column.querySelectorAll(':scope > [data-blok-database-column-header]')].flatMap(tabbables)),
+        ...columns.flatMap((column) => tabbables(column).filter((el) => el.closest('[data-blok-database-column-header]') === null)),
+      ];
+    }
+
+    const add = heads.querySelector<HTMLElement>(':scope > [data-blok-database-add-column]');
+
+    return [
+      ...tabbables(heads).filter((el) => el !== add),
+      ...[...board.querySelectorAll(':scope > [data-blok-database-board-lane]')].flatMap(tabbables),
+      ...(add === null ? [] : [add]),
+    ];
+  }
 
   /** The card an arrow key goes to; null at an edge; undefined for other keys. */
   private cardTarget(cardEl: HTMLElement, key: string): HTMLElement | null | undefined {

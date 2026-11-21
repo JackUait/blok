@@ -2627,12 +2627,6 @@ export class DatabaseTool implements BlockTool {
         element.blur();
       }
     });
-    // Clearing it removes the line (notion-motion.md Round 15 C).
-    element.addEventListener('blur', () => {
-      if (this.descriptionElement === element && (element.textContent ?? '').trim() === '') {
-        this.removeDescription();
-      }
-    });
     // Before the title row, which on a full page holds only the add-view "+": Notion puts the description right under the page title, above the views.
     titleRow.before(element);
     this.descriptionElement = element;
@@ -2654,7 +2648,10 @@ export class DatabaseTool implements BlockTool {
 
   /** After setData: show, update or drop the field to match the data. */
   private syncDescription(): void {
-    if (!this.fullPage || this.description === '') {
+    // An empty line stays until reload (notion-motion.md Round 99 #7). save() leaves it out.
+    const emptyLine = this.descriptionElement !== null && this.readDescription() === '';
+
+    if (!this.fullPage || (this.description === '' && !emptyLine)) {
       this.descriptionElement?.remove();
       this.descriptionElement = null;
 

@@ -835,13 +835,19 @@ describe('row selection after undo in a linked view', () => {
       return views.filter((view) => view.showDataSourceTitle === false).map((view) => view.id);
     };
 
+    const stopCapturing = (): void => {
+      (editor as unknown as { module: { yjsManager: { stopCapturing: () => void } } }).module.yjsManager.stopCapturing();
+    };
+
     expect(linkedTitle()?.hidden).toBe(true);
+    stopCapturing();
     document.querySelector<HTMLElement>('[data-blok-id="lk"] [data-blok-database-tab][data-view-id="lv"]')?.click();
     await quiet();
     document.querySelector<HTMLElement>('[data-blok-popover-opened="true"] [data-blok-item-name="database-view-data-source-titles"]')?.click();
     await quiet();
     expect(linkedTitle()?.hidden).toBe(false);
     expect(await hiddenViews()).toEqual([]);
+    stopCapturing();
 
     editor.history.undo();
     await quiet();

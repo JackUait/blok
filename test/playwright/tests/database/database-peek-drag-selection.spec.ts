@@ -482,7 +482,9 @@ test.describe('D7 in a sorted table', () => {
 });
 
 test.describe('selection bar', () => {
-  test('takes the place of the view toolbar row, and "1 selected" stays on one line', async ({ page }) => {
+  // notion-motion.md Round 93 §1 #4 (r93-n-v2-drag-bar.raw): with several views the bar sits on the title row,
+  // so the view tabs stay visible and clickable.
+  test('sits on the title row with the tabs still clickable, and "1 selected" stays on one line', async ({ page }) => {
     await mount(page, blocks());
     await tableRow(page, 'r1').hover();
     await tableRow(page, 'r1').locator('[data-blok-database-table-row-checkbox]').click();
@@ -491,20 +493,16 @@ test.describe('selection bar', () => {
 
     await expect(bar).toBeVisible();
     const barBox = await bar.boundingBox();
-    const viewBar = await page.locator('[data-blok-database-view-bar]').boundingBox();
-    const header = await page.locator('[data-blok-database-table-header]').boundingBox();
+    const titleRow = await page.locator('[data-blok-database-title-row]').boundingBox();
     const count = await boxOf(page, '[data-blok-database-table-selection-count]');
 
-    if (barBox === null || viewBar === null || header === null) throw new Error('no layout');
-    expect(barBox.y + barBox.height).toBeLessThanOrEqual(header.y);
-    expect(barBox.y).toBeGreaterThanOrEqual(viewBar.y);
-    expect(barBox.y + barBox.height).toBeLessThanOrEqual(viewBar.y + viewBar.height);
+    if (barBox === null || titleRow === null) throw new Error('no layout');
+    expect(barBox.y).toBeGreaterThanOrEqual(titleRow.y);
+    expect(barBox.y + barBox.height).toBeLessThanOrEqual(titleRow.y + titleRow.height);
     expect(count?.height).toBe(21);
-    await expect(page.locator('[data-blok-database-tab-bar]')).toBeHidden();
-
-    await tableRow(page, 'r1').locator('[data-blok-database-table-row-checkbox]').click();
-    await expect(bar).toHaveCount(0);
     await expect(page.locator('[data-blok-database-tab-bar]')).toBeVisible();
+    await page.getByRole('tab', { name: 'Board' }).click();
+    await expect(page.getByRole('tab', { name: 'Board' })).toHaveAttribute('aria-selected', 'true');
   });
   // With tabs the bar sat at the view bar's edge, 316px left of the table (sweep9a motion-rowdrag.json).
   test('starts at the table content with tabs, as it does with one view', async ({ page }) => {

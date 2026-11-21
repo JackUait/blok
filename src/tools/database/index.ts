@@ -12198,11 +12198,18 @@ export class DatabaseTool implements BlockTool {
     this.paintRowSelection();
   }
 
-  /** The view toolbar row: the selection bar takes its place (research/08). With one view that is the title row. */
+  /**
+   * The selection bar sits on the title row, so the view tabs stay clickable (notion-motion.md Round 93 §1 #4).
+   * A hidden title (full page, hidden source titles) is unmeasured, so the bar keeps the view bar there.
+   */
   private selectionBarSlot(): HTMLElement | null {
-    const owner = this.viewOwner();
+    const element = this.viewOwner().element;
+    const titleRow = element?.querySelector<HTMLElement>(':scope > [data-blok-database-title-row]') ?? null;
+    const titleShown = (titleRow?.querySelector(':scope > [data-blok-database-title]:not([hidden])') ?? null) !== null;
 
-    return owner.element?.querySelector<HTMLElement>(':scope > [data-blok-database-title-row][data-single-view], :scope > [data-blok-database-view-bar]') ?? null;
+    if (titleRow !== null && (titleShown || titleRow.hasAttribute('data-single-view'))) return titleRow;
+
+    return element?.querySelector<HTMLElement>(':scope > [data-blok-database-view-bar]') ?? null;
   }
 
   /** Where this block's shown view is drawn. */

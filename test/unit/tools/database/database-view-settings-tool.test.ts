@@ -700,3 +700,24 @@ describe('DatabaseTool — view settings', () => {
     tool.destroy();
   });
 });
+
+// notion-motion.md Round 93 §1 #4 (r93-n-v2-drag-bar.raw): with several views the "1 selected" bar sits on
+// the title row, so the view tabs stay clickable.
+describe('DatabaseTool — selection bar place', () => {
+  afterEach(() => {
+    PopoverRegistry.resetForTests();
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  it('puts the table selection bar on the title row when there are several views', () => {
+    const { tool, root } = mount({}, {}, { views: [tableView(), tableView({ id: 'v2', name: 'Two', position: 'a1' })] });
+
+    root.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-row-checkbox]')?.click();
+    const bar = root.querySelector('[data-blok-database-table-selection-bar]');
+
+    expect(bar?.parentElement?.hasAttribute('data-blok-database-title-row')).toBe(true);
+    expect(root.querySelector('[data-blok-database-view-bar]')?.hasAttribute('data-blok-database-selecting')).toBe(false);
+    tool.destroy();
+  });
+});

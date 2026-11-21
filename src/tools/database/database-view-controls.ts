@@ -368,11 +368,9 @@ export class DatabaseViewControls {
       this.hideSearch();
       if (!this.searchButton.hidden) this.searchButton.focus();
     });
-    this.searchInput.addEventListener('blur', (event) => {
-      // The folded tabs' pill only shows while the search is open: closing it would pull the pill from under the click.
-      const toPill = event.relatedTarget instanceof Element && event.relatedTarget.closest('[data-blok-database-tab-compact]') !== null;
-
-      if (this.query === '' && !toPill) this.hideSearch();
+    // notion-motion.md Round 100 §1 #5: an empty search closes on a press on the folded pill too, so the pill opens no list.
+    this.searchInput.addEventListener('blur', () => {
+      if (this.query === '') this.hideSearch();
     });
     this.shareFormButton = button('database-toolbar-share-form', this.t('formShare'), { text: this.t('formShare') });
     this.shareFormButton.setAttribute('data-blok-database-toolbar-share-form', '');

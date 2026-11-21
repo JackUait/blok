@@ -1168,14 +1168,31 @@ describe('DatabaseViewControls', () => {
       controls.destroy();
     });
 
-    it('stays open when an empty search hands the focus to the folded pill', () => {
+    // notion-motion.md Round 100 §1 #5 (r100-n-fold-pill-open.raw): a press on the pill closes an empty search and the tabs unfold.
+    it('closes an empty search that hands the focus to the folded pill', () => {
       const { controls } = setup({ levers: { openFullPage } });
       const { pill } = inViewBar(controls);
 
       click('database-toolbar-search');
       pill.focus();
 
-      expect(q('database-search-input')?.isConnected).toBe(true);
+      expect(q('database-search-input')).toBeNull();
+      expect(controls.toolbar.hasAttribute('data-blok-database-searching')).toBe(false);
+      controls.destroy();
+    });
+
+    it('keeps a search with a query open when the folded pill takes the focus', () => {
+      const { controls } = setup({ levers: { openFullPage } });
+      const { pill } = inViewBar(controls);
+
+      click('database-toolbar-search');
+      const input = q('database-search-input') as HTMLInputElement;
+
+      input.value = 'o';
+      input.dispatchEvent(new Event('input'));
+      pill.focus();
+
+      expect(input.isConnected).toBe(true);
       expect(controls.toolbar.hasAttribute('data-blok-database-searching')).toBe(true);
       controls.destroy();
     });

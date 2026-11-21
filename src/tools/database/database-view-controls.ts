@@ -1275,6 +1275,8 @@ export class DatabaseViewControls {
   /** » shows for an open search or a filter bar with a sort. */
   private syncMinimize(): void {
     this.minimizeButton.hidden = this.minimized || (!this.searchShown() && !this.barMinimizable);
+    // notion-motion.md Round 100 §1 #7: for the search alone, only while the pointer is on the controls (database.css).
+    this.minimizeButton.toggleAttribute('data-blok-database-toolbar-hover-only', !this.barMinimizable);
   }
 
   private setSearch(query: string): void {

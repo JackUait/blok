@@ -370,6 +370,15 @@ describe('minimized database toolbar', () => {
     expect(body(reducedMotion, pair)).toContain('transition: none');
   });
 
+  // notion-motion.md Round 100 §1 #7: » for the search alone shows only while the pointer is on the controls.
+  // It keeps its room, so its coming and going never refolds the bar; a keyboard focus on a control shows it.
+  it('hides a hover-only » until the pointer or a keyboard focus is on the controls', () => {
+    const rule = body(database, `[data-blok-database-view-bar] > ${TOOLBAR}:not(:hover):not(:has(> :not([data-blok-database-search-input]):focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only]`);
+
+    expect(rule).toContain('visibility: hidden');
+    expect(rule).toContain('opacity: 0');
+  });
+
   it('draws « as a mirrored »', () => {
     expect(body(database, `${EXPAND} svg`)).toContain('transform: scaleX(-1)');
   });

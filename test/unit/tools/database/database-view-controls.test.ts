@@ -2950,6 +2950,22 @@ describe('DatabaseViewControls', () => {
       expect(q('database-toolbar-minimize')?.hidden).toBe(true);
     });
 
+    // notion-motion.md Round 100 §1 #7 (r100-n-minimize-hover-search-open*.raw): with only the search open, » shows while the pointer is on the controls.
+    it('marks » as hover-only while it shows for the search alone', () => {
+      const { controls, saved } = setup();
+
+      click('database-toolbar-search');
+      const minimize = q('database-toolbar-minimize');
+
+      expect(minimize?.hidden).toBe(false);
+      expect(minimize?.hasAttribute('data-blok-database-toolbar-hover-only')).toBe(true);
+
+      saved.view = { ...saved.view, sorts: [{ propertyId: 'title', direction: 'asc' }] };
+      controls.refresh();
+
+      expect(minimize?.hasAttribute('data-blok-database-toolbar-hover-only')).toBe(false);
+    });
+
     it('takes » away when a sorted view switches to a form', () => {
       const { controls, saved } = setup();
 

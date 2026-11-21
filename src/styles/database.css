@@ -12902,6 +12902,14 @@ button[data-blok-database-table-group-count]:hover {
   }
 }
 
+/* notion-motion.md Round 100 §1 #7: » for the search alone shows while the pointer is on the controls.
+   It keeps its room, so it never refolds the bar under the pointer. A keyboard focus on a control shows it too.
+   Read only in the view bar: a title row keeps it shown. */
+[data-blok-database-view-bar] > [data-blok-database-view-toolbar]:not(:hover):not(:has(> :not([data-blok-database-search-input]):focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only] {
+  visibility: hidden;
+  opacity: 0;
+}
+
 /* « brings the controls back with a 200ms fade. */
 [data-blok-database-view-toolbar][data-expanding] > * {
   transition: opacity 0.2s ease;

@@ -1995,6 +1995,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r270: every database gutter takes a lead or trail share of the room beside the column,
     // and a full-page database sets them from contentAlign, like its page title.
     const DATABASE_R270_BYTES = 2068;
+    // Lane r273: » for the search alone shows only on hover over the view bar's controls.
+    const DATABASE_R273_BYTES = 545;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2688,6 +2690,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R269_BYTES
       + DATABASE_R268_BYTES
       + DATABASE_R270_BYTES
+      + DATABASE_R273_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

@@ -15727,6 +15727,11 @@ button[data-blok-database-table-group-count]:hover {
   transition: none;
 }
 
+[data-blok-database-view-bar] > [data-blok-database-view-toolbar]:not(:hover):not(:has(> :not([data-blok-database-search-input]):focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only] {
+  visibility: hidden;
+  opacity: 0;
+}
+
 [data-blok-database-view-toolbar][data-expanding] > * {
   transition: opacity 0.2s ease;
 }

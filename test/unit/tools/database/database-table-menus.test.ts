@@ -296,6 +296,16 @@ describe('column header menu glyphs', () => {
     expect(icon('database-header-insert-right')).toBe(IconColumnInsertRight);
   });
 
+  // notion-motion.md Round 94 §1 #5 (r94-n-unwrap-text-mo.raw): a click on Wrap or Unwrap closes the menu.
+  it.each([
+    [false, 'database-header-wrap'],
+    [true, 'database-header-unwrap'],
+  ] as const)('closes the menu on a click on its wrap row (wrapped: %s)', (wrapped, name) => {
+    const found = headerViewItems(ctx('text', { wrapped })).find((item) => 'name' in item && item.name === name);
+
+    expect(found !== undefined && 'closeOnActivate' in found ? found.closeOnActivate : undefined).toBe(true);
+  });
+
   // notion-motion.md Round 29 §2 and §5: Wrap and Unwrap differ, and Unfreeze crosses out Freeze's pin.
   it('draws different glyphs for Wrap and Unwrap, and a crossed-out pin for Unfreeze', () => {
     const icon = (over: Partial<HeaderMenuContext>, name: string): unknown => {

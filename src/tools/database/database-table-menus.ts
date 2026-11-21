@@ -414,10 +414,14 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
     items.push(item('database-header-hide', 'tools.database.tableHide', ctx.onHide, IconEyeSlash));
   }
   // Notion offers no wrap toggle on a checkbox or a button column. Round 29 §2: each state has its own glyph.
+  // Round 94 §1 #5: a click closes the menu.
   if (property.type !== 'checkbox' && property.type !== 'button') {
-    items.push(ctx.wrapped
-      ? item('database-header-unwrap', 'tools.database.tableUnwrap', () => ctx.onWrap(false), IconArrowRightLine)
-      : item('database-header-wrap', 'tools.database.tableWrap', () => ctx.onWrap(true), IconUTurnLeft));
+    items.push({
+      ...(ctx.wrapped
+        ? item('database-header-unwrap', 'tools.database.tableUnwrap', () => ctx.onWrap(false), IconArrowRightLine)
+        : item('database-header-wrap', 'tools.database.tableWrap', () => ctx.onWrap(true), IconUTurnLeft)),
+      closeOnActivate: true,
+    });
   }
   items.push(
     item('database-header-insert-left', 'tools.database.tableInsertLeft', () => ctx.onInsert('left'), IconColumnInsertLeft),

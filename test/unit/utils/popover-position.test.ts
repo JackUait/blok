@@ -974,6 +974,12 @@ describe('resolvePosition', () => {
     it('puts its left edge on the anchor\'s left edge in RTL', () => {
       expect(resolvePosition({ ...base, direction: 'rtl' as const, anchor: rect({ top: 404.1, bottom: 404.1, left: 18, right: 42, width: 24, height: 0 }) }).left).toBe(18);
     });
+
+    // notion-motion.md Round 87 §2 (r87-n-calas-open-mo.raw): a menu hung from the anchor's end grows from that corner (origin 250px 0).
+    it('reports the end side, so the open motion grows from the anchor\'s corner', () => {
+      expect(resolvePosition(base).openLeft).toBe(true);
+      expect(resolvePosition({ ...base, direction: 'rtl' as const, anchor: rect({ top: 404.1, bottom: 404.1, left: 18, right: 42, width: 24, height: 0 }) }).openLeft).toBe(false);
+    });
   });
 
   // notion-motion.md Round 21 §1: a database colour flyout that does not fit below opens above its button,

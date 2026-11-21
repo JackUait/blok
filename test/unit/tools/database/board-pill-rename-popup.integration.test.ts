@@ -308,12 +308,30 @@ describe('board: rename popup by property type, and on a band pill', () => {
     expect(bandPill()).toHaveFocus();
   });
 
-  it('a click on a band pill renames nothing, as before (Notion\'s click is unread)', async () => {
+  // notion-motion.md Round 100 §1 #3-#4 (r100-n-band-pill-click.raw, r100-n-band-pill-space.raw): a click or Space opens the same popup.
+  it('a click on a band pill opens the 300 popup, and Done renames the sub-group', async () => {
     await mount({ groupBy: 'st', subGroupBy: 'sel' });
     bandPill()?.click();
     await quiet();
 
-    expect(field()).toBeNull();
+    expect(field()).toHaveFocus();
+    expect(field()?.value).toBe('Red');
+    expect(popupWidth()).toBe('300px');
+
+    await type('Crimson');
+    done()?.click();
+    await quiet();
+
+    expect(await optionLabels('sel')).toEqual(['Crimson']);
+  });
+
+  it('Space on a band pill opens the popup', async () => {
+    await mount({ groupBy: 'st', subGroupBy: 'sel' });
+    bandPill()?.focus();
+    await key(bandPill() ?? document.body, ' ');
+
+    expect(field()).toHaveFocus();
+    expect(field()?.value).toBe('Red');
   });
 
   async function openBand(): Promise<void> {

@@ -10276,16 +10276,23 @@ export class DatabaseTool implements BlockTool {
         this.pressButton(rowId, propertyId);
       }
     }, true);
-    // notion-motion.md Round 99 §1 #2: Enter on a band pill opens the rename popup under it. Space and a click are unread.
+    // notion-motion.md Round 99 §1 #2, Round 100 §1 #3-#4: a click, Enter or Space on a band pill opens the rename popup under it.
     boardEl.addEventListener('keydown', (event) => {
       const label = event.target instanceof HTMLElement && event.target.matches('[data-blok-database-board-lane-label][role="button"]') ? event.target : null;
 
-      if (label === null || event.key !== 'Enter' || event.isComposing) return;
+      if (label === null || (event.key !== 'Enter' && event.key !== ' ') || event.isComposing) return;
       event.preventDefault();
       this.renameLane(label);
     });
     boardEl.addEventListener('click', (event) => {
       const target = event.target as HTMLElement;
+      const bandPill = target.closest<HTMLElement>('[data-blok-database-board-lane-label][role="button"]');
+
+      if (bandPill !== null) {
+        this.renameLane(bandPill);
+
+        return;
+      }
 
       const addCardBtn = target.closest('[data-blok-database-add-card]');
 

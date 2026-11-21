@@ -286,6 +286,33 @@ test.describe('sub-grouped board', () => {
     expect(await walk(page, 'Shift+Tab', order.length)).toEqual(order.slice().reverse());
   });
 
+  // notion-motion.md Round 100 §1 #3-#4 (r100-n-band-pill-click.raw, r100-n-band-pill-space.raw): 4 under the pill, 300 wide.
+  for (const how of ['click', 'Space']) {
+    test(`${how} on a band pill opens the rename popup under it`, async ({ page }) => {
+      const pill = page.getByRole('region', { name: 'Red' }).locator('[data-blok-database-board-lane-label]');
+      const field = page.locator('[data-blok-database-group-name-field] input');
+
+      if (how === 'click') {
+        await pill.click();
+      } else {
+        await pill.focus();
+        await page.keyboard.press('Space');
+      }
+
+      await expect(field).toBeFocused();
+      await expect(field).toHaveValue('Red');
+
+      const pillBox = await pill.boundingBox();
+      const popup = page.locator('[data-blok-popover]:has([data-blok-database-group-name-field]) [data-blok-popover-container]');
+      const popupBox = await popup.boundingBox();
+
+      expect(Math.round((popupBox?.x ?? 0) - (pillBox?.x ?? 0))).toBe(0);
+      expect(Math.round((popupBox?.y ?? 0) - (pillBox?.y ?? 0) - (pillBox?.height ?? 0))).toBe(4);
+      expect(await popup.evaluate((el: HTMLElement) => el.offsetWidth)).toBe(300);
+      expect(await popup.evaluate((el: HTMLElement) => el.offsetHeight)).toBe(36);
+    });
+  }
+
   test('a collapsed band\'s cards are skipped', async ({ page }) => {
     const toggle = page.getByRole('region', { name: 'Red' }).locator('[data-blok-database-board-lane-toggle]');
 

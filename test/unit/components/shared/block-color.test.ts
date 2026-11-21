@@ -57,6 +57,37 @@ describe('block-color foundation', () => {
       expect(el.style.color).toBe('');
       expect(el.style.backgroundColor).toBe('');
     });
+
+    it('rounds a background fill and hangs it 2px past each side of the block', () => {
+      const el = document.createElement('div');
+
+      applyBlockColor(el, { backgroundColor: 'blue' });
+
+      expect(el.style.borderRadius).toBe('var(--blok-radius-control-sm)');
+      expect(el.style.boxShadow).toBe(
+        'var(--blok-space-0-5) 0 0 var(--blok-color-blue-bg), calc(-1 * var(--blok-space-0-5)) 0 0 var(--blok-color-blue-bg)'
+      );
+    });
+
+    it('takes the corners and the hang away with the background', () => {
+      const el = document.createElement('div');
+
+      applyBlockColor(el, { backgroundColor: 'blue' });
+      applyBlockColor(el, { textColor: 'red' });
+
+      expect(el.style.borderRadius).toBe('');
+      expect(el.style.boxShadow).toBe('');
+    });
+
+    it('leaves the shape alone for a block that draws its own fill', () => {
+      const el = document.createElement('div');
+
+      applyBlockColor(el, { backgroundColor: 'blue' }, { hang: false });
+
+      expect(el.style.backgroundColor).toBe('var(--blok-color-blue-bg)');
+      expect(el.style.borderRadius).toBe('');
+      expect(el.style.boxShadow).toBe('');
+    });
   });
 
   describe('BLOCK_COLOR_SANITIZE', () => {

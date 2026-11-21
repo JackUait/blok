@@ -329,7 +329,7 @@ export class TableOfContentsTool implements BlockTool {
     if (this.root === null) {
       return;
     }
-    applyBlockColor(this.root, this.data);
+    applyBlockColor(this.root, this.data, { hang: false });
     this.root.toggleAttribute('data-tinted', this.data.textColor !== undefined);
     this.root.toggleAttribute('data-filled', this.data.backgroundColor !== undefined);
   }

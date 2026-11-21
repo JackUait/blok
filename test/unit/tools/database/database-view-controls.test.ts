@@ -204,8 +204,9 @@ describe('DatabaseViewControls', () => {
     it('sit between Sort and search, in Notion\'s order', () => {
       setup({ levers: levers() });
 
+      // » is there for the pointer only (database.css).
       expect(order()).toEqual([
-        'database-toolbar-filter', 'database-toolbar-sort', 'database-toolbar-automations', 'database-toolbar-autofill',
+        'database-toolbar-minimize', 'database-toolbar-filter', 'database-toolbar-sort', 'database-toolbar-automations', 'database-toolbar-autofill',
         'database-toolbar-search', 'database-toolbar-settings',
       ]);
       expect(q('database-toolbar-automations')?.getAttribute('aria-label')).toBe('tools.database.automationTitle');
@@ -252,7 +253,7 @@ describe('DatabaseViewControls', () => {
     controls.refresh();
 
     expect(shown()).toEqual([
-      'database-toolbar-filter', 'database-toolbar-sort', 'database-toolbar-automations', 'database-toolbar-search', 'database-toolbar-settings',
+      'database-toolbar-minimize', 'database-toolbar-filter', 'database-toolbar-sort', 'database-toolbar-automations', 'database-toolbar-search', 'database-toolbar-settings',
     ]);
   });
 
@@ -2924,7 +2925,7 @@ describe('DatabaseViewControls', () => {
     it('shows » left of the icons while the search is open, and » closes the search and minimizes the toolbar', () => {
       const { controls, host } = setup();
 
-      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+      expect(q('database-toolbar-minimize')?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('idle');
       click('database-toolbar-search');
       const minimize = q('database-toolbar-minimize');
 
@@ -2948,6 +2949,19 @@ describe('DatabaseViewControls', () => {
       setup({ levers: { savedView: () => form } });
 
       expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+    });
+
+    // notion-motion.md Round 101 §1 #2 (r101-n-minimize-hover-search-closed*.raw): with no sort or filter, Notion mounts » while the pointer is on the controls.
+    it('keeps » for the pointer with the search closed and no rule on the view', () => {
+      setup();
+      const minimize = q('database-toolbar-minimize');
+
+      expect(minimize?.hidden).toBe(false);
+      expect(minimize?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('idle');
+
+      click('database-toolbar-search');
+
+      expect(minimize?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('');
     });
 
     // notion-motion.md Round 100 §1 #7 (r100-n-minimize-hover-search-open*.raw): with only the search open, » shows while the pointer is on the controls.

@@ -381,10 +381,40 @@ describe('minimized database toolbar', () => {
   // notion-motion.md Round 100 §1 #7: » for the search alone shows only while the pointer is on the controls.
   // It keeps its room, so its coming and going never refolds the bar; a keyboard focus on a control shows it.
   it('hides a hover-only » until the pointer or a keyboard focus is on the controls', () => {
-    const rule = body(database, `[data-blok-database-view-bar] > ${TOOLBAR}:not(:hover):not(:has(> :not([data-blok-database-search-input]):focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only]`);
+    const rule = body(database, `[data-blok-database-view-bar] > ${TOOLBAR}:not(:hover):not(:has(> :not([data-blok-database-search-input]):focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only=""]`);
 
     expect(rule).toContain('visibility: hidden');
     expect(rule).toContain('opacity: 0');
+  });
+
+  // notion-motion.md Round 101 §1 #2, §3: with no sort or filter, Notion mounts » while the pointer is on the controls,
+  // with no fade, and drops it ~200ms after the pointer leaves. It takes no room, so the tabs never refold under the pointer.
+  describe('» on a view with no rule', () => {
+    const IDLE = '[data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"]';
+
+    it('takes no room and shows with no fade', () => {
+      const rule = body(outsideReducedMotion, `${TOOLBAR} > ${IDLE}`);
+
+      expect(rule).toContain('margin-inline-start: calc(-1 * var(--blok-database-toolbar-icon-size))');
+      expect(rule).toContain('transition: background-color 0.1s ease-in-out;');
+    });
+
+    it('leaves 200ms after the pointer and the keyboard focus leave the controls', () => {
+      const rule = body(outsideReducedMotion, `${TOOLBAR}:not(:hover):not(:has(> :focus-visible)) > ${IDLE}`);
+
+      expect(rule).toContain('display: none');
+      expect(rule).toContain('transition: background-color 0.1s ease-in-out, display 0s allow-discrete 0.2s');
+    });
+
+    it('stays out of a title row, where it is unmeasured, and off tabs that run up to the toolbar', () => {
+      expect(body(database, `[data-blok-database-title-row] > ${TOOLBAR} > ${IDLE}`)).toContain('display: none');
+      expect(body(database, `[data-blok-database-view-bar][data-blok-database-fold-minimize] > ${TOOLBAR} > ${IDLE}`)).toContain('display: none');
+    });
+
+    // r273's instant hide must not reach this one, or its 200ms stay is lost.
+    it('is left out of the search-alone hide', () => {
+      expect(database).not.toContain('[data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only] {');
+    });
   });
 
   it('draws « as a mirrored »', () => {

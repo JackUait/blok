@@ -22,6 +22,8 @@ import { positionBetween } from '../../shared/database/positions';
 // notion-motion.md Round 91 §1 #7: from a 556.1 press the tab sat still at 5.9 px and moved at 6.9.
 // 6.5 gives that and the whole-pixel read (6 no, 7 yes); Notion's exact cutoff is unread.
 const DRAG_THRESHOLD = 6.5;
+/** A toolbar icon button's width (database.css `--blok-database-toolbar-icon-size`). */
+const TOOLBAR_ICON_SIZE = 28;
 
 /**
  * Set when a tab is activated from the keyboard. Switching views makes the
@@ -381,24 +383,37 @@ export class DatabaseTabBar {
 
     viewBar?.toggleAttribute('data-blok-database-fold-icons', !fold.icons);
     viewBar?.toggleAttribute('data-blok-database-fold-new', !fold.newButton);
-    if (fit === 'all') {
-      this.keepFocus(focused);
-
-      return;
-    }
-    // Notion's "+" leaves once a tab folds.
-    bar.setAttribute('data-blok-database-tab-folded', '');
     if (fit === 'compact') {
+      // Notion's "+" leaves once a tab folds.
+      bar.setAttribute('data-blok-database-tab-folded', '');
       for (const tab of tabs) {
         tab.style.display = 'none';
       }
       this.placeCompactButton();
-      this.keepFocus(focused);
-
-      return;
+    } else if (fit !== 'all') {
+      bar.setAttribute('data-blok-database-tab-folded', '');
+      this.foldTabs(fit);
     }
-    this.foldTabs(fit);
+    this.markMinimizeRoom(viewBar, toolbar);
     this.keepFocus(focused);
+  }
+
+  /**
+   * The hover-only » takes no room (database.css), so it stays hidden where
+   * the tabs run up to the toolbar and it would cover them.
+   */
+  private markMinimizeRoom(viewBar: HTMLElement | null, toolbar: HTMLElement | null): void {
+    const bar = this.element;
+
+    if (viewBar === null || toolbar === null || bar === null) return;
+    const rtl = getComputedStyle(viewBar).direction === 'rtl';
+    const shown = Array.from(bar.children, (child) => child.getBoundingClientRect()).filter((rect) => rect.width > 0);
+    const start = toolbar.getBoundingClientRect();
+    const tabsEnd = rtl ? Math.min(...shown.map((rect) => rect.left)) : Math.max(...shown.map((rect) => rect.right));
+    // No shown child gives ±Infinity, so the room is Infinity either way.
+    const room = rtl ? tabsEnd - start.right : start.left - tabsEnd;
+
+    viewBar.toggleAttribute('data-blok-database-fold-minimize', room < TOOLBAR_ICON_SIZE);
   }
 
   private watchSearchMark(toolbar: HTMLElement | null): void {

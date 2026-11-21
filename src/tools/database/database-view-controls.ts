@@ -1272,11 +1272,20 @@ export class DatabaseViewControls {
     this.searchCloseTimer = null;
   }
 
-  /** » shows for an open search or a filter bar with a sort. */
+  /** » shows for an open search or a filter bar with a sort, and for the pointer on a view with no rule. */
   private syncMinimize(): void {
-    this.minimizeButton.hidden = this.minimized || (!this.searchShown() && !this.barMinimizable);
+    const type = this.host.savedView()?.type;
+    // notion-motion.md Round 101 §1 #2: with no sort or filter Notion mounts » while the pointer is on the controls.
+    // Left out, unmeasured: a bar of filters alone and a title-only database. A form and a dashboard have nothing to fold.
+    const idle = !this.searchShown() && !this.barShown && this.host.schema().length > 1 && type !== 'form' && type !== 'dashboard';
+
+    this.minimizeButton.hidden = this.minimized || (!this.searchShown() && !this.barMinimizable && !idle);
     // notion-motion.md Round 100 §1 #7: for the search alone, only while the pointer is on the controls (database.css).
-    this.minimizeButton.toggleAttribute('data-blok-database-toolbar-hover-only', !this.barMinimizable);
+    if (this.barMinimizable) {
+      this.minimizeButton.removeAttribute('data-blok-database-toolbar-hover-only');
+    } else {
+      this.minimizeButton.setAttribute('data-blok-database-toolbar-hover-only', idle ? 'idle' : '');
+    }
   }
 
   private setSearch(query: string): void {

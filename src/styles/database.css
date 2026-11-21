@@ -14,6 +14,8 @@
   --blok-database-picker-head-padding-block: 9.25px;
   /* The search ×: it lies over the field's end by its own width. */
   --blok-database-search-clear-size: 28px;
+  /* A view toolbar icon button's width. */
+  --blok-database-toolbar-icon-size: 28px;
   --blok-database-ink-secondary: rgb(114, 111, 106);
   --blok-database-ink-tertiary: rgb(114, 111, 106);
   /* Search match tint: Notion's, measured (findings V22). */
@@ -12907,9 +12909,27 @@ button[data-blok-database-table-group-count]:hover {
 /* notion-motion.md Round 100 §1 #7: » for the search alone shows while the pointer is on the controls.
    It keeps its room, so it never refolds the bar under the pointer. A keyboard focus on a control shows it too.
    Read only in the view bar: a title row keeps it shown. */
-[data-blok-database-view-bar] > [data-blok-database-view-toolbar]:not(:hover):not(:has(> :not([data-blok-database-search-input]):focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only] {
+[data-blok-database-view-bar] > [data-blok-database-view-toolbar]:not(:hover):not(:has(> :not([data-blok-database-search-input]):focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only=""] {
   visibility: hidden;
   opacity: 0;
+}
+
+/* notion-motion.md Round 101 §1 #2, §3: with no sort or filter, » shows while the pointer or a keyboard focus is on the
+   controls, with no fade, and leaves 200ms after. It takes no room, so the tabs never refold under the pointer.
+   A title row is unmeasured, so it stays out there, and so do tabs that run up to the toolbar (database-tab-bar.ts). */
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"] {
+  margin-inline-start: calc(-1 * var(--blok-database-toolbar-icon-size));
+  transition: background-color 0.1s ease-in-out;
+}
+
+[data-blok-database-view-toolbar]:not(:hover):not(:has(> :focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"] {
+  display: none;
+  transition: background-color 0.1s ease-in-out, display 0s allow-discrete 0.2s;
+}
+
+[data-blok-database-title-row] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"],
+[data-blok-database-view-bar][data-blok-database-fold-minimize] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"] {
+  display: none;
 }
 
 /* « brings the controls back with a 200ms fade. */

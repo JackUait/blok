@@ -97,6 +97,36 @@ describe('DatabaseTabBar — the view bar folds like Notion (notion-spec-2 §26.
     vi.restoreAllMocks();
   });
 
+  // notion-motion.md Round 101 §1 #2: the hover-only » takes no room, so it shows only where the tabs leave it room.
+  // Blok's choice: a tabs row that runs up to the toolbar is unmeasured in Notion.
+  describe('room for the hover-only »', () => {
+    const place = (el: Element, left: number, width: number): void => {
+      vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(left, 0, width, 28));
+    };
+
+    it('marks the bar when the tabs end less than one icon before the toolbar', () => {
+      const mounted = mount();
+
+      place(mounted.toolbar, 959.7, 270);
+      place(mounted.el.lastElementChild ?? mounted.el, 920.4, 28);
+      layOut(mounted, 1000);
+      fire();
+
+      expect(mounted.viewBar.hasAttribute('data-blok-database-fold-minimize')).toBe(true);
+    });
+
+    it('leaves the mark off when an icon fits between them', () => {
+      const mounted = mount();
+
+      place(mounted.toolbar, 959.7, 270);
+      place(mounted.el.lastElementChild ?? mounted.el, 600, 28);
+      layOut(mounted, 1000);
+      fire();
+
+      expect(mounted.viewBar.hasAttribute('data-blok-database-fold-minimize')).toBe(false);
+    });
+  });
+
   it('shows every tab, "+", the icons and New on a wide bar', () => {
     const mounted = mount();
 

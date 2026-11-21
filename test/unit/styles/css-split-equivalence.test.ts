@@ -1999,6 +1999,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // +283: the search × lies over the field's end, so a query adds no width.
     // +259: the ×'s 28px as a token (css-vars-extraction R2).
     const DATABASE_R273_BYTES = 545 + 283 + 259;
+    // Lane r274: » for the pointer on a view with no rule, out of the layout and off tabs that reach the toolbar.
+    const DATABASE_R274_BYTES = 1321;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2693,6 +2695,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R268_BYTES
       + DATABASE_R270_BYTES
       + DATABASE_R273_BYTES
+      + DATABASE_R274_BYTES
+      + DATABASE_R274_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

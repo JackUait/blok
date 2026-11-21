@@ -1977,6 +1977,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R260_BYTES = 1098;
     // Lane r262: Round 96 §1 #4 #5 the list row's focus fill and dark ring blue. Net database.css growth against origin/main.
     const DATABASE_R262_BYTES = 219;
+    // Lane r257: Round 94 §1 #7 a hidden title row. Net database.css growth against origin/main.
+    const DATABASE_R257_BYTES = 170;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2659,6 +2661,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R256_BYTES
       + DATABASE_R260_BYTES
       + DATABASE_R262_BYTES
+      + DATABASE_R257_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

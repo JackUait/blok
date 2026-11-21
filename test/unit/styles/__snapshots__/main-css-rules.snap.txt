@@ -7337,6 +7337,10 @@ button[data-blok-database-board-lane-count]:hover {
   margin-bottom: var(--blok-space-1-25);
 }
 
+[data-blok-database-title-row][hidden] {
+  display: none;
+}
+
 [data-blok-database-title-row][data-single-view] {
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
   padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));

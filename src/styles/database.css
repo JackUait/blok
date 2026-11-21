@@ -3297,6 +3297,11 @@ button[data-blok-database-board-lane-count]:hover {
   margin-bottom: var(--blok-space-1-25);
 }
 
+/* No title to show with several views (notion-motion.md Round 94 §1 #7): the tabs take the row's place. */
+[data-blok-database-title-row][hidden] {
+  display: none;
+}
+
 /* Single-view mode: move centering offset to the row, strip it from the title
    so the + button sits exactly 4px after the title text */
 [data-blok-database-title-row][data-single-view] {

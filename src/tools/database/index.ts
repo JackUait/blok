@@ -1882,13 +1882,14 @@ export class DatabaseTool implements BlockTool {
     if (titleEl === null) return;
     const saved = this.shownView();
 
-    // "Show data source title" (research/20 §1f, R-2022-03-15). The title row stays: it can hold the add-view "+".
+    // "Show data source title" (research/20 §1f, R-2022-03-15).
     const hidden = this.fullPage || this.dataSourceTitlesHidden
       || (this.linked && saved !== undefined && this.controls.effective(saved).showDataSourceTitle === false);
     const source = this.linked ? this : this.activeSource();
 
     titleEl.hidden = hidden || source !== this;
     this.paintSourceTitle(source === this ? undefined : source, hidden);
+    this.syncTitleRowShown();
     if (!this.linked || this.source === undefined) return;
     const missing = this.sourceMissing();
     const live = missing || this.source.documentId !== undefined ? undefined : this.databaseTitleOf(this.source.databaseId);
@@ -5745,6 +5746,23 @@ export class DatabaseTool implements BlockTool {
       }
     }
     this.syncTitleRowFold(single);
+    this.syncTitleRowShown();
+  }
+
+  /**
+   * notion-motion.md Round 94 §1 #7: with several views and no title to show, the row goes and the tabs move up.
+   * One view keeps it: it holds the view toolbar.
+   */
+  private syncTitleRowShown(): void {
+    const row = this.titleRowElement;
+
+    if (row === null) return;
+    const titled = [this.titleElement, this.sourceTitleElement].some((el) => el !== null && !el.hidden);
+
+    const hidden = !titled && !row.hasAttribute('data-single-view');
+
+    // Only on a change: an attribute write is a mutation, even with the same value.
+    if (row.hidden !== hidden) row.hidden = hidden;
   }
 
   /** One view: the title row folds its toolbar as the view bar does (peek-top.png). */
@@ -12260,15 +12278,14 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * The selection bar sits on the title row, so the view tabs stay clickable (notion-motion.md Round 93 §1 #4).
-   * A hidden title (full page, hidden source titles) is unmeasured, so the bar keeps the view bar there.
+   * The selection bar sits on the first chrome row shown (notion-motion.md Round 93 §1 #4, Round 94 §2):
+   * the title row, or the tab row when there is no title row.
    */
   private selectionBarSlot(): HTMLElement | null {
     const element = this.viewOwner().element;
     const titleRow = element?.querySelector<HTMLElement>(':scope > [data-blok-database-title-row]') ?? null;
-    const titleShown = (titleRow?.querySelector(':scope > [data-blok-database-title]:not([hidden])') ?? null) !== null;
 
-    if (titleRow !== null && (titleShown || titleRow.hasAttribute('data-single-view'))) return titleRow;
+    if (titleRow !== null && !titleRow.hidden) return titleRow;
 
     return element?.querySelector<HTMLElement>(':scope > [data-blok-database-view-bar]') ?? null;
   }

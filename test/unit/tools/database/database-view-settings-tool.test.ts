@@ -730,3 +730,49 @@ describe('DatabaseTool — selection bar place', () => {
     tool.destroy();
   });
 });
+
+// notion-motion.md Round 94 §1 #7 and §2 (r94-n-hidden-title-selbar.raw): with no title to show, the title row
+// goes away and the tabs move up. The "1 selected" bar sits on the first row shown.
+describe('DatabaseTool — hidden title row', () => {
+  afterEach(() => {
+    PopoverRegistry.resetForTests();
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  const twoViews = [tableView(), tableView({ id: 'v2', name: 'Two', position: 'a1' })];
+  const titleRow = (root: HTMLElement): HTMLElement | null => root.querySelector('[data-blok-database-title-row]');
+  const pickRow = (root: HTMLElement): Element | null => {
+    root.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-row-checkbox]')?.click();
+
+    return root.querySelector('[data-blok-database-table-selection-bar]');
+  };
+
+  it.each([
+    ['hidden data source titles', { hideDataSourceTitles: true }],
+    ['a full page', { fullPage: true }],
+  ] as const)('drops the title row with %s, and puts the selection bar on the tab row', (_, extra) => {
+    const { tool, root } = mount({}, {}, { views: twoViews, ...extra });
+
+    expect(titleRow(root)).not.toBeVisible();
+    expect(pickRow(root)?.parentElement?.hasAttribute('data-blok-database-view-bar')).toBe(true);
+    tool.destroy();
+  });
+
+  it('keeps the title row with one view, since it holds the view toolbar', () => {
+    const { tool, root } = mount({}, {}, { hideDataSourceTitles: true });
+
+    expect(titleRow(root)).toBeVisible();
+    tool.destroy();
+  });
+
+  it('brings the title row back when the titles are shown again', () => {
+    const { tool, root } = mount({}, {}, { views: twoViews, hideDataSourceTitles: true });
+
+    tool.setData({ ...tool.save(root), hideDataSourceTitles: false });
+
+    expect(titleRow(root)).toBeVisible();
+    expect(pickRow(root)?.parentElement?.hasAttribute('data-blok-database-title-row')).toBe(true);
+    tool.destroy();
+  });
+});

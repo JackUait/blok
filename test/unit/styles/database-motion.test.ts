@@ -403,6 +403,12 @@ describe('minimized database toolbar', () => {
     expect(body(database, `${TITLE_EXPAND}:focus-visible`)).toContain('opacity: 1');
   });
 
+  // notion-motion.md Round 104 §1 #2: in a view bar, once the pointer has left «, it shows only while the pointer is
+  // on the toolbar. A keyboard focus on a control still shows it. A title row already shows it on hover only.
+  it('hides a hover-only « while the pointer and the keyboard are off the toolbar', () => {
+    expect(body(database, `[data-blok-database-view-bar] > ${TOOLBAR}:not(:hover):not(:has(> :focus-visible)) > ${EXPAND}[data-blok-database-expand-hover-only]`)).toContain('opacity: 0');
+  });
+
   // motion-minimize.json t1190: « fades in over 200ms ease as it appears.
   it('fades « in over 200ms ease when it appears, keeping the hover fill', () => {
     const pair = `${TOOLBAR} > ${EXPAND}`;

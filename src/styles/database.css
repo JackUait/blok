@@ -12948,6 +12948,11 @@ button[data-blok-database-table-group-count]:hover {
   opacity: 1;
 }
 
+/* notion-motion.md Round 104 §1 #2: once the pointer has left «, a view bar shows it only while the pointer is on the toolbar. */
+[data-blok-database-view-bar] > [data-blok-database-view-toolbar]:not(:hover):not(:has(> :focus-visible)) > [data-blok-database-toolbar-expand][data-blok-database-expand-hover-only] {
+  opacity: 0;
+}
+
 [data-blok-database-toolbar-expand] svg {
   transform: scaleX(-1);
 }

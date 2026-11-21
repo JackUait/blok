@@ -15762,6 +15762,10 @@ button[data-blok-database-table-group-count]:hover {
   opacity: 1;
 }
 
+[data-blok-database-view-bar] > [data-blok-database-view-toolbar]:not(:hover):not(:has(> :focus-visible)) > [data-blok-database-toolbar-expand][data-blok-database-expand-hover-only] {
+  opacity: 0;
+}
+
 [data-blok-database-toolbar-expand] svg {
   transform: scaleX(-1);
 }

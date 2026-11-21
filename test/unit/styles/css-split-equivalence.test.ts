@@ -2024,8 +2024,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r282: the Show calendar as row's › turns while its menu is open (Round 87 §2),
     // and a one-day timeline bar's hover fill is never under 12 (Round 92 §4). Net database.css growth against origin/main.
     const DATABASE_R282_BYTES = 983;
-    // Lane r283: a colour rule's ⌄ level with "Select..." and 8 in; 16 under the Conditional color intro text.
-    const DATABASE_R283_BYTES = 283;
+    // Lane r283: a colour rule's ⌄ level with "Select..." and 8 in; 16 under the Conditional color intro text;
+    // +334: « is hover-only in a view bar once the pointer has left it.
+    const DATABASE_R283_BYTES = 283 + 334;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

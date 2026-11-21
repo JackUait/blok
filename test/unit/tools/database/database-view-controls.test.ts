@@ -3045,6 +3045,27 @@ describe('DatabaseViewControls', () => {
       }
     });
 
+    // notion-motion.md Round 104 §1 #2 (r104-n-expand-sticky.raw): « stays at rest after », until the pointer
+    // enters it and leaves; from then on it shows only on hover. A new » starts that over.
+    it('makes « hover-only once the pointer has left it, until the next »', () => {
+      setup();
+      click('database-toolbar-minimize');
+      const expand = q('database-toolbar-expand');
+      const HOVER_ONLY = 'data-blok-database-expand-hover-only';
+
+      expect(expand?.hidden).toBe(false);
+      expect(expand?.hasAttribute(HOVER_ONLY)).toBe(false);
+
+      expand?.dispatchEvent(new PointerEvent('pointerenter'));
+      expect(expand?.hasAttribute(HOVER_ONLY)).toBe(false);
+      expand?.dispatchEvent(new PointerEvent('pointerleave'));
+      expect(expand?.hasAttribute(HOVER_ONLY)).toBe(true);
+
+      click('database-toolbar-expand');
+      click('database-toolbar-minimize');
+      expect(q('database-toolbar-expand')?.hasAttribute(HOVER_ONLY)).toBe(false);
+    });
+
     it('shows « with no » while minimized, even with the search open', () => {
       const { controls, saved } = setup();
 

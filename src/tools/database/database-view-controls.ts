@@ -170,6 +170,8 @@ const button = (testId: string, label: string, content: { icon?: string; text?: 
 
 /** Notion's controls fade back in over 200ms when « expands the toolbar; a little longer so the fade ends first. */
 const EXPAND_FADE_MS = 250;
+/** Set on « once the pointer has left it: database.css then shows it only on hover. */
+const EXPAND_HOVER_ONLY = 'data-blok-database-expand-hover-only';
 
 /** Longer than the 200ms shrink, so transitionend normally wins. */
 const SEARCH_CLOSE_FALLBACK_MS = 250;
@@ -324,6 +326,8 @@ export class DatabaseViewControls {
     // notion-motion.md Round 102 §1 #4: » folds the controls; the chip bar stays.
     this.minimizeButton.addEventListener('click', (event) => {
       if (this.searchShown()) this.hideSearch();
+      // notion-motion.md Round 104 §1 #2: « stays at rest after each », until the pointer leaves it.
+      this.expandButton.removeAttribute(EXPAND_HOVER_ONLY);
       this.host.updateView({ toolbarMinimized: true });
       this.refresh();
       this.placeFocusAfterToggle(event, this.expandButton);
@@ -331,6 +335,7 @@ export class DatabaseViewControls {
     this.expandButton = iconButton('database-toolbar-expand', this.host.i18n.t('tools.toggle.ariaLabelExpand'), IconChevronDoubleRight);
     this.expandButton.setAttribute('data-blok-database-toolbar-expand', '');
     this.expandButton.hidden = true;
+    this.expandButton.addEventListener('pointerleave', () => this.expandButton.setAttribute(EXPAND_HOVER_ONLY, ''));
     this.expandButton.addEventListener('click', (event) => {
       // The controls fade in once; a later show of one of them stays instant.
       // Marked first: the host's redraw lays out, and the fade only starts if the mark is on then.

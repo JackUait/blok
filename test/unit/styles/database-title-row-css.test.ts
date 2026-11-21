@@ -350,8 +350,21 @@ describe('the sort and filter chip bar keeps to the text column', () => {
 describe('several views: the selection bar sits at the top of the first row', () => {
   it.each([
     '[data-blok-database-view-bar] > [data-blok-database-table-selection-bar], [data-blok-database-view-bar] > [data-blok-database-table-selection-bar-leaving]',
-    '[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-table-selection-bar], [data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-table-selection-bar-leaving]',
+    '[data-blok-database-title-row] > [data-blok-database-table-selection-bar], [data-blok-database-title-row] > [data-blok-database-table-selection-bar-leaving]',
   ])('top-aligns the bar in %s', (selector) => {
     expect(rule(selector)).toMatch(/margin-block: 0 auto/);
+  });
+});
+
+// notion-motion.md Round 97 §1 #4: with one view the bar's top is the database's top too, 8px left of the title.
+describe('one view: the selection bar sits at the database top, 8px left of the title', () => {
+  it('no rule keeps the one-view bar centred in the title row', () => {
+    expect(database).not.toContain(':not([data-single-view]) > [data-blok-database-table-selection-bar]');
+  });
+
+  it('starts 8px before the title text', () => {
+    const body = rule('[data-blok-database-title-row][data-single-view] > [data-blok-database-table-selection-bar], [data-blok-database-title-row][data-single-view] > [data-blok-database-table-selection-bar-leaving]');
+
+    expect(body).toMatch(/inset-inline-start: max\(0px, calc\(\(100% - var\(--blok-content-max-width, var\(--max-width-content\)\)\) \/ 2 - 8px\)\)/);
   });
 });

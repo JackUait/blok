@@ -529,6 +529,24 @@ test.describe('selection bar', () => {
       expect(Math.abs(bar.y - top.y)).toBeLessThanOrEqual(0.5);
     });
   }
+  // notion-motion.md Round 97 §1 #4 (r97-n-selbar-oneview.raw): with one view the bar's top is the database's top,
+  // and it starts 8px left of the title text.
+  test('with one view the bar sits at the database top, 8px left of the title', async ({ page }) => {
+    await mount(page, blocks().map((block) => (block.type === 'database'
+      ? { ...block, data: { ...block.data, views: (block.data as { views: unknown[] }).views.slice(0, 1) } }
+      : block)));
+    const title = await page.locator('[data-blok-database-title]').boundingBox();
+
+    await tableRow(page, 'r1').hover();
+    await tableRow(page, 'r1').locator('[data-blok-database-table-row-checkbox]').click();
+
+    const bar = await page.locator('[data-blok-database-table-selection-bar]').boundingBox();
+    const top = await page.locator('[data-blok-database-wrapper]').boundingBox();
+
+    if (bar === null || top === null || title === null) throw new Error('no layout');
+    expect(Math.abs(bar.y - top.y)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(title.x - 8 - bar.x)).toBeLessThanOrEqual(0.5);
+  });
   // With tabs the bar sat at the view bar's edge, 316px left of the table (sweep9a motion-rowdrag.json).
   test('starts at the table content with tabs, as it does with one view', async ({ page }) => {
     await mount(page, blocks());

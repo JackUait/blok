@@ -408,6 +408,9 @@ const releaseCaret = (): void => {
 const ownsText = (target: Element | null | undefined): boolean =>
   Array.from(target?.childNodes ?? []).some((node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? '').trim() !== '');
 
+/** notion-motion.md Round 101 §1 #4: the room round the coloured pill inside Notion's group pill button. */
+const PILL_BUTTON_PAD = 3;
+
 const groupMenuCoverPlacement = (anchor: HTMLElement, margin: number, offset: number): Pick<PopoverDesktopParams, 'cover' | 'viewportMargin' | 'coverFlipOffset' | 'coverVerticalMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
   const rect = anchor.getBoundingClientRect();
 
@@ -10734,7 +10737,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** `owner` keeps `data-popover-open` while the menu is up, so its hover-only buttons stay shown. */
-  private showGroupPopover(anchor: HTMLElement, items: ReturnType<typeof groupMenuItems>, owner?: HTMLElement, layout: { minWidth?: string; scopeElement?: HTMLElement; class?: string; offset?: number; highlight?: string; edgeMargin?: number } = {}): void {
+  private showGroupPopover(anchor: HTMLElement, items: ReturnType<typeof groupMenuItems>, owner?: HTMLElement, layout: { minWidth?: string; scopeElement?: HTMLElement; class?: string; offset?: number; highlight?: string; edgeMargin?: number; position?: DOMRect } = {}): void {
     this.groupMenuPopover?.destroy();
 
     const params: PopoverDesktopParams = {
@@ -10747,6 +10750,7 @@ export class DatabaseTool implements BlockTool {
       autoFocusFirstItem: false,
       items,
       ...(layout.scopeElement !== undefined ? { scopeElement: layout.scopeElement } : {}),
+      ...(layout.position !== undefined ? { position: layout.position, positionContext: anchor } : {}),
     };
     const popover = new PopoverDesktop(layout.edgeMargin === undefined
       ? params
@@ -11155,7 +11159,7 @@ export class DatabaseTool implements BlockTool {
 
   /**
    * notion-motion.md Round 98 §1 #1, Round 99 §1 #1-#4, Round 100 §1 #3-#4: a click, Enter or Space on a column pill
-   * or a band pill opens this under the pill: 4 below it, the name selected, and the same field and "Done ↵" as "+ New group".
+   * or a band pill opens this under the pill (Round 101 §1 #4: 7 below its coloured pill, 3 left of it), the name selected, and the same field and "Done ↵" as "+ New group".
    * `propertyId` is the grouped property: a Status option's popup is 240 wide, a Select or Multi-select one's 300.
    * `done` gets the trimmed name on Done or Enter, and null on any other close
    * (Round 100 §1 #1: Notion drops a typed name on a click outside).
@@ -11168,12 +11172,17 @@ export class DatabaseTool implements BlockTool {
     });
     const status = propertyId !== undefined && this.model.getProperty(propertyId)?.type === 'status';
 
+    // Round 101 §1 #4: Notion's pill button is the coloured pill with 3px round it, and the popup sits 4 under that button.
+    // A band pill's coloured pill is inside its label; a column pill is coloured itself.
+    const coloured = (pill.querySelector(':scope > [data-blok-database-option-pill]') ?? pill).getBoundingClientRect();
+
     field.input.setAttribute('aria-label', this.api.i18n.t('tools.database.renameColumn'));
     field.input.placeholder = this.api.i18n.t('tools.database.renameGroup');
     this.showGroupPopover(pill, [{ type: PopoverItemType.Html, element: field.wrap, name: 'rename-group' }], pill, {
       class: `${DATABASE_MENU_CLASS} blok-database-new-group-menu`,
       minWidth: status ? '240px' : '300px',
       offset: 4,
+      position: new DOMRect(coloured.x - PILL_BUTTON_PAD, coloured.y - PILL_BUTTON_PAD, coloured.width + 2 * PILL_BUTTON_PAD, coloured.height + 2 * PILL_BUTTON_PAD),
     });
     const popover = this.groupMenuPopover;
 

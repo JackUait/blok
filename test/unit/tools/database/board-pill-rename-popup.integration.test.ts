@@ -269,6 +269,40 @@ describe('board: rename popup by property type, and on a band pill', () => {
     expect(popupWidth()).toBe(width);
   });
 
+  // notion-motion.md Round 101 §1 #4 (r101-n-col-pill-click-escape.raw, r101-n-band-pill-click-escape.raw):
+  // Notion's pill button has 3px round the coloured pill, so the popup sits 7 under the coloured pill and 3 left of it.
+  describe('places the popup against the coloured pill', () => {
+    const popupAt = (): number[] => {
+      const popover = field()?.closest<HTMLElement>('[data-blok-popover]');
+
+      return [Number.parseFloat(popover?.style.left ?? ''), Number.parseFloat(popover?.style.top ?? '')];
+    };
+    const placeAt = (el: Element | null | undefined, x: number, y: number, width: number): void => {
+      if (el instanceof HTMLElement) vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(x, y, width, 20));
+    };
+
+    it('a column pill: 3 left of it and 7 under it', async () => {
+      await mount({ groupBy: 'sel' });
+      placeAt(pill(), 550, 323, 102.2);
+      pill()?.click();
+      await quiet();
+
+      expect(popupAt()).toEqual([547, 350]);
+    });
+
+    it('a band pill: 3 left of its coloured pill, as its button already is, and 7 under it', async () => {
+      await mount({ groupBy: 'st', subGroupBy: 'sel' });
+      const band = bandPill();
+
+      placeAt(band, 563, 373, 43.6);
+      placeAt(band?.firstElementChild, 566, 373, 37.6);
+      band?.click();
+      await quiet();
+
+      expect(popupAt()).toEqual([563, 400]);
+    });
+  });
+
   it('the rename field reads "Rename group" when it is empty', async () => {
     await mount({ groupBy: 'sel' });
     pill()?.click();

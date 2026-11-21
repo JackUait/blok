@@ -709,6 +709,66 @@ describe('view settings panel', () => {
     expect(pickLarge).toHaveBeenCalledTimes(1);
   });
 
+  // notion-motion.md Round 14 (r14-cal-showas.png), Round 87 §2 (r87-n-calas-open-mo.raw): a 250 menu under the row, end edges aligned; the › turns.
+  describe('"Show calendar as"', () => {
+    const calendar = (pickWeek: () => void): Harness => {
+      const h = harness({ type: 'calendar' });
+
+      h.ctx.layoutItems = () => [{
+        type: PopoverItemType.Default,
+        name: 'calendar-show-as',
+        title: 'Show calendar as',
+        children: { items: [
+          { type: PopoverItemType.Default, name: 'calendar-range-month', title: 'Month', isActive: true, onActivate: vi.fn() },
+          { type: PopoverItemType.Default, name: 'calendar-range-week', title: 'Week', isActive: false, onActivate: pickWeek },
+        ] },
+      }];
+      h.open();
+      click('database-settings-layout');
+
+      return h;
+    };
+    const menu = (): HTMLElement | null => q('database-calendar-show-as-menu');
+
+    it('opens a 250 menu under the row and keeps the Layout page', () => {
+      calendar(vi.fn());
+      const row = q('database-calendar-show-as');
+
+      expect(row?.getAttribute('aria-haspopup')).toBe('menu');
+      expect(row?.getAttribute('aria-expanded')).toBe('false');
+      click('database-calendar-show-as');
+
+      expect(menu()?.style.width).toBe('250px');
+      expect(menu()?.closest('[data-blok-popover-custom-class]')?.getAttribute('data-blok-popover-custom-class')?.split(' ')).not.toContain('blok-database-docked-panel');
+      expect(q('database-view-settings')?.getAttribute('data-blok-database-panel-page')).toBe('layout');
+      expect(q('database-calendar-show-as')?.getAttribute('aria-expanded')).toBe('true');
+      expect(menu()?.querySelector('[data-blok-testid="database-calendar-range-month"]')?.getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('runs a pick, closes the menu and gives the row the focus back', () => {
+      const pickWeek = vi.fn();
+
+      calendar(pickWeek);
+      click('database-calendar-show-as');
+      click('database-calendar-range-week');
+
+      expect(pickWeek).toHaveBeenCalledTimes(1);
+      expect(menu()).toBeNull();
+      expect(q('database-calendar-show-as')).toHaveFocus();
+      expect(q('database-calendar-show-as')?.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('turns the chevron back when Escape closes the menu', () => {
+      calendar(vi.fn());
+      click('database-calendar-show-as');
+      menu()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(menu()).toBeNull();
+      expect(q('database-calendar-show-as')?.getAttribute('aria-expanded')).toBe('false');
+      expect(q('database-view-settings')).not.toBeNull();
+    });
+  });
+
   it('lists the tool actions on the root page; a click closes the panel and runs it', () => {
     const h = harness();
     const exportCsv = vi.fn();

@@ -14511,6 +14511,26 @@ button[data-blok-database-table-group-count]:hover {
   transform: scaleX(-1);
 }
 
+/* notion-motion.md Round 87 §2 (r87-n-calas-open-mo.raw): a row's menu is open, so its › points down.
+   `rotate` runs after the RTL flip above, so RTL turns the other way. */
+[data-blok-database-panel-row][aria-haspopup="menu"] [data-blok-database-panel-chevron] svg {
+  transition: rotate 200ms ease-in-out;
+}
+
+[data-blok-database-panel-row][aria-haspopup="menu"][aria-expanded="true"] [data-blok-database-panel-chevron] svg {
+  rotate: 90deg;
+}
+
+[dir="rtl"] [data-blok-database-panel-row][aria-haspopup="menu"][aria-expanded="true"] [data-blok-database-panel-chevron] svg {
+  rotate: -90deg;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-database-panel-row][aria-haspopup="menu"] [data-blok-database-panel-chevron] svg {
+    transition: none;
+  }
+}
+
 [data-blok-database-panel-row] {
   display: flex;
   flex: 0 0 auto;

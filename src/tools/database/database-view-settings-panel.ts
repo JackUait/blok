@@ -1482,6 +1482,8 @@ export class ViewSettingsPages {
         });
       }
 
+      if (item.name === 'calendar-show-as') return this.layoutMenuRow(panel, item);
+
       return panelRow({
         label: item.title,
         testId: `database-${item.name}`,
@@ -1491,6 +1493,37 @@ export class ViewSettingsPages {
         onClick: () => panel.push(this.layoutChoices(item.name, item.title)),
       });
     })];
+  }
+
+  /**
+   * notion-motion.md Round 14 (r14-cal-showas.png), Round 87 §2 (r87-n-calas-open-mo.raw): "Show calendar as"
+   * opens a 250 menu under the row, end edges aligned, and its › turns down while it is open.
+   */
+  private layoutMenuRow(panel: DatabasePanel, item: LayoutItem): HTMLElement {
+    const opener = panelRow({
+      label: item.title,
+      testId: `database-${item.name}`,
+      value: item.children?.find((child) => child.active)?.title ?? '',
+      opensPage: true,
+      disabled: !this.shared,
+      onClick: () => {
+        opener.setAttribute('aria-expanded', 'true');
+        openFlyout(opener, panel, `database-${item.name}-menu`, LAYOUT_MENU_WIDTH, (pick) => (item.children ?? []).map((child) => panelRow({
+          label: child.title,
+          testId: `database-${child.name}`,
+          checked: child.active,
+          onClick: () => pick(() => {
+            child.activate?.();
+            panel.refresh();
+          }),
+        })), { alignEnd: true, onClose: () => opener.setAttribute('aria-expanded', 'false') });
+      },
+    });
+
+    opener.setAttribute('aria-haspopup', 'menu');
+    opener.setAttribute('aria-expanded', 'false');
+
+    return opener;
   }
 
   private layoutChoices(name: string, title: string): PanelPage {
@@ -3801,6 +3834,8 @@ export const openFilterList = (anchor: HTMLElement, ctx: ViewSettingsContext, te
 
 /** notion-motion.md Round 38 §4 (r38-manage-sources.raw): the data source ⋯ menu. */
 const MANAGE_SOURCE_MENU_WIDTH = 200;
+/** notion-motion.md Round 87 §2: the Show calendar as menu is 250 wide. */
+const LAYOUT_MENU_WIDTH = 250;
 /** notion-motion.md Round 19 §1 (r19-adv-rulemore.raw, r19-adv-groupmore.raw): the rule and group ⋯ menus. */
 const RULE_MORE_WIDTH = 150.8;
 /** notion-motion.md Round 19 §1 (r19-adv-andor.raw). */

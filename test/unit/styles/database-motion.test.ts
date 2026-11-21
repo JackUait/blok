@@ -574,3 +574,20 @@ describe('column header Change type list', () => {
     expect(container).toContain('transform-origin: center');
   });
 });
+
+// notion-motion.md Round 87 §2 (r87-n-calas-open-mo.raw): while the Show calendar as menu is open, its row's › turns 90° over 200ms ease-in-out.
+describe('a panel row that opens a menu', () => {
+  const ROW = '[data-blok-database-panel-row][aria-haspopup="menu"]';
+  const CHEVRON = `${ROW} [data-blok-database-panel-chevron] svg`;
+  const OPEN = `${ROW}[aria-expanded="true"] [data-blok-database-panel-chevron] svg`;
+
+  it('turns its chevron down while the menu is open', () => {
+    expect(body(outsideReducedMotion, CHEVRON)).toContain('transition: rotate 200ms ease-in-out');
+    expect(body(outsideReducedMotion, OPEN)).toContain('rotate: 90deg');
+    expect(body(outsideReducedMotion, `[dir="rtl"] ${OPEN}`)).toContain('rotate: -90deg');
+  });
+
+  it('turns at once under reduced motion', () => {
+    expect(body(reducedMotion, CHEVRON)).toContain('transition: none');
+  });
+});

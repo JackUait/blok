@@ -17206,6 +17206,22 @@ button[data-blok-database-table-group-count]:hover {
   transform: scaleX(-1);
 }
 
+[data-blok-database-panel-row][aria-haspopup="menu"] [data-blok-database-panel-chevron] svg {
+  transition: rotate 200ms ease-in-out;
+}
+
+[data-blok-database-panel-row][aria-haspopup="menu"][aria-expanded="true"] [data-blok-database-panel-chevron] svg {
+  rotate: 90deg;
+}
+
+[dir="rtl"] [data-blok-database-panel-row][aria-haspopup="menu"][aria-expanded="true"] [data-blok-database-panel-chevron] svg {
+  rotate: -90deg;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-panel-row][aria-haspopup="menu"] [data-blok-database-panel-chevron] svg {
+  transition: none;
+}
+
 [data-blok-database-panel-row] {
   display: flex;
   flex: 0 0 auto;

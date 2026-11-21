@@ -170,4 +170,32 @@ describe('View settings › Group: reorder groups by their handle (notion-motion
     expect(panelGroups().length).toBe(4);
     expect(byTestId('database-group-list-handle-a')).toBeNull();
   });
+
+  it('a Status group moved into another status group writes nothing and adds no undo step', async () => {
+    const status = doc();
+    const db = status[0].data as DatabaseData;
+
+    db.schema[1] = { id: 'st', name: 'Status', type: 'status', position: 'a1', config: { options: [
+      { id: 'ns', label: 'Not started', position: 'a0', groupId: 'todo' },
+      { id: 'ip', label: 'In progress', color: 'blue', position: 'a0', groupId: 'inProgress' },
+      { id: 'dn', label: 'Done', color: 'green', position: 'a0', groupId: 'complete' },
+    ] } };
+    db.views[0].groupSettings = undefined;
+    status[1].data = { properties: { t: 'One', st: 'ip' }, position: 'a0' };
+    const api = await make(status);
+    const saved = JSON.stringify((await api.save()).blocks.find((b) => b.id === 'db')?.data);
+    const shown = columns();
+
+    await openGroupPage();
+    stopCapturing();
+
+    expect(api.history.canUndo()).toBe(false);
+    altArrow('ns', 'ArrowDown');
+    await quiet();
+
+    expect(JSON.stringify((await api.save()).blocks.find((b) => b.id === 'db')?.data)).toBe(saved);
+    expect(api.history.canUndo()).toBe(false);
+    expect(columns()).toEqual(shown);
+    expect(panelGroups().filter((key) => key !== NO_VALUE)).toEqual(['ns', 'ip', 'dn']);
+  });
 });

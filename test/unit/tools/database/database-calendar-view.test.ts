@@ -803,6 +803,23 @@ describe('DatabaseCalendarView', () => {
       expect(handlers.navigate).not.toHaveBeenCalled();
     });
 
+    // notion-motion.md Round 104 §1 #8 (r104-n-cal-kb-today-*.raw): arrows on Today or Next month move nothing, the page included.
+    it.each(['today', 'next', 'prev'])('keeps the page still on arrows over the %s button', (which) => {
+      const { root, handlers } = mount();
+      const button = root.querySelector<HTMLElement>(`[data-blok-database-calendar-${which}]`);
+
+      if (button === null) throw new Error(`no ${which} button`);
+      button.focus();
+      for (const name of ['ArrowDown', 'ArrowRight', 'ArrowLeft', 'ArrowUp']) {
+        const press = new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true });
+
+        button.dispatchEvent(press);
+        expect(press.defaultPrevented, name).toBe(true);
+      }
+      expect(button).toHaveFocus();
+      expect(handlers.navigate).not.toHaveBeenCalled();
+    });
+
     it('moves between days with the arrow keys', () => {
       const { root } = mount();
 

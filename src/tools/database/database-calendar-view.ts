@@ -676,7 +676,8 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     }
 
     // notion-motion.md Round 97 §1 #3: arrows on a focused event do nothing, and the page does not scroll.
-    if (onEvent) {
+    // Round 104 §1 #8: the same on the month buttons (read on Today and Next month).
+    if (onEvent || target?.closest('[data-blok-database-calendar-nav]') != null) {
       if (event.key.startsWith('Arrow')) event.preventDefault();
 
       return;

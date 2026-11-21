@@ -8512,6 +8512,11 @@ button[data-blok-database-board-lane-count]:hover {
   overflow: hidden;
 }
 
+[data-blok-database-board-container]:has(> [data-blok-database-list]) {
+  overflow: clip;
+  overflow-clip-margin: 6px;
+}
+
 [data-blok-database-list] {
   display: flex;
   flex-direction: column;

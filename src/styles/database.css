@@ -4698,6 +4698,13 @@ button[data-blok-database-board-lane-count]:hover {
   overflow: hidden;
 }
 
+/* A list row's keyboard ring sits 6px outside the row (Round 95 §1 #8), so the clip leaves it room.
+   Not for other views: clip is no scroll container, so their sticky headers would stick to the page. */
+[data-blok-database-board-container]:has(> [data-blok-database-list]) {
+  overflow: clip;
+  overflow-clip-margin: 6px;
+}
+
 /* ─── List View ──────────────────────────────────────── */
 
 /**
@@ -10542,7 +10549,7 @@ textarea[data-blok-database-cell-input] {
   padding-block-end: var(--blok-space-3);
 }
 
-/* It clips too (overflow set inline), so it bleeds the same way. The list's
+/* It clips too, so it bleeds the same way. The list's
    narrower gutter fits in the table's, and so does the form's gap "+". */
 [data-blok-database-board-container]:has(> [data-blok-database-table], > [data-blok-database-list], > [data-blok-database-form]) {
   margin-inline-start: calc(-1 * max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))));

@@ -2545,7 +2545,6 @@ export class DatabaseTool implements BlockTool {
     boardContainer.setAttribute('data-blok-database-board-container', '');
     // Every view's own buttons (calendar nav, board column menus, feed actions) take Enter as a click.
     boardContainer.setAttribute(DATA_ATTR.keyboardOwner, '');
-    boardContainer.style.overflow = 'hidden';
     boardContainer.style.position = 'relative';
     this.boardContainer = boardContainer;
     wrapper.appendChild(boardContainer);

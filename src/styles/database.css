@@ -4083,14 +4083,12 @@ button[data-blok-database-board-lane-count]:hover {
   padding-inline-start: var(--blok-space-4);
 }
 
+/* notion-motion.md Round 88 §1 #9: Notion's › ink is 5.6x10 in this 16 box; the Keyline chevron draws that at 24. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] > [data-blok-popover-container] [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right] {
-  width: 16px;
+  --blok-database-chevron-box: 16px;
+  --blok-database-chevron-size: 24px;
+  width: var(--blok-database-chevron-box);
   margin-inline: var(--blok-space-1-5) 0;
-}
-
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] > [data-blok-popover-container] [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right] svg {
-  width: 16px;
-  height: 16px;
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right] {
@@ -10096,6 +10094,13 @@ textarea[data-blok-database-cell-input] {
   height: 20px;
 }
 
+/* notion-motion.md Round 88 §1 #9: Notion's month arrows draw ink ~6.2x10.8 in their 20 buttons; the Keyline
+   chevron draws that at 26. Cell editor only: the filter chip's calendar was not measured. */
+[data-blok-database-date-editor] :is([data-blok-database-date-prev], [data-blok-database-date-next]) {
+  --blok-database-chevron-box: 20px;
+  --blok-database-chevron-size: 26px;
+}
+
 [dir="rtl"] [data-blok-database-date-prev] svg,
 [dir="rtl"] [data-blok-database-date-next] svg {
   transform: scaleX(-1);
@@ -10322,14 +10327,32 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink-secondary);
 }
 
+/* notion-motion.md Round 83 l.8793 and Round 88 §1 #9: Notion ends these rows in a 14 box at +218 whose chevron
+   ink is 8.8 long; the Keyline chevron draws 8.7 at 21. */
 [data-blok-database-date-remind-chevron] {
+  --blok-database-chevron-box: 14px;
+  --blok-database-chevron-size: 21px;
+  align-items: center;
+  justify-content: center;
+  width: var(--blok-database-chevron-box);
+  height: var(--blok-database-chevron-box);
   color: var(--blok-database-value-chevron);
 }
 
-[data-blok-database-date-remind-chevron] > svg,
 [data-blok-database-date-remind-check] > svg {
   width: 16px;
   height: 16px;
+}
+
+/* A Keyline chevron drawn larger than its box, centred over it: the ink grows to Notion's, the layout keeps the box.
+   Size and margin, not a transform: the RTL rules mirror these svgs with transform. */
+[data-blok-database-date-editor] :is([data-blok-database-date-prev], [data-blok-database-date-next]) > svg,
+[data-blok-database-date-remind-chevron] > svg,
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] > [data-blok-popover-container] [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right] svg {
+  flex-shrink: 0;
+  width: var(--blok-database-chevron-size);
+  height: var(--blok-database-chevron-size);
+  margin: calc((var(--blok-database-chevron-box) - var(--blok-database-chevron-size)) / 2);
 }
 
 [data-blok-database-date-remind-check] {

@@ -8003,13 +8003,10 @@ button[data-blok-database-board-lane-count]:hover {
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] > [data-blok-popover-container] [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right] {
-  width: 16px;
+  --blok-database-chevron-box: 16px;
+  --blok-database-chevron-size: 24px;
+  width: var(--blok-database-chevron-box);
   margin-inline: var(--blok-space-1-5) 0;
-}
-
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] > [data-blok-popover-container] [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right] svg {
-  width: 16px;
-  height: 16px;
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right] {
@@ -13369,6 +13366,11 @@ textarea[data-blok-database-cell-input] {
   height: 20px;
 }
 
+[data-blok-database-date-editor] :is([data-blok-database-date-prev], [data-blok-database-date-next]) {
+  --blok-database-chevron-box: 20px;
+  --blok-database-chevron-size: 26px;
+}
+
 [dir="rtl"] [data-blok-database-date-prev] svg, [dir="rtl"] [data-blok-database-date-next] svg {
   transform: scaleX(-1);
 }
@@ -13564,12 +13566,25 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-date-remind-chevron] {
+  --blok-database-chevron-box: 14px;
+  --blok-database-chevron-size: 21px;
+  align-items: center;
+  justify-content: center;
+  width: var(--blok-database-chevron-box);
+  height: var(--blok-database-chevron-box);
   color: var(--blok-database-value-chevron);
 }
 
-[data-blok-database-date-remind-chevron] > svg, [data-blok-database-date-remind-check] > svg {
+[data-blok-database-date-remind-check] > svg {
   width: 16px;
   height: 16px;
+}
+
+[data-blok-database-date-editor] :is([data-blok-database-date-prev], [data-blok-database-date-next]) > svg, [data-blok-database-date-remind-chevron] > svg, [data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] > [data-blok-popover-container] [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right] svg {
+  flex-shrink: 0;
+  width: var(--blok-database-chevron-size);
+  height: var(--blok-database-chevron-size);
+  margin: calc((var(--blok-database-chevron-box) - var(--blok-database-chevron-size)) / 2);
 }
 
 [data-blok-database-date-remind-check] {

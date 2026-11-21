@@ -775,13 +775,17 @@ describe('cell editor CSS', () => {
       expect(declared(`${FLYOUT} [data-blok-popover-item-value]`, 'padding-inline-start')).toEqual(['var(--blok-space-4)']);
     });
 
-    it('draws a 16 chevron 6 after the value, flush with the row end', () => {
+    // Round 88 §1 #9: Notion's › ink is 5.6x10 in the 16 box; the Keyline chevron draws 5.7x9.9 at 24, centred over it.
+    it('draws a 16 chevron box 6 after the value, flush with the row end, with the glyph at 24', () => {
       const CHEVRON = `${FLYOUT} [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right]`;
 
-      expect(declared(CHEVRON, 'width')).toEqual(['16px']);
+      expect(declared(CHEVRON, 'width')).toEqual(['var(--blok-database-chevron-box)']);
+      expect(declared(CHEVRON, '--blok-database-chevron-box')).toEqual(['16px']);
+      expect(declared(CHEVRON, '--blok-database-chevron-size')).toEqual(['24px']);
       expect(declared(CHEVRON, 'margin-inline')).toEqual(['var(--blok-space-1-5) 0']);
-      expect(declared(`${CHEVRON} svg`, 'width')).toEqual(['16px']);
-      expect(declared(`${CHEVRON} svg`, 'height')).toEqual(['16px']);
+      expect(declared(`${CHEVRON} svg`, 'width')).toEqual(['var(--blok-database-chevron-size)']);
+      expect(declared(`${CHEVRON} svg`, 'height')).toEqual(['var(--blok-database-chevron-size)']);
+      expect(declared(`${CHEVRON} svg`, 'margin')).toEqual(['calc((var(--blok-database-chevron-box) - var(--blok-database-chevron-size)) / 2)']);
     });
   });
 
@@ -1258,5 +1262,36 @@ describe('cell editor CSS', () => {
     it('draws "Colors" at weight 500', () => {
       expect(declared(`${MENU} [data-blok-database-option-colors-heading]`, 'font-weight')).toEqual(['500']);
     });
+  });
+});
+
+// notion-motion.md Round 88 §1 #9 and Round 83 l.8793: Notion's month arrows draw ink ~6.2x10.8 in 20 buttons, and
+// the picker rows end in a 14 box at +218. A Keyline chevron is drawn larger than its box, so the ink grows and the box stays.
+describe('date picker chevrons (Round 88)', () => {
+  const ARROWS = '[data-blok-database-date-editor] :is([data-blok-database-date-prev], [data-blok-database-date-next])';
+  const SIZE = '--blok-database-chevron-size';
+
+  it('draws the month arrows at 26 in their 20 buttons, ink 6.2x10.7', () => {
+    expect(declared(ARROWS, '--blok-database-chevron-box')).toEqual(['20px']);
+    expect(declared(ARROWS, SIZE)).toEqual(['26px']);
+  });
+
+  it('ends a picker row in a 14 box with the chevron at 21, ink 5x8.7', () => {
+    expect(declared('[data-blok-database-date-remind-chevron]', 'width')).toEqual(['var(--blok-database-chevron-box)']);
+    expect(declared('[data-blok-database-date-remind-chevron]', '--blok-database-chevron-box')).toEqual(['14px']);
+    expect(declared('[data-blok-database-date-remind-chevron]', SIZE)).toEqual(['21px']);
+  });
+
+  it('keeps the checkmark at 16', () => {
+    expect(declared('[data-blok-database-date-remind-check] > svg', 'width')).toEqual(['16px']);
+    expect(declared('[data-blok-database-date-remind-chevron] > svg', 'width')).toEqual(['var(--blok-database-chevron-size)']);
+  });
+
+  it('centres each glyph over its box', () => {
+    for (const svg of [`${ARROWS} > svg`, '[data-blok-database-date-remind-chevron] > svg']) {
+      expect(declared(svg, 'height')).toEqual(['var(--blok-database-chevron-size)']);
+      expect(declared(svg, 'margin')).toEqual(['calc((var(--blok-database-chevron-box) - var(--blok-database-chevron-size)) / 2)']);
+      expect(declared(svg, 'flex-shrink')).toEqual(['0']);
+    }
   });
 });

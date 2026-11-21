@@ -2014,6 +2014,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r279: the empty Conditional color page's intro text is 258 wide, in line with its button.
     // +556: a colour rule's "Select..." field ends in a 16px chevron.
     const DATABASE_R279_BYTES = 248 + 556;
+    // Lane r280: the date picker's month arrows and row-end chevrons and Edit property's › draw Notion's ink sizes.
+    const DATABASE_R280_BYTES = 1479;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2713,6 +2715,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R275_BYTES
       + DATABASE_R276_BYTES
       + DATABASE_R279_BYTES
+      + DATABASE_R280_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

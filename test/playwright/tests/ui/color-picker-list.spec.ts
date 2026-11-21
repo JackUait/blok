@@ -205,6 +205,40 @@ test.describe('color picker, named rows', () => {
     expect(text.width).toBeCloseTo(background.width, 1);
   });
 
+  test('a hairline splits the columns and keeps a check on its own side', async ({ page }) => {
+    await boot(page, EIGHT_RECENTS);
+    const picker = await openBlockColors(page);
+    const textSection = picker.getByTestId('block-color-section-textColor');
+    const text = await box(textSection);
+    const background = await box(picker.getByTestId('block-color-section-backgroundColor'));
+    const line = await textSection.evaluate((el) => {
+      const style = getComputedStyle(el, '::after');
+      const host = el.getBoundingClientRect();
+
+      return {
+        left: host.right - parseFloat(style.right) - parseFloat(style.width),
+        width: parseFloat(style.width),
+        top: parseFloat(style.top),
+        bottom: parseFloat(style.bottom),
+        color: style.backgroundColor,
+      };
+    });
+    const check = await box(picker.getByTestId('block-color-swatch-textColor-default').getByTestId('block-color-check'));
+    const tile = await box(picker.getByTestId('block-color-swatch-backgroundColor-default').getByTestId('block-color-tile'));
+
+    // The check is 29px from the other column's tile: 16px before the line, plus 13.
+    expect(tile.x - (check.x + check.width)).toBeCloseTo(29, 0);
+    expect(background.x - (text.x + text.width)).toBeCloseTo(21, 1);
+    expect(line.width).toBeCloseTo(1, 1);
+    // 10px of room on each side of the line.
+    expect(line.left - (text.x + text.width)).toBeCloseTo(10, 1);
+    expect(line.top).toBeCloseTo(0, 1);
+    expect(line.bottom).toBeCloseTo(0, 1);
+    expect(line.color).not.toBe('rgba(0, 0, 0, 0)');
+    expect(check.x + check.width).toBeLessThan(line.left);
+    expect((await box(card(picker))).width).toBeCloseTo(316, 0);
+  });
+
   test('recently used stays as it was until the block menu is opened again', async ({ page }) => {
     await boot(page, EIGHT_RECENTS);
     const picker = await openBlockColors(page);

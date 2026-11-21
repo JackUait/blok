@@ -787,7 +787,7 @@ export const DATABASE_DATA = {
           groupOrder: {
             type: 'object',
             additionalProperties: { type: 'string' },
-            description: 'This view\'s own manual group order: option id to a fractional key, compared with option positions. An option without a key uses its position. Status: also read under ascending group sort; an option without a key follows the option before it in workflow order.',
+            description: 'This view\'s own manual group order: option id to a fractional key, compared with option positions. An option without a key uses its position. Status: an option without a key goes last; a column drop writes this order and sets the group sort to manual.',
           },
           hiddenGroups: GROUP_REFS,
           collapsedGroups: GROUP_REFS,

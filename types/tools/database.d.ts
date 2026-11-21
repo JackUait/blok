@@ -991,6 +991,8 @@ export interface DatabaseViewConfig {
    * This view's own manual group order: option id to a fractional key, compared
    * with the options' shared `position` keys. An option without a key uses its
    * `position`. Read only when the groups are sorted Manual. Absent: the option order.
+   * Status: also read under Ascending; an option without a key follows the option
+   * before it in workflow order.
    */
   groupOrder?: Record<string, string>;
   /** Groups this view hides, by option id. */

@@ -344,3 +344,14 @@ describe('the sort and filter chip bar keeps to the text column', () => {
     expect(body).toContain('min-block-size: 45px');
   });
 });
+
+// notion-motion.md Round 93 §1 #4 and Round 94 §2: with several views the bar's top is the database's top,
+// 4px above the first row's title or tabs, on the title row or, with no title row, on the tab row.
+describe('several views: the selection bar sits at the top of the first row', () => {
+  it.each([
+    '[data-blok-database-view-bar] > [data-blok-database-table-selection-bar], [data-blok-database-view-bar] > [data-blok-database-table-selection-bar-leaving]',
+    '[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-table-selection-bar], [data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-table-selection-bar-leaving]',
+  ])('top-aligns the bar in %s', (selector) => {
+    expect(rule(selector)).toMatch(/margin-block: 0 auto/);
+  });
+});

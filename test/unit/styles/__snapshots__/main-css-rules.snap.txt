@@ -7449,6 +7449,10 @@ button[data-blok-database-board-lane-count]:hover {
   margin-block: auto;
 }
 
+[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-table-selection-bar], [data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-table-selection-bar-leaving] {
+  margin-block: 0 auto;
+}
+
 [data-blok-database-title-row]:hover [data-blok-database-add-view], [data-blok-database-title-row] [data-blok-database-add-view][data-popover-open], [data-blok-database-title-row]:hover [data-blok-database-title-more], [data-blok-database-title-more][data-popover-open], [data-blok-database-title-more]:focus-visible {
   opacity: 1;
 }
@@ -15352,7 +15356,7 @@ button[data-blok-database-table-group-count]:hover {
 
 [data-blok-database-view-bar] > [data-blok-database-table-selection-bar], [data-blok-database-view-bar] > [data-blok-database-table-selection-bar-leaving] {
   inset-block: 0;
-  margin-block: auto;
+  margin-block: 0 auto;
 }
 
 [data-blok-database-selecting="table"] > [data-blok-database-table-selection-bar], [data-blok-database-table] > [data-blok-database-table-selection-bar] {

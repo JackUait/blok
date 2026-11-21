@@ -11150,7 +11150,8 @@ export class DatabaseTool implements BlockTool {
    * notion-motion.md Round 98 §1 #1, Round 99 §1 #1-#4: a click, Enter or Space on a column pill, or Enter on a band pill,
    * opens this under the pill: 4 below it, the name selected, and the same field and "Done ↵" as "+ New group".
    * `propertyId` is the grouped property: a Status option's popup is 240 wide, a Select one's 300
-   * (a Multi-select's is unread and takes Select's). `done` gets the trimmed name on Done or Enter, and null on any other close.
+   * (a Multi-select's is unread and takes Select's). `done` gets the trimmed name on Done, Enter or a click outside,
+   * and null on Escape or an empty name. Notion's click outside is unread: a typed name is kept, not lost.
    */
   private openGroupRename(pill: HTMLElement, label: string, propertyId: string | undefined, done: (label: string | null) => void): void {
     const result: { label: string | null } = { label: null };
@@ -11159,6 +11160,13 @@ export class DatabaseTool implements BlockTool {
       this.groupMenuPopover?.hide();
     });
     const status = propertyId !== undefined && this.model.getProperty(propertyId)?.type === 'status';
+    const cancel = { escaped: false };
+    // On window in capture: the popover registry closes on Escape in document capture, which runs after it.
+    const onEscape = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') cancel.escaped = true;
+    };
+
+    window.addEventListener('keydown', onEscape, true);
 
     field.input.setAttribute('aria-label', this.api.i18n.t('tools.database.renameColumn'));
     field.input.placeholder = this.api.i18n.t('tools.database.renameGroup');
@@ -11167,7 +11175,13 @@ export class DatabaseTool implements BlockTool {
       minWidth: status ? '240px' : '300px',
       offset: 4,
     });
-    this.groupMenuPopover?.on(PopoverEvent.Closed, () => done(result.label));
+    this.groupMenuPopover?.on(PopoverEvent.Closed, () => {
+      const typed = field.input.value.trim();
+
+      window.removeEventListener('keydown', onEscape, true);
+
+      done(result.label ?? (cancel.escaped || typed === '' ? null : typed));
+    });
     field.input.focus();
     field.input.select();
   }

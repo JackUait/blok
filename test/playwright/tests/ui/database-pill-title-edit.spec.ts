@@ -121,6 +121,16 @@ test.describe('Database board view — pill click rename popup', () => {
     expect(await pillOf(page, 'Done Committed').evaluate((el) => el.matches(':focus-visible'))).toBe(false);
   });
 
+  // Notion's click outside is unread: the popup keeps a typed name, as the old in-pill field did on blur.
+  test('a click outside the popup commits the new title', async ({ page }) => {
+    await titleOf(page, 'Backlog').click();
+    await field(page).fill('New Column Name');
+    await page.mouse.click(5, 5);
+
+    await expect(field(page)).toHaveCount(0);
+    await expect(titleOf(page, 'New Column Name')).toHaveText('New Column Name');
+  });
+
   test('Escape keeps the name, and the pill takes focus back with its ring, as in Notion', async ({ page }) => {
     await titleOf(page, 'Backlog').click();
     await field(page).fill('Cancelled Text');

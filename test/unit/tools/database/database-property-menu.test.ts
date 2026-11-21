@@ -492,6 +492,24 @@ describe('DatabasePropertyMenu', () => {
     expect(document.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('tools.database.deletePropertyFromConfirm:Tasks');
   });
 
+  // notion-motion.md Round 101 §1 #7 (r101-n-delete-property-dialog.raw): the title is 600 and the database name in it 700.
+  it('sets the question in the bold title, with the database name stronger', () => {
+    const menu = new DatabasePropertyMenu({
+      i18n: { t: (key: string, params?: Record<string, string>) => `${key}:${params?.name ?? ''}`, getLocale: () => 'en' } as never,
+      hasPeople: false,
+      ...callbacks(),
+      databaseName: () => 'Tasks',
+    });
+
+    menu.open(prop('text'), document.createElement('button'));
+    const del = byName(lastItems(), 'delete');
+
+    del.onActivate?.(del);
+
+    expect(document.querySelector('[data-blok-database-confirm-dialog]')?.hasAttribute('data-bold-title')).toBe(true);
+    expect(document.querySelector('[data-blok-database-confirm-title] strong')?.textContent).toBe('Tasks');
+  });
+
   it('keeps the property when the dialog is cancelled', async () => {
     const cb = open(prop('text'));
     const del = byName(lastItems(), 'delete');

@@ -7258,6 +7258,11 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   font-weight: 600;
 }
 
+/* notion-motion.md Round 101 §1 #7: Delete property's database name is 700. Not `bolder`: on a 600 title that is 900. */
+[data-blok-database-confirm-title] strong {
+  font-weight: 700;
+}
+
 /* notion-motion.md Round 65 §1 "Move database to Trash?": title 20-44, body box 44-80, confirm at 88, Cancel at 129. */
 [data-blok-database-confirm-dialog][data-trash] [data-blok-database-confirm-title] {
   font-weight: 600;

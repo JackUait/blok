@@ -10794,6 +10794,10 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   font-weight: 600;
 }
 
+[data-blok-database-confirm-title] strong {
+  font-weight: 700;
+}
+
 [data-blok-database-confirm-dialog][data-trash] [data-blok-database-confirm-title] {
   font-weight: 600;
 }

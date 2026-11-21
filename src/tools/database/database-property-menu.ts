@@ -345,10 +345,15 @@ export class DatabasePropertyMenu {
 
   /** Notion asks in a modal (notion-motion.md Round 14), not in the menu. */
   private confirmDelete(id: string): void {
+    const name = this.options.databaseName?.();
+
     void openDatabaseConfirm({
-      title: this.options.databaseName === undefined
+      title: name === undefined
         ? this.t('tools.database.deletePropertyConfirm')
-        : this.options.i18n.t('tools.database.deletePropertyFromConfirm', { name: this.options.databaseName() }),
+        : this.options.i18n.t('tools.database.deletePropertyFromConfirm', { name }),
+      // notion-motion.md Round 101 §1 #7: the title is 600 and the database name in it 700.
+      titleEmphasis: name,
+      boldTitle: true,
       confirmLabel: this.t('blockSettings.delete'),
       cancelLabel: this.t('tools.database.layoutCancel'),
       destructive: true,

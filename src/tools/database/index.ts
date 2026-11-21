@@ -14,7 +14,7 @@ import { HistoryDraftsCommit, type HistoryDraftsCommitPayload } from '../../comp
 import type { HistoryStep } from '../../../types/api/history';
 import type { AutofillSettings, ButtonAction, ButtonCallbackAction, ButtonSendNotificationAction, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, DeletedPropertyDefinition, PropertyValue, DatabasePermissionAction, DashboardWidget, DashboardRow, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue, LoadLimit, ViewCalculation } from './types';
 import { countFilterRules } from './filter-tree';
-import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, orderedStatusOptions, personIdsOf, readPropertyValue, statusGroupOf, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
+import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, orderedStatusOptions, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData, isPlaceValue } from './tier3-values';
 import { DatabaseHostLevers } from './database-host-levers';
 import { DatabaseFormView, isAutoQuestion } from './database-form-view';
@@ -191,7 +191,7 @@ import type { DataSourceChoice, ViewGroupEntry, StarterRow, ViewSettingsAction, 
 import { openFilterList } from './database-view-settings-panel';
 import type { DatabasePanel } from './database-panel';
 import { registerGroupToggle } from './database-group-toggle';
-import { GROUPABLE_TYPES, defaultGroupSort, groupValueForKey } from './group-keys';
+import { GROUPABLE_TYPES, defaultGroupSort, groupValueForKey, statusViewOrder } from './group-keys';
 import { resolveRowColors, withGroupFlags } from './view-data';
 import { checkboxGroupName } from './database-group-checkbox';
 import { groupLabel } from './database-group-labels';
@@ -7442,10 +7442,11 @@ export class DatabaseTool implements BlockTool {
     const reorder = (): SelectOption[] => property?.type === 'status'
       ? [...listed].reverse()
       : [...listed].sort((x, y) => x.label.localeCompare(y.label) * (sort === 'descending' ? -1 : 1));
-    // research/31 §8: a view's own manual order. Status keeps its workflow order.
+    // research/31 §8: a view's own manual order. A Status board reads it under its default Ascending too (Round 94 §1 #1).
     const order = sort === 'manual' && property?.type !== 'status' ? view?.groupOrder : undefined;
     const keyOf = (option: SelectOption): string => order?.[option.id] ?? option.position;
-    const manual = order === undefined ? listed : [...listed].sort((x, y) => (keyOf(x) < keyOf(y) ? -1 : 1));
+    const sorted = order === undefined ? listed : [...listed].sort((x, y) => (keyOf(x) < keyOf(y) ? -1 : 1));
+    const manual = property?.type === 'status' && statusBy !== 'group' ? statusViewOrder(listed, view?.groupOrder) : sorted;
     const options = inOrder ? manual : reorder();
     const stored = view?.noValueGroupPosition;
     const index = stored === undefined || !inOrder ? -1 : options.findIndex((option) => keyOf(option) > stored);
@@ -11919,13 +11920,13 @@ export class DatabaseTool implements BlockTool {
     }
 
     if (prop.type === 'status') {
-      this.dropStatusColumn(prop, result);
+      if (viewConfig !== undefined) this.dropStatusColumn(prop, viewConfig, result);
 
       return;
     }
 
     // A view with its own group order moves the column there only; the options keep their positions.
-    const order = viewConfig?.groupOrder !== undefined && prop.type !== 'status' ? viewConfig.groupOrder : undefined;
+    const order = viewConfig?.groupOrder;
     // Keep the stored array in position order so every later reader (add-column,
     // neighbour lookup) sees the same order the board renders in.
     const options = prop.config.options
@@ -11972,30 +11973,41 @@ export class DatabaseTool implements BlockTool {
    * Moves a column element to a new position in the DOM without full re-render.
    */
   /**
-   * Status columns draw by status group first, and each group keeps its own position keys.
-   * So a column moves only among its own group; a drop outside it would not show, and writes nothing.
-   * A descending board draws them reversed, so no saved order would show the drop either.
+   * notion-motion.md Round 94 §1 #1: a Status column drop, inside or across status groups, reorders this view only;
+   * the options and status groups stay as they are. Every drop rewrites the view's whole order, so options
+   * that had no key yet get one, all in one write (one undo step).
+   * A descending board draws the workflow reversed and ignores the order, so a drop there writes nothing.
    */
-  private dropStatusColumn(prop: PropertyDefinition, { optionId, beforeOptionId, afterOptionId }: GroupDragResult): void {
-    const sort = this.shownView()?.groupSettings?.sort ?? defaultGroupSort(prop.type);
+  private dropStatusColumn(prop: PropertyDefinition, view: DatabaseViewConfig, { optionId, beforeOptionId, afterOptionId }: GroupDragResult): void {
+    const sort = view.groupSettings?.sort ?? defaultGroupSort(prop.type);
 
-    if (sort !== 'manual' && sort !== 'ascending') {
+    if ((sort !== 'manual' && sort !== 'ascending') || view.groupByStatus === 'group') {
       return;
     }
-    const groupId = statusGroupOf(prop, optionId)?.id;
-    const peers = orderedStatusOptions(prop).filter((o) => o.id !== optionId && statusGroupOf(prop, o.id)?.id === groupId);
-    const after = peers.find((o) => o.id === afterOptionId);
-    const before = peers.find((o) => o.id === beforeOptionId);
+    const shown = statusViewOrder(orderedStatusOptions(prop), view.groupOrder);
 
-    if (groupId === undefined || (after === undefined && before === undefined)) {
+    if (!shown.some((o) => o.id === optionId)) {
       return;
     }
-    const position = DatabaseModel.positionBetween(after?.position ?? null, before?.position ?? null);
-    const options = (prop.config?.options ?? []).map((o) => (o.id === optionId ? { ...o, position } : o));
+    const keys = shown.reduce<string[]>((all) => [...all, DatabaseModel.positionBetween(all.at(-1) ?? null, null)], []);
+    const order: Record<string, string> = Object.fromEntries(shown.map((o, i) => [o.id, keys[i]]));
+    const stored = view.noValueGroupPosition;
+    // The no-value group keeps its place among the re-keyed options.
+    const found = stored === undefined ? -1 : shown.findIndex((o) => o.position > stored);
+    const at = found === -1 ? keys.length : found;
+    const remapped = stored === undefined ? undefined : DatabaseModel.positionBetween(keys[at - 1] ?? null, keys[at] ?? null);
+    // A drop right after the no-value group pins it just past the other options, as a Select board does.
+    const pinned = afterOptionId === NO_VALUE_GROUP_KEY ? DatabaseModel.positionBetween(keys.filter((_, i) => shown[i].id !== optionId).at(-1) ?? null, null) : undefined;
+    const noValue = remapped ?? pinned;
+    const keyOf = (id: string | null): string | null => {
+      if (id === NO_VALUE_GROUP_KEY) return noValue ?? null;
 
-    this.model.updateProperty(prop.id, { config: { options } });
+      return id === null ? null : order[id] ?? null;
+    };
+
+    order[optionId] = DatabaseModel.positionBetween(keyOf(afterOptionId), keyOf(beforeOptionId));
+    this.writeView(view.id, { groupOrder: order, ...(noValue === undefined ? {} : { noValueGroupPosition: noValue }) });
     this.moveColumnInDom(optionId, beforeOptionId);
-    void this.sync.syncUpdateProperty({ propertyId: prop.id, changes: { config: { options } } });
   }
 
   private moveColumnInDom(optionId: string, beforeOptionId: string | null): void {

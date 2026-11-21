@@ -171,7 +171,7 @@ describe('View settings › Group: reorder groups by their handle (notion-motion
     expect(byTestId('database-group-list-handle-a')).toBeNull();
   });
 
-  it('a Status group moved into another status group writes nothing and adds no undo step', async () => {
+  it('a Status group moved into another status group reorders this view only, in the list too, and one undo puts it back', async () => {
     const status = doc();
     const db = status[0].data as DatabaseData;
 
@@ -183,19 +183,22 @@ describe('View settings › Group: reorder groups by their handle (notion-motion
     db.views[0].groupSettings = undefined;
     status[1].data = { properties: { t: 'One', st: 'ip' }, position: 'a0' };
     const api = await make(status);
-    const saved = JSON.stringify((await api.save()).blocks.find((b) => b.id === 'db')?.data);
-    const shown = columns();
+    const schema = JSON.stringify(((await api.save()).blocks.find((b) => b.id === 'db')?.data as DatabaseData).schema);
 
     await openGroupPage();
     stopCapturing();
 
-    expect(api.history.canUndo()).toBe(false);
     altArrow('ns', 'ArrowDown');
     await quiet();
 
-    expect(JSON.stringify((await api.save()).blocks.find((b) => b.id === 'db')?.data)).toBe(saved);
-    expect(api.history.canUndo()).toBe(false);
-    expect(columns()).toEqual(shown);
-    expect(panelGroups().filter((key) => key !== NO_VALUE)).toEqual(['ns', 'ip', 'dn']);
+    expect(columns()).toEqual(['ip', 'ns', 'dn']);
+    expect(panelGroups().filter((key) => key !== NO_VALUE)).toEqual(['ip', 'ns', 'dn']);
+    expect(JSON.stringify(((await api.save()).blocks.find((b) => b.id === 'db')?.data as DatabaseData).schema)).toBe(schema);
+
+    stopCapturing();
+    api.history.undo();
+    await quiet();
+
+    expect(columns()).toEqual(['ns', 'ip', 'dn']);
   });
 });

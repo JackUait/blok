@@ -24,6 +24,27 @@ const PERSON_LIKE: readonly PropertyType[] = ['person', 'createdBy', 'lastEdited
 export const defaultGroupSort = (type: PropertyType): GroupSort =>
   type === 'number' || type === 'checkbox' || type === 'status' || DATE_LIKE.includes(type) ? 'ascending' : 'manual';
 
+/**
+ * A Status board's options in the view's own order (notion-motion.md Round 94 §1 #1), each with its key
+ * as `position`. An option with no key (added after the order was saved) follows the option before it
+ * in `workflow`, and takes that option's key, so the no-value group stays on the same side of both.
+ */
+export const statusViewOrder = (workflow: SelectOption[], order: Record<string, string> | undefined): SelectOption[] => {
+  if (order === undefined) return workflow;
+  const result = workflow
+    .flatMap((option) => (order[option.id] === undefined ? [] : [{ ...option, position: order[option.id] }]))
+    .sort((a, b) => (a.position < b.position ? -1 : 1));
+
+  workflow.forEach((option, index) => {
+    if (order[option.id] !== undefined) return;
+    const previous = index === 0 ? -1 : result.findIndex((o) => o.id === workflow[index - 1].id);
+
+    result.splice(previous + 1, 0, { ...option, position: previous === -1 ? '' : result[previous].position });
+  });
+
+  return result;
+};
+
 /** Notion's Range defaults: 0 to 1000, every 100 (research/22 §7). */
 export const DEFAULT_RANGE = { start: 0, end: 1000, size: 100 };
 

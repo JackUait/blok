@@ -85,12 +85,29 @@ describe('list rows (research/07)', () => {
     expect(ruleBody(database, '[data-blok-database-list-row]:focus')).toBe('');
   });
 
+  // notion-motion.md Round 96 §1 #4: the ring comes with the row's hover fill (0.06 light, 0.055 dark).
+  it('fills a keyboard-focused row with its hover fill', () => {
+    const row = ruleBody(database, ':where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row]:focus-visible');
+
+    expect(row).toContain('background-color: var(--blok-database-add-hover-bg)');
+  });
+
+  // notion-motion.md Round 96 §1 #5: Notion's dark ring is its light blue 35,131,226 (4.5:1 on rgb(25,25,25)).
+  it('rings a dark row with Notion\'s blue, leaving the shared focus ring alone', () => {
+    const row = ruleBody(database, ':where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row]:focus-visible');
+
+    expect(row).toContain('0 0 0 4px var(--blok-database-list-row-ring, var(--blok-focus-ring))');
+    expect(ruleBody(database, ':where([data-blok-theme="dark"] [data-blok-interface])')).toContain('--blok-database-list-row-ring: rgb(35, 131, 226)');
+    expect(database).toMatch(/prefers-color-scheme: dark[^@]*--blok-database-list-row-ring: rgb\(35, 131, 226\)/);
+    expect(ruleBody(database, ':where([data-blok-interface])')).not.toContain('--blok-database-list-row-ring:');
+  });
+
   // notion-motion.md Round 95 §1 #8: the row's ring sits outside it: a 2px gap, a 2px blue line, then a faint 2px halo.
   it('rings a keyboard-focused row outside its edge, as Notion does', () => {
     const row = ruleBody(database, ':where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row]:focus-visible');
     const light = ruleBody(database, ':where([data-blok-interface])');
 
-    expect(row).toContain('box-shadow: 0 0 0 2px var(--blok-database-list-row-ring-gap), 0 0 0 4px var(--blok-focus-ring), 0 0 0 6px var(--blok-database-list-row-ring-halo)');
+    expect(row).toContain('box-shadow: 0 0 0 2px var(--blok-database-list-row-ring-gap), 0 0 0 4px var(--blok-database-list-row-ring, var(--blok-focus-ring)), 0 0 0 6px var(--blok-database-list-row-ring-halo)');
     expect(light).toContain('--blok-database-list-row-ring-gap: rgb(248, 248, 247)');
     expect(light).toContain('--blok-database-list-row-ring-halo: rgba(255, 255, 255, 0.25)');
     expect(ruleBody(database, ':where([data-blok-theme="dark"] [data-blok-interface])')).toContain('--blok-database-list-row-ring-gap:');

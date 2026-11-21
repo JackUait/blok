@@ -859,9 +859,10 @@
     --blok-database-form-answer-border: rgb(44, 44, 43);
     --blok-database-cell-empty-text: var(--blok-database-ink-tertiary);
     --blok-database-popover-hover: var(--blok-database-hover-bg);
-    /* Notion's dark list row ring is unmeasured: the gap and halo take the page colour. */
+    /* notion-motion.md Round 96 §1 #5: page-colour bands, Notion's light blue (4.5:1 on #191919). */
     --blok-database-list-row-ring-gap: var(--blok-bg-primary);
     --blok-database-list-row-ring-halo: var(--blok-bg-primary);
+    --blok-database-list-row-ring: rgb(35, 131, 226);
   }
 }
 
@@ -1237,9 +1238,10 @@
   --blok-database-form-answer-border: rgb(44, 44, 43);
   --blok-database-cell-empty-text: var(--blok-database-ink-tertiary);
   --blok-database-popover-hover: var(--blok-database-hover-bg);
-  /* Notion's dark list row ring is unmeasured: the gap and halo take the page colour. */
+  /* notion-motion.md Round 96 §1 #5: page-colour bands, Notion's light blue (4.5:1 on #191919). */
   --blok-database-list-row-ring-gap: var(--blok-bg-primary);
   --blok-database-list-row-ring-halo: var(--blok-bg-primary);
+  --blok-database-list-row-ring: rgb(35, 131, 226);
 }
 
 /* Notion's primary ink for every database text that has no colour of its own (cards, list rows, title). */
@@ -4801,7 +4803,8 @@ button[data-blok-database-board-lane-count]:hover {
 }
 
 :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row]:focus-visible {
-  box-shadow: 0 0 0 2px var(--blok-database-list-row-ring-gap), 0 0 0 4px var(--blok-focus-ring), 0 0 0 6px var(--blok-database-list-row-ring-halo);
+  background-color: var(--blok-database-add-hover-bg);
+  box-shadow: 0 0 0 2px var(--blok-database-list-row-ring-gap), 0 0 0 4px var(--blok-database-list-row-ring, var(--blok-focus-ring)), 0 0 0 6px var(--blok-database-list-row-ring-halo);
 }
 
 :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row-property][data-editable]:focus-visible {

@@ -277,6 +277,23 @@ describe('DatabaseTabBar — the view bar folds like Notion (notion-spec-2 §26.
       mounted.tabBar.destroy();
     });
 
+    // The search mark comes after the field's grow has started (database-view-controls.ts), when no resize may follow.
+    it('folds when the mark lands, with no resize', async () => {
+      const mounted = mount(twoViews(), 'v2');
+
+      layOut(mounted, 1000);
+      fire();
+      mounted.toolbar.setAttribute('data-blok-database-searching', '');
+      await Promise.resolve();
+
+      expect(mounted.el.querySelector('[data-blok-database-tab-compact]')).not.toBeNull();
+      mounted.toolbar.removeAttribute('data-blok-database-searching');
+      await Promise.resolve();
+
+      expect(shownTabs(mounted.el)).toEqual(['v1', 'v2']);
+      mounted.tabBar.destroy();
+    });
+
     it('leaves a single tab as it is', () => {
       const mounted = mount([view('v1', 'Table', 'a0')]);
 

@@ -132,6 +132,9 @@ export class DatabaseTabBar {
   /** "Table ⌄": the current view as one button once fewer than two tabs fit. */
   private compactBtnEl: HTMLElement | null = null;
   private resizeObserver: ResizeObserver | null = null;
+  /** The toolbar's search mark lands mid-grow (database-view-controls.ts), so no resize may follow it. */
+  private searchObserver: MutationObserver | null = null;
+  private observedToolbar: HTMLElement | null = null;
 
   private isDragging = false;
   /** The click after a drop belongs to the drag, not the tab. */
@@ -321,6 +324,7 @@ export class DatabaseTabBar {
     const tabs = Array.from(bar.querySelectorAll<HTMLElement>('[data-blok-database-tab]'));
     const focused = tabs.find((tab) => tab === document.activeElement) ?? (document.activeElement === this.compactBtnEl ? this.compactBtnEl : null);
 
+    this.watchSearchMark(toolbar);
     for (const tab of tabs) {
       tab.style.display = '';
     }
@@ -395,6 +399,15 @@ export class DatabaseTabBar {
     }
     this.foldTabs(fit);
     this.keepFocus(focused);
+  }
+
+  private watchSearchMark(toolbar: HTMLElement | null): void {
+    if (toolbar === this.observedToolbar || typeof MutationObserver === 'undefined') return;
+    this.searchObserver?.disconnect();
+    this.observedToolbar = toolbar;
+    if (toolbar === null) return;
+    this.searchObserver ??= new MutationObserver(() => this.refold());
+    this.searchObserver.observe(toolbar, { attributes: true, attributeFilter: ['data-blok-database-searching'] });
   }
 
   /** A fold that hid the focused tab or pill hands the focus to what now stands for the current view. */
@@ -1130,6 +1143,9 @@ export class DatabaseTabBar {
   destroy(): void {
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
+    this.searchObserver?.disconnect();
+    this.searchObserver = null;
+    this.observedToolbar = null;
     this.cleanupDrag();
     this.closeContextPopover();
     this.closeOverflowDropdown();

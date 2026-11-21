@@ -174,6 +174,9 @@ const EXPAND_FADE_MS = 250;
 /** Longer than the 200ms shrink, so transitionend normally wins. */
 const SEARCH_CLOSE_FALLBACK_MS = 250;
 
+/** notion-motion.md Round 100 §1 #8 (r100-n-search-fold-motion.raw): the tabs fold ~170ms into the field's 200ms grow. */
+const SEARCH_FOLD_DELAY_MS = 170;
+
 const hasTransition = (el: HTMLElement): boolean =>
   getComputedStyle(el).transitionDuration.split(',').some((part) => parseFloat(part) > 0);
 
@@ -212,6 +215,7 @@ export class DatabaseViewControls {
   /** The filter bar shows a sort, so » can fold it. */
   private barMinimizable = false;
   private searchCloseTimer: ReturnType<typeof setTimeout> | null = null;
+  private searchFoldTimer: ReturnType<typeof setTimeout> | null = null;
   /** The person's choice for the chip bar: shown, hidden, or `null` to follow its chips. Reset per view. */
   private barOpen: boolean | null = null;
   private barViewId: string | null = null;
@@ -564,9 +568,29 @@ export class DatabaseViewControls {
     this.fullPageLink.hidden = this.host.openFullPage?.() === undefined;
   }
 
-  /** The mark the tab bar's fold reads (database-tab-bar.ts refold). */
+  /** The mark the tab bar's fold reads (database-tab-bar.ts refold). It lands late in the field's grow and leaves at once. */
   private syncSearching(): void {
-    this.toolbar.toggleAttribute('data-blok-database-searching', this.searchShown());
+    this.cancelSearchFold();
+    if (!this.searchShown()) {
+      this.toolbar.removeAttribute('data-blok-database-searching');
+
+      return;
+    }
+    if (this.toolbar.hasAttribute('data-blok-database-searching')) return;
+    if (!hasTransition(this.searchInput)) {
+      this.toolbar.setAttribute('data-blok-database-searching', '');
+
+      return;
+    }
+    this.searchFoldTimer = setTimeout(() => {
+      this.searchFoldTimer = null;
+      this.toolbar.setAttribute('data-blok-database-searching', '');
+    }, SEARCH_FOLD_DELAY_MS);
+  }
+
+  private cancelSearchFold(): void {
+    if (this.searchFoldTimer !== null) clearTimeout(this.searchFoldTimer);
+    this.searchFoldTimer = null;
   }
 
   /** Syncs the toolbar and filter bar to the active view, and the open panel. */
@@ -663,6 +687,7 @@ export class DatabaseViewControls {
     this.destroyed = true;
     if (this.sortHistory !== null) liveSortControls.get(this.sortHistory.key)?.delete(this);
     this.endSearchClose();
+    this.cancelSearchFold();
     if (this.expandTimer !== null) clearTimeout(this.expandTimer);
     this.expandTimer = null;
     this.panel?.close();

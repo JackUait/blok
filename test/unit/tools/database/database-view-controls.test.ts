@@ -1080,6 +1080,53 @@ describe('DatabaseViewControls', () => {
       controls.destroy();
     });
 
+    // notion-motion.md Round 100 §1 #8 (r100-n-search-fold-motion.raw): the tabs swap ~170ms in, near the end of the field's grow.
+    it('marks the toolbar 170ms after the field starts to grow', () => {
+      vi.useFakeTimers();
+      try {
+        const { controls } = setup({ levers: { openFullPage } });
+
+        inViewBar(controls);
+        click('database-toolbar-search');
+        const input = q('database-search-input') as HTMLInputElement;
+
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        input.style.transitionDuration = '0.2s';
+        click('database-toolbar-search');
+
+        expect(controls.toolbar.hasAttribute('data-blok-database-searching')).toBe(false);
+        vi.advanceTimersByTime(169);
+        expect(controls.toolbar.hasAttribute('data-blok-database-searching')).toBe(false);
+        vi.advanceTimersByTime(1);
+        expect(controls.toolbar.hasAttribute('data-blok-database-searching')).toBe(true);
+        controls.destroy();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('drops a pending mark when the search closes first', () => {
+      vi.useFakeTimers();
+      try {
+        const { controls } = setup({ levers: { openFullPage } });
+
+        inViewBar(controls);
+        click('database-toolbar-search');
+        const input = q('database-search-input') as HTMLInputElement;
+
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        input.style.transitionDuration = '0.2s';
+        click('database-toolbar-search');
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        vi.advanceTimersByTime(300);
+
+        expect(controls.toolbar.hasAttribute('data-blok-database-searching')).toBe(false);
+        controls.destroy();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     // notion-motion.md Round 100 §1 #2 (r100-n-search-open-rest.raw): ⤢ stays at rest with search open; R99 missed it (an A, not a button).
     it('keeps ⤢ while the search is open', () => {
       const { controls } = setup({ levers: { openFullPage } });

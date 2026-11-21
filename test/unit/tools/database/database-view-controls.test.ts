@@ -36,6 +36,15 @@ const click = (id: string): void => {
   el.click();
 };
 
+/** A mouse click: unlike Enter or Space on a focused button, its `detail` counts the presses. */
+const pointerClick = (id: string): void => {
+  const el = q(id);
+
+  if (el === null) throw new Error(`no ${id}`);
+  el.focus();
+  el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+};
+
 const setup = (options: {
   readOnly?: boolean;
   locked?: boolean;
@@ -2965,19 +2974,20 @@ describe('DatabaseViewControls', () => {
     });
 
     // notion-motion.md Round 100 §1 #7 (r100-n-minimize-hover-search-open*.raw): with only the search open, » shows while the pointer is on the controls.
-    it('marks » as hover-only while it shows for the search alone', () => {
+    // Round 102 §1 #1: a sort does not change that.
+    it('keeps » hover-only with the search open, with or without a sort', () => {
       const { controls, saved } = setup();
 
       click('database-toolbar-search');
       const minimize = q('database-toolbar-minimize');
 
       expect(minimize?.hidden).toBe(false);
-      expect(minimize?.hasAttribute('data-blok-database-toolbar-hover-only')).toBe(true);
+      expect(minimize?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('');
 
       saved.view = { ...saved.view, sorts: [{ propertyId: 'title', direction: 'asc' }] };
       controls.refresh();
 
-      expect(minimize?.hasAttribute('data-blok-database-toolbar-hover-only')).toBe(false);
+      expect(minimize?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('');
     });
 
     it('takes » away when a sorted view switches to a form', () => {
@@ -3047,15 +3057,60 @@ describe('DatabaseViewControls', () => {
     });
 
     // A blur on an empty query closes the search, so the press must not take the focus first.
-    it('keeps the focus in the field on press, and gives it to settings, which stays, after', () => {
+    it('keeps the focus in the field on press', () => {
       setup();
       click('database-toolbar-search');
       const press = new MouseEvent('pointerdown', { bubbles: true, cancelable: true });
 
       q('database-toolbar-minimize')?.dispatchEvent(press);
       expect(press.defaultPrevented).toBe(true);
+    });
 
+    // notion-motion.md Round 102 §1 #8, Round 87 §1 #11: a click on » or « leaves the focus on the page.
+    it('leaves the focus on the page after a mouse click on » and on «', () => {
+      const { saved, host } = setup();
+
+      vi.mocked(host.updateView).mockImplementation((changes) => {
+        saved.view = { ...saved.view, ...changes };
+      });
+      pointerClick('database-toolbar-minimize');
+      expect(document.body).toHaveFocus();
+
+      pointerClick('database-toolbar-expand');
+      expect(document.body).toHaveFocus();
+    });
+
+    it('leaves the focus on the page after a mouse click on » with the search open', () => {
+      setup();
+      click('database-toolbar-search');
+      q('database-search-input')?.setAttribute('style', 'transition-duration: 0.2s');
+      q('database-toolbar-minimize')?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+
+      expect(document.body).toHaveFocus();
+    });
+
+    // Enter or Space keeps the keyboard user's place: the focus moves to the button that undoes it.
+    it('moves the focus from » to « and back for Enter or Space', () => {
+      const { saved, host } = setup();
+
+      vi.mocked(host.updateView).mockImplementation((changes) => {
+        saved.view = { ...saved.view, ...changes };
+      });
       click('database-toolbar-minimize');
+      expect(q('database-toolbar-expand')).toHaveFocus();
+
+      click('database-toolbar-expand');
+      expect(q('database-toolbar-minimize')).toHaveFocus();
+    });
+
+    it('gives the focus to settings for Enter on « when » cannot show', () => {
+      const { controls, saved } = setup({ schema: () => [{ id: 'title', name: 'Name', type: 'title', position: 'a0' }] });
+
+      saved.view = { ...saved.view, toolbarMinimized: true };
+      controls.refresh();
+      click('database-toolbar-expand');
+
+      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
       expect(q('database-toolbar-settings')).toHaveFocus();
     });
 
@@ -3271,14 +3326,37 @@ describe('DatabaseViewControls', () => {
       return env;
     };
 
-    // Shots 20, 22 and 23 show » with a sort; 15, 17 (a filter only) and 41 (no rule) do not.
-    it('shows no » for a bar of filters alone', () => {
+    // notion-motion.md Round 102 §1 #2 (r102-n-minimize-filter-only*.raw): » shows on hover for a bar of filters alone.
+    it('keeps a hover-only » for a bar of filters alone', () => {
       withFilter();
+      const minimize = q('database-toolbar-minimize');
 
-      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+      expect(minimize?.hidden).toBe(false);
+      expect(minimize?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('idle');
     });
 
-    it('shows » left of Filter while the bar shows a sort, and » hides the bar', () => {
+    // notion-motion.md Round 102 §1 #1 (r102-n-minimize-sort-only.raw, -both.raw): with a sort » is hover-only too.
+    it('keeps » hover-only while the bar shows a sort', () => {
+      const { controls, saved } = withFilter();
+
+      saved.view = { ...saved.view, sorts: [{ id: 's1', propertyId: 'num', direction: 'asc' }] };
+      controls.refresh();
+
+      expect(q('database-toolbar-minimize')?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('idle');
+    });
+
+    it('keeps » for a sort on a database with only a title', () => {
+      const { controls, saved } = setup({ schema: () => [{ id: 'title', name: 'Name', type: 'title', position: 'a0' }] });
+
+      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+      saved.view = { ...saved.view, sorts: [{ id: 's1', propertyId: 'title', direction: 'asc' }] };
+      controls.refresh();
+
+      expect(q('database-toolbar-minimize')?.hidden).toBe(false);
+    });
+
+    // notion-motion.md Round 102 §1 #4 (r102-n-after-minimize-filter.raw, -sort.raw): » folds the controls, not the chip bar.
+    it('shows » left of Filter while the bar shows a sort, and » keeps the bar', () => {
       const { controls, saved } = withFilter();
 
       saved.view = { ...saved.view, sorts: [{ id: 's1', propertyId: 'num', direction: 'asc' }] };
@@ -3295,7 +3373,8 @@ describe('DatabaseViewControls', () => {
 
       click('database-toolbar-minimize');
 
-      expect(controls.filterBar.hidden).toBe(true);
+      expect(controls.filterBar.hidden).toBe(false);
+      expect(q('database-sort-pill')).not.toBeNull();
       expect(q('database-toolbar-minimize')?.hidden).toBe(true);
     });
 

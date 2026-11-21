@@ -243,7 +243,7 @@ test.describe('Database — a long title stays one line', () => {
     await expect(page.locator(TITLE)).toBeHidden();
   });
 
-  // notion-motion.md, Round 7 "⤢ fold point": below 320, » goes with New ⌄.
+  // notion-motion.md, Round 7 "⤢ fold point": below 320, » goes with New ⌄. Round 102 §1 #1: » shows on hover.
   test('minimize folds with New below a 320px row', async ({ page }) => {
     await create(page, {
       title: LONG_TITLE,
@@ -253,10 +253,12 @@ test.describe('Database — a long title stays one line', () => {
     const settings = page.getByTestId('database-toolbar-settings');
 
     await setRowWidth(page, 320);
+    await settings.hover();
     await expect(minimize).toBeVisible();
     await expect(page.getByTestId('database-toolbar-new')).toBeVisible();
 
     await setRowWidth(page, 319);
+    await settings.hover();
     await expect(minimize).toBeHidden();
     await expect(page.getByTestId('database-toolbar-new')).toBeHidden();
     await expect(settings).toBeVisible();

@@ -15704,12 +15704,11 @@ button[data-blok-database-table-group-count]:hover {
   display: none;
 }
 
-[data-blok-database-toolbar-expand] {
+[data-blok-database-title-row] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-expand] {
   opacity: 0;
-  transition: opacity 0.2s ease;
 }
 
-:is([data-blok-database-title-row], [data-blok-database-view-bar]):hover [data-blok-database-toolbar-expand], [data-blok-database-toolbar-expand]:focus-visible {
+[data-blok-database-title-row]:hover > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-expand], [data-blok-database-title-row] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-expand]:focus-visible {
   opacity: 1;
 }
 
@@ -15721,26 +15720,33 @@ button[data-blok-database-table-group-count]:hover {
   transform: none;
 }
 
-[data-blok-database-view-toolbar] > :is([data-blok-database-toolbar-minimize], [data-blok-database-toolbar-expand]) {
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-expand] {
   transition: background-color 0.1s ease-in-out, opacity 0.2s ease;
 }
 
-[@starting-style] [data-blok-database-view-toolbar] > [data-blok-database-toolbar-minimize], :is([data-blok-database-title-row], [data-blok-database-view-bar]):hover [data-blok-database-toolbar-expand] {
+[@starting-style] [data-blok-database-view-toolbar] > [data-blok-database-toolbar-expand], [data-blok-database-title-row]:hover > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-expand] {
   opacity: 0;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-view-toolbar] > :is([data-blok-database-toolbar-minimize], [data-blok-database-toolbar-expand]) {
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-view-toolbar] > [data-blok-database-toolbar-expand] {
   transition: none;
+}
+
+:is([data-blok-database-view-bar], [data-blok-database-title-row]) > [data-blok-database-view-toolbar] {
+  align-self: stretch;
 }
 
 [data-blok-database-view-bar] > [data-blok-database-view-toolbar]:not(:hover):not(:has(> :not([data-blok-database-search-input]):focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only=""] {
   visibility: hidden;
-  opacity: 0;
+  transition: background-color 0.1s ease-in-out, visibility 0s 0.2s;
 }
 
 [data-blok-database-view-toolbar] > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"] {
   margin-inline-start: calc(-1 * var(--blok-database-toolbar-icon-size));
-  transition: background-color 0.1s ease-in-out;
+}
+
+[data-blok-database-title-row] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"] {
+  margin-inline-start: 0;
 }
 
 [data-blok-database-view-toolbar]:not(:hover):not(:has(> :focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"] {
@@ -15748,7 +15754,7 @@ button[data-blok-database-table-group-count]:hover {
   transition: background-color 0.1s ease-in-out, display 0s allow-discrete 0.2s;
 }
 
-[data-blok-database-title-row] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"], [data-blok-database-view-bar][data-blok-database-fold-minimize] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"] {
+[data-blok-database-view-bar][data-blok-database-fold-minimize] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"] {
   display: none;
 }
 

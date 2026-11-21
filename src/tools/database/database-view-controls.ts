@@ -212,8 +212,6 @@ export class DatabaseViewControls {
   /** The saved view keeps its toolbar minimized. */
   private minimized = false;
   private expandTimer: ReturnType<typeof setTimeout> | null = null;
-  /** The filter bar shows a sort, so » can fold it. */
-  private barMinimizable = false;
   private searchCloseTimer: ReturnType<typeof setTimeout> | null = null;
   private searchFoldTimer: ReturnType<typeof setTimeout> | null = null;
   /** The person's choice for the chip bar: shown, hidden, or `null` to follow its chips. Reset per view. */
@@ -323,17 +321,17 @@ export class DatabaseViewControls {
     this.minimizeButton.addEventListener('pointerdown', (event) => {
       if (this.searchShown()) event.preventDefault();
     });
-    this.minimizeButton.addEventListener('click', () => {
+    // notion-motion.md Round 102 §1 #4: » folds the controls; the chip bar stays.
+    this.minimizeButton.addEventListener('click', (event) => {
       if (this.searchShown()) this.hideSearch();
-      this.barOpen = false;
       this.host.updateView({ toolbarMinimized: true });
       this.refresh();
-      this.settingsButton.focus();
+      this.placeFocusAfterToggle(event, this.expandButton);
     });
     this.expandButton = iconButton('database-toolbar-expand', this.host.i18n.t('tools.toggle.ariaLabelExpand'), IconChevronDoubleRight);
     this.expandButton.setAttribute('data-blok-database-toolbar-expand', '');
     this.expandButton.hidden = true;
-    this.expandButton.addEventListener('click', () => {
+    this.expandButton.addEventListener('click', (event) => {
       // The controls fade in once; a later show of one of them stays instant.
       // Marked first: the host's redraw lays out, and the fade only starts if the mark is on then.
       this.toolbar.setAttribute('data-expanding', '');
@@ -344,7 +342,7 @@ export class DatabaseViewControls {
         this.expandTimer = null;
         this.toolbar.removeAttribute('data-expanding');
       }, EXPAND_FADE_MS);
-      this.settingsButton.focus();
+      this.placeFocusAfterToggle(event, this.minimizeButton);
     });
     this.sortButton.addEventListener('click', () => this.openSort());
     this.automationsButton.addEventListener('click', () => this.openSettings(this.automationsButton, 'automations'));
@@ -678,7 +676,6 @@ export class DatabaseViewControls {
     this.filterBar.hidden = true;
     this.filterBar.replaceChildren();
     // notion-motion.md Round 41 Part B: a form has no filter bar, so » has nothing to fold.
-    this.barMinimizable = false;
     this.syncMinimize();
   }
 
@@ -1274,20 +1271,36 @@ export class DatabaseViewControls {
     this.searchCloseTimer = null;
   }
 
-  /** » shows for an open search or a filter bar with a sort, and for the pointer on a view with no rule. */
+  /**
+   * notion-motion.md Round 102 §1 #1-#3: » shows only while the pointer or a keyboard focus is on the
+   * controls, with a sort, filters, no rule or an open search (database.css). A form and a dashboard have
+   * nothing to fold. A title-only database with no bar is left out, unmeasured.
+   */
   private syncMinimize(): void {
     const type = this.host.savedView()?.type;
-    // notion-motion.md Round 101 §1 #2: with no sort or filter Notion mounts » while the pointer is on the controls.
-    // Left out, unmeasured: a bar of filters alone and a title-only database. A form and a dashboard have nothing to fold.
-    const idle = !this.searchShown() && !this.barShown && this.host.schema().length > 1 && type !== 'form' && type !== 'dashboard';
+    const searching = this.searchShown();
+    const foldable = searching || this.barShown || this.host.schema().length > 1;
 
-    this.minimizeButton.hidden = this.minimized || (!this.searchShown() && !this.barMinimizable && !idle);
-    // notion-motion.md Round 100 §1 #7: for the search alone, only while the pointer is on the controls (database.css).
-    if (this.barMinimizable) {
-      this.minimizeButton.removeAttribute('data-blok-database-toolbar-hover-only');
-    } else {
-      this.minimizeButton.setAttribute('data-blok-database-toolbar-hover-only', idle ? 'idle' : '');
+    this.minimizeButton.hidden = this.minimized || type === 'form' || type === 'dashboard' || !foldable;
+    // An open search keeps »'s room (database.css), so the folded tabs do not move under the pointer.
+    this.minimizeButton.setAttribute('data-blok-database-toolbar-hover-only', searching ? '' : 'idle');
+  }
+
+  /**
+   * notion-motion.md Round 102 §1 #8: a click leaves the focus on the page. Enter or Space keeps the
+   * keyboard user's place on the button that undoes it, or on settings when that cannot show.
+   */
+  private placeFocusAfterToggle(event: MouseEvent, undo: HTMLElement): void {
+    if (event.detail > 0) {
+      const focused = document.activeElement;
+
+      if (focused instanceof HTMLElement && this.toolbar.contains(focused)) focused.blur();
+
+      return;
     }
+    // A CSS-hidden » (tabs up to the toolbar) refuses the focus too.
+    if (!undo.hidden) undo.focus();
+    if (document.activeElement !== undo) this.settingsButton.focus();
   }
 
   private setSearch(query: string): void {
@@ -1375,8 +1388,6 @@ export class DatabaseViewControls {
     // Notion keeps the bar, with only "+ Filter", after its last chip goes.
     if (pills.length === 0 && !personal && this.barShown && this.barOpen === null) this.barOpen = true;
     this.barShown = this.barOpen ?? (pills.length > 0 || personal);
-    // Inferred from shots: Notion shows » with a sort (20, 22, 23), not with filters alone (15, 17) or no rule (41).
-    this.barMinimizable = this.barShown && view.sorts.length > 0;
     this.syncMinimize();
     if (!this.barShown) {
       this.filterBar.replaceChildren();

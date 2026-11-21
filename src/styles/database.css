@@ -12873,14 +12873,13 @@ button[data-blok-database-table-group-count]:hover {
   display: none;
 }
 
-/* « shows only while the pointer is on the header. */
-[data-blok-database-toolbar-expand] {
+/* notion-motion.md Round 102 §1 #5: a view bar keeps « with the pointer away; a one-view title row shows it on hover. */
+[data-blok-database-title-row] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-expand] {
   opacity: 0;
-  transition: opacity 0.2s ease;
 }
 
-:is([data-blok-database-title-row], [data-blok-database-view-bar]):hover [data-blok-database-toolbar-expand],
-[data-blok-database-toolbar-expand]:focus-visible {
+[data-blok-database-title-row]:hover > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-expand],
+[data-blok-database-title-row] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-expand]:focus-visible {
   opacity: 1;
 }
 
@@ -12892,40 +12891,48 @@ button[data-blok-database-table-group-count]:hover {
   transform: none;
 }
 
-/* » and « fade in over 200ms ease as they appear (motion-search.json, motion-minimize.json).
+/* « fades in over 200ms ease as it appears (motion-minimize.json); » never fades (Round 102 §3).
    Must outrank `[data-blok-database-view-toolbar] > button`, which sets only the hover fill. */
-[data-blok-database-view-toolbar] > :is([data-blok-database-toolbar-minimize], [data-blok-database-toolbar-expand]) {
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-expand] {
   transition: background-color 0.1s ease-in-out, opacity 0.2s ease;
 }
 
 /* « starts from its hover rule's selector: a weaker one would lose to that rule's opacity 1. */
 @starting-style {
-  [data-blok-database-view-toolbar] > [data-blok-database-toolbar-minimize],
-  :is([data-blok-database-title-row], [data-blok-database-view-bar]):hover [data-blok-database-toolbar-expand] {
+  [data-blok-database-view-toolbar] > [data-blok-database-toolbar-expand],
+  [data-blok-database-title-row]:hover > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-expand] {
     opacity: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-blok-database-view-toolbar] > :is([data-blok-database-toolbar-minimize], [data-blok-database-toolbar-expand]) {
+  [data-blok-database-view-toolbar] > [data-blok-database-toolbar-expand] {
     transition: none;
   }
 }
 
-/* notion-motion.md Round 100 §1 #7: » for the search alone shows while the pointer is on the controls.
-   It keeps its room, so it never refolds the bar under the pointer. A keyboard focus on a control shows it too.
+/* notion-motion.md Round 102 §1 #7: »'s hover zone is the toolbar, as tall as its 40px row. */
+:is([data-blok-database-view-bar], [data-blok-database-title-row]) > [data-blok-database-view-toolbar] {
+  align-self: stretch;
+}
+
+/* notion-motion.md Round 100 §1 #7, Round 102 §1 #6: with the search open, » shows while the pointer or a keyboard focus
+   is on the controls, at once, and leaves 200ms after. It keeps its room, so it never refolds the bar under the pointer.
    Read only in the view bar: a title row keeps it shown. */
 [data-blok-database-view-bar] > [data-blok-database-view-toolbar]:not(:hover):not(:has(> :not([data-blok-database-search-input]):focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only=""] {
   visibility: hidden;
-  opacity: 0;
+  transition: background-color 0.1s ease-in-out, visibility 0s 0.2s;
 }
 
-/* notion-motion.md Round 101 §1 #2, §3: with no sort or filter, » shows while the pointer or a keyboard focus is on the
-   controls, with no fade, and leaves 200ms after. It takes no room, so the tabs never refold under the pointer.
-   A title row is unmeasured, so it stays out there, and so do tabs that run up to the toolbar (database-tab-bar.ts). */
+/* notion-motion.md Round 101 §1 #2, Round 102 §1 #1-#3: with a sort, filters or no rule, » shows the same way. It takes
+   no room in a view bar, so the tabs never refold under the pointer, and stays off tabs that run up to the toolbar
+   (database-tab-bar.ts). A title row folds by its own width (database-view-bar-fold.ts), so there it takes its room. */
 [data-blok-database-view-toolbar] > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"] {
   margin-inline-start: calc(-1 * var(--blok-database-toolbar-icon-size));
-  transition: background-color 0.1s ease-in-out;
+}
+
+[data-blok-database-title-row] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"] {
+  margin-inline-start: 0;
 }
 
 [data-blok-database-view-toolbar]:not(:hover):not(:has(> :focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"] {
@@ -12933,7 +12940,6 @@ button[data-blok-database-table-group-count]:hover {
   transition: background-color 0.1s ease-in-out, display 0s allow-discrete 0.2s;
 }
 
-[data-blok-database-title-row] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"],
 [data-blok-database-view-bar][data-blok-database-fold-minimize] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"] {
   display: none;
 }

@@ -2003,6 +2003,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // +503: the search × is 24 and round with a 20px icon, and the field sits flush on its neighbours.
     // +190: the database name in Delete property's title is 700.
     const DATABASE_R274_BYTES = 1321 + 503 + 190;
+    // Lane r275: » shows only on hover with any rule and in a title row, with no fade; « stays in a view bar;
+    // the toolbar fills its 40px row.
+    const DATABASE_R275_BYTES = 388;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2699,6 +2702,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R273_BYTES
       + DATABASE_R274_BYTES
       + DATABASE_R274_BYTES
+      + DATABASE_R275_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

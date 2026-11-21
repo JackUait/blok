@@ -2000,7 +2000,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // +259: the ×'s 28px as a token (css-vars-extraction R2).
     const DATABASE_R273_BYTES = 545 + 283 + 259;
     // Lane r274: » for the pointer on a view with no rule, out of the layout and off tabs that reach the toolbar.
-    const DATABASE_R274_BYTES = 1321;
+    // +503: the search × is 24 and round with a 20px icon, and the field sits flush on its neighbours.
+    const DATABASE_R274_BYTES = 1321 + 503;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

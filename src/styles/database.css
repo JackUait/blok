@@ -12,8 +12,8 @@
   --blok-database-ink: rgb(44, 44, 43);
   /* notion-spec-2 §18.3: the status and person pickers' 38.5px head (4 + 5.25 around a 20px line). */
   --blok-database-picker-head-padding-block: 9.25px;
-  /* The search ×: it lies over the field's end by its own width. */
-  --blok-database-search-clear-size: 28px;
+  /* The search ×: it lies over the field's end by its own width (notion-motion.md Round 101 §1 #5: Notion's is 24). */
+  --blok-database-search-clear-size: 24px;
   /* A view toolbar icon button's width. */
   --blok-database-toolbar-icon-size: 28px;
   --blok-database-ink-secondary: rgb(114, 111, 106);
@@ -12731,7 +12731,8 @@ button[data-blok-database-table-group-count]:hover {
   margin-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
-[data-blok-database-view-toolbar] > :not([data-blok-database-toolbar-icon], [data-blok-database-new]) {
+/* The search field and its × sit flush on their neighbours (notion-motion.md Round 101 §1 #8). */
+[data-blok-database-view-toolbar] > :not([data-blok-database-toolbar-icon], [data-blok-database-new], [data-blok-database-search-input], [data-blok-database-search-clear]) {
   margin-inline: var(--blok-border-width-hairline);
 }
 
@@ -12963,7 +12964,9 @@ button[data-blok-database-table-group-count]:hover {
 [data-blok-database-view-toolbar] > [data-blok-database-search-clear] {
   width: var(--blok-database-search-clear-size);
   min-width: var(--blok-database-search-clear-size);
+  height: var(--blok-database-search-clear-size);
   padding: 0;
+  border-radius: var(--blok-radius-pill);
   /* Over the field's end: a query must not widen the toolbar, or the icons fold at the first key (notion-motion.md Round 100). */
   margin-inline-start: calc(-1 * var(--blok-database-search-clear-size));
 }
@@ -12972,11 +12975,14 @@ button[data-blok-database-table-group-count]:hover {
   padding-inline-end: var(--blok-database-search-clear-size);
 }
 
+/* Notion's icon box is 20. The transparent border keeps the disc at 16 and the × at its drawn size. */
 [data-blok-database-search-clear] svg {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
+  border: var(--blok-space-0-5) solid transparent;
   padding: var(--blok-space-0-5);
   border-radius: var(--blok-radius-pill);
+  background-clip: padding-box;
   background-color: var(--blok-database-ink-tertiary);
   color: var(--blok-bg-primary);
 }

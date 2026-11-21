@@ -4694,7 +4694,7 @@ span[data-blok-slash-search] {
 :where([data-blok-interface]), :where([data-blok-popover]), :where([data-blok-top-layer]:not([data-blok-interface] *)) {
   --blok-database-ink: rgb(44, 44, 43);
   --blok-database-picker-head-padding-block: 9.25px;
-  --blok-database-search-clear-size: 28px;
+  --blok-database-search-clear-size: 24px;
   --blok-database-toolbar-icon-size: 28px;
   --blok-database-ink-secondary: rgb(114, 111, 106);
   --blok-database-ink-tertiary: rgb(114, 111, 106);
@@ -15586,7 +15586,7 @@ button[data-blok-database-table-group-count]:hover {
   margin-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
-[data-blok-database-view-toolbar] > :not([data-blok-database-toolbar-icon], [data-blok-database-new]) {
+[data-blok-database-view-toolbar] > :not([data-blok-database-toolbar-icon], [data-blok-database-new], [data-blok-database-search-input], [data-blok-database-search-clear]) {
   margin-inline: var(--blok-border-width-hairline);
 }
 
@@ -15772,7 +15772,9 @@ button[data-blok-database-table-group-count]:hover {
 [data-blok-database-view-toolbar] > [data-blok-database-search-clear] {
   width: var(--blok-database-search-clear-size);
   min-width: var(--blok-database-search-clear-size);
+  height: var(--blok-database-search-clear-size);
   padding: 0;
+  border-radius: var(--blok-radius-pill);
   margin-inline-start: calc(-1 * var(--blok-database-search-clear-size));
 }
 
@@ -15781,10 +15783,12 @@ button[data-blok-database-table-group-count]:hover {
 }
 
 [data-blok-database-search-clear] svg {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
+  border: var(--blok-space-0-5) solid transparent;
   padding: var(--blok-space-0-5);
   border-radius: var(--blok-radius-pill);
+  background-clip: padding-box;
   background-color: var(--blok-database-ink-tertiary);
   color: var(--blok-bg-primary);
 }

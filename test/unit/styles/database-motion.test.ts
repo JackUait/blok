@@ -313,9 +313,33 @@ describe('database toolbar search', () => {
   // notion-motion.md Round 100 §1 #6 (r100-n-fold-pill-menu.raw): Notion's input narrows 146→126 for a query, so the field takes no
   // more room. The × sits over the field's end: a wider toolbar would fold the icons at the first keystroke.
   it('lays the clear × over the field\'s end, so a query adds no width', () => {
-    expect(database).toContain('--blok-database-search-clear-size: 28px;');
+    expect(database).toContain('--blok-database-search-clear-size: 24px;');
     expect(body(database, `[data-blok-database-view-toolbar] > [data-blok-database-search-clear]`)).toContain('margin-inline-start: calc(-1 * var(--blok-database-search-clear-size))');
     expect(body(database, `${INPUT}:has(+ [data-blok-database-search-clear]:not([hidden]))`)).toContain('padding-inline-end: var(--blok-database-search-clear-size)');
+  });
+
+  // notion-motion.md Round 101 §1 #8 (r100-n-search-open-rest.raw): Search 921.7, field 949.7, ⤢ 1099.7, with no gap round the field.
+  it('sets the field and its × against their neighbours, with no 1px gap', () => {
+    const SPACED = rules(database).filter((rule) => rule.body.includes('margin-inline: var(--blok-border-width-hairline)'))
+      .flatMap((rule) => rule.selectors).find((selector) => selector.startsWith('[data-blok-database-view-toolbar] > :not('));
+
+    expect(SPACED).toContain(INPUT);
+    expect(SPACED).toContain('[data-blok-database-search-clear]');
+  });
+
+  // notion-motion.md Round 101 §1 #5 (r101-n-kb-search-type.raw, r101-n-search-query.png): "Clear Input" is 24×24 and round,
+  // its icon box 20; the drawn disc (15 in Notion, 16 here) and the 6px × keep Blok's look.
+  it('draws the × as a round 24px button with a 20px icon and a 16px disc', () => {
+    const clear = body(database, `[data-blok-database-view-toolbar] > [data-blok-database-search-clear]`);
+    const icon = body(database, '[data-blok-database-search-clear] svg');
+
+    expect(clear).toContain('height: var(--blok-database-search-clear-size)');
+    expect(clear).toContain('border-radius: var(--blok-radius-pill)');
+    expect(icon).toContain('width: 20px');
+    expect(icon).toContain('height: 20px');
+    expect(icon).toContain('border: var(--blok-space-0-5) solid transparent');
+    expect(icon).toContain('padding: var(--blok-space-0-5)');
+    expect(icon).toContain('background-clip: padding-box');
   });
 });
 

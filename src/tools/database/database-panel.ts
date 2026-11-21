@@ -632,8 +632,8 @@ const DRAG_THRESHOLD = 8;
  * Pointer drag inside one list, as Notion's sort list (r35:497-509): past the
  * threshold the row follows the pointer, clamped to the list ends. A neighbour
  * moves one slot once the pointer enters its slot: the gap before it, then its
- * box (Round 91 §1 #6, a hypothesis from one sample each way; the upward pass
- * is unmeasured). The sort panel slides it in database.css (r52-n-sort-rule-drag.raw).
+ * box (Round 91 §1 #6). Going up it swaps once the pointer reaches the row's
+ * bottom (Round 92 §1 #9). The lists slide it in database.css (r52-n-sort-rule-drag.raw).
  * Release commits the order shown. Rows carry their id in `data-item-id`.
  */
 export const startReorderDrag = (
@@ -686,8 +686,8 @@ export const startReorderDrag = (
     source.style.top = `${offset}px`;
     state.slot = from;
     for (const [index, row] of rows.entries()) {
-      // A row's slot runs from the previous row's bottom to its own bottom.
-      const passedAbove = index < from && pointer < rects[index].bottom;
+      // A row's slot runs from the previous row's bottom to its own bottom. The bottom itself is the upper slot's.
+      const passedAbove = index < from && pointer <= rects[index].bottom;
       const passedBelow = index > from && pointer > rects[index - 1].bottom;
       const shift = (passedAbove ? pitchUp : 0) - (passedBelow ? pitchDown : 0);
 

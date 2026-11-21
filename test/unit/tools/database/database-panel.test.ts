@@ -347,6 +347,18 @@ describe('DatabasePanel', () => {
       expect(row('b').style.top).toBe('');
     });
 
+    // notion-motion.md Round 92 §1 #9 (r92-n-sort-ruledrag-up.raw): going up, the row above swaps once the pointer
+    // reaches its bottom (390.2), one 2px step before Blok did. Going down, that same point does not swap yet.
+    it('passes the row above once the pointer reaches its bottom', () => {
+      const { list, row } = dragList(['a', 'b']);
+
+      down(list, 'b', 189);
+      move(167);
+      expect(row('a').style.top).toBe('');
+      move(165);
+      expect(row('a').style.top).toBe('40px');
+    });
+
     it('clamps at the list end and passes every row it crosses', () => {
       const { list, row, onMove } = dragList(['a', 'b', 'c']);
 

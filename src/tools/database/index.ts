@@ -1880,11 +1880,9 @@ export class DatabaseTool implements BlockTool {
     const titleEl = this.titleElement;
 
     if (titleEl === null) return;
-    const saved = this.shownView();
 
     // "Show data source title" (research/20 §1f, R-2022-03-15).
-    const hidden = this.fullPage || this.dataSourceTitlesHidden
-      || (this.linked && saved !== undefined && this.controls.effective(saved).showDataSourceTitle === false);
+    const hidden = this.fullPage || this.sourceTitlesHidden;
     const source = this.linked ? this : this.activeSource();
 
     titleEl.hidden = hidden || source !== this;
@@ -2843,7 +2841,7 @@ export class DatabaseTool implements BlockTool {
       closeOnActivate: true,
       onActivate: (): void => void this.turnIntoPage(),
     }];
-    const editIcon: MenuConfigItem[] = locked || !this.titleEditable() || this.dataSourceTitlesHidden ? [] : [{
+    const editIcon: MenuConfigItem[] = locked || !this.titleEditable() || this.sourceTitlesHidden ? [] : [{
       icon: IconEmojiSmile,
       title: this.api.i18n.t('tools.database.tableEditIcon'),
       name: 'database-edit-icon',
@@ -2858,7 +2856,7 @@ export class DatabaseTool implements BlockTool {
       isActive: (): boolean => this.structureLocked(),
       onActivate: (): void => this.setDatabaseLocked(!this.structureLocked()),
     }];
-    const rename: MenuConfigItem[] = locked || !this.titleEditable() || this.dataSourceTitlesHidden ? [] : [{
+    const rename: MenuConfigItem[] = locked || !this.titleEditable() || this.sourceTitlesHidden ? [] : [{
       icon: IconPencil,
       title: t('renameView'),
       name: 'database-rename',
@@ -5803,9 +5801,30 @@ export class DatabaseTool implements BlockTool {
     return action === undefined ? {} : { onEditLayout: action.onClick };
   }
 
+  /**
+   * "Show data source titles" is one setting per block (notion-motion.md Round 97 §1 #5).
+   * A linked block once saved it per view: those read as hidden only when every view hid it.
+   */
+  private get sourceTitlesHidden(): boolean {
+    const views = this.model.getViews();
+
+    return this.dataSourceTitlesHidden
+      || (this.linked && views.length > 0 && views.every((view) => view.showDataSourceTitle === false));
+  }
+
   private toggleDataSourceTitles(): void {
     if (this.readOnly || this.structureLocked()) return;
-    this.dataSourceTitlesHidden = !this.dataSourceTitlesHidden;
+    const hide = !this.sourceTitlesHidden;
+
+    this.dataSourceTitlesHidden = hide;
+    // Showing again drops the old per-view values, or they would keep it hidden.
+    if (!hide) {
+      this.model.getViews().filter((view) => view.showDataSourceTitle === false)
+        .forEach((view) => {
+          this.model.updateView(view.id, { showDataSourceTitle: undefined });
+          void this.sync.syncUpdateView({ viewId: view.id, changes: { showDataSourceTitle: undefined } });
+        });
+    }
     this.block.dispatchChange();
     this.paintLinkedTitle();
     this.rebuildTabBar();
@@ -5837,7 +5856,7 @@ export class DatabaseTool implements BlockTool {
         this.tabDisplay.set(display);
         this.rebuildTabBar();
       },
-      dataSourceTitlesHidden: this.dataSourceTitlesHidden,
+      dataSourceTitlesHidden: this.sourceTitlesHidden,
       // A full-page database never shows its title, so there is nothing to toggle.
       ...(this.readOnly || this.structureLocked() || this.fullPage ? {} : { onDataSourceTitlesToggle: () => this.toggleDataSourceTitles() }),
       // The bar hides it while read-only or locked; it flips in place (setReadOnly), so this is not gated here.
@@ -7594,7 +7613,7 @@ export class DatabaseTool implements BlockTool {
       linked: () => owner.linked,
       // The tab menu's switch: the main toolbar only, and not on a full page, where the title never shows.
       ...(context === undefined && !this.fullPage ? {
-        dataSourceTitles: { shown: () => !this.dataSourceTitlesHidden, toggle: () => this.toggleDataSourceTitles() },
+        dataSourceTitles: { shown: () => !this.sourceTitlesHidden, toggle: () => this.toggleDataSourceTitles(), views: () => this.model.getTabViews().length },
       } : {}),
       noDate: () => {
         if (context !== undefined) return undefined;

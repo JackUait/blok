@@ -515,6 +515,7 @@ describe('view settings panel', () => {
       const h = harness();
 
       h.ctx.linked = () => true;
+      h.ctx.dataSourceTitles = { shown: () => true, toggle: vi.fn() };
       h.open('layout');
       const ids = [...document.querySelectorAll<HTMLElement>('[data-blok-testid="database-view-settings"] [data-blok-testid^="database-settings-"]')]
         .map((el) => el.getAttribute('data-blok-testid'));
@@ -768,17 +769,33 @@ describe('view settings panel', () => {
       return ids.slice(lastTile + 1);
     };
 
-    it.each(['table', 'map'] as const)('is the first row after the tiles on a linked %s, on by default, and turns off', (type) => {
+    // notion-motion.md Round 97 §1 #5: on a linked block it is one setting for the whole block, not one per view.
+    it.each(['table', 'map'] as const)('is the first row after the tiles on a linked %s, and toggles the block setting', (type) => {
       const h = harness({ type });
+      const toggle = vi.fn();
 
       h.ctx.linked = () => true;
+      h.ctx.dataSourceTitles = { shown: () => true, toggle, views: () => 1 };
       h.open();
       click('database-settings-layout');
 
       expect(rowsAfterTiles()[0]).toBe('database-settings-data-source-title');
       expect(document.querySelector('[data-blok-testid="database-settings-data-source-title"]')?.getAttribute('aria-checked')).toBe('true');
       click('database-settings-data-source-title');
-      expect(h.ctx.updateView).toHaveBeenCalledWith({ showDataSourceTitle: false });
+      expect(toggle).toHaveBeenCalledTimes(1);
+      expect(h.ctx.updateView).not.toHaveBeenCalled();
+    });
+
+    // notion-motion.md Round 97 (notes): the linked label reads "title" with one view and "titles" with two.
+    it.each([[1, 'tools.database.settingsShowDataSourceTitle'], [2, 'tools.database.showDataSourceTitles']] as const)('on a linked block with %i view(s) reads %s', (count, label) => {
+      const h = harness();
+
+      h.ctx.linked = () => true;
+      h.ctx.dataSourceTitles = { shown: () => true, toggle: vi.fn(), views: () => count };
+      h.open();
+      click('database-settings-layout');
+
+      expect(document.querySelector('[data-blok-testid="database-settings-data-source-title"]')?.textContent).toContain(label);
     });
 
     it('is not offered on a database that holds its own rows', () => {

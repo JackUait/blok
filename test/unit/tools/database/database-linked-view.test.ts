@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { DatabaseData, DatabaseLinkedSourceSnapshot, PropertyDefinition } from '../../../../src/tools/database/types';
+import type { DatabaseTool } from '../../../../src/tools/database';
+import type { DatabaseData, DatabaseLinkedSourceSnapshot, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
 import { buildDatabase, makeDoc, rowSeed } from './structure-harness';
 
 vi.mock('../../../../src/blok', () => ({
@@ -447,27 +448,73 @@ describe('DatabaseTool — linked view, research 20 §2', () => {
     expect(el.querySelector('[data-blok-database-add-view]')).toBeNull();
   });
 
-  it('"Show data source title" off hides the "↗ source" title of that view only, and saves on the view', () => {
-    const doc = docWithSource();
-    const data = linkedData();
+  // notion-motion.md Round 97 §1 #5: one setting for the whole linked block, so a tab switch never moves the title.
+  describe('"Show data source title" on a linked block', () => {
+    const twoViews = (patch: Partial<DatabaseViewConfig>[] = [{}, {}]): DatabaseData => {
+      const data = linkedData();
 
-    data.views.push({ id: 'lv2', name: 'Other', type: 'table', position: 'a1', sorts: [], filters: [], visibleProperties: ['status'] });
-    buildDatabase(doc, 'db', sourceData());
-    const { tool, el } = buildDatabase(doc, 'linked', data);
-    const title = (): HTMLElement | null => el.querySelector<HTMLElement>('[data-blok-database-title]');
+      data.views.push({ id: 'lv2', name: 'Other', type: 'table', position: 'a1', sorts: [], filters: [], visibleProperties: ['status'] });
+      data.views = data.views.map((view, index) => ({ ...view, ...patch[index] }));
 
-    expect(title()?.hidden).toBe(false);
-    (tool as unknown as { controls: { openSettings: (a: HTMLElement, p: string) => void } }).controls.openSettings(el, 'root');
-    panelById('database-view-settings')?.querySelector<HTMLElement>('[data-blok-testid="database-settings-layout"]')?.click();
-    panelById('database-view-settings')?.querySelector<HTMLElement>('[data-blok-testid="database-settings-data-source-title"]')?.click();
+      return data;
+    };
+    const build = (data: DatabaseData): { tool: DatabaseTool; el: HTMLElement; title: () => HTMLElement | null; tab: (id: string) => void; flip: () => void } => {
+      const doc = docWithSource();
 
-    expect(title()?.hidden).toBe(true);
-    expect(tool.save(document.createElement('div')).views.find((view) => view.id === 'lv')?.showDataSourceTitle).toBe(false);
+      buildDatabase(doc, 'db', sourceData());
+      const { tool, el } = buildDatabase(doc, 'linked', data);
 
-    el.querySelector<HTMLElement>('[data-blok-database-tab][data-view-id="lv2"]')?.click();
-    expect(title()?.hidden).toBe(false);
-    el.querySelector<HTMLElement>('[data-blok-database-tab][data-view-id="lv"]')?.click();
-    expect(title()?.hidden).toBe(true);
+      return {
+        tool,
+        el,
+        title: () => el.querySelector<HTMLElement>('[data-blok-database-title]'),
+        tab: (id) => el.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${id}"]`)?.click(),
+        flip: () => {
+          (tool as unknown as { controls: { openSettings: (a: HTMLElement, p: string) => void } }).controls.openSettings(el, 'root');
+          panelById('database-view-settings')?.querySelector<HTMLElement>('[data-blok-testid="database-settings-layout"]')?.click();
+          panelById('database-view-settings')?.querySelector<HTMLElement>('[data-blok-testid="database-settings-data-source-title"]')?.click();
+        },
+      };
+    };
+
+    it('off hides the "↗ source" title in every view and saves on the block, not on the view', () => {
+      const { tool, title, tab, flip } = build(twoViews());
+
+      expect(title()?.hidden).toBe(false);
+      flip();
+
+      expect(title()?.hidden).toBe(true);
+      const saved = tool.save(document.createElement('div'));
+
+      expect(saved.hideDataSourceTitles).toBe(true);
+      expect(saved.views.some((view) => 'showDataSourceTitle' in view)).toBe(false);
+      tab('lv2');
+      expect(title()?.hidden).toBe(true);
+      tab('lv');
+      expect(title()?.hidden).toBe(true);
+    });
+
+    it('reads old per-view values as hidden only when every view hid it', () => {
+      expect(build(twoViews([{ showDataSourceTitle: false }, { showDataSourceTitle: false }])).title()?.hidden).toBe(true);
+
+      const mixed = build(twoViews([{ showDataSourceTitle: false }, {}]));
+
+      expect(mixed.title()?.hidden).toBe(false);
+      mixed.tab('lv2');
+      expect(mixed.title()?.hidden).toBe(false);
+    });
+
+    it('on from old per-view values shows the title and drops those values', () => {
+      const { tool, title, flip } = build(twoViews([{ showDataSourceTitle: false }, { showDataSourceTitle: false }]));
+
+      flip();
+
+      expect(title()?.hidden).toBe(false);
+      const saved = tool.save(document.createElement('div'));
+
+      expect(saved.hideDataSourceTitles).toBeUndefined();
+      expect(saved.views.some((view) => 'showDataSourceTitle' in view)).toBe(false);
+    });
   });
 
   describe('"+" add view on a linked view (research 20 §2b)', () => {

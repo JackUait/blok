@@ -141,7 +141,7 @@ export interface ViewSettingsContext {
   /** A linked view: its lock reads "Lock views" (research 20 §2b). */
   linked?: () => boolean;
   /** The block's "Show data source titles", as the tab menu toggles it (research/30 §B17). Without it a database with its own rows has no such row. */
-  dataSourceTitles?: { shown: () => boolean; toggle: () => void };
+  dataSourceTitles?: { shown: () => boolean; toggle: () => void; views?: () => number };
   duplicateView: () => void;
   deleteView: () => void;
   copyViewLink: () => void;
@@ -393,9 +393,11 @@ export class ViewSettingsPages {
   /** notion-motion.md Round 32 §3: a database with its own rows lists "Show data source titles" first. */
   private ownSourceTitle(): HTMLButtonElement[] {
     const titles = this.ctx.dataSourceTitles;
+    // Round 97 (notes): a linked block's label reads "title" with one view, "titles" with several.
+    const singular = this.ctx.linked?.() === true && (titles?.views?.() ?? 1) < 2;
 
     return titles === undefined ? [] : [panelSwitch({
-      label: this.t('showDataSourceTitles'),
+      label: this.t(singular ? 'settingsShowDataSourceTitle' : 'showDataSourceTitles'),
       testId: 'database-settings-data-source-title',
       checked: titles.shown(),
       disabled: !this.shared,
@@ -1212,16 +1214,8 @@ export class ViewSettingsPages {
       build: (panel) => {
         const view = this.ctx.view();
         const tiles = this.layoutTiles(panel, view.type);
-        // Linked views only: a database that holds its rows shows its own title (R-2022-03-15).
-        const sourceTitle = this.ctx.linked?.() === true
-          ? [panelSwitch({
-            label: this.t('settingsShowDataSourceTitle'),
-            testId: 'database-settings-data-source-title',
-            checked: view.showDataSourceTitle !== false,
-            disabled: !this.shared,
-            onToggle: (next) => this.ctx.updateView({ showDataSourceTitle: next }),
-          })]
-          : this.ownSourceTitle();
+        // notion-motion.md Round 97 §1 #5: one setting for the block, linked or not.
+        const sourceTitle = this.ownSourceTitle();
         const pageIcon = panelSwitch({
           label: this.t('settingsShowPageIcon'),
           testId: 'database-settings-page-icon',

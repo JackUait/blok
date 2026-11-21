@@ -465,7 +465,8 @@ test.describe('linked view, research 20', () => {
     expect(((await savedRow(page, 'db-1')).schema as Array<{ type: string; databaseLocked?: boolean }>).find((p) => p.type === 'title')?.databaseLocked).toBeUndefined();
   });
 
-  test('"Show data source title" off hides the "↗ Tasks" title, keeps the add-view "+", and saves on the view', async ({ page }) => {
+  // notion-motion.md Round 97 §1 #5: one setting for the linked block, saved on the block.
+  test('"Show data source title" off hides the "↗ Tasks" title, keeps the add-view "+", and saves on the block', async ({ page }) => {
     await mount(page, [...source(), linkedBlock()]);
     const link = page.getByRole('link', { name: 'Tasks' });
 
@@ -481,7 +482,8 @@ test.describe('linked view, research 20', () => {
 
     await expect(link).toBeHidden();
     await expect(page.locator('[data-blok-database-add-view]').nth(1)).toBeAttached();
-    await expect.poll(async () => ((await savedRow(page, 'linked-1')).views as Array<{ showDataSourceTitle?: boolean }>)[0].showDataSourceTitle).toBe(false);
+    await expect.poll(async () => (await savedRow(page, 'linked-1')).hideDataSourceTitles).toBe(true);
+    expect(((await savedRow(page, 'linked-1')).views as Array<{ showDataSourceTitle?: boolean }>)[0].showDataSourceTitle).toBeUndefined();
     // The source's own title stays.
     await expect(page.locator('[data-blok-database-title][contenteditable="true"]')).toBeVisible();
   });

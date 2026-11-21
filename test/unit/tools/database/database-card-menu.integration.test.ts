@@ -5,6 +5,7 @@ import { SCHEMA, buildTool as buildHarnessTool, fakeRow, makeDoc, tableData } fr
 import type { Doc } from './tier3-harness';
 import { hover, shownHint } from './hint-harness';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
+import { PopoverAbstract } from '../../../../src/components/utils/popover/popover-abstract';
 
 vi.mock('../../../../src/blok', () => ({
   Blok: class MockBlok {
@@ -587,6 +588,22 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       expect(notesCell(el)).toHaveFocus();
       expect(doc.rows.get('a')?.data.properties.done).toBe(false);
       expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    });
+
+    // notion-motion.md Round 103 §1 #5: Escape removes the right-click row menu at once, as it does the ⋮⋮ menu.
+    it('Escape closes the right-click row menu at once, with no fade', () => {
+      const { el } = buildTool(focusRow(), {}, tableData(FOCUS_SCHEMA, { type: 'table' }));
+      const atOnce: boolean[] = [];
+      const hideOnEscape = PopoverAbstract.prototype.hideOnEscape;
+
+      vi.spyOn(PopoverAbstract.prototype, 'hideOnEscape').mockImplementation(function (this: PopoverAbstract) {
+        atOnce.push(this.escapeClosesAtOnce);
+        hideOnEscape.call(this);
+      });
+      rightClickNotes(el);
+      (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(atOnce).toEqual([true]);
     });
 
     it('Escape on the row menu keeps the row selected and focuses the right-clicked cell', async () => {

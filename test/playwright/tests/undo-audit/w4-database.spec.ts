@@ -315,7 +315,7 @@ const GESTURES: Gesture[] = [
   } },
   { id: 'W4D-C2', name: 'renaming a board column', run: async (page) => {
     await page.locator('[data-blok-database-column][data-option-id="opt-todo"] [data-blok-database-column-title]').click();
-    const input = page.locator('[data-blok-database-column-title-input]');
+    const input = page.getByRole('textbox', { name: 'Rename column' });
 
     await input.fill('Backlog');
     await input.press('Enter');

@@ -119,6 +119,23 @@ describe('board: column pill rename popup', () => {
     expect(q('[data-blok-database-column-title-input]')).toBeNull();
   });
 
+  // notion-motion.md Round 99 §1 #1: a click opens the same popup as Enter.
+  it('a click opens the popup too, and Done renames the group', async () => {
+    pill()?.click();
+    await quiet();
+
+    expect(field()).toHaveFocus();
+    expect(field()?.value).toBe('Todo');
+    expect(q('[data-blok-database-column] input')).toBeNull();
+
+    await type('Review');
+    done()?.click();
+    await quiet();
+
+    expect(await labels()).toEqual(['Review']);
+    await vi.waitFor(() => expect(pill()).toHaveFocus());
+  });
+
   it('Enter in the field renames the group, and the pill takes focus back', async () => {
     await openRename('Enter');
     await type('Review');

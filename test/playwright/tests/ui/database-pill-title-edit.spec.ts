@@ -73,105 +73,69 @@ const DATABASE_BLOCKS: OutputData['blocks'] = [
   },
 ];
 
-test.describe('Database board view — pill title inline editing', () => {
+const titleOf = (page: Page, name: string): ReturnType<Page['locator']> =>
+  page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).filter({ hasText: name });
+
+const pillOf = (page: Page, name: string): ReturnType<Page['locator']> =>
+  page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-pill]`).filter({ hasText: name });
+
+const field = (page: Page): ReturnType<Page['locator']> => page.getByRole('textbox', { name: 'Rename column' });
+
+/** notion-motion.md Round 99 §1 #1: a click on a column pill opens the same rename popup as Enter. */
+test.describe('Database board view — pill click rename popup', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await gotoTestPage(page);
+    await resetAndCreate(page, DATABASE_BLOCKS);
   });
 
-  test('clicking the column title replaces it with a focused input', async ({ page }) => {
-    await resetAndCreate(page, DATABASE_BLOCKS);
+  test('a click opens the popup with the name selected, and no inline field', async ({ page }) => {
+    await titleOf(page, 'Backlog').click();
 
-    const titleDiv = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).filter({ hasText: 'Backlog' });
-    await expect(titleDiv).toBeVisible();
-
-    await titleDiv.click();
-
-    const input = page.locator(`${BLOK_INTERFACE_SELECTOR}`).getByRole('textbox', { name: 'Rename column' });
-    await expect(input).toBeVisible();
-    await expect(input).toBeFocused();
+    await expect(field(page)).toBeFocused();
+    await expect(field(page)).toHaveValue('Backlog');
+    expect(await field(page).evaluate((el: HTMLInputElement) => [el.selectionStart, el.selectionEnd])).toEqual([0, 7]);
+    await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column] input`)).toHaveCount(0);
   });
 
-  test('blurring the input commits the new title', async ({ page }) => {
-    await resetAndCreate(page, DATABASE_BLOCKS);
+  test('Enter in the popup renames the group, and the pill takes focus back', async ({ page }) => {
+    await titleOf(page, 'Backlog').click();
+    await field(page).fill('Enter Committed');
+    await field(page).press('Enter');
 
-    const titleDiv = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).filter({ hasText: 'Backlog' });
-    await titleDiv.click();
-
-    const input = page.locator(`${BLOK_INTERFACE_SELECTOR}`).getByRole('textbox', { name: 'Rename column' });
-    await expect(input).toBeVisible();
-
-    await input.fill('New Column Name');
-    await input.blur();
-
-    // Input should disappear after blur
-    await expect(input).not.toBeVisible();
-
-    // Title div should now show the new name
-    const updatedTitle = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).filter({ hasText: 'New Column Name' });
-    await expect(updatedTitle).toBeVisible();
-    await expect(updatedTitle).toHaveText('New Column Name');
+    await expect(field(page)).toHaveCount(0);
+    await expect(titleOf(page, 'Enter Committed')).toBeVisible();
+    await expect(pillOf(page, 'Enter Committed')).toBeFocused();
   });
 
-  test('pressing Enter commits the new title', async ({ page }) => {
-    await resetAndCreate(page, DATABASE_BLOCKS);
+  test('Done by mouse renames, and the pill takes focus back with no ring', async ({ page }) => {
+    await pillOf(page, 'Backlog').click();
+    await field(page).fill('Done Committed');
+    await page.getByTestId('popover-item-html').getByRole('button', { name: 'Done' }).click();
 
-    const titleDiv = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).filter({ hasText: 'Backlog' });
-    await titleDiv.click();
-
-    const input = page.locator(`${BLOK_INTERFACE_SELECTOR}`).getByRole('textbox', { name: 'Rename column' });
-    await expect(input).toBeVisible();
-
-    await input.fill('Enter Committed');
-    await input.press('Enter');
-
-    // Input should disappear after Enter
-    await expect(input).not.toBeVisible();
-
-    // Title div should show the committed name
-    const updatedTitle = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).filter({ hasText: 'Enter Committed' });
-    await expect(updatedTitle).toBeVisible();
-    await expect(updatedTitle).toHaveText('Enter Committed');
+    await expect(titleOf(page, 'Done Committed')).toBeVisible();
+    await expect(pillOf(page, 'Done Committed')).toBeFocused();
+    expect(await pillOf(page, 'Done Committed').evaluate((el) => el.matches(':focus-visible'))).toBe(false);
   });
 
-  test('pressing Escape cancels the edit and restores the original title', async ({ page }) => {
-    await resetAndCreate(page, DATABASE_BLOCKS);
+  test('Escape keeps the name, and the pill takes focus back with its ring, as in Notion', async ({ page }) => {
+    await titleOf(page, 'Backlog').click();
+    await field(page).fill('Cancelled Text');
+    await field(page).press('Escape');
 
-    const titleDiv = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).filter({ hasText: 'Backlog' });
-    const originalText = await titleDiv.textContent();
-
-    await titleDiv.click();
-
-    const input = page.locator(`${BLOK_INTERFACE_SELECTOR}`).getByRole('textbox', { name: 'Rename column' });
-    await expect(input).toBeVisible();
-
-    await input.fill('Cancelled Text');
-    await input.press('Escape');
-
-    // Input should disappear after Escape
-    await expect(input).not.toBeVisible();
-
-    // Title div should be restored with the original text
-    const restoredTitle = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).filter({ hasText: 'Backlog' });
-    await expect(restoredTitle).toBeVisible();
-    await expect(restoredTitle).toHaveText(originalText ?? '');
+    await expect(field(page)).toHaveCount(0);
+    await expect(titleOf(page, 'Backlog')).toHaveText('Backlog');
+    await expect(pillOf(page, 'Backlog')).toBeFocused();
+    expect(await pillOf(page, 'Backlog').evaluate((el) => el.matches(':focus-visible'))).toBe(true);
   });
 
-  test('clicking the pill title does NOT start a column drag', async ({ page }) => {
-    await resetAndCreate(page, DATABASE_BLOCKS);
+  test('a click on the pill does NOT start a column drag', async ({ page }) => {
+    await titleOf(page, 'Backlog').click();
 
-    const titleDiv = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).filter({ hasText: 'Backlog' });
-    await titleDiv.click();
-
-    // The drag ghost element should NOT appear after a simple click on the title
-    const dragGhost = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-ghost]`);
-    await expect(dragGhost).not.toBeVisible();
-
-    // The input should appear instead (confirming edit mode, not drag)
-    const input = page.locator(`${BLOK_INTERFACE_SELECTOR}`).getByRole('textbox', { name: 'Rename column' });
-    await expect(input).toBeVisible();
+    await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-ghost]`)).not.toBeVisible();
+    await expect(field(page)).toBeVisible();
   });
 });

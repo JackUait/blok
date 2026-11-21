@@ -11567,13 +11567,8 @@ export class DatabaseTool implements BlockTool {
       });
 
       this.columnControls = new DatabaseColumnControls({
-        i18n: this.api.i18n,
         onRename: (optionId, label) => this.handleOptionRename(optionId, label),
         openRename: (pill, label, done) => this.openGroupRename(pill, label, done),
-        onRenameInput: (optionId, label) => {
-          // Instant local save — update the model immediately so save() captures latest value
-          this.handleOptionRename(optionId, label);
-        },
         onRenameCommit: (optionId, label) => {
           // Debounced backend persist
           const viewConfig = this.shownView();

@@ -1837,18 +1837,9 @@
  * Column title text — never truncate.
  */
 [data-blok-database-column-title],
-[data-blok-database-no-value-label],
-[data-blok-database-column-title-input] {
+[data-blok-database-no-value-label] {
   white-space: nowrap;
   font: inherit;
-}
-
-[data-blok-database-column-title-input] {
-  border: none;
-  outline: none;
-  padding: 0;
-  min-width: 0;
-  field-sizing: content;
 }
 
 /**

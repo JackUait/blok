@@ -216,13 +216,13 @@ test('Done in the rename popup renames the group and gives focus back to the pil
   await expect(page.locator('[data-blok-database-group-name-field]')).toHaveCount(0);
 });
 
-test('a click on a pill shows no ring', async ({ page }) => {
+// notion-motion.md Round 99 §1 #1: a click anywhere on the pill, its edge too, opens the rename popup.
+test('a click on a pill opens the rename popup and shows no ring', async ({ page }) => {
   const pill = page.locator('[data-blok-database-column-pill]', { hasText: 'Not started' });
 
-  // The pill's edge, not its title: a click on the title renames.
   await pill.click({ position: { x: 3, y: 3 } });
 
-  await expect(pill).toBeFocused();
+  await expect(page.locator('[data-blok-database-group-name-field] input')).toBeFocused();
   expect(await pill.evaluate((el) => el.matches(':focus-visible'))).toBe(false);
   await expect(pill).toHaveCSS('outline-style', 'none');
 });

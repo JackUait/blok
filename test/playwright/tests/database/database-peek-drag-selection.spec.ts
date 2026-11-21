@@ -527,6 +527,10 @@ test.describe('selection bar', () => {
 
       expect(Math.abs(bar.y - firstRowTop)).toBeLessThanOrEqual(0.5);
       expect(Math.abs(bar.y - top.y)).toBeLessThanOrEqual(0.5);
+      // notion-motion.md Round 99 §1 #5: with no title row the bar starts 8px left of the tabs, 10px on a full page.
+      const tabGap = label === 'a full page' ? 10 : 8;
+
+      expect(hidden ? Math.abs(tab.x - bar.x - tabGap) : 0).toBeLessThanOrEqual(0.5);
     });
   }
   // notion-motion.md Round 97 §1 #4 (r97-n-selbar-oneview.raw): with one view the bar's top is the database's top,

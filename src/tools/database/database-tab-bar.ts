@@ -369,6 +369,9 @@ export class DatabaseTabBar {
     probe.remove();
     this.moreBtnEl = null;
 
+    // notion-motion.md Round 103 §1 #3: Notion folds a tab before it gives up the room of a » that shows on hover.
+    // This » takes no room (database.css), so the toolbar's width leaves it out.
+    const idleMinimize = toolbar?.querySelector(':scope > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"]:not([hidden])') != null ? TOOLBAR_ICON_SIZE : 0;
     const fold = planViewBarFold({
       width,
       gap,
@@ -376,7 +379,7 @@ export class DatabaseTabBar {
       current: tabs.findIndex((tab) => tab.getAttribute('data-view-id') === this.options.activeViewId),
       add,
       more,
-      toolbar: { full, noIcons },
+      toolbar: { full: full + idleMinimize, noIcons: noIcons + idleMinimize },
     });
 
     // notion-motion.md Round 99 §1 #8: an open search folds two or more tabs into the pill, room or not.
@@ -424,7 +427,12 @@ export class DatabaseTabBar {
     this.observedToolbar = toolbar;
     if (toolbar === null) return;
     this.searchObserver ??= new MutationObserver(() => this.refold());
-    this.searchObserver.observe(toolbar, { attributes: true, attributeFilter: ['data-blok-database-searching'] });
+    // Subtree: » showing or not, or taking its room or not, changes the room the tabs have.
+    this.searchObserver.observe(toolbar, {
+      attributes: true,
+      subtree: true,
+      attributeFilter: ['data-blok-database-searching', 'hidden', 'data-blok-database-toolbar-hover-only'],
+    });
   }
 
   /** A fold that hid the focused tab or pill hands the focus to what now stands for the current view. */

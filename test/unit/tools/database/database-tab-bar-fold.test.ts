@@ -127,6 +127,66 @@ describe('DatabaseTabBar — the view bar folds like Notion (notion-spec-2 §26.
     });
   });
 
+  // notion-motion.md Round 103 §1 #3 (r103-n-viewbar4-list-room.raw): with no rule Notion folds a tab at rest, so the
+  // hover-only » (which takes no room) still has its 28px when the pointer comes.
+  describe('room kept for the hover-only » with no rule', () => {
+    const addMinimize = ({ toolbar }: Mounted, hoverOnly: string, hidden = false): HTMLButtonElement => {
+      const minimize = document.createElement('button');
+
+      minimize.setAttribute('data-blok-database-toolbar-minimize', '');
+      minimize.setAttribute('data-blok-database-toolbar-hover-only', hoverOnly);
+      minimize.hidden = hidden;
+      toolbar.prepend(minimize);
+
+      return minimize;
+    };
+
+    // 334 for the tabs: three tabs and "+" fit only without »'s 28.
+    it('folds a tab so » fits beside the toolbar', () => {
+      const mounted = mount();
+
+      addMinimize(mounted, 'idle');
+      layOut(mounted, 581);
+      fire();
+
+      expect(shownTabs(mounted.el)).toEqual(['v1', 'v2']);
+      expect(mounted.el.querySelector('[data-blok-database-tab-more]')?.textContent).toBe('1 more…');
+    });
+
+    it('keeps every tab when » is hidden for good', () => {
+      const mounted = mount();
+
+      addMinimize(mounted, 'idle', true);
+      layOut(mounted, 581);
+      fire();
+
+      expect(shownTabs(mounted.el)).toEqual(['v1', 'v2', 'v3']);
+    });
+
+    // A chip bar's » keeps its room in the toolbar's own width (database.css), so it is not counted twice.
+    it('does not count a » that already takes its room', () => {
+      const mounted = mount();
+
+      addMinimize(mounted, 'bar');
+      layOut(mounted, 581);
+      fire();
+
+      expect(shownTabs(mounted.el)).toEqual(['v1', 'v2', 'v3']);
+    });
+
+    it('refolds when » comes back', async () => {
+      const mounted = mount();
+      const minimize = addMinimize(mounted, 'idle', true);
+
+      layOut(mounted, 581);
+      fire();
+      minimize.hidden = false;
+      await Promise.resolve();
+
+      expect(shownTabs(mounted.el)).toEqual(['v1', 'v2']);
+    });
+  });
+
   it('shows every tab, "+", the icons and New on a wide bar', () => {
     const mounted = mount();
 

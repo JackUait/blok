@@ -509,6 +509,16 @@ describe('conditional color card lines (notion-motion.md Round 20 §4)', () => {
   });
 });
 
+// notion-motion.md Round 95 §1 #7 (r95-n-condcolor-empty.raw): the text box is 258 wide at +16, as "New color setting".
+describe('conditional color intro text', () => {
+  it('drops the note padding and takes the button\'s side margins', () => {
+    const body = ruleBody(database, '[data-blok-database-panel-note][data-blok-database-color-blurb]');
+
+    expect(body).toContain('padding-inline: 0');
+    expect(body).toContain('margin-inline: var(--blok-space-3)');
+  });
+});
+
 describe('conditional color rule handle (notion-motion.md Round 20 §4)', () => {
   const HANDLE = '[data-blok-database-color-rules] [data-blok-database-panel-handle]';
 

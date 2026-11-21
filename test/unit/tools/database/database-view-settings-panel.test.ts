@@ -3057,6 +3057,7 @@ describe('view settings panel', () => {
       click('database-settings-color');
 
       expect(note()?.textContent).toBe('tools.database.colorBlurb');
+      expect(note()?.hasAttribute('data-blok-database-color-blurb')).toBe(true);
       expect(q('database-color-add')?.hasAttribute('data-blok-database-color-new')).toBe(true);
     });
 

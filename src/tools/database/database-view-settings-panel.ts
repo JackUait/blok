@@ -3488,7 +3488,7 @@ export class ViewSettingsPages {
 
         // notion-motion.md Round 20 §4: the intro text shows only while there is no rule.
         return [
-          ...(cards.length === 0 ? [panelText(this.t('colorBlurb'))] : []),
+          ...(cards.length === 0 ? [marked(panelText(this.t('colorBlurb')), 'data-blok-database-color-blurb')] : []),
           // notion-motion.md Round 20 §4: the list order is each cell's priority; a ⠿ handle reorders it.
           // A locked view cannot reorder: the cards stand in a plain list.
           ...(cards.length > 0 && disabled ? [plainColorRules(cards.map((card) => card.element))] : []),

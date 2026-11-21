@@ -18130,6 +18130,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-panel-value-text);
 }
 
+[data-blok-database-panel-note][data-blok-database-color-blurb] {
+  padding-inline: 0;
+  margin-inline: var(--blok-space-3);
+}
+
 [data-blok-database-panel-row]:is([data-blok-database-color-new], [data-blok-database-color-add-another]) {
   justify-content: center;
   width: calc(100% - 2 * var(--blok-space-3));

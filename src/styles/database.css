@@ -15548,6 +15548,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-panel-value-text);
 }
 
+/* Round 95 §1 #7 (r95-n-condcolor-empty.raw): the intro text is 258 wide at +16, in line with the button under it. */
+[data-blok-database-panel-note][data-blok-database-color-blurb] {
+  padding-inline: 0;
+  margin-inline: var(--blok-space-3);
+}
+
 /* r20-cc-intro.raw: a blue 258x28 "New color setting", 14px 500, radius 6; the blue is Blok's AA step of it. */
 [data-blok-database-panel-row]:is([data-blok-database-color-new], [data-blok-database-color-add-another]) {
   justify-content: center;

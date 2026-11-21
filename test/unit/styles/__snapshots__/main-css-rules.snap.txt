@@ -31465,6 +31465,15 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   pointer-events: none;
 }
 
+[data-blok-page-header][data-blok-page-full-database] {
+  --blok-page-title-size: 32px;
+}
+
+[data-blok-page-header][data-blok-page-full-database] [data-blok-page-title] {
+  padding-block: 0;
+  margin-block-end: var(--blok-space-2);
+}
+
 [@container (max-width: 480px)] [data-blok-page-title] {
   --blok-page-title-size: 32px;
 }

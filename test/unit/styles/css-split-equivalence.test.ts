@@ -1983,6 +1983,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R264_BYTES = 161;
     // Lane r265: Round 98 §1 #1 the column pill rename popup shares the "+ New group" field rules. Net database.css growth against origin/main.
     const DATABASE_R265_BYTES = 82;
+    // Lane r266: Round 98 §1 #5 the page title over a full-page database (page-title.css, +434), less §1 #3's
+    // several-view selection bar folded into the shared title-row rule (database.css, -206). Net growth against origin/main.
+    const DATABASE_R266_BYTES = 228;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2670,6 +2673,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R257_BYTES
       + DATABASE_R264_BYTES
       + DATABASE_R265_BYTES
+      + DATABASE_R266_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

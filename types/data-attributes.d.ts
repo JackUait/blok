@@ -177,6 +177,8 @@ export const DATA_ATTR: {
   readonly pageCoverRemove: 'data-blok-page-cover-remove';
   /** A button the page's first block puts in the row over the title; the value is its name */
   readonly pageHeaderAction: 'data-blok-page-header-action';
+  /** On the page header while the page's first block is a full-page database */
+  readonly pageFullDatabase: 'data-blok-page-full-database';
 
   // Drag and Drop
 

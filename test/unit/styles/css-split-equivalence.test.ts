@@ -1989,6 +1989,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r269: Round 99 §1 #6 the full-page description right under the title, tabs 16 under it (database.css),
     // and #9 the title text in line with the tabs (page-title.css). Net growth against origin/main.
     const DATABASE_R269_BYTES = 687;
+    // Lane r268: Round 99 §1 #5 the tab-row selection bar starts 8px (10px on a full page) left of the tabs,
+    // less §1 #1's dropped in-pill rename field rules. Net database.css growth against origin/main.
+    const DATABASE_R268_BYTES = 363;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2678,6 +2681,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R265_BYTES
       + DATABASE_R266_BYTES
       + DATABASE_R269_BYTES
+      + DATABASE_R268_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

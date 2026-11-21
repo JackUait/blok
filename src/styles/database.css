@@ -12421,12 +12421,19 @@ button[data-blok-database-table-group-count]:hover {
   visibility: hidden;
 }
 
-/* No inset-inline-start here: the base rule's centring offset lines the bar up with the tabs and the table.
-   The bar is here only with no title row; its top is the database's top, 4px above the tabs (notion-motion.md Round 94 §2). */
+/* The bar is here only with no title row; its top is the database's top, 4px above the tabs (notion-motion.md Round 94 §2).
+   It starts 8px left of the tabs, and 10px on a full-page database (Round 99 §1 #5).
+   The view bar is only the column wide, so the offset goes past its left edge: no max(0px) around the whole sum. */
 [data-blok-database-view-bar] > [data-blok-database-table-selection-bar],
 [data-blok-database-view-bar] > [data-blok-database-table-selection-bar-leaving] {
   inset-block: 0;
+  inset-inline-start: calc(max(0px, (100% - var(--blok-content-max-width, var(--max-width-content))) / 2) - 8px);
   margin-block: 0 auto;
+}
+
+[data-blok-database-page] > [data-blok-database-view-bar] > [data-blok-database-table-selection-bar],
+[data-blok-database-page] > [data-blok-database-view-bar] > [data-blok-database-table-selection-bar-leaving] {
+  inset-inline-start: calc(max(0px, (100% - var(--blok-content-max-width, var(--max-width-content))) / 2) - 10px);
 }
 
 /* notion-motion.md Round 14: the table bar fades in. The board and list bars are unmeasured. */

@@ -4024,7 +4024,7 @@ describe('DatabaseTool', () => {
 
       title?.click();
 
-      expect(queryByData(column ?? element, 'data-blok-database-column-title-input')).toBeNull();
+      expect(document.querySelector('[data-blok-database-group-name-field]')).toBeNull();
 
       tool.destroy();
     });

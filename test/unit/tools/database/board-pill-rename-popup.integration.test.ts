@@ -250,8 +250,11 @@ describe('board: rename popup by property type, and on a band pill', () => {
 
   it('Enter on a band pill opens a 300 popup under it, and Enter in it renames the sub-group', async () => {
     await mount({ groupBy: 'st', subGroupBy: 'sel' });
+    const before = ((await editor?.save())?.blocks ?? []).map((block) => block.id);
+
     await openBand();
 
+    expect(((await editor?.save())?.blocks ?? []).map((block) => block.id)).toEqual(before);
     expect(field()).toHaveFocus();
     expect(field()?.value).toBe('Red');
     expect(popupWidth()).toBe('300px');

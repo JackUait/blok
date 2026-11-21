@@ -4734,6 +4734,8 @@ span[data-blok-slash-search] {
   --blok-database-card-drag-source-bg: rgba(55, 53, 47, 0.06);
   --blok-database-popover-shadow: rgba(25, 25, 25, 0.05) 0 20px 24px, rgba(25, 25, 25, 0.027) 0 5px 8px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-popover-hover: var(--blok-database-hover-bg);
+  --blok-database-list-row-ring-gap: rgb(248, 248, 247);
+  --blok-database-list-row-ring-halo: rgba(255, 255, 255, 0.25);
   --blok-database-option-default-bg: rgba(42, 28, 0, 0.07);
   --blok-database-option-default-text: rgb(44, 44, 43);
   --blok-database-option-gray-bg: rgba(28, 19, 1, 0.11);
@@ -5336,6 +5338,8 @@ span[data-blok-slash-search] {
   --blok-database-form-answer-border: rgb(44, 44, 43);
   --blok-database-cell-empty-text: var(--blok-database-ink-tertiary);
   --blok-database-popover-hover: var(--blok-database-hover-bg);
+  --blok-database-list-row-ring-gap: var(--blok-bg-primary);
+  --blok-database-list-row-ring-halo: var(--blok-bg-primary);
 }
 
 :where([data-blok-theme="dark"] [data-blok-interface]), :where([data-blok-theme="dark"] [data-blok-popover]), :where([data-blok-theme="dark"] [data-blok-top-layer]:not([data-blok-interface] *)) {
@@ -5660,6 +5664,8 @@ span[data-blok-slash-search] {
   --blok-database-form-answer-border: rgb(44, 44, 43);
   --blok-database-cell-empty-text: var(--blok-database-ink-tertiary);
   --blok-database-popover-hover: var(--blok-database-hover-bg);
+  --blok-database-list-row-ring-gap: var(--blok-bg-primary);
+  --blok-database-list-row-ring-halo: var(--blok-bg-primary);
 }
 
 [data-blok-database-wrapper] {
@@ -8583,7 +8589,11 @@ button[data-blok-database-board-lane-count]:hover {
   height: 20px;
 }
 
-:where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row]:focus-visible, :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row-property][data-editable]:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row]:focus-visible {
+  box-shadow: 0 0 0 2px var(--blok-database-list-row-ring-gap), 0 0 0 4px var(--blok-focus-ring), 0 0 0 6px var(--blok-database-list-row-ring-halo);
+}
+
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row-property][data-editable]:focus-visible {
   box-shadow: inset 0 0 0 2px var(--blok-focus-ring);
 }
 

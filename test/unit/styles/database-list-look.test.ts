@@ -85,6 +85,19 @@ describe('list rows (research/07)', () => {
     expect(ruleBody(database, '[data-blok-database-list-row]:focus')).toBe('');
   });
 
+  // notion-motion.md Round 95 §1 #8: the row's ring sits outside it: a 2px gap, a 2px blue line, then a faint 2px halo.
+  it('rings a keyboard-focused row outside its edge, as Notion does', () => {
+    const row = ruleBody(database, ':where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row]:focus-visible');
+    const light = ruleBody(database, ':where([data-blok-interface])');
+
+    expect(row).toContain('box-shadow: 0 0 0 2px var(--blok-database-list-row-ring-gap), 0 0 0 4px var(--blok-focus-ring), 0 0 0 6px var(--blok-database-list-row-ring-halo)');
+    expect(light).toContain('--blok-database-list-row-ring-gap: rgb(248, 248, 247)');
+    expect(light).toContain('--blok-database-list-row-ring-halo: rgba(255, 255, 255, 0.25)');
+    expect(ruleBody(database, ':where([data-blok-theme="dark"] [data-blok-interface])')).toContain('--blok-database-list-row-ring-gap:');
+    expect(ruleBody(database, ':where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row-property][data-editable]:focus-visible'))
+      .toContain('inset 0 0 0 2px var(--blok-focus-ring)');
+  });
+
   // findings-listgallery L19: only the row fills on hover; a property has no fill of its own.
   it('gives a hovered property no fill of its own', () => {
     expect(ruleBody(database, '[data-blok-database-list-row-property][data-editable]:hover')).toBe('');

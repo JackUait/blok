@@ -128,7 +128,9 @@ describe('shared tool classes', () => {
         import('../../../src/tools/code/constants'),
       ]);
 
-      expect(codeTool.CARD_STYLES).toBe([...codeShared.CODE_CARD_CLASSES, 'rounded-ss-none'].join(' '));
+      // La carte dérive de la source partagée, sans ajout : plus aucun onglet
+      // ne se pose dessus, donc aucun coin n'est carré.
+      expect(codeTool.CARD_STYLES).toBe(codeShared.CODE_CARD_CLASSES.join(' '));
 
       const [calloutShared, calloutTool] = await Promise.all([
         import('../../../src/shared/tool-classes/callout'),

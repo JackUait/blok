@@ -498,11 +498,6 @@ describe('buildCodeDOM', () => {
       expect(WRAPPER_STYLES).not.toContain('bg-code-bg');
     });
 
-    it('squares the card corner under the tab', async () => {
-      const { CARD_STYLES } = await import('../../../../src/tools/code/constants');
-
-      expect(CARD_STYLES).toContain('rounded-ss-none');
-    });
   });
 
   describe('line numbers gutter', () => {

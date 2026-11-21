@@ -500,7 +500,7 @@ describe('DatabaseCardDrawer — link values', () => {
       clickOn(valueOf(options, propertyId));
 
       expect(editor()).toBeNull();
-      expect(document.querySelector('[data-blok-popover-opened], [role="dialog"]')).toBeNull();
+      expect(document.querySelector('[data-blok-popover-opened], [role="dialog"]:not([data-blok-database-drawer])')).toBeNull();
       expect(options.onPropertyValueChange).not.toHaveBeenCalled();
     });
 

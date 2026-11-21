@@ -255,6 +255,11 @@ export class DatabaseTableGrid {
     }
   }
 
+  /** Commit and close a floating cell editor before opening its row page. */
+  finishEditing(): void {
+    this.editor?.close();
+  }
+
   /**
    * Focuses a cell and keeps the selection; a redraw that already replaced this grid focuses it in the new one.
    * `holdEscape`: the next Escape leaves the selection as it is (notion-motion.md Round 67 §4, after the Move to picker).

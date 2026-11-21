@@ -274,7 +274,7 @@ describe('DatabaseViewControls', () => {
   it('turns Hide empty groups on when a column header groups by a number', () => {
     const { controls, host } = setup();
 
-    controls.groupBy('num', document.body.appendChild(document.createElement('button')));
+    controls.groupBy('num');
 
     expect(host.updateView).toHaveBeenCalledWith({ groupBy: 'num', groupSettings: { hideEmptyGroups: true } });
   });

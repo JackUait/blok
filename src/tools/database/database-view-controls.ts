@@ -702,12 +702,11 @@ export class DatabaseViewControls {
     }));
   }
 
-  /** Group from a column header: groups by that property, then shows the group settings. */
-  groupBy(propertyId: string, anchor: HTMLElement): void {
+  /** Group from a column header: only groups, no settings page (notion-motion.md Round 93 §1 #1). */
+  groupBy(propertyId: string): void {
     const property = this.host.schema().find((p) => p.id === propertyId);
 
     this.host.updateView(property === undefined ? { groupBy: propertyId } : groupByChange(this.host.savedView(), property));
-    this.openSettings(anchor, 'group');
   }
 
   /** A row menu's Layout or Property visibility: that page, under the settings button while it is on screen. */

@@ -380,7 +380,8 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
       item('database-header-filter', 'tools.database.tableFilter', ctx.onFilter, IconFilter),
       // notion-live-7/80-menu-text.png: Sort shows a "›"; it opens the two sort choices.
       { ...item('database-header-sort', 'tools.database.tableSort', ctx.onSort, IconSort), chevron: true },
-      ...(groupable ? [item('database-header-group', 'tools.database.tableGroup', ctx.onGroup, IconGroup)] : []),
+      // notion-motion.md Round 93 §1 #1: Group opens nothing, so the row closes the menu itself.
+      ...(groupable ? [{ ...item('database-header-group', 'tools.database.tableGroup', ctx.onGroup, IconGroup), closeOnActivate: true }] : []),
       calculate,
     ]
     : [];

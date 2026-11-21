@@ -8930,7 +8930,7 @@ export class DatabaseTool implements BlockTool {
     } else if (action === 'sort') {
       controls.sortBy(propertyId, anchor);
     } else if (!(context?.owner ?? this).structureLocked()) {
-      controls.groupBy(propertyId, anchor);
+      controls.groupBy(propertyId);
     }
   }
 

@@ -253,6 +253,17 @@ describe('DatabaseTool — view settings', () => {
     expect(dispatchChange).toHaveBeenCalled();
   });
 
+  // notion-motion.md Round 93 §1 #1 (r93-n-hdr-group-mo.raw): Group only groups; no View settings opens.
+  it('groups from a column header without opening View settings', () => {
+    const { tool, root } = mount();
+
+    headerAction(root, 'p-stage', 'tools.database.tableGroup');
+
+    expect(q('database-view-settings')).toBeNull();
+    expect(document.querySelector('[data-blok-popover-custom-class~="blok-database-header-menu"][data-blok-popover-opened="true"]')).toBeNull();
+    expect(tool.save(root).views[0].groupBy).toBe('p-stage');
+  });
+
   it('searches titles and property text', () => {
     const { root } = mount();
 

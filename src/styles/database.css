@@ -16751,7 +16751,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   block-size: 20px;
 }
 
-[data-blok-database-calendar-day]:hover [data-blok-database-calendar-add] {
+[data-blok-database-calendar-day]:hover [data-blok-database-calendar-add],
+[data-blok-database-calendar-day]:focus-visible [data-blok-database-calendar-add],
+[data-blok-database-calendar-add]:focus-visible {
   opacity: 1;
 }
 

@@ -678,13 +678,75 @@ describe('DatabaseCalendarView', () => {
   });
 
   describe('keyboard', () => {
-    // notion-motion.md Round 96 §1 #2 (r96-n-cal-event-tab.raw): Tab from Next Month lands on the first event, no day cell before it.
-    it('makes each event a Tab stop and no day cell', () => {
+    const addOf = (cell: HTMLElement): HTMLElement | null => cell.querySelector<HTMLElement>('[data-blok-database-calendar-add]');
+    const tab = (target: Element, shiftKey = false): KeyboardEvent => {
+      const press = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true });
+
+      target.dispatchEvent(press);
+
+      return press;
+    };
+    const stopDays = (root: HTMLElement): string[] => days(root).filter((el) => el.tabIndex === 0).map((el) => el.getAttribute('data-day') ?? '');
+
+    // notion-motion.md Round 96 §1 #2 (r96-n-cal-event-tab.raw): Tab from Next Month lands on the first event.
+    // Notion has no key path into the days; Blok keeps one day as a Tab stop after the events, so a keyboard can reach them.
+    it('makes each event a Tab stop, and today\'s cell and its "+" too', () => {
       const { root } = mount();
 
       expect(events(root).filter((el) => el.tabIndex === 0).map((el) => el.getAttribute('data-row-id'))).toEqual(['r1', 'r2']);
-      expect(days(root).filter((el) => el.tabIndex === 0)).toEqual([]);
+      expect(stopDays(root)).toEqual(['2026-10-09']);
+      expect(addOf(day(root, '2026-10-09'))?.tabIndex).toBe(0);
+      expect(root.querySelectorAll('[data-blok-database-calendar-add]:not([tabindex="-1"])')).toHaveLength(1);
       expect(root.querySelector('[data-blok-database-calendar-grid]')?.hasAttribute('data-blok-keyboard-owner')).toBe(true);
+    });
+
+    it('a month with no events still has a Tab stop: today', () => {
+      const { root } = mount({ rows: [] });
+
+      expect(events(root)).toEqual([]);
+      expect(stopDays(root)).toEqual(['2026-10-09']);
+    });
+
+    it('without today on screen, the stop is the month\'s first day', () => {
+      const { root } = mount({ anchor: '2026-11-05' });
+
+      expect(stopDays(root)).toEqual(['2026-11-01']);
+    });
+
+    it('the stop follows a day the redraw was asked to focus', () => {
+      const { root } = mount({ focusDay: '2026-10-21' });
+
+      expect(stopDays(root)).toEqual(['2026-10-21']);
+    });
+
+    it('Tab walks the events first, then the day stop and its "+"; Shift+Tab walks back', () => {
+      const { root } = mount();
+      const [r1] = events(root, 'r1');
+      const [r2] = events(root, 'r2');
+      const today = day(root, '2026-10-09');
+
+      r1.focus();
+      expect(tab(r1).defaultPrevented).toBe(true);
+      expect(r2).toHaveFocus();
+      tab(r2);
+      expect(today).toHaveFocus();
+      tab(today);
+      expect(addOf(today)).toHaveFocus();
+      tab(addOf(today) ?? root, true);
+      expect(today).toHaveFocus();
+      tab(today, true);
+      expect(r2).toHaveFocus();
+    });
+
+    it('a "+" reached by the keyboard adds a page on its day', () => {
+      const { root, handlers } = mount();
+      const today = day(root, '2026-10-09');
+
+      today.focus();
+      tab(today);
+      (document.activeElement as HTMLElement | null)?.click();
+
+      expect(handlers.addRow).toHaveBeenCalledExactlyOnceWith('2026-10-09', true);
     });
 
     it('gives an event that spans weeks one Tab stop, on its first part', () => {
@@ -752,7 +814,17 @@ describe('DatabaseCalendarView', () => {
       key(document.activeElement ?? root, 'ArrowLeft');
       key(document.activeElement ?? root, 'ArrowUp');
       expect(document.activeElement?.getAttribute('data-day')).toBe('2026-10-09');
-      expect(days(root).filter((el) => el.tabIndex === 0)).toEqual([]);
+    });
+
+    it('moves the day stop and its "+" with the arrow keys', () => {
+      const { root } = mount();
+
+      day(root, '2026-10-09').focus();
+      key(document.activeElement ?? root, 'ArrowRight');
+
+      expect(stopDays(root)).toEqual(['2026-10-10']);
+      expect(addOf(day(root, '2026-10-10'))?.tabIndex).toBe(0);
+      expect(addOf(day(root, '2026-10-09'))?.tabIndex).toBe(-1);
     });
 
     it('flips Left and Right in a right-to-left editor', () => {

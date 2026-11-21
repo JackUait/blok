@@ -292,6 +292,12 @@ describe('database gallery and calendar styles', () => {
     expect(inner).toMatch(/border-radius:\s*var\(--blok-radius-control\)/);
   });
 
+  // The keyboard reaches the "+" through the day's Tab stop, so it shows with the day's or its own keyboard focus.
+  it('shows the day "+" while the day or the "+" has keyboard focus', () => {
+    expect(ruleBody('[data-blok-database-calendar-day]:focus-visible [data-blok-database-calendar-add]')).toMatch(/opacity:\s*1/);
+    expect(ruleBody('[data-blok-database-calendar-add]:focus-visible')).toMatch(/opacity:\s*1/);
+  });
+
   it('tints only the day "+"\'s inner 20px button on hover, keeping the white chip', () => {
     const hover = ruleBody('[data-blok-database-calendar-add]:hover::before');
 

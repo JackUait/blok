@@ -876,10 +876,12 @@ test.describe('calendar', () => {
     await expect(drawer(page)).toBeVisible();
   });
 
-  // notion-motion.md Round 96 §1 #2 (r96-n-cal-event-tab.raw): Tab from Next Month lands on the first event, no day cell first.
-  test('Tab from Next month visits each event, then leaves the grid; Space opens the focused event', async ({ page }) => {
+  // notion-motion.md Round 96 §1 #2 (r96-n-cal-event-tab.raw): Tab from Next Month lands on the first event, though today's cell comes first in the DOM.
+  // Notion's Tab then leaves; Blok stops on today and its "+" first, so a keyboard can reach the days.
+  test('Tab from Next month visits each event, then today and its "+", then leaves the grid; Space opens the focused event', async ({ page }) => {
     await mount(page, blocks({ type: 'calendar' }));
     const grid = page.locator('[data-blok-database-calendar-grid]');
+    const add = day(page, '2026-10-09').locator('[data-blok-database-calendar-add]');
 
     await page.locator('[data-blok-database-calendar-next]').focus();
     await page.keyboard.press('Tab');
@@ -887,12 +889,37 @@ test.describe('calendar', () => {
     await page.keyboard.press('Tab');
     await expect(event(page, 'r2')).toBeFocused();
     await page.keyboard.press('Tab');
+    await expect(day(page, '2026-10-09')).toBeFocused();
+    await expect(add).toHaveCSS('opacity', '1');
+    await page.keyboard.press('Tab');
+    await expect(add).toBeFocused();
+    await page.keyboard.press('Tab');
     expect(await grid.evaluate((el) => el.contains(document.activeElement))).toBe(false);
 
+    await page.keyboard.press('Shift+Tab');
+    await expect(add).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(day(page, '2026-10-09')).toBeFocused();
     await page.keyboard.press('Shift+Tab');
     await expect(event(page, 'r2')).toBeFocused();
     await page.keyboard.press('Space');
     await expect(drawer(page)).toBeVisible();
+  });
+
+  test('a month with no events: Tab reaches today, arrows walk the days, and the "+" adds a page there', async ({ page }) => {
+    await mount(page, blocks({ type: 'calendar' }, [{ id: 'r3', properties: { 'p-title': 'Someday' } }]));
+
+    await page.locator('[data-blok-database-calendar-next]').focus();
+    await page.keyboard.press('Tab');
+    await expect(day(page, '2026-10-09')).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(day(page, '2026-10-10')).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(day(page, '2026-10-10').locator('[data-blok-database-calendar-add]')).toBeFocused();
+    await page.keyboard.press('Enter');
+
+    await expect(drawer(page)).toBeVisible();
+    await expect.poll(async () => (await savedRows(page)).filter((row) => row.properties['p-due'] === '2026-10-10')).toHaveLength(1);
   });
 
   test('next, previous and Today navigate, and the range survives a reload for this person', async ({ page }) => {

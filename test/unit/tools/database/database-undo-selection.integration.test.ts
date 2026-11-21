@@ -766,3 +766,86 @@ describe('row selection after undo in a linked view', () => {
     expect(linkedPicked()).toEqual(['r2']);
   });
 });
+
+// notion-motion.md Round 93 §1 #3 (r93-n-v2-undo.raw): reorder in Table 2, visit Table, come back, one undo.
+describe('undo after visiting another view', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+  });
+
+  afterEach(() => {
+    editor?.destroy();
+    editor = undefined;
+    holder?.remove();
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  const makeTwoViews = async (): Promise<TestEditor> => {
+    const blocks = doc();
+    const data = blocks[0].data as { views: Array<Record<string, unknown>>; activeViewId: string };
+
+    data.views.push({ ...data.views[0], id: 'v2', name: 'Table 2', position: 'a1' });
+    data.activeViewId = 'v2';
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
+      data: { blocks },
+    } as never) as unknown as TestEditor;
+    await editor.isReady;
+    await quiet();
+
+    return editor;
+  };
+
+  // The press matters: a pointerdown is what opens a new undo step.
+  const clickTab = async (viewId: string): Promise<void> => {
+    const tab = document.querySelector<HTMLElement>(`[role="tab"][data-view-id="${viewId}"]`);
+
+    if (tab === null) throw new Error(`no tab ${viewId}`);
+    tab.dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true }));
+    tab.dispatchEvent(new PointerEvent('pointerup', { button: 0, bubbles: true }));
+    tab.click();
+    await quiet();
+  };
+
+  const activeTab = (): string | null => document.querySelector('[role="tab"][aria-selected="true"]')?.getAttribute('data-view-id') ?? null;
+
+  const dragToTop = async (id: string): Promise<void> => {
+    const rows = [...document.querySelectorAll<HTMLElement>('[data-blok-database-table-row]')];
+
+    rows.forEach((el, index) => {
+      vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, index * 38, 800, 38));
+    });
+    const handle = row(id)?.querySelector<HTMLElement>('[data-blok-database-table-row-handle]');
+
+    if (handle === null || handle === undefined) throw new Error('no row drag handle');
+    handle.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: 10, clientY: rows.indexOf(row(id) as HTMLElement) * 38 + 19, bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 10, clientY: 5, bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    await quiet();
+  };
+
+  it('undoes the reorder with one undo, stays on the view, and selects the moved row', async () => {
+    const blok = await makeTwoViews();
+
+    await dragToTop('r3');
+    expect(order()).toEqual(['r3', 'r1', 'r2']);
+
+    await clickTab('v');
+    await clickTab('v2');
+    expect(activeTab()).toBe('v2');
+    expect(order()).toEqual(['r3', 'r1', 'r2']);
+
+    blok.history.undo();
+    await quiet();
+
+    expect(order()).toEqual(['r1', 'r2', 'r3']);
+    expect(activeTab()).toBe('v2');
+    expect(selectedRows()).toEqual(['r3']);
+  });
+});

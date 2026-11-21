@@ -5155,6 +5155,17 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
+   * The user picks a view. Saved and synced, but not an undo step (Notion).
+   * Only for a bare switch: one that follows an edit would carry that edit out of the history.
+   */
+  private showView(viewId: string): void {
+    if (viewId === this.activeViewId) return;
+    this.switchView(viewId);
+    // Before the view's DOM mutations reach the block, or that tracked save writes it first.
+    this.block.dispatchChange({ derived: true });
+  }
+
+  /**
    * The rebuilt bar starts with the old tab still painted active and the new one
    * blank, then drops both marks so the 100ms background transition in
    * database.css plays (research/08). The body already swapped in one frame.
@@ -5784,7 +5795,7 @@ export class DatabaseTool implements BlockTool {
     return new DatabaseTabBar({
       views: localizeDatabaseViews(this.model.getTabViews(), this.api.i18n),
       activeViewId: this.activeViewId,
-      onTabClick: (viewId) => this.switchView(viewId),
+      onTabClick: (viewId) => this.showView(viewId),
       onAddView: (type) => this.addViewWithSettings(type),
       onRename: (viewId, name) => this.renameView(viewId, name),
       onDuplicate: (viewId) => this.duplicateViewWithSettings(viewId),
@@ -7808,7 +7819,7 @@ export class DatabaseTool implements BlockTool {
 
   /** "Edit view" or "Rename" on a tab: show that view, then its settings. */
   private editView(viewId: string, anchor: HTMLElement, start: 'root' | 'rename' | 'source' = 'root'): void {
-    this.switchView(viewId);
+    this.showView(viewId);
     const tab = this.element?.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${CSS.escape(viewId)}"]`);
 
     this.controls.openSettings(tab?.isConnected === true ? tab : anchor, start);

@@ -15373,12 +15373,12 @@ button[data-blok-database-table-group-count]:hover {
 
 [data-blok-database-view-bar] > [data-blok-database-table-selection-bar], [data-blok-database-view-bar] > [data-blok-database-table-selection-bar-leaving] {
   inset-block: 0;
-  inset-inline-start: calc(max(0px, (100% - var(--blok-content-max-width, var(--max-width-content))) / 2) - 8px);
+  inset-inline-start: calc(max(0px, (100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)) - 8px);
   margin-block: 0 auto;
 }
 
 [data-blok-database-page] > [data-blok-database-view-bar] > [data-blok-database-table-selection-bar], [data-blok-database-page] > [data-blok-database-view-bar] > [data-blok-database-table-selection-bar-leaving] {
-  inset-inline-start: calc(max(0px, (100% - var(--blok-content-max-width, var(--max-width-content))) / 2) - 10px);
+  inset-inline-start: calc(max(0px, (100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)) - 10px);
 }
 
 [data-blok-database-selecting="table"] > [data-blok-database-table-selection-bar], [data-blok-database-table] > [data-blok-database-table-selection-bar] {

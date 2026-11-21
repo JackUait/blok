@@ -375,12 +375,12 @@ describe('the selection bar on the tab row starts left of the tabs, as in Notion
   it('starts 8px before the tabs when the titles are hidden', () => {
     const body = rule('[data-blok-database-view-bar] > [data-blok-database-table-selection-bar], [data-blok-database-view-bar] > [data-blok-database-table-selection-bar-leaving]');
 
-    expect(body).toMatch(/inset-inline-start: calc\(max\(0px, \(100% - var\(--blok-content-max-width, var\(--max-width-content\)\)\) \/ 2\) - 8px\)/);
+    expect(body).toMatch(/inset-inline-start: calc\(max\(0px, \(100% - var\(--blok-content-max-width, var\(--max-width-content\)\)\) \* var\(--_blok-database-lead, 0\.5\)\) - 8px\)/);
   });
 
   it('starts 10px before the tabs on a full-page database', () => {
     const body = rule('[data-blok-database-page] > [data-blok-database-view-bar] > [data-blok-database-table-selection-bar], [data-blok-database-page] > [data-blok-database-view-bar] > [data-blok-database-table-selection-bar-leaving]');
 
-    expect(body).toMatch(/inset-inline-start: calc\(max\(0px, \(100% - var\(--blok-content-max-width, var\(--max-width-content\)\)\) \/ 2\) - 10px\)/);
+    expect(body).toMatch(/inset-inline-start: calc\(max\(0px, \(100% - var\(--blok-content-max-width, var\(--max-width-content\)\)\) \* var\(--_blok-database-lead, 0\.5\)\) - 10px\)/);
   });
 });

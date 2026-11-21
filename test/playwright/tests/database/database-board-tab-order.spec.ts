@@ -163,3 +163,36 @@ test('a pill reached by Tab rings like the count beside it', async ({ page }) =>
   await page.keyboard.press('Tab');
   expect(pillRing).toBe(await ring());
 });
+
+for (const key of ['Enter', 'Space']) {
+  test(`${key} on a pill renames the group, and Escape gives focus back to the pill`, async ({ page }) => {
+    const pill = page.locator('[data-blok-database-column-pill]', { hasText: 'Not started' });
+    const before = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks.map((b) => b.id));
+    const scrollY = await page.evaluate(() => window.scrollY);
+
+    await pill.focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press(key);
+
+    await expect(page.locator('[data-blok-database-column-title-input]')).toBeFocused();
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
+
+    await page.keyboard.press('Escape');
+
+    await expect(page.locator('[data-blok-database-column-title-input]')).toHaveCount(0);
+    await expect(pill).toBeFocused();
+    expect(await page.evaluate(async () => (await window.blokInstance?.save())?.blocks.map((b) => b.id))).toEqual(before);
+  });
+}
+
+test('a click on a pill shows no ring', async ({ page }) => {
+  const pill = page.locator('[data-blok-database-column-pill]', { hasText: 'Not started' });
+
+  // The pill's edge, not its title: a click on the title renames.
+  await pill.click({ position: { x: 3, y: 3 } });
+
+  await expect(pill).toBeFocused();
+  expect(await pill.evaluate((el) => el.matches(':focus-visible'))).toBe(false);
+  await expect(pill).toHaveCSS('outline-style', 'none');
+});

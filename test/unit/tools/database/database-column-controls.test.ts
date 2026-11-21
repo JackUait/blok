@@ -73,8 +73,25 @@ describe('DatabaseColumnControls', () => {
         expect(headerEl.querySelector('[data-blok-database-column-title-input]')).not.toBeNull();
         simulateKeydown(headerEl.querySelector('[data-blok-database-column-title-input]') as HTMLElement, 'Escape');
         expect(headerEl.querySelector('[data-blok-database-column-title-input]')).toBeNull();
+        expect(pill).toHaveFocus();
       }
       headerEl.remove();
+    });
+
+    it('leaves focus where a Tab took it when the rename ends on blur', () => {
+      const headerEl = makePillHeaderEl('BACKLOG');
+      const pill = headerEl.querySelector<HTMLElement>('[data-blok-database-column-pill]');
+      const next = document.createElement('button');
+
+      document.body.append(headerEl, next);
+      controls.makePillTitleEditable(headerEl, 'opt-1');
+      pill?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      next.focus();
+
+      expect(headerEl.querySelector('[data-blok-database-column-title-input]')).toBeNull();
+      expect(next).toHaveFocus();
+      headerEl.remove();
+      next.remove();
     });
 
     it('input is pre-filled with the current title', () => {

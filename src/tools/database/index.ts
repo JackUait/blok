@@ -12224,7 +12224,8 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * notion-motion.md Round 94 §1 #3, Round 95 §1 #5: a Board, List, Calendar or Gallery drop focuses the dropped item, with no range.
+   * notion-motion.md Round 94 §1 #3, Round 95 §1 #4–5: a List, Calendar or Gallery drop, or a Board drop in the card's own column,
+   * focuses the dropped item, with no range.
    * A table drop leaves focus on body (Round 93), and so does a Timeline drop (Round 95 §2).
    * `day`: a calendar event split across weeks takes focus on the part in that day's week.
    */

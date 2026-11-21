@@ -17,6 +17,8 @@ export interface CellPopoverOptions {
    * `'page'`: a full-page database's side panel, from under `dockRow` to the window bottom (research/35 §2.3).
    */
   docked?: boolean | 'page';
+  /** With `docked: true`: opens this far under the anchor instead of level with its top. */
+  dockGap?: number;
   /** With `docked: 'page'`: the toolbar row the panel starts under. */
   dockRow?: HTMLElement;
   /** A menu-like panel (DatabasePanel), not a cell editor: Notion's menu corner (database.css). */
@@ -222,7 +224,11 @@ export class CellPopover {
     const coverOrFit = cover === true || cover === 'value' ? coverPlacement(anchor, cover === 'value', cover === true && this.options.below === true) : fit;
     const docks = {
       page: () => dockPlacement(anchor, (this.options.dockRow ?? anchor).getBoundingClientRect().bottom, 0),
-      card: () => dockPlacement(anchor, anchor.getBoundingClientRect().top, DOCK_VIEWPORT_MARGIN),
+      card: () => {
+        const rect = anchor.getBoundingClientRect();
+
+        return dockPlacement(anchor, this.options.dockGap === undefined ? rect.top : rect.bottom + this.options.dockGap, DOCK_VIEWPORT_MARGIN);
+      },
     };
     const dock = docked === 'page' ? docks.page : docks.card;
     const placement = docked === undefined || docked === false ? coverOrFit : dock();

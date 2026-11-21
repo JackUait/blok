@@ -30,6 +30,7 @@ const exists = (id: string): boolean => document.querySelector(`[data-blok-testi
 const q = (id: string): HTMLElement | null => document.querySelector<HTMLElement>(`[data-blok-testid="${id}"]`);
 
 interface Harness {
+  anchor: HTMLElement;
   ctx: ViewSettingsContext;
   state: { view: DatabaseViewConfig; locked: boolean };
   open: (start?: ViewSettingsStart) => DatabasePanel;
@@ -68,6 +69,7 @@ const harness = (view: Partial<DatabaseViewConfig> = {}): Harness => {
   document.body.appendChild(anchor);
 
   return {
+    anchor,
     ctx,
     state,
     open: (start = 'root') => {
@@ -103,6 +105,18 @@ describe('view settings panel', () => {
       expect(docked()).toBe(true);
       panel.close();
     }
+  });
+
+  // notion-motion.md Round 92 §1 #5: Notion opens its sub-pages 3px under the Settings button (bottom 299.2, page at 302.2), not over it.
+  it('opens 3px under the button that opened it', () => {
+    const h = harness();
+
+    vi.spyOn(h.anchor, 'getBoundingClientRect').mockReturnValue(new DOMRect(1128, 271, 28, 28));
+    const panel = h.open('group');
+    const popover = document.querySelector('[data-blok-testid="database-view-settings"]')?.closest<HTMLElement>('[data-blok-popover-custom-class]');
+
+    expect(popover?.style.top).toBe('302px');
+    panel.close();
   });
 
   // findings V11: every root row carries a glyph; Layout's follows the view's layout.

@@ -3727,6 +3727,8 @@ export const openViewSettings = (
     width: 290,
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
     docked: true,
+    // notion-motion.md Round 92 §1 #5: a short page sits 3px under the Settings button; a tall one still clamps to the window.
+    dockGap: 3,
     closeLabel: ctx.i18n.t('tools.database.close'),
     ...(onClose !== undefined ? { onClose } : {}),
   });

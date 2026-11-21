@@ -35,6 +35,8 @@ export interface DatabasePanelOptions {
   backLabel: string;
   /** Docks at the window's end edge (view settings, research/26 §1a). */
   docked?: boolean;
+  /** With `docked` as a floating card: opens this far under the anchor instead of level with its top. */
+  dockGap?: number;
   /** With `docked`: every sub-page header ends in a × with this name (findings V25). */
   closeLabel?: string;
   /** Space under the anchor; the popover's usual gap when unset. */
@@ -142,6 +144,7 @@ export class DatabasePanel {
       content: this.element,
       panel: true,
       ...(dock ?? {}),
+      ...(options.dockGap !== undefined ? { dockGap: options.dockGap } : {}),
       ...(options.gap !== undefined ? { gap: options.gap } : {}),
       ...(options.beside !== undefined ? { beside: options.beside } : {}),
       ...(options.besideOf !== undefined ? { besideOf: options.besideOf } : {}),

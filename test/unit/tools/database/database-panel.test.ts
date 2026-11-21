@@ -149,6 +149,16 @@ describe('DatabasePanel', () => {
       panel.close();
     });
 
+    it('with a dock gap, opens that far under the anchor', () => {
+      vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(new DOMRect(40, 300, 28, 28));
+      const panel = new DatabasePanel({ anchor, root: { build: () => [] }, testId: 'panel', width: 290, backLabel: 'Back', docked: true, dockGap: 3 });
+
+      panel.open();
+
+      expect(popoverOf()?.style.top).toBe('331px');
+      panel.close();
+    });
+
     // research/35 §2.3, research/27 18.png: on a full-page database it runs from under the toolbar row to the window's bottom, flush with its end edge.
     it('on a full-page database sits flush with the window\'s end edge, under the toolbar row', () => {
       const wrapper = document.createElement('div');

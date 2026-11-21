@@ -811,6 +811,45 @@ describe('row selection after undo in a linked view', () => {
     expect(linkedPicked()).toEqual([]);
   });
 
+  it('one undo hides the titles again after "Show data source titles" cleared every view', async () => {
+    const blocks = linkedDoc();
+    const linkedData = blocks[blocks.length - 1].data as { views: Array<Record<string, unknown>> };
+
+    linkedData.views = [
+      { ...linkedData.views[0], showDataSourceTitle: false },
+      { ...linkedData.views[0], id: 'lv2', name: 'Table 2', position: 'a1', showDataSourceTitle: false },
+    ];
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
+      data: { blocks },
+    } as never) as unknown as TestEditor;
+    await editor.isReady;
+    await quiet();
+    const linkedTitle = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-id="lk"] [data-blok-database-title]');
+    const hiddenViews = async (): Promise<string[]> => {
+      const saved = await editor?.blocks.getById('lk')?.save();
+      const views = (saved?.data as { views: Array<{ id: string; showDataSourceTitle?: boolean }> }).views;
+
+      return views.filter((view) => view.showDataSourceTitle === false).map((view) => view.id);
+    };
+
+    expect(linkedTitle()?.hidden).toBe(true);
+    document.querySelector<HTMLElement>('[data-blok-id="lk"] [data-blok-database-tab][data-view-id="lv"]')?.click();
+    await quiet();
+    document.querySelector<HTMLElement>('[data-blok-popover-opened="true"] [data-blok-item-name="database-view-data-source-titles"]')?.click();
+    await quiet();
+    expect(linkedTitle()?.hidden).toBe(false);
+    expect(await hiddenViews()).toEqual([]);
+
+    editor.history.undo();
+    await quiet();
+
+    expect(await hiddenViews()).toEqual(['lv', 'lv2']);
+    expect(linkedTitle()?.hidden).toBe(true);
+  });
+
   it('still selects a row whose own delete is undone', async () => {
     const blok = await makeLinked();
 

@@ -343,7 +343,8 @@ export class DatabaseViewControls {
     this.sortButton.addEventListener('click', () => this.openSort());
     this.automationsButton.addEventListener('click', () => this.openSettings(this.automationsButton, 'automations'));
     this.autofillButton.addEventListener('click', () => this.openSettings(this.autofillButton, 'autofill'));
-    this.settingsButton.addEventListener('click', () => this.openSettings(this.settingsButton, 'root'));
+    // notion-motion.md Round 95 §1 #6: the Settings button lands on Close, as tab menu › Edit view does.
+    this.settingsButton.addEventListener('click', () => this.openSettings(this.settingsButton, 'edit'));
     this.searchButton.addEventListener('click', () => this.showSearch());
     this.searchClear = button('database-search-clear', this.t('searchClear'), { icon: IconCross });
     this.searchClear.setAttribute('data-blok-database-search-clear', '');

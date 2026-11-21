@@ -3766,7 +3766,7 @@ export const openViewSettings = (
     name?.focus();
     name?.select();
   }
-  // notion-motion.md Round 94 §1 #4: tab menu › Edit view lands on Close on every layout.
+  // notion-motion.md Round 94 §1 #4, Round 95 §1 #6: tab menu › Edit view and the Settings button land on Close on every layout.
   if (start === 'edit') panel.root.querySelector<HTMLElement>('[data-blok-testid="database-panel-close"]')?.focus();
 
   return panel;

@@ -118,6 +118,15 @@ describe('DatabaseTool — view settings', () => {
     expect(root.querySelector('[data-blok-database-tab][data-view-id="v1"] [data-blok-database-tab-name]')?.textContent).toBe('Roadmap');
   });
 
+  // notion-motion.md Round 95 §1 #6 (r95-n-board-settingsbtn-focus.raw): the Settings button opens View settings on Close, like Edit view.
+  it('the Settings button opens view settings with Close focused', () => {
+    mount();
+
+    click('database-toolbar-settings');
+
+    expect(q('database-panel-close')).toHaveFocus();
+  });
+
   // findings V08: the tab menu's Rename opens View settings with the name field focused.
   it('the tab menu\'s Rename opens view settings with the name field focused', () => {
     const { root } = mount({}, {}, { views: [tableView(), tableView({ id: 'v2', name: 'Two', position: 'a1' })] });

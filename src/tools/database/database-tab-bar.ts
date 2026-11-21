@@ -965,7 +965,7 @@ export class DatabaseTabBar {
       onClose: (escape) => {
         this.closeViewPopover();
         // The list's search field held the focus; Escape hands it back to the button that opened it.
-        if (escape && anchor.isConnected) anchor.focus({ preventScroll: true });
+        if (escape && anchor.isConnected) (this.searchFieldBehind(anchor) ?? anchor).focus({ preventScroll: true });
       },
       yieldsKeys: () => this.viewPopover !== null,
       // notion-motion.md Round 38 §6: the first outside click closes only the Add view card.
@@ -977,6 +977,15 @@ export class DatabaseTabBar {
 
     this.overflowList = list;
     list.open();
+  }
+
+  /** notion-motion.md Round 100 §1 #6: a pill folded by the toolbar search hands Escape back to that search. */
+  private searchFieldBehind(anchor: HTMLElement): HTMLElement | null {
+    const toolbar = this.observedToolbar;
+
+    if (anchor !== this.compactBtnEl || toolbar?.hasAttribute('data-blok-database-searching') !== true) return null;
+
+    return toolbar.querySelector<HTMLElement>('[data-blok-database-search-input]:not([data-closing])');
   }
 
   /** Moves a view between two neighbours, the same way for a tab and an overflow row. */

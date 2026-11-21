@@ -294,6 +294,25 @@ describe('DatabaseTabBar — the view bar folds like Notion (notion-spec-2 §26.
       mounted.tabBar.destroy();
     });
 
+    // notion-motion.md Round 100 §1 #6 (r100-n-fold-pill-menu.raw): Escape in the pill's list goes back to the search field.
+    it('hands the focus back to the search field on Escape in the pill\'s list', () => {
+      const mounted = mount(twoViews(), 'v2');
+      const search = document.createElement('input');
+
+      search.setAttribute('data-blok-database-search-input', '');
+      mounted.toolbar.append(search);
+      mounted.toolbar.setAttribute('data-blok-database-searching', '');
+      layOut(mounted, 1000);
+      fire();
+      mounted.el.querySelector<HTMLElement>('[data-blok-database-tab-compact]')?.click();
+      const input = document.querySelector<HTMLInputElement>('[data-blok-database-tab-overflow-dropdown] input');
+
+      input?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(search).toHaveFocus();
+      mounted.tabBar.destroy();
+    });
+
     it('leaves a single tab as it is', () => {
       const mounted = mount([view('v1', 'Table', 'a0')]);
 

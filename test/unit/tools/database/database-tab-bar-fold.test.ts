@@ -233,4 +233,77 @@ describe('DatabaseTabBar — the view bar folds like Notion (notion-spec-2 §26.
 
     expect(mounted.viewBar.hasAttribute('data-blok-database-fold-new')).toBe(false);
   });
+  describe('the pill\'s views list by keyboard', () => {
+    const openList = (): { mounted: Mounted; input: HTMLInputElement } => {
+      const mounted = mount();
+
+      layOut(mounted, 493);
+      fire();
+      mounted.el.querySelector<HTMLElement>('[data-blok-database-tab-compact]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      const input = document.querySelector<HTMLInputElement>('[data-blok-database-tab-overflow-dropdown] input');
+
+      if (input === null) throw new Error('no list search');
+
+      return { mounted, input };
+    };
+
+    it('puts the focus back on the pill on Escape', () => {
+      const { mounted, input } = openList();
+
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(mounted.el.querySelector('[data-blok-database-tab-compact]')).toHaveFocus();
+      mounted.tabBar.destroy();
+    });
+
+    it('lands on the next bar\'s pill after Enter picks a view', async () => {
+      const { mounted, input } = openList();
+
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      mounted.tabBar.destroy();
+      document.body.replaceChildren();
+      const next = mount(threeViews(), 'v2');
+
+      await Promise.resolve();
+      layOut(next, 493);
+      fire();
+
+      expect(next.el.querySelector('[data-blok-database-tab-compact]')).toHaveFocus();
+      next.tabBar.destroy();
+    });
+
+    it('leaves the focus alone after a mouse pick', async () => {
+      const { mounted } = openList();
+
+      document.querySelector<HTMLElement>('[data-blok-database-tab-overflow-dropdown] [data-view-id="v2"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+      mounted.tabBar.destroy();
+      document.body.replaceChildren();
+      const next = mount(threeViews(), 'v2');
+
+      await Promise.resolve();
+      layOut(next, 493);
+      fire();
+
+      expect(next.el.querySelector('[data-blok-database-tab-compact]')).not.toHaveFocus();
+      next.tabBar.destroy();
+    });
+  });
+
+  // A tab that folds away must not drop the focus to the page: a view picked by keyboard lands on its tab first.
+  it('moves the focus from a tab that folds to the pill, and back when it unfolds', () => {
+    const mounted = mount();
+    const active = mounted.el.querySelector<HTMLElement>('[data-view-id="v1"]');
+
+    active?.focus();
+    layOut(mounted, 493);
+    fire();
+
+    expect(mounted.el.querySelector('[data-blok-database-tab-compact]')).toHaveFocus();
+    layOut(mounted, 1000);
+    fire();
+
+    expect(active).toHaveFocus();
+    mounted.tabBar.destroy();
+  });
 });

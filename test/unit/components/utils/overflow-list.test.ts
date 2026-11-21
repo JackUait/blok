@@ -183,8 +183,23 @@ describe('OverflowList keyboard (research/21 §2)', () => {
     press('ArrowDown');
     press('Enter');
 
-    expect(onSelect).toHaveBeenCalledWith('c');
+    expect(onSelect).toHaveBeenCalledWith('c', true);
     expect(list.isOpen).toBe(false);
+  });
+
+  // The owner hands the focus back to its button only when Escape closed the list.
+  it('tells the owner whether Escape closed it', () => {
+    const onClose = vi.fn();
+
+    list.close();
+    list = make({ onClose });
+    list.open();
+    press('Escape');
+    list = make({ onClose });
+    list.open();
+    press('Enter');
+
+    expect(onClose.mock.calls).toEqual([[true], [false]]);
   });
 
   it('Enter on New view runs the new-item action and closes the list', () => {
@@ -358,9 +373,9 @@ describe('OverflowList fixed rows', () => {
     expect(onSelect).not.toHaveBeenCalled();
     expect(list.isOpen).toBe(true);
 
-    row('c').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    row('c').dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
 
-    expect(onSelect).toHaveBeenCalledWith('c');
+    expect(onSelect).toHaveBeenCalledWith('c', false);
   });
 });
 

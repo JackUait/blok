@@ -319,6 +319,7 @@ export class DatabaseTabBar {
     const viewBar = parent?.hasAttribute('data-blok-database-view-bar') === true ? parent : null;
     const toolbar = viewBar?.querySelector<HTMLElement>(':scope > [data-blok-database-view-toolbar]') ?? null;
     const tabs = Array.from(bar.querySelectorAll<HTMLElement>('[data-blok-database-tab]'));
+    const focused = tabs.find((tab) => tab === document.activeElement) ?? (document.activeElement === this.compactBtnEl ? this.compactBtnEl : null);
 
     for (const tab of tabs) {
       tab.style.display = '';
@@ -370,20 +371,39 @@ export class DatabaseTabBar {
       toolbar: { full, noIcons },
     });
 
+    const fit = fold.tabs;
+
     viewBar?.toggleAttribute('data-blok-database-fold-icons', !fold.icons);
     viewBar?.toggleAttribute('data-blok-database-fold-new', !fold.newButton);
-    if (fold.tabs === 'all') return;
+    if (fit === 'all') {
+      this.keepFocus(focused);
+
+      return;
+    }
     // Notion's "+" leaves once a tab folds.
     bar.setAttribute('data-blok-database-tab-folded', '');
-    if (fold.tabs === 'compact') {
+    if (fit === 'compact') {
       for (const tab of tabs) {
         tab.style.display = 'none';
       }
       this.placeCompactButton();
+      this.keepFocus(focused);
 
       return;
     }
-    this.foldTabs(fold.tabs);
+    this.foldTabs(fit);
+    this.keepFocus(focused);
+  }
+
+  /** A fold that hid the focused tab or pill hands the focus to what now stands for the current view. */
+  private keepFocus(focused: HTMLElement | null): void {
+    const bar = this.element;
+
+    if (focused === null || bar === null || focused.isConnected && focused.style.display !== 'none') return;
+    const active = bar.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${CSS.escape(this.options.activeViewId)}"]`);
+    const target = this.compactBtnEl ?? (active !== null && active.style.display !== 'none' ? active : null);
+
+    target?.focus({ preventScroll: true });
   }
 
   /** "Table ⌄": the current view's icon and name and a chevron; it opens the views list. */
@@ -875,10 +895,8 @@ export class DatabaseTabBar {
         noResults: this.t('find.noResults', 'No results'),
       },
       readOnly: this.readOnly,
-      onSelect: (viewId) => {
-        if (viewId !== this.options.activeViewId) {
-          this.options.onTabClick(viewId);
-        }
+      onSelect: (viewId, byKeyboard) => {
+        this.activateTab(viewId, byKeyboard);
       },
       onReorder: (viewId, afterId, beforeId) => this.reorderBetween(viewId, afterId, beforeId),
       onMenu: (button, viewId, row) => {
@@ -929,8 +947,10 @@ export class DatabaseTabBar {
 
         return true;
       },
-      onClose: () => {
+      onClose: (escape) => {
         this.closeViewPopover();
+        // The list's search field held the focus; Escape hands it back to the button that opened it.
+        if (escape && anchor.isConnected) anchor.focus({ preventScroll: true });
       },
       yieldsKeys: () => this.viewPopover !== null,
       // notion-motion.md Round 38 §6: the first outside click closes only the Add view card.

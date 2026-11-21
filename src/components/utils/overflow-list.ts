@@ -26,7 +26,8 @@ export interface OverflowListOptions {
   labels: { search: string; handle: string; menu: string; newItem: string; noResults: string };
   /** Read-only rows only open their item: no handle, no "•••". */
   readOnly: boolean;
-  onSelect: (id: string) => void;
+  /** `byKeyboard`: Enter in the search field picked it. */
+  onSelect: (id: string, byKeyboard: boolean) => void;
   /** A row dropped between two neighbours; null at either end. Omitted: no drag handle. */
   onReorder?: (id: string, afterId: string | null, beforeId: string | null) => void;
   /** "•••" on a row. The caller's menu lives outside the list. Omitted: no "•••". */
@@ -49,7 +50,8 @@ export interface OverflowListOptions {
   peelsOutsidePress?: () => boolean;
   /** An element whose own Escape must not close the list (a rename field). */
   ownsEscape: (target: EventTarget | null) => boolean;
-  onClose?: () => void;
+  /** `escape`: Escape closed it. */
+  onClose?: (escape: boolean) => void;
 }
 
 /**
@@ -191,7 +193,7 @@ export class OverflowList {
     this.highlight(this.currentRow());
   }
 
-  public close(): void {
+  public close(escape = false): void {
     if (this.element === null) {
       return;
     }
@@ -208,7 +210,7 @@ export class OverflowList {
 
     this.element = null;
     this.fadeOut(element);
-    this.options.onClose?.();
+    this.options.onClose?.(escape);
   }
 
   /** notion-motion.md Round 75 §2: the open in reverse, then the list leaves. */
@@ -285,7 +287,7 @@ export class OverflowList {
 
       return;
     }
-    this.close();
+    this.close(true);
   };
 
   /** True when the key moved or activated the highlight. */
@@ -394,7 +396,8 @@ export class OverflowList {
       if (event.target instanceof Element && event.target.closest('button, input') !== null) {
         return;
       }
-      this.options.onSelect(row.id);
+      // Enter in the search field clicks the row with no pointer: detail 0.
+      this.options.onSelect(row.id, event.detail === 0);
       this.close();
     });
 

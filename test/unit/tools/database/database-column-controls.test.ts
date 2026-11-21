@@ -78,6 +78,42 @@ describe('DatabaseColumnControls', () => {
       headerEl.remove();
     });
 
+    // notion-motion.md Round 98 §1 #1: Enter and Space open the rename popup under the pill, not an inline field.
+    it('opens the rename popup from Enter and Space, and the pill takes focus back when it closes', () => {
+      const openRename = vi.fn<(pill: HTMLElement, label: string, done: (label: string | null) => void) => void>();
+      const popupControls = new DatabaseColumnControls({ i18n, onRename, onRenameCommit, openRename });
+      const headerEl = makePillHeaderEl('BACKLOG');
+      const pill = headerEl.querySelector<HTMLElement>('[data-blok-database-column-pill]');
+      const elsewhere = document.createElement('input');
+
+      document.body.append(headerEl, elsewhere);
+      popupControls.makePillTitleEditable(headerEl, 'opt-1');
+
+      for (const key of ['Enter', ' ']) {
+        const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+
+        pill?.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(true);
+        expect(headerEl.querySelector('[data-blok-database-column-title-input]')).toBeNull();
+        expect(openRename).toHaveBeenLastCalledWith(pill, 'BACKLOG', expect.any(Function));
+        elsewhere.focus();
+        openRename.mock.lastCall?.[2](null);
+        expect(pill).toHaveFocus();
+      }
+      expect(onRename).not.toHaveBeenCalled();
+
+      pill?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      elsewhere.focus();
+      openRename.mock.lastCall?.[2]('DOING');
+
+      expect(headerEl.querySelector('[data-blok-database-column-title]')?.textContent).toBe('DOING');
+      expect(onRenameCommit).toHaveBeenCalledWith('opt-1', 'DOING');
+      expect(onRename).toHaveBeenCalledWith('opt-1', 'DOING');
+      expect(pill).toHaveFocus();
+      headerEl.remove();
+      elsewhere.remove();
+    });
+
     it('leaves focus where a Tab took it when the rename ends on blur', () => {
       const headerEl = makePillHeaderEl('BACKLOG');
       const pill = headerEl.querySelector<HTMLElement>('[data-blok-database-column-pill]');

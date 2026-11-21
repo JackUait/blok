@@ -9714,13 +9714,13 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   padding: 0;
 }
 
-[data-blok-database-layout-section-rename][data-blok-database-new-group] {
+[data-blok-database-layout-section-rename][data-blok-database-group-name-field] {
   gap: 0;
   margin-block-start: 0;
   padding: var(--blok-space-1-5);
 }
 
-[data-blok-database-new-group] input {
+[data-blok-database-group-name-field] input {
   line-height: 21px;
 }
 

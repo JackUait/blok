@@ -6073,19 +6073,20 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   cursor: pointer;
 }
 
-/* notion-motion.md Round 16 §3: "+ New group" is 300x36. A 6px inset, the bare 21px field, then a 24px Done with "↵". */
+/* notion-motion.md Round 16 §3: "+ New group" is 300x36. A 6px inset, the bare 21px field, then a 24px Done with "↵".
+   Round 98 §1 #1: the column pill rename popup is the same field. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-new-group-menu'] [data-blok-popover-container],
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-new-group-menu'] [data-blok-popover-items] {
   padding: 0;
 }
 
-[data-blok-database-layout-section-rename][data-blok-database-new-group] {
+[data-blok-database-layout-section-rename][data-blok-database-group-name-field] {
   gap: 0;
   margin-block-start: 0;
   padding: var(--blok-space-1-5);
 }
 
-[data-blok-database-new-group] input {
+[data-blok-database-group-name-field] input {
   line-height: 21px;
 }
 

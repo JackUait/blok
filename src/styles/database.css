@@ -12942,6 +12942,12 @@ button[data-blok-database-table-group-count]:hover {
   width: 28px;
   min-width: 28px;
   padding: 0;
+  /* Over the field's end: a query must not widen the toolbar, or the icons fold at the first key (notion-motion.md Round 100). */
+  margin-inline-start: -28px;
+}
+
+[data-blok-database-search-input]:has(+ [data-blok-database-search-clear]:not([hidden])) {
+  padding-inline-end: 28px;
 }
 
 [data-blok-database-search-clear] svg {

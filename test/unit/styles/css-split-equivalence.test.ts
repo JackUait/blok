@@ -1996,7 +1996,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // and a full-page database sets them from contentAlign, like its page title.
     const DATABASE_R270_BYTES = 2068;
     // Lane r273: » for the search alone shows only on hover over the view bar's controls.
-    const DATABASE_R273_BYTES = 545;
+    // +283: the search × lies over the field's end, so a query adds no width.
+    const DATABASE_R273_BYTES = 545 + 283;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

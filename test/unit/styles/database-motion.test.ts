@@ -309,6 +309,13 @@ describe('database toolbar search', () => {
     expect(closing).toContain('inline-size: 0');
     expect(closing).toContain('opacity: 0');
   });
+
+  // notion-motion.md Round 100 §1 #6 (r100-n-fold-pill-menu.raw): Notion's input narrows 146→126 for a query, so the field takes no
+  // more room. The × sits over the field's end: a wider toolbar would fold the icons at the first keystroke.
+  it('lays the clear × over the field\'s end, so a query adds no width', () => {
+    expect(body(database, `[data-blok-database-view-toolbar] > [data-blok-database-search-clear]`)).toContain('margin-inline-start: -28px');
+    expect(body(database, `${INPUT}:has(+ [data-blok-database-search-clear]:not([hidden]))`)).toContain('padding-inline-end: 28px');
+  });
 });
 
 // notion-motion.md Round 68 §1 (r68-n-locked-btn.raw): "Locked" is a 24 tall text button, r4, padding 0 6, gap 4, a 20px glyph,

@@ -3060,6 +3060,33 @@ describe('view settings panel', () => {
       expect(q('database-color-add')?.hasAttribute('data-blok-database-color-new')).toBe(true);
     });
 
+    // notion-motion.md Round 95 §1 #7 (r95-n-condcolor-empty.raw): a click leaves the focus on the page.
+    it('leaves nothing focused when a click opens the empty page', () => {
+      harness().open();
+      q('database-settings-color')?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+
+      expect(document.body).toHaveFocus();
+      expect(note()).not.toBeNull();
+      // Escape still steps back from the page.
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(note()).toBeNull();
+      expect(q('database-settings-color')).not.toBeNull();
+    });
+
+    it('keeps the focus in the page when Enter opens it', () => {
+      harness().open();
+      click('database-settings-color');
+
+      expect(q('database-panel-back')).toHaveFocus();
+    });
+
+    it('keeps the focus in the page when a click opens it with rules', () => {
+      harness({ colorRules: [{ id: 'c1', propertyId: 'stage', operator: 'is_not_empty', value: null, color: 'match' }] }).open();
+      q('database-settings-color')?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+
+      expect(q('database-panel-back')).toHaveFocus();
+    });
+
     it('drops the intro once a rule exists and heads each card "Property operator ⌄" with a trash', () => {
       const h = harness({ colorRules: [{ id: 'c1', propertyId: 'stage', operator: 'is_not_empty', value: null, color: 'match' }] });
 

@@ -516,7 +516,11 @@ export class ViewSettingsPages {
             icon: IconPaintRoller,
             ...countValue(view.colorRules?.length ?? 0),
             opensPage: true,
-            onClick: () => panel.push(this.colors()),
+            onClick: (event) => {
+              panel.push(this.colors());
+              // notion-motion.md Round 95 §1 #7: a click on the empty page leaves the focus on the page; Enter keeps it in.
+              if (event.detail > 0 && (view.colorRules?.length ?? 0) === 0 && document.activeElement instanceof HTMLElement) document.activeElement.blur();
+            },
           }));
         }
         const sources = this.ctx.dataSources;

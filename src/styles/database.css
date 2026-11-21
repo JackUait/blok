@@ -5393,6 +5393,11 @@ button[data-blok-database-board-lane-count]:hover {
   transform: rotate(180deg);
 }
 
+/* notion-motion.md Round 56 §8: the button's glyph takes 8.7 of the row. The drawing stays 16 (its ink is 8.3) and its sides tuck in. */
+[data-blok-database-drawer-backlinks] > [data-blok-database-backlinks-icon] svg {
+  margin-inline: -3.65px;
+}
+
 [dir="rtl"] [data-blok-database-backlinks-icon] svg {
   transform: rotate(90deg);
 }
@@ -21892,6 +21897,8 @@ button[data-blok-database-feed-reaction]:hover,
 
 /* Round 75 §2: "Add option" is 28 tall, 4 under the last row, 16 in from the card. Round 88: the label sits 10 after the plus. */
 [data-blok-database-form-add-option] {
+  --blok-database-form-add-option-glyph: 19.3px;
+
   display: inline-flex;
   align-self: flex-start;
   align-items: center;
@@ -21904,8 +21911,6 @@ button[data-blok-database-feed-reaction]:hover,
   border-radius: var(--blok-radius-control);
   background: transparent;
   color: var(--blok-database-ink-secondary);
-  --blok-database-form-add-option-glyph: 19.3px;
-
   font: inherit;
   font-size: 14px;
   cursor: pointer;
@@ -21915,6 +21920,7 @@ button[data-blok-database-feed-reaction]:hover,
   background-color: var(--blok-database-hover-bg);
 }
 
+/* Round 88: Notion's plus fills a 12.8 slot with 12.8 of ink. Blok's inks two thirds of its box, so it draws at 19.3 and its sides tuck in. */
 [data-blok-database-form-add-option] svg {
   flex: none;
   inline-size: var(--blok-database-form-add-option-glyph);
@@ -21929,7 +21935,6 @@ button[data-blok-database-feed-reaction]:hover,
   gap: var(--blok-space-3);
   min-block-size: 36px;
   margin-block-end: var(--blok-space-2-5);
-/* Round 88: Notion's plus fills a 12.8 slot with 12.8 of ink. Blok's inks two thirds of its box, so it draws at 19.3 and its sides tuck in. */
   padding-inline: var(--blok-space-2-5);
   border-radius: var(--blok-radius-control);
 }

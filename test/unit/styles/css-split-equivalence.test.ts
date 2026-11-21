@@ -2016,8 +2016,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R279_BYTES = 248 + 556;
     // Lane r280: the date picker's month arrows and row-end chevrons and Edit property's › draw Notion's ink sizes.
     const DATABASE_R280_BYTES = 1479;
-    // Lane r278: Add option's plus fills a 12.8 slot with its label 10 after; the reposition pill is at least 180.
-    const DATABASE_R278_BYTES = 366 + 257;
+    // Lane r278: Add option's plus fills a 12.8 slot with its label 10 after; the reposition pill is at least 180;
+    // the backlinks glyph takes 8.7 of its button.
+    const DATABASE_R278_BYTES = 366 + 257 + 250;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

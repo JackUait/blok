@@ -17,6 +17,8 @@
   /* A view toolbar icon button's width. */
   --blok-database-toolbar-icon-size: 28px;
   --blok-database-ink-secondary: rgb(114, 111, 106);
+  /* notion-motion.md Round 103 §1 #6: the row menu's "Page" label. Light is unread, so it keeps the menu's label ink. */
+  --blok-database-row-menu-heading-ink: var(--blok-menu-section-label);
   --blok-database-ink-tertiary: rgb(114, 111, 106);
   /* Search match tint: Notion's, measured (findings V22). */
   --blok-database-search-match-bg: rgba(255, 205, 56, 0.4);
@@ -495,6 +497,7 @@
        143,140,135 passes on both and on a hovered card (38). */
     --blok-database-ink: rgb(240, 239, 237);
     --blok-database-ink-secondary: rgb(173, 169, 163);
+    --blok-database-row-menu-heading-ink: var(--blok-database-ink-secondary);
     --blok-database-ink-tertiary: rgb(143, 140, 135);
     /* Large-text 3:1 on the dark pages (rgb(29, 29, 28) 3.04, rgb(25, 25, 25) 3.17), on the tertiary ink's hue. */
     --blok-database-title-placeholder: rgb(106, 104, 101);
@@ -877,6 +880,7 @@
      143,140,135 passes on both and on a hovered card (38). */
   --blok-database-ink: rgb(240, 239, 237);
   --blok-database-ink-secondary: rgb(173, 169, 163);
+  --blok-database-row-menu-heading-ink: var(--blok-database-ink-secondary);
   --blok-database-ink-tertiary: rgb(143, 140, 135);
   --blok-database-title-placeholder: rgb(106, 104, 101);
   --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
@@ -4276,6 +4280,11 @@ button[data-blok-database-board-lane-count]:hover {
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-database-row-menu-heading] {
   padding-block: var(--blok-space-1-5) var(--blok-space-2-25);
   line-height: 14.4px;
+}
+
+/* Unlayered, so it wins over the heading's text-menu-section-label utility. */
+[data-blok-database-row-menu-heading] {
+  color: var(--blok-database-row-menu-heading-ink);
 }
 
 /* feel/findings-toolbar V26: 28px, a 16px glyph, 1px after the last tab. */

@@ -2019,6 +2019,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r278: Add option's plus fills a 12.8 slot with its label 10 after; the reposition pill is at least 180;
     // the backlinks glyph takes 8.7 of its button.
     const DATABASE_R278_BYTES = 366 + 257 + 250;
+    // Lane r281: the row menu's "Page" label takes Notion's dark ink.
+    const DATABASE_R281_BYTES = 524;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2720,6 +2722,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R279_BYTES
       + DATABASE_R280_BYTES
       + DATABASE_R278_BYTES
+      + DATABASE_R281_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

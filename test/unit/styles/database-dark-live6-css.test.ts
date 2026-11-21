@@ -158,3 +158,16 @@ describe('"Add a property" type list in dark (§23.4)', () => {
     expect(tokenValues('--blok-database-type-icon').slice(1)).toEqual(['var(--blok-database-glyph)', 'var(--blok-database-glyph)']);
   });
 });
+
+// notion-motion.md Round 103 §1 #6 (r103-n-row48-rclick-menu-dark.raw): the row menu's "Page" label is rgb(173, 169, 163)
+// in dark. Light is unread, so it keeps the menu section label ink.
+describe('the row menu\'s "Page" label in dark', () => {
+  it('takes Notion\'s rgb(173, 169, 163) in dark and keeps the section label ink in light', () => {
+    expect(tokenValues('--blok-database-row-menu-heading-ink')).toEqual([
+      'var(--blok-menu-section-label)',
+      'var(--blok-database-ink-secondary)',
+      'var(--blok-database-ink-secondary)',
+    ]);
+    expect(ruleBody('[data-blok-database-row-menu-heading]')).toContain('color: var(--blok-database-row-menu-heading-ink)');
+  });
+});

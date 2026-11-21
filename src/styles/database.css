@@ -15833,17 +15833,24 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   padding-inline: var(--blok-space-2-25) var(--blok-space-2-5);
 }
 
-/* r52-n-sort-rule-drag.raw: a rule the drag passes slides over 200ms ease. From top: auto it would jump. */
-[data-blok-database-panel-page="sort"] [data-blok-database-panel-list-item] {
+/* r52-n-sort-rule-drag.raw, Round 92 §3: a row the drag passes slides over 200ms ease, on the sort, property and
+   group lists. From top: auto it would jump. */
+[data-blok-database-panel-page="sort"] [data-blok-database-panel-list-item],
+[data-blok-database-panel-page="properties"] [data-blok-database-panel-list-item],
+[data-blok-database-panel-page="group"] [data-blok-database-panel-list-item] {
   top: 0;
 }
 
-[data-blok-database-panel-page="sort"] [data-blok-database-panel-list-item]:not([data-dragging]) {
+[data-blok-database-panel-page="sort"] [data-blok-database-panel-list-item]:not([data-dragging]),
+[data-blok-database-panel-page="properties"] [data-blok-database-panel-list-item]:not([data-dragging]),
+[data-blok-database-panel-page="group"] [data-blok-database-panel-list-item]:not([data-dragging]) {
   transition: top 200ms ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-blok-database-panel-page="sort"] [data-blok-database-panel-list-item]:not([data-dragging]) {
+  [data-blok-database-panel-page="sort"] [data-blok-database-panel-list-item]:not([data-dragging]),
+  [data-blok-database-panel-page="properties"] [data-blok-database-panel-list-item]:not([data-dragging]),
+  [data-blok-database-panel-page="group"] [data-blok-database-panel-list-item]:not([data-dragging]) {
     transition: none;
   }
 }

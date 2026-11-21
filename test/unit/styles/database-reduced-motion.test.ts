@@ -45,8 +45,8 @@ describe('database.css under prefers-reduced-motion', () => {
     expect(source).not.toMatch(/\[data-blok-database-column-reordering\] \[data-blok-database-column\] \{[^}]*margin-inline-start/);
   });
 
-  it('drops the sort rule slide', () => {
-    expect(reducedProp('[data-blok-database-panel-page="sort"] [data-blok-database-panel-list-item]:not([data-dragging])', 'transition')).toBe('none');
+  it.each(['sort', 'properties', 'group'])('drops the %s list slide', (page) => {
+    expect(reducedProp(`[data-blok-database-panel-page="${page}"] [data-blok-database-panel-list-item]:not([data-dragging])`, 'transition')).toBe('none');
   });
 
   it('drops the property popover entrance animation', () => {

@@ -351,3 +351,12 @@ describe('sort rule drag', () => {
     expect(declared('[data-blok-database-panel-page="sort"] [data-blok-database-panel-list-item]', 'top')).toEqual(['0']);
   });
 });
+
+// notion-motion.md Round 92 §1 #3, §3 (r92-n-prop-drag-down.raw, r92-n-grp-drag-down.raw): the property and group lists
+// slide a passed row the same way, over ~184 ms.
+describe('property and group list drag', () => {
+  it.each(['properties', 'group'])('slides a passed row on the %s page over 200ms ease, from top 0', (page) => {
+    expect(declared(`[data-blok-database-panel-page="${page}"] [data-blok-database-panel-list-item]:not([data-dragging])`, 'transition').at(0)).toBe('top 200ms ease');
+    expect(declared(`[data-blok-database-panel-page="${page}"] [data-blok-database-panel-list-item]`, 'top')).toEqual(['0']);
+  });
+});

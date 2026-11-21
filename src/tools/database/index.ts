@@ -2698,6 +2698,8 @@ export class DatabaseTool implements BlockTool {
 
     button.type = 'button';
     button.setAttribute('aria-label', this.api.i18n.t('tools.database.tableEditIcon'));
+    // Blok's block Tab would keep the focus here (database-tab-bar.ts marks the title row's other buttons too).
+    button.setAttribute(DATA_ATTR.keyboardOwner, '');
     button.addEventListener('click', () => this.openIconPicker(button));
 
     return button;

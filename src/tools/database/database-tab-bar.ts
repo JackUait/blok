@@ -205,6 +205,8 @@ export class DatabaseTabBar {
     const addBtn = document.createElement('button');
     addBtn.setAttribute('data-blok-database-add-view', '');
     addBtn.setAttribute('aria-label', this.t('tools.database.addView', 'Add view'));
+    // One view moves it out of the bar into the title row, so it carries its own owner: Blok's block Tab would keep the focus.
+    addBtn.setAttribute(DATA_ATTR.keyboardOwner, '');
     addBtn.innerHTML = IconPlus;
     onHover(addBtn, this.t('tools.database.addNewView', 'Add a new view'));
     addBtn.addEventListener('click', () => {
@@ -1196,6 +1198,8 @@ export class DatabaseTabBar {
 
     button.type = 'button';
     button.setAttribute('data-blok-database-title-more', '');
+    // Not the title row: its title is a text field that keeps Blok's keys.
+    button.setAttribute(DATA_ATTR.keyboardOwner, '');
     button.setAttribute('aria-label', t('tools.database.tableMoreActions', 'More actions'));
     button.innerHTML = IconDotsHorizontal;
     button.addEventListener('click', () => {

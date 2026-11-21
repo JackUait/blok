@@ -14,7 +14,7 @@ import { HistoryDraftsCommit, type HistoryDraftsCommitPayload } from '../../comp
 import type { HistoryStep } from '../../../types/api/history';
 import type { AutofillSettings, ButtonAction, ButtonCallbackAction, ButtonSendNotificationAction, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, DeletedPropertyDefinition, PropertyValue, DatabasePermissionAction, DashboardWidget, DashboardRow, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue, LoadLimit, ViewCalculation } from './types';
 import { countFilterRules } from './filter-tree';
-import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
+import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, orderedStatusOptions, personIdsOf, readPropertyValue, statusGroupOf, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData, isPlaceValue } from './tier3-values';
 import { DatabaseHostLevers } from './database-host-levers';
 import { DatabaseFormView, isAutoQuestion } from './database-form-view';
@@ -11898,6 +11898,12 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
+    if (prop.type === 'status') {
+      this.dropStatusColumn(prop, result);
+
+      return;
+    }
+
     // A view with its own group order moves the column there only; the options keep their positions.
     const order = viewConfig?.groupOrder !== undefined && prop.type !== 'status' ? viewConfig.groupOrder : undefined;
     // Keep the stored array in position order so every later reader (add-column,
@@ -11945,6 +11951,27 @@ export class DatabaseTool implements BlockTool {
   /**
    * Moves a column element to a new position in the DOM without full re-render.
    */
+  /**
+   * Status columns draw by status group first, and each group keeps its own position keys.
+   * So a column moves only among its own group; a drop outside it would not show, and writes nothing.
+   */
+  private dropStatusColumn(prop: PropertyDefinition, { optionId, beforeOptionId, afterOptionId }: GroupDragResult): void {
+    const groupId = statusGroupOf(prop, optionId)?.id;
+    const peers = orderedStatusOptions(prop).filter((o) => o.id !== optionId && statusGroupOf(prop, o.id)?.id === groupId);
+    const after = peers.find((o) => o.id === afterOptionId);
+    const before = peers.find((o) => o.id === beforeOptionId);
+
+    if (groupId === undefined || (after === undefined && before === undefined)) {
+      return;
+    }
+    const position = DatabaseModel.positionBetween(after?.position ?? null, before?.position ?? null);
+    const options = (prop.config?.options ?? []).map((o) => (o.id === optionId ? { ...o, position } : o));
+
+    this.model.updateProperty(prop.id, { config: { options } });
+    this.moveColumnInDom(optionId, beforeOptionId);
+    void this.sync.syncUpdateProperty({ propertyId: prop.id, changes: { config: { options } } });
+  }
+
   private moveColumnInDom(optionId: string, beforeOptionId: string | null): void {
     const boardEl = this.viewRoot()?.querySelector<HTMLElement>('[data-blok-database-board]');
 

@@ -15548,6 +15548,30 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-panel-value-text);
 }
 
+/* r20-cc-is-parts.raw: the "Select..." field ends in a 16x16 ⌄ in rgb(173, 169, 163). */
+button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-field] {
+  display: flex;
+  align-items: center;
+}
+
+[data-blok-database-color-rule-text] {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-blok-database-color-rule-chevron] {
+  display: inline-flex;
+  flex: none;
+  color: var(--blok-database-table-gutter-icon);
+}
+
+[data-blok-database-color-rule-chevron] svg {
+  width: 16px;
+  height: 16px;
+}
+
 /* Round 95 §1 #7 (r95-n-condcolor-empty.raw): the intro text is 258 wide at +16, in line with the button under it. */
 [data-blok-database-panel-note][data-blok-database-color-blurb] {
   padding-inline: 0;

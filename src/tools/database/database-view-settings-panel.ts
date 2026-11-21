@@ -3329,6 +3329,8 @@ export class ViewSettingsPages {
     // r20-cc-is.raw: a 240×34 button holds the 232×30 field. The flyout opens under it, or above when it does not fit (r21-cc-date-val.raw).
     const button = document.createElement('button');
     const field = document.createElement('span');
+    const label = marked(document.createElement('span'), 'data-blok-database-color-rule-text');
+    const chevron = marked(document.createElement('span'), 'data-blok-database-color-rule-chevron');
     const text = filterValueText(rule, property, (key, vars) => this.ctx.i18n.t(key, vars), (person) => this.personName(person), (row) => this.ctx.relatedRows?.(property).find((r) => r.id === row)?.title, editorLocale(this.ctx.i18n));
     const scoped: ViewSettingsContext = { ...this.ctx, thisPageDatabase: () => null };
 
@@ -3340,14 +3342,18 @@ export class ViewSettingsPages {
     field.setAttribute('data-blok-database-color-rule-field', '');
     // r20-cc-is.raw, notion-motion.md Round 21 §1: the measured picker types read "Select..." while empty.
     // Other types are unmeasured and keep "Value".
-    field.textContent = text !== '' ? text : this.t(SELECT_PLACEHOLDER_TYPES.includes(property.type) ? 'colorValuePlaceholder' : 'filterValue');
+    label.textContent = text !== '' ? text : this.t(SELECT_PLACEHOLDER_TYPES.includes(property.type) ? 'colorValuePlaceholder' : 'filterValue');
     // r20-cc-red.png, r21-cc-st-picked.png: Select and Status picks show as option tokens.
     if (property.type === 'select' || property.type === 'status') {
       const picked: unknown[] = Array.isArray(rule.value) ? rule.value : [];
       const tokens = (property.config?.options ?? []).filter((option) => picked.includes(option.id)).map((option) => createOptionPill(option));
 
-      if (tokens.length > 0) field.replaceChildren(...tokens);
+      if (tokens.length > 0) label.replaceChildren(...tokens);
     }
+    // r20-cc-is-parts.raw: the field ends in a 16x16 ⌄.
+    chevron.setAttribute('aria-hidden', 'true');
+    chevron.innerHTML = IconChevronDown;
+    field.append(label, chevron);
     button.append(field);
     button.addEventListener('click', () => openRuleValueFlyout(button, panel, scoped, read, save, COLOR_VALUE_FLYOUT_WIDTH, COLOR_VALUE_FLYOUT_GAP, true));
 

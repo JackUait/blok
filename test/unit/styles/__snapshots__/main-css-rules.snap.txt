@@ -18130,6 +18130,29 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-panel-value-text);
 }
 
+button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-field] {
+  display: flex;
+  align-items: center;
+}
+
+[data-blok-database-color-rule-text] {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-blok-database-color-rule-chevron] {
+  display: inline-flex;
+  flex: none;
+  color: var(--blok-database-table-gutter-icon);
+}
+
+[data-blok-database-color-rule-chevron] svg {
+  width: 16px;
+  height: 16px;
+}
+
 [data-blok-database-panel-note][data-blok-database-color-blurb] {
   padding-inline: 0;
   margin-inline: var(--blok-space-3);

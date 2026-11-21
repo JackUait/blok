@@ -2012,7 +2012,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // +382: the AI Autofill rows sit 30 apart, and the "Basic" tag is 11/500.
     const DATABASE_R276_BYTES = 83 + 459 + 382;
     // Lane r279: the empty Conditional color page's intro text is 258 wide, in line with its button.
-    const DATABASE_R279_BYTES = 248;
+    // +556: a colour rule's "Select..." field ends in a 16px chevron.
+    const DATABASE_R279_BYTES = 248 + 556;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

@@ -3142,7 +3142,7 @@ describe('view settings panel', () => {
       h.open();
       click('database-settings-color');
 
-      expect(q('database-color-value-c1')?.textContent).toBe('tools.database.colorValuePlaceholder');
+      expect(q('database-color-value-c1')?.textContent?.trim()).toBe('tools.database.colorValuePlaceholder');
 
       h.ctx.updateView({ colorRules: [{ id: 'c1', propertyId: 'stage', operator: 'equals', value: ['o1'], color: 'match' }] });
       const token = q('database-color-value-c1')?.querySelector('[data-blok-database-option-pill]');
@@ -3245,9 +3245,25 @@ describe('view settings panel', () => {
       for (const id of ['c1', 'c2', 'c3', 'c4', 'c5']) {
         const value = q(`database-color-value-${id}`);
 
-        expect(value?.textContent, id).toBe('tools.database.colorValuePlaceholder');
+        expect(value?.textContent?.trim(), id).toBe('tools.database.colorValuePlaceholder');
         expect(value?.hasAttribute('data-empty'), id).toBe(true);
       }
+    });
+
+    // notion-motion.md Round 20 §4 (r20-cc-is-parts.raw, r21-cc-cb-cc.raw): the "Select..." field ends in a ⌄.
+    it('ends a Checkbox rule\'s "Select..." field in a chevron after its text', () => {
+      const h = harness({ colorRules: [{ id: 'c1', propertyId: 'cb', operator: 'equals', value: null, color: 'green' }] });
+
+      h.ctx.schema = () => [...schema, { id: 'cb', name: 'Done', type: 'checkbox', position: 'b1' }];
+      h.open();
+      click('database-settings-color');
+      const field = q('database-color-value-c1')?.querySelector('[data-blok-database-color-rule-field]');
+      const chevron = field?.lastElementChild;
+
+      expect(chevron?.hasAttribute('data-blok-database-color-rule-chevron')).toBe(true);
+      expect(chevron?.getAttribute('aria-hidden')).toBe('true');
+      expect(chevron?.querySelector('svg')).not.toBeNull();
+      expect(field?.querySelector('[data-blok-database-color-rule-text]')?.textContent).toBe('tools.database.colorValuePlaceholder');
     });
 
     // notion-motion.md Round 22 §3: "Select..." on Relation, Created by/time and Last edited by/time too.
@@ -3271,7 +3287,7 @@ describe('view settings panel', () => {
       click('database-settings-color');
 
       for (const id of ['c1', 'c2', 'c3', 'c4', 'c5']) {
-        expect(q(`database-color-value-${id}`)?.textContent, id).toBe('tools.database.colorValuePlaceholder');
+        expect(q(`database-color-value-${id}`)?.textContent?.trim(), id).toBe('tools.database.colorValuePlaceholder');
       }
     });
 

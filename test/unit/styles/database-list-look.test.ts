@@ -519,6 +519,22 @@ describe('conditional color intro text', () => {
   });
 });
 
+// notion-motion.md Round 20 §4 (r20-cc-is-parts.raw): a 16x16 ⌄ in rgb(173, 169, 163) at the "Select..." field's end.
+describe('conditional color value chevron', () => {
+  it('lays the field out as a row whose text truncates before a 16px chevron in the gutter icon ink', () => {
+    expect(ruleBody(database, 'button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-field]')).toContain('display: flex');
+    const text = ruleBody(database, '[data-blok-database-color-rule-text]');
+
+    expect(text).toContain('min-width: 0');
+    expect(text).toContain('text-overflow: ellipsis');
+    expect(ruleBody(database, '[data-blok-database-color-rule-chevron]')).toContain('color: var(--blok-database-table-gutter-icon)');
+    const svg = ruleBody(database, '[data-blok-database-color-rule-chevron] svg');
+
+    expect(svg).toContain('width: 16px');
+    expect(svg).toContain('height: 16px');
+  });
+});
+
 describe('conditional color rule handle (notion-motion.md Round 20 §4)', () => {
   const HANDLE = '[data-blok-database-color-rules] [data-blok-database-panel-handle]';
 

@@ -504,6 +504,31 @@ test.describe('selection bar', () => {
     await page.getByRole('tab', { name: 'Board' }).click();
     await expect(page.getByRole('tab', { name: 'Board' })).toHaveAttribute('aria-selected', 'true');
   });
+  // notion-motion.md Round 94 §1 #7 and §2 (r94-n-hidden-title-selbar.raw, r94-n-fullpage-selbar.raw): with no title
+  // the title row goes, the tabs move up to 4px under the database's top, and the bar's top is the database's top.
+  for (const [label, extra] of [['shown titles', {}], ['hidden titles', { hideDataSourceTitles: true }], ['a full page', { fullPage: true }]] as const) {
+    test(`with ${label} the bar's top is the database's top, 4px above the first row`, async ({ page }) => {
+      await mount(page, blocks().map((block) => (block.type === 'database' ? { ...block, data: { ...block.data, ...extra } } : block)));
+      const hidden = label !== 'shown titles';
+
+      await expect(page.locator('[data-blok-database-title-row]')).toBeVisible({ visible: !hidden });
+      // Read before the pick: the bar hides the tabs it covers.
+      const tab = await page.getByRole('tab', { name: 'Table' }).boundingBox();
+
+      await tableRow(page, 'r1').hover();
+      await tableRow(page, 'r1').locator('[data-blok-database-table-row-checkbox]').click();
+
+      const bar = await page.locator('[data-blok-database-table-selection-bar]').boundingBox();
+      const top = await page.locator('[data-blok-database-wrapper]').boundingBox();
+      const title = await page.locator('[data-blok-database-title-row]').boundingBox();
+
+      if (bar === null || top === null || tab === null) throw new Error('no layout');
+      const firstRowTop = hidden || title === null ? tab.y - 4 : title.y;
+
+      expect(Math.abs(bar.y - firstRowTop)).toBeLessThanOrEqual(0.5);
+      expect(Math.abs(bar.y - top.y)).toBeLessThanOrEqual(0.5);
+    });
+  }
   // With tabs the bar sat at the view bar's edge, 316px left of the table (sweep9a motion-rowdrag.json).
   test('starts at the table content with tabs, as it does with one view', async ({ page }) => {
     await mount(page, blocks());

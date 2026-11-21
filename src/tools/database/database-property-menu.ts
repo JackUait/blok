@@ -275,6 +275,8 @@ const OPTION_SORTS = [
 ] as const;
 
 /** Person "Edit property" rows (research/16 §5). The first choice of each is what an absent key means. */
+/** A private-use character, so no database name contains it. */
+const NAME_MARK = '\uE000';
 const PERSON_LIMITS = [['one', 'tools.database.personLimitOne'], ['none', 'tools.database.relationLimitNone']] as const;
 const PERSON_DEFAULTS = [['none', 'tools.database.personDefaultNone'], ['createdBy', 'tools.database.propertyTypeCreatedBy']] as const;
 const PERSON_NOTIFICATIONS = [
@@ -346,13 +348,16 @@ export class DatabasePropertyMenu {
   /** Notion asks in a modal (notion-motion.md Round 14), not in the menu. */
   private confirmDelete(id: string): void {
     const name = this.options.databaseName?.();
+    // A mark no name holds finds where the sentence puts the name.
+    const marked = name === undefined ? undefined : this.options.i18n.t('tools.database.deletePropertyFromConfirm', { name: NAME_MARK });
+    const at = marked?.indexOf(NAME_MARK) ?? -1;
 
     void openDatabaseConfirm({
-      title: name === undefined
+      title: marked === undefined || name === undefined
         ? this.t('tools.database.deletePropertyConfirm')
-        : this.options.i18n.t('tools.database.deletePropertyFromConfirm', { name }),
+        : marked.replace(NAME_MARK, () => name),
       // notion-motion.md Round 101 §1 #7: the title is 600 and the database name in it 700.
-      titleEmphasis: name,
+      ...(name !== undefined && at >= 0 ? { titleEmphasis: { text: name, at } } : {}),
       boldTitle: true,
       confirmLabel: this.t('blockSettings.delete'),
       cancelLabel: this.t('tools.database.layoutCancel'),

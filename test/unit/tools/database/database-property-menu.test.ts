@@ -510,6 +510,23 @@ describe('DatabasePropertyMenu', () => {
     expect(document.querySelector('[data-blok-database-confirm-title] strong')?.textContent).toBe('Tasks');
   });
 
+  it('stresses the database name where the sentence puts it, even when the name is also in another word', () => {
+    const menu = new DatabasePropertyMenu({
+      i18n: { t: (key: string, params?: Record<string, string>) => `${key}:${params?.name ?? ''}`, getLocale: () => 'en' } as never,
+      hasPeople: false,
+      ...callbacks(),
+      databaseName: () => 'e',
+    });
+
+    menu.open(prop('text'), document.createElement('button'));
+    const del = byName(lastItems(), 'delete');
+
+    del.onActivate?.(del);
+    const strong = document.querySelector('[data-blok-database-confirm-title] strong');
+
+    expect(strong?.previousSibling?.textContent).toBe('tools.database.deletePropertyFromConfirm:');
+  });
+
   it('keeps the property when the dialog is cancelled', async () => {
     const cb = open(prop('text'));
     const del = byName(lastItems(), 'delete');

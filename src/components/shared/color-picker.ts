@@ -214,11 +214,16 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
   wrapper.setAttribute('data-blok-testid', `${testIdPrefix}-picker`);
   wrapper.setAttribute(DATA_ATTR.keyboardOwner, '');
   // The popover pads its content 6px. 2px more makes the 8px the rows are spaced for.
-  wrapper.className = 'grid w-76 grid-cols-2 gap-x-2 gap-y-2.5 p-0.5 mobile:w-full';
+  wrapper.className = 'grid w-76 grid-cols-2 gap-x-5.25 gap-y-2.5 p-0.5 mobile:w-full';
   const pickerId = generateId('blok-color-picker-');
   const sectionGrids: HTMLDivElement[] = [];
 
   const sectionClassName = 'flex min-w-0 flex-col gap-1';
+  /**
+   * A line in the middle of the column gap. Without it a row's checkmark
+   * reads as the mark of the next column's tile.
+   */
+  const columnLineClassName = "relative after:absolute after:inset-y-0 after:-end-2.75 after:w-px after:bg-popover-border after:content-['']";
   const titleClassName = 'text-xs font-medium text-text-secondary px-0.5';
   const focusRingClassName = 'ring-inset focus-visible:ring-2 focus-visible:ring-focus-ring';
 
@@ -372,7 +377,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     section.setAttribute('data-blok-testid', `${testIdPrefix}-section-${mode.key}`);
     section.setAttribute('role', 'group');
     section.setAttribute('aria-labelledby', title.id);
-    section.className = sectionClassName;
+    section.className = modeIndex === 0 ? twMerge(sectionClassName, columnLineClassName) : sectionClassName;
 
     grid.className = 'flex flex-col';
     sectionGrids.push(grid);

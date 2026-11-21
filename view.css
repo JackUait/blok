@@ -502,6 +502,11 @@
   :where([data-blok-interface], [data-blok-popover]) mark {
     color: inherit;
     background-color: transparent;
+    border-radius: var(--blok-radius-control-sm);
+    padding: var(--blok-space-0-25);
+    margin-inline: calc(-1 * var(--blok-space-0-25));
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
   }
   :where([data-blok-interface], [data-blok-popover]) :is(code, kbd, samp, pre) {
     font-family: var(--blok-font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace);

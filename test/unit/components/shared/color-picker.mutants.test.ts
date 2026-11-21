@@ -257,7 +257,7 @@ describe('color-picker mutant kills', () => {
       const { element } = createColorPicker(createOptions());
 
       expect(element.getAttribute('data-blok-testid')).toBe('test-picker');
-      expect(element.className).toBe('grid w-76 grid-cols-2 gap-x-2 gap-y-2.5 p-0.5 mobile:w-full');
+      expect(element.className).toBe('grid w-76 grid-cols-2 gap-x-5.25 gap-y-2.5 p-0.5 mobile:w-full');
     });
 
     it('titles each section with a picker-unique id under the blok-color-picker- prefix', () => {
@@ -390,9 +390,16 @@ describe('color-picker mutant kills', () => {
       const { element } = createColorPicker(createOptions());
 
       for (const key of ['text', 'bg']) {
-        expect(byTestId(element, `test-section-${key}`).hidden).toBe(false);
-        expect(byTestId(element, `test-section-${key}`).className).toBe('flex min-w-0 flex-col gap-1');
+        const section = byTestId(element, `test-section-${key}`);
+
+        expect(section.hidden).toBe(false);
+        expect([...section.classList]).toEqual(expect.arrayContaining(['flex', 'min-w-0', 'flex-col', 'gap-1']));
       }
+
+      const firstColumn = [...byTestId(element, 'test-section-text').classList];
+
+      expect(firstColumn).toEqual(expect.arrayContaining(['relative', 'after:w-px', 'after:bg-popover-border', 'after:-end-2.75']));
+      expect(byTestId(element, 'test-section-bg').classList.contains('after:w-px')).toBe(false);
     });
 
     it('resets every section to default on reset()', () => {

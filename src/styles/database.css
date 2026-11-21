@@ -21883,12 +21883,12 @@ button[data-blok-database-feed-reaction]:hover,
   outline: none;
 }
 
-/* Round 75 §2: "Add option" is 28 tall, 4 under the last row, 16 in from the card. Its ink, type size and icon are unmeasured. */
+/* Round 75 §2: "Add option" is 28 tall, 4 under the last row, 16 in from the card. Round 88: the label sits 10 after the plus. */
 [data-blok-database-form-add-option] {
   display: inline-flex;
   align-self: flex-start;
   align-items: center;
-  gap: var(--blok-space-1-5);
+  gap: var(--blok-space-2-5);
   block-size: 28px;
   margin-block: var(--blok-space-1) var(--blok-space-0-5);
   margin-inline-start: var(--blok-space-1);
@@ -21897,6 +21897,8 @@ button[data-blok-database-feed-reaction]:hover,
   border-radius: var(--blok-radius-control);
   background: transparent;
   color: var(--blok-database-ink-secondary);
+  --blok-database-form-add-option-glyph: 19.3px;
+
   font: inherit;
   font-size: 14px;
   cursor: pointer;
@@ -21907,8 +21909,10 @@ button[data-blok-database-feed-reaction]:hover,
 }
 
 [data-blok-database-form-add-option] svg {
-  inline-size: 16px;
-  block-size: 16px;
+  flex: none;
+  inline-size: var(--blok-database-form-add-option-glyph);
+  block-size: var(--blok-database-form-add-option-glyph);
+  margin-inline: calc((12.8px - var(--blok-database-form-add-option-glyph)) / 2);
 }
 
 /* Round 75 §2: the checkbox answer is a 576x36 row, its box 10 in; the card ends 22 under it. */
@@ -21918,6 +21922,7 @@ button[data-blok-database-feed-reaction]:hover,
   gap: var(--blok-space-3);
   min-block-size: 36px;
   margin-block-end: var(--blok-space-2-5);
+/* Round 88: Notion's plus fills a 12.8 slot with 12.8 of ink. Blok's inks two thirds of its box, so it draws at 19.3 and its sides tuck in. */
   padding-inline: var(--blok-space-2-5);
   border-radius: var(--blok-radius-control);
 }

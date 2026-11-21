@@ -23836,13 +23836,14 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   display: inline-flex;
   align-self: flex-start;
   align-items: center;
-  gap: var(--blok-space-1-5);
+  gap: var(--blok-space-2-5);
   block-size: 28px;
   margin-block: var(--blok-space-1) var(--blok-space-0-5);
   margin-inline-start: var(--blok-space-1);
   padding-inline: var(--blok-space-2);
   border: none;
   border-radius: var(--blok-radius-control);
+  --blok-database-form-add-option-glyph: 19.3px;
   background: transparent;
   color: var(--blok-database-ink-secondary);
   font: inherit;
@@ -23855,8 +23856,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-form-add-option] svg {
-  inline-size: 16px;
-  block-size: 16px;
+  flex: none;
+  inline-size: var(--blok-database-form-add-option-glyph);
+  block-size: var(--blok-database-form-add-option-glyph);
+  margin-inline: calc((12.8px - var(--blok-database-form-add-option-glyph)) / 2);
 }
 
 [data-blok-database-form-checkbox-row] {

@@ -384,6 +384,19 @@ const seedWins = <T extends DatabaseData | undefined>(data: T): T => {
 const BOARD_GROUP_PAGE = 10;
 
 /**
+ * notion-motion.md Round 93 §1 #2: a row or card drop clears a caret left in page text and focus goes to body.
+ * The selection keys skip an Escape aimed at text, so a kept caret would keep the item picked.
+ * Drop only: a cancelled drag keeps the caret.
+ */
+const releaseCaret = (): void => {
+  const active = document.activeElement;
+
+  if (!(active instanceof HTMLElement) || !(active.isContentEditable || active.matches('input, textarea'))) return;
+  window.getSelection()?.removeAllRanges();
+  active.blur();
+};
+
+/**
  * Under the button with its start edge on the button's, as before, but through the cover clamp:
  * near a window edge it slides in to `margin` from it instead of turning to end at the button.
  * Above, its bottom sits `offset` over the button's top. The top and bottom keep no margin.
@@ -10060,6 +10073,7 @@ export class DatabaseTool implements BlockTool {
     const groupBy = view?.groupBy;
 
     if (this.readOnly || (context !== undefined && !context.writable())) return;
+    releaseCaret();
     // notion-motion.md Round 92 §1: a Gallery drop picks the card, before the write so its undo picks it again.
     const gallery = context === undefined && this.view instanceof DatabaseGalleryView;
 
@@ -11576,6 +11590,7 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
+    releaseCaret();
     // Picked before the write, so the step records it and its undo picks the row again.
     this.selectRows([rowId]);
     this.placeRow(this.shownView(), rowId, afterRowId, beforeRowId);
@@ -11654,6 +11669,7 @@ export class DatabaseTool implements BlockTool {
     if (groupByPropId === undefined) {
       return;
     }
+    releaseCaret();
 
     const subGroupBy = viewConfig?.subGroupBy;
     const subChange: Record<string, PropertyValue> = subGroupBy !== undefined && subGroupBy !== groupByPropId && result.toSubGroup !== undefined

@@ -310,6 +310,50 @@ describe('row selection after undo', () => {
     expect(selectedRows()).toEqual([]);
   });
 
+  /** A paragraph above the database, focused with a collapsed caret in it. */
+  const caretInParagraph = async (blok: TestEditor): Promise<HTMLElement> => {
+    const block = blok.blocks.insert('paragraph', { text: 'Note' }, undefined, 0);
+
+    await quiet();
+    const text = block.holder.querySelector<HTMLElement>('[data-blok-tool="paragraph"]');
+
+    if (text === null) throw new Error('no paragraph text');
+    // jsdom neither reflects `contentEditable` nor implements `isContentEditable`.
+    text.setAttribute('contenteditable', 'true');
+    Object.defineProperty(text, 'isContentEditable', { configurable: true, get: () => true });
+    text.focus();
+    const range = document.createRange();
+
+    range.setStart(text, 0);
+    range.collapse(true);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(range);
+    expect(text).toHaveFocus();
+
+    return text;
+  };
+
+  const escapeOnFocus = async (): Promise<void> => {
+    (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await quiet();
+  };
+
+  // notion-motion.md Round 93 §1 #2 (r93-n-caret-tdrag.raw): the drop clears the caret, focus goes to body, and Escape clears the row.
+  it('takes the caret out of a paragraph on a table drop, so Escape clears the row', async () => {
+    const blok = await make();
+    const text = await caretInParagraph(blok);
+
+    await dragToTop('r3', false);
+
+    expect(text).not.toHaveFocus();
+    expect(window.getSelection()?.rangeCount).toBe(0);
+    expect(selectedRows()).toEqual(['r3']);
+
+    await escapeOnFocus();
+
+    expect(selectedRows()).toEqual([]);
+  });
+
   it('drops the restored row from the selection when redo deletes it again', async () => {
     const blok = await make();
 
@@ -575,6 +619,45 @@ describe('row selection after undo', () => {
     await escapeOnBody();
 
     expect(picked(type)).toEqual([]);
+  });
+
+  // notion-motion.md Round 93 §1 #2 (r93-n-caret-bdrag.raw): the drop clears the caret, so Escape clears the item.
+  it.each([
+    ['board', 'board-one-group'],
+    ['list', 'list'],
+    ['gallery', 'gallery'],
+  ] as const)('takes the caret out of a paragraph on a %s drop, so Escape clears the item', async (type, layout) => {
+    const blok = await make(layout);
+    const text = await caretInParagraph(blok);
+
+    await dragItemToTop(type, 'r3');
+
+    expect(text).not.toHaveFocus();
+    expect(window.getSelection()?.rangeCount).toBe(0);
+    expect(picked(type)).toEqual(['r3']);
+
+    await escapeOnFocus();
+
+    expect(picked(type)).toEqual([]);
+  });
+
+  // notion-motion.md Round 13: a sorted board drop takes its own early path.
+  it('takes the caret out of a paragraph on a sorted board drop', async () => {
+    const blok = await make('board-one-group');
+    const db = blok.blocks.getById('db');
+    const saved = await db?.save();
+    const data = saved?.data as { views: Array<Record<string, unknown>> };
+
+    data.views[0] = { ...data.views[0], sorts: [{ propertyId: 't', direction: 'asc' }] };
+    await blok.blocks.update('db', data);
+    await quiet();
+    const text = await caretInParagraph(blok);
+
+    await dragItemToTop('board', 'r3');
+
+    expect(text).not.toHaveFocus();
+    expect(window.getSelection()?.rangeCount).toBe(0);
+    expect(picked('board')).toEqual(['r3']);
   });
 
   // notion-motion.md Round 92 §1 #1–2: undo of a Board, List or Gallery reorder selects the moved item (fade in); redo clears it (fade out).

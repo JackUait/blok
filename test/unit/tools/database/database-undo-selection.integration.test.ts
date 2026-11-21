@@ -621,6 +621,26 @@ describe('row selection after undo', () => {
     expect(picked(type)).toEqual([]);
   });
 
+  // notion-motion.md Round 94 §1 #3: a Board or List drop focuses the dropped item with no range; Escape on it clears it.
+  it.each([
+    ['board', 'board-one-group'],
+    ['list', 'list'],
+  ] as const)('focuses the dropped %s item, and Escape on it clears the item', async (type, layout) => {
+    const blok = await make(layout);
+
+    await caretInParagraph(blok);
+    await dragItemToTop(type, 'r3');
+
+    expect(itemOf(type, 'r3')).toHaveFocus();
+    expect(itemOf(type, 'r3')?.getAttribute('tabindex')).toBe('0');
+    expect([...document.querySelectorAll(`${ITEM[type]}[tabindex="0"]`)]).toHaveLength(1);
+    expect(window.getSelection()?.rangeCount).toBe(0);
+
+    await escapeOnFocus();
+
+    expect(picked(type)).toEqual([]);
+  });
+
   // notion-motion.md Round 93 §1 #2 (r93-n-caret-bdrag.raw): the drop clears the caret, so Escape clears the item.
   it.each([
     ['board', 'board-one-group'],

@@ -383,6 +383,9 @@ const seedWins = <T extends DatabaseData | undefined>(data: T): T => {
 /** Groups a board shows before "Load more groups" (research/08). */
 const BOARD_GROUP_PAGE = 10;
 
+/** Items a drop focuses (notion-motion.md Round 94 §1 #3). */
+const LANDED_FOCUS_ITEM = '[data-blok-database-card], [data-blok-database-list-row], [data-blok-database-calendar-event]';
+
 /**
  * notion-motion.md Round 93 §1 #2: a row or card drop clears a caret left in page text and focus goes to body.
  * The selection keys skip an Escape aimed at text, so a kept caret would keep the item picked.
@@ -7142,7 +7145,10 @@ export class DatabaseTool implements BlockTool {
             this.calendarDropDay = landedOn;
             this.rerenderView({ keepDrawer: true });
             this.calendarDropDay = undefined;
-            if (landedOn !== undefined) this.landRow(rowId);
+            if (landedOn !== undefined) {
+              this.landRow(rowId);
+              this.focusLandedItem(rowId, landedOn);
+            }
           }
         },
         navigate: (anchor, focus) => {
@@ -11607,6 +11613,7 @@ export class DatabaseTool implements BlockTool {
     this.placeRow(this.shownView(), rowId, afterRowId, beforeRowId);
     this.rerenderView();
     this.landRow(rowId);
+    this.focusLandedItem(rowId);
   }
 
   /**
@@ -11701,6 +11708,7 @@ export class DatabaseTool implements BlockTool {
       }
       this.writeRowValues(rowId, sortedChanges);
       this.landRow(rowId);
+      this.focusLandedItem(rowId);
 
       return;
     }
@@ -11716,6 +11724,7 @@ export class DatabaseTool implements BlockTool {
     });
     this.rerenderView();
     this.landRow(rowId);
+    this.focusLandedItem(rowId);
   }
 
   /** The sorts this person sees: their own (D4) or the saved ones. */
@@ -12190,6 +12199,29 @@ export class DatabaseTool implements BlockTool {
     this.landedRowIds = rowIds;
     this.selectRows(rowIds);
     this.landedRowIds = [];
+  }
+
+  /**
+   * notion-motion.md Round 94 §1 #3: a Board, List or Calendar drop focuses the dropped item, with no range.
+   * A table drop leaves focus on body (Round 93); Gallery and Timeline are unmeasured.
+   * `day`: a calendar event split across weeks takes focus on the part in that day's week.
+   */
+  private focusLandedItem(rowId: string, day?: string): void {
+    const root = this.viewRoot();
+    const id = CSS.escape(rowId);
+    const items = [...root?.querySelectorAll<HTMLElement>(`:is(${LANDED_FOCUS_ITEM})[data-row-id="${id}"]`) ?? []];
+    const item = items.find((el) => day !== undefined && el.closest('[data-blok-database-calendar-week]')?.querySelector(`[data-day="${CSS.escape(day)}"]`) != null) ?? items[0];
+
+    if (item === undefined) return;
+    // Board cards and list rows keep one tabbable item, so Tab and the arrows go on from here.
+    if (!item.hasAttribute('data-blok-database-calendar-event')) {
+      const kind = item.hasAttribute('data-blok-database-card') ? '[data-blok-database-card]' : '[data-blok-database-list-row]';
+
+      root?.querySelectorAll<HTMLElement>(kind).forEach((el) => el.setAttribute('tabindex', el === item ? '0' : '-1'));
+    }
+    item.focus({ preventScroll: true });
+    // After focus, which can leave a range on the item; Notion leaves none.
+    window.getSelection()?.removeAllRanges();
   }
 
   private clearRowSelection(): void {

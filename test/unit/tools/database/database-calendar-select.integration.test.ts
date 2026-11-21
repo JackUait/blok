@@ -279,6 +279,28 @@ describe('DatabaseTool — calendar event selection (research/22 §1)', () => {
     expect(dayCell(el, '2026-10-22').hasAttribute('data-drop-leaving')).toBe(true);
   });
 
+  // notion-motion.md Round 94 §1 #3: focus moves to the dropped event.
+  it('a moved event takes focus', () => {
+    const { el, tool } = buildTool(doc(), {}, calendarData());
+    const handlers = (tool as unknown as { view: { options: { handlers: { setDate: (rowId: string, value: string, day?: string) => void } } } }).view.options.handlers;
+
+    handlers.setDate('delta', '2026-10-22', '2026-10-22');
+
+    expect(eventOf(el, 'delta')).toHaveFocus();
+  });
+
+  it('a moved event that crosses a week takes focus on the part in the drop day\'s week', () => {
+    const { el, tool } = buildTool(doc(), {}, calendarData());
+    const handlers = (tool as unknown as { view: { options: { handlers: { setDate: (rowId: string, value: string, day?: string) => void } } } }).view.options.handlers;
+
+    handlers.setDate('delta', '2026-10-22/2026-10-29', '2026-10-29');
+    const parts = [...el.querySelectorAll<HTMLElement>('[data-blok-database-calendar-event][data-row-id="delta"]')];
+    const inDropWeek = parts.find((part) => part.closest('[data-blok-database-calendar-week]')?.querySelector('[data-day="2026-10-29"]') !== null);
+
+    expect(parts).toHaveLength(2);
+    expect(inDropWeek).toHaveFocus();
+  });
+
   it('a resized event is not selected and no day fades', () => {
     const { el, tool } = buildTool(doc(), {}, calendarData());
     const handlers = (tool as unknown as { view: { options: { handlers: { setDate: (rowId: string, value: string) => void } } } }).view.options.handlers;

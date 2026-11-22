@@ -13,6 +13,7 @@ import { startInlineRename } from '../../components/utils/inline-rename';
 import { onHover } from '../../components/utils/tooltip';
 import { rovingRadioGroup, type RovingRadioGroup } from '../../components/utils/roving-radio-group';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { isKeyboardModality } from '../../components/utils/input-modality';
 import type { API } from '../../../types';
 import type { DatabaseTabDisplay, DatabaseViewConfig, ViewType } from './types';
 import { isHistoryKey } from './database-keyboard';
@@ -22,6 +23,17 @@ import { positionBetween } from '../../shared/database/positions';
 // notion-motion.md Round 91 §1 #7: from a 556.1 press the tab sat still at 5.9 px and moved at 6.9.
 // 6.5 gives that and the whole-pixel read (6 no, 7 yes); Notion's exact cutoff is unread.
 const DRAG_THRESHOLD = 6.5;
+
+/**
+ * A press away closes a panel at pointerdown; the mousedown that follows in the same task would move
+ * focus to the page. Stops that one mousedown's default, then lets go.
+ */
+const keepFocusThroughPress = (): void => {
+  const keep = (event: MouseEvent): void => event.preventDefault();
+
+  window.addEventListener('mousedown', keep, { capture: true, once: true });
+  setTimeout(() => window.removeEventListener('mousedown', keep, true), 0);
+};
 /** A toolbar icon button's width (database.css `--blok-database-toolbar-icon-size`). */
 const TOOLBAR_ICON_SIZE = 28;
 
@@ -91,7 +103,7 @@ export interface TabBarOptions {
   viewSource?: (viewId: string) => { name: string; enabled: boolean } | undefined;
   /** "Source ›" pressed: opens the view settings' Source picker. */
   /** `onClose` runs once the source panel has closed, after it has put focus back. */
-  onViewSource?: (viewId: string, anchor: HTMLElement, onClose?: (escape: boolean) => void) => void;
+  onViewSource?: (viewId: string, anchor: HTMLElement, onClose?: (escape: boolean, away?: boolean) => void) => void;
   /** "Copy link to view". */
   onCopyLink?: (viewId: string) => void;
   /** "Open as full page": read when the menu opens; undefined leaves the row out. */
@@ -705,19 +717,21 @@ export class DatabaseTabBar {
 
   /**
    * notion-motion.md Round 110 §1 #3: the source panel opens over the tab menu, which stays.
-   * Escape closes the panel only and gives focus back to the Source row; any other close takes the menu too.
+   * Escape or a click away (Round 114 §1 #1) closes the panel only and gives focus back to the Source row;
+   * a pick takes the menu too. A pointer close leaves no cursor on the row (keyboard-only focus law).
    */
   private openSourceFromMenu(viewId: string, anchor: HTMLElement, onSource: NonNullable<TabBarOptions['onViewSource']>): void {
     const popover = this.contextPopover;
     // notion-motion.md Round 111 §1 #3: Notion covers the menu with a see-through layer while the panel is up.
     const release = popover?.holdOpen('database-view-source');
 
-    onSource(viewId, anchor, (escape) => {
+    onSource(viewId, anchor, (escape, away = false) => {
       // A rebuild (the view switched) already closed this menu.
       if (popover === null || this.contextPopover !== popover) return;
-      if (escape && release !== undefined) {
-        release('database-view-source');
+      if ((escape || away) && release !== undefined) {
+        release(escape || isKeyboardModality() ? 'database-view-source' : undefined);
         popover.getElement().querySelector('[data-blok-item-name="database-view-source"]')?.closest<HTMLElement>('[data-blok-popover-items]')?.focus({ preventScroll: true });
+        if (away) keepFocusThroughPress();
 
         return;
       }

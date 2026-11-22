@@ -274,6 +274,20 @@ describe('view tabs (feel/findings-toolbar)', () => {
         expect(menuItem('database-view-source').closest('[data-blok-popover-items]')).toHaveFocus();
         expect(menuItem('database-view-source').getAttribute('data-blok-focused')).toBe('true');
       });
+
+      // notion-motion.md Round 114 §1 #1 (r114-n-source-click-{tabrow,page}.raw): a click away closes the panel only.
+      it('a click away closes the source panel only and puts focus on the Source row with no cursor', async () => {
+        await openSource();
+
+        document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+        await quiet();
+
+        expect(tabMenuOpen()).toBe(true);
+        expect(settingsPanel()).toBeNull();
+        expect(menuItem('database-view-source').closest('[data-blok-popover-items]')).toHaveFocus();
+        expect(menuItem('database-view-source')).not.toHaveAttribute('data-blok-focused');
+        expect(menuItem('database-view-source')).not.toHaveAttribute('data-blok-popover-item-children-open');
+      });
     });
 
     it('Copy link to view copies the link of the view it was opened on', async () => {

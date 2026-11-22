@@ -5852,7 +5852,7 @@ export class DatabaseTool implements BlockTool {
       onEditView: (viewId, anchor) => this.editView(viewId, anchor),
       ...(this.linked ? {} : {
         viewSource: (viewId: string) => this.viewSource(viewId),
-        onViewSource: (viewId: string, anchor: HTMLElement, onClose?: (escape: boolean) => void) => this.editView(viewId, anchor, 'source', onClose),
+        onViewSource: (viewId: string, anchor: HTMLElement, onClose?: (escape: boolean, away?: boolean) => void) => this.editView(viewId, anchor, 'source', onClose),
       }),
       onRenameView: (viewId, anchor) => this.editView(viewId, anchor, 'rename'),
       onCopyLink: (viewId) => this.copyViewLink(viewId),
@@ -7885,7 +7885,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** "Edit view" or "Rename" on a tab: show that view, then its settings. */
-  private editView(viewId: string, anchor: HTMLElement, start: 'edit' | 'rename' | 'source' = 'edit', onClose?: (escape: boolean) => void): void {
+  private editView(viewId: string, anchor: HTMLElement, start: 'edit' | 'rename' | 'source' = 'edit', onClose?: (escape: boolean, away?: boolean) => void): void {
     this.showView(viewId);
     const tab = this.element?.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${CSS.escape(viewId)}"]`);
 

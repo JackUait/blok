@@ -1037,3 +1037,17 @@ describe('database menu separators', () => {
     expect(colors).toContain('--blok-popover-border: rgba(255, 255, 255, 0.14)');
   });
 });
+
+// notion-motion.md L1218, L3523: the keyboard row takes the hover fill, 0.051. Dark: 0.055 (L8617, L10747).
+describe('database menu keyboard row', () => {
+  const MENU = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu']";
+
+  it('fills the keyboard row like the hover row, light', () => {
+    expect(declared(MENU, '--blok-item-focus-bg')).toEqual(['rgba(33, 27, 23, 0.051)']);
+  });
+
+  it('fills it with Notion\'s dark hover, under both dark switches', () => {
+    expect(declared(`:root:not([data-blok-theme="light"]) ${MENU}`, '--blok-item-focus-bg')).toEqual(['rgba(255, 255, 255, 0.055)']);
+    expect(declared(`[data-blok-theme="dark"] ${MENU}`, '--blok-item-focus-bg')).toEqual(['rgba(255, 255, 255, 0.055)']);
+  });
+});

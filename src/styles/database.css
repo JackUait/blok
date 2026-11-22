@@ -3580,6 +3580,8 @@ button[data-blok-database-board-lane-count]:hover {
   --blok-text-primary: var(--blok-database-ink);
   --blok-text-secondary: var(--blok-database-ink-secondary);
   --blok-item-hover-bg: rgba(33, 27, 23, 0.051);
+  /* notion-motion.md L1218, L3523: the keyboard row takes the hover fill. */
+  --blok-item-focus-bg: rgba(33, 27, 23, 0.051);
   --blok-icon-active-text: var(--blok-database-ink);
 }
 
@@ -3604,12 +3606,14 @@ button[data-blok-database-board-lane-count]:hover {
   :root:not([data-blok-theme="light"]) [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'],
   :root:not([data-blok-theme="light"]) [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover] {
     --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
+    --blok-item-focus-bg: rgba(255, 255, 255, 0.055);
   }
 }
 
 [data-blok-theme="dark"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'],
 [data-blok-theme="dark"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover] {
   --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
+  --blok-item-focus-bg: rgba(255, 255, 255, 0.055);
 }
 
 /* Beats the separator's shared bg-popover-border/60. */

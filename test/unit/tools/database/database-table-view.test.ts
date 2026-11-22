@@ -1395,6 +1395,15 @@ describe('DatabaseTableView', () => {
     describe('Cmd+arrows on a selected cell', () => {
       const rows = [row('r1', 'Alpha'), row('r2', 'Beta'), row('r3', 'Gamma'), row('r4', 'Delta')];
 
+      // A Cmd step across columns scrolls the table with scrollTo, which jsdom lacks.
+      beforeEach(() => {
+        HTMLElement.prototype.scrollTo = vi.fn();
+      });
+
+      afterEach(() => {
+        Reflect.deleteProperty(HTMLElement.prototype, 'scrollTo');
+      });
+
       it.each([
         ['ArrowUp', 'r3', 'p-amount', 'r1/p-amount'],
         ['ArrowDown', 'r2', 'p-amount', 'r4/p-amount'],

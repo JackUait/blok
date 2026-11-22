@@ -10634,6 +10634,8 @@ export class DatabaseTool implements BlockTool {
         : {}),
       onDuplicate: () => {
         if (!writable()) return;
+        // Round 109 §1 #1: Duplicate fades the ••• menu out. Move to, the other closing item, goes at once.
+        if (fromDots && this.cardMenuPopover !== null) this.cardMenuPopover.itemCloseFades = true;
         this.duplicateTableRow(rowId);
         duplicated.done = true;
       },
@@ -10676,8 +10678,6 @@ export class DatabaseTool implements BlockTool {
 
     // notion-motion.md Round 108 §1 #6, Round 109 §1 #2: a middle click away keeps a right-click or ••• menu open.
     popover.holdsOnMiddleClick = options.pointer !== undefined || fromDots;
-    // Round 109 §1 #1: an item click fades the ••• menu out; Escape and a click away still remove it at once.
-    popover.itemCloseFades = fromDots;
     // Round 109 §1 #1: after Duplicate, focus is on the card's •••. The redraw may have replaced the button, so find it again.
     if (fromDots) {
       popover.on(PopoverEvent.Closed, () => {

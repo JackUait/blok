@@ -803,6 +803,23 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       document.querySelectorAll('[data-blok-database-move-picker]').forEach((picker) => picker.remove());
     });
 
+    // Only Duplicate's fade is measured (Round 109 §1 #1). Move to's picker takes the menu's place, so the menu goes at once.
+    it('••• › Move to closes the board card menu at once, with no fade', () => {
+      const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('board'));
+      const fades: boolean[] = [];
+      const hide = PopoverAbstract.prototype.hide;
+
+      vi.spyOn(PopoverAbstract.prototype, 'hide').mockImplementation(function (this: PopoverAbstract) {
+        fades.push(this.itemCloseFades);
+        hide.call(this);
+      });
+      openMenu(el, 'board');
+      menuItem('database-row-move-to')?.click();
+
+      expect(fades.length).toBeGreaterThan(0);
+      expect(fades.every((fade) => !fade)).toBe(true);
+    });
+
     it('a picked board card lists the other databases on ⌘⇧P', async () => {
       const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('board'));
 

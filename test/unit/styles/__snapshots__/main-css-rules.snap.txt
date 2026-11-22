@@ -10446,6 +10446,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 
 [data-blok-database-property-type-layout='grid'] {
   width: 400px;
+  max-height: 50dvh;
 }
 
 [data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-body] {
@@ -10466,10 +10467,6 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   height: 1px;
   margin: var(--blok-space-1-25) var(--blok-space-1) var(--blok-space-1-5);
   background-color: var(--blok-database-table-border);
-}
-
-[data-blok-database-property-type-name-over-anchor] {
-  max-height: 50dvh;
 }
 
 [data-blok-database-property-type-name-over-anchor] [data-blok-database-property-type-body] {

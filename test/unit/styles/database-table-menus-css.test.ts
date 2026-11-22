@@ -180,6 +180,12 @@ describe('add property menu (T12)', () => {
     expect(declared(`${GRID} [data-blok-database-property-type-option]`, 'min-height')).toEqual(['32px']);
   });
 
+  // notion-motion.md Round 86 §1 #10: Insert left/right opens the same 389x362.5 dialog as the "+", whose painted
+  // card is 400x358.5 at a 717 window (Round 34 §6, r34-typemenu-plus-midscreen.png), so both grids show half the window.
+  it('caps every type grid at half the window, Insert left/right too', () => {
+    expect(declared("[data-blok-database-property-type-layout='grid']", 'max-height')).toEqual(['50dvh']);
+  });
+
   // notion-spec-2 §25.6 (editprop-select.txt): the line under Sort is 4px below it, at box x + 12, 276 wide; the first option 42 below it.
   it('insets the Edit property line under Sort as Notion does', () => {
     expect(declared('[data-blok-item-name="optionSort"] + [data-blok-popover-item-separator]', 'padding'))
@@ -191,8 +197,8 @@ describe('add property menu (T12)', () => {
     expect(declared("[data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-grid]", 'row-gap')).toEqual(['var(--blok-space-0-5)']);
   });
 
-  // notion-spec-2 §19.11: the header "+" name box is a white 378x28 box over the "+"; the grid shows half the window and fades its last 34px.
-  it('draws the header "+" name box in the header cell and caps the grid at half the window', () => {
+  // notion-spec-2 §19.11: the header "+" name box is a white 378x28 box over the "+"; its last 34px fade.
+  it('draws the header "+" name box in the header cell and fades the grid', () => {
     const OVER = '[data-blok-database-property-type-name-over-anchor]';
 
     expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'position')).toEqual(['absolute']);
@@ -200,7 +206,7 @@ describe('add property menu (T12)', () => {
     expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'height')).toEqual(['28px']);
     expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'border-radius')).toEqual(['var(--blok-radius-control)']);
     expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'box-shadow')).toEqual(['none']);
-    expect(declared(OVER, 'max-height')).toEqual(['50dvh']);
+    expect(declared(OVER, 'max-height')).toEqual([]);
     expect(declared(`${OVER} [data-blok-database-property-type-body]`, 'mask-image')).toEqual(['linear-gradient(black 0%, black calc(100% - 34px), transparent 100%)']);
   });
 

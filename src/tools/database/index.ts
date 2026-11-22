@@ -14484,10 +14484,9 @@ export class DatabaseTool implements BlockTool {
       i18n: this.api.i18n,
       hasPeople: this.hasPeople,
       withNameField: true,
-      // research/08: the table's "+" and Insert left/right get Notion's header grid; the row page passes onAdded and keeps the list.
-      ...(onAdded === undefined ? { layout: 'grid' as const } : {}),
-      // notion-spec-2 §19.11: the "+" puts the name box in the header cell. Insert left/right's is unmeasured.
-      ...(onAdded === undefined && placement === undefined ? { nameOverAnchor: true } : {}),
+      // research/08, notion-spec-2 §19.11, notion-motion.md Round 114 §1 #2: the table's "+" and Insert left/right
+      // get Notion's header grid with the name box over the card; the row page passes onAdded and keeps the list.
+      ...(onAdded === undefined ? { layout: 'grid' as const, nameOverAnchor: true } : {}),
       onSelect: (type, name, icon) => {
         if (!writable()) return;
         const side = placement?.side === 'left' ? 'beforeId' : 'afterId';

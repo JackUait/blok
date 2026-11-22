@@ -5018,7 +5018,7 @@ span[data-blok-slash-search] {
   --blok-database-card-menu-hover-bg: var(--blok-database-hover-bg);
   --blok-database-peek-label: var(--blok-database-ink-secondary);
   --blok-database-peek-label-icon: rgb(142, 139, 134);
-  --blok-database-peek-add-icon: rgb(142, 139, 134);
+  --blok-database-peek-add-icon: rgb(173, 169, 163);
   --blok-database-group-action-icon: rgb(142, 139, 134);
   --blok-database-add-group-icon: rgb(173, 169, 163);
   --blok-database-card-glyph: rgb(142, 139, 134);

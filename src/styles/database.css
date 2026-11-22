@@ -464,8 +464,8 @@
   --blok-database-peek-label: var(--blok-database-ink-secondary);
   /* The label's type icon and its hover handle: Notion's ink, 3.39:1 on white, 3.07:1 on the hover fill. */
   --blok-database-peek-label-icon: rgb(142, 139, 134);
-  /* "Add a property" plus: Notion's rgb(173, 169, 163) is 2.34:1, so the type icon ink stands in. */
-  --blok-database-peek-add-icon: rgb(142, 139, 134);
+  /* "Add a property" plus (L2660). The text beside it names the button, so the icon needs no 3:1. */
+  --blok-database-peek-add-icon: rgb(173, 169, 163);
   /* Light glyph inks (notion-motion.md). Icons are not on the AA text list; dark keeps its old ink. */
   /* Group band ⋯ and + (L3102, L4154). */
   --blok-database-group-action-icon: rgb(142, 139, 134);

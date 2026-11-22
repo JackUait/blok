@@ -2714,8 +2714,8 @@ describe('DatabaseTableView', () => {
       expect(document.querySelector('[data-blok-popover-custom-class~="blok-database-calc-menu"]')).not.toBeNull();
     });
 
-    // notion-motion.md Round 111 §1 #4 (r111-n-footer-{sum,countall}-rows.raw): the menu opens with the row that
-    // holds the current calculation tinted. The tint follows the pointer and stays on the last row after it leaves.
+    // notion-motion.md Round 111 §1 #4: Notion tints the row holding the current calculation on open.
+    // User decision 2026-11-22: only after a keyboard open (keyboard-only focus law); a mouse open tints nothing.
     describe('footer menu highlight', () => {
       const lit = (): string[] => [...document.querySelectorAll<HTMLElement>('[data-blok-database-menu-lit]')].map((el) => el.textContent ?? '');
       const row = (key: string): HTMLElement | undefined =>
@@ -2727,22 +2727,49 @@ describe('DatabaseTableView', () => {
         document.dispatchEvent(new MouseEvent('mousemove', { clientX: 1, clientY: 1, bubbles: true }));
         root.querySelector<HTMLElement>(`[data-blok-database-table-calc][data-property-id="${propertyId}"] [data-blok-database-table-calc-box]`)?.click();
       };
+      const useMouse = (): void => {
+        document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      };
+      const useKeyboard = (): void => {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+      };
 
-      it('starts on More options when Sum is set', () => {
+      afterEach(() => {
+        useKeyboard();
+      });
+
+      it('a mouse open tints no row, and nothing stays tinted after a hover and a leave', () => {
+        useMouse();
+        openFooter([{ id: 'p-amount', fn: 'sum' }], 'p-amount');
+
+        expect(lit()).toEqual([]);
+
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 5, bubbles: true }));
+        row('tools.database.calcNone')?.dispatchEvent(new MouseEvent('mouseover', { clientX: 10, clientY: 10, bubbles: true }));
+        document.querySelector<HTMLElement>('[data-blok-popover-opened="true"] [data-blok-popover-container]')
+          ?.dispatchEvent(new MouseEvent('mouseleave', { clientX: 900, clientY: 900 }));
+
+        expect(lit()).toEqual([]);
+      });
+
+      it('a keyboard open starts on More options when Sum is set', () => {
+        useKeyboard();
         openFooter([{ id: 'p-amount', fn: 'sum' }], 'p-amount');
 
         expect(lit()).toHaveLength(1);
         expect(lit()[0]).toContain('tools.database.calcMoreOptions');
       });
 
-      it('starts on Count when Count all is set', () => {
+      it('a keyboard open starts on Count when Count all is set', () => {
+        useKeyboard();
         openFooter([{ id: 'p-amount', fn: 'count' }], 'p-amount');
 
         expect(lit()).toHaveLength(1);
         expect(lit()[0]).toContain('tools.database.calcCount');
       });
 
-      it('starts on None when nothing is set', () => {
+      it('a keyboard open starts on None when nothing is set', () => {
+        useKeyboard();
         // Another column's sum keeps the footer row; p-notes has nothing set.
         openFooter([{ id: 'p-amount', fn: 'sum' }], 'p-notes');
 
@@ -2750,21 +2777,19 @@ describe('DatabaseTableView', () => {
         expect(lit()[0]).toContain('tools.database.calcNone');
       });
 
-      it('moves to the hovered row and stays there after the pointer leaves the menu', () => {
+      it('after a keyboard open, the start tint goes once the pointer takes a row, and nothing stays after a leave', () => {
+        useKeyboard();
         openFooter([{ id: 'p-amount', fn: 'sum' }], 'p-amount');
-        const none = row('tools.database.calcNone');
 
         document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 5, bubbles: true }));
-        none?.dispatchEvent(new MouseEvent('mouseover', { clientX: 10, clientY: 10, bubbles: true }));
+        row('tools.database.calcNone')?.dispatchEvent(new MouseEvent('mouseover', { clientX: 10, clientY: 10, bubbles: true }));
 
-        expect(lit()).toHaveLength(1);
-        expect(lit()[0]).toContain('tools.database.calcNone');
+        expect(lit()).toEqual([]);
 
         document.querySelector<HTMLElement>('[data-blok-popover-opened="true"] [data-blok-popover-container]')
           ?.dispatchEvent(new MouseEvent('mouseleave', { clientX: 900, clientY: 900 }));
 
-        expect(lit()).toHaveLength(1);
-        expect(lit()[0]).toContain('tools.database.calcNone');
+        expect(lit()).toEqual([]);
       });
     });
 

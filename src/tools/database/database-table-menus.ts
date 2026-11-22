@@ -3,6 +3,7 @@ import type { PopoverItemDefaultBaseParams, PopoverItemParams } from '@/types/ut
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
+import { isKeyboardModality } from '../../components/utils/input-modality';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import {
   IconArrowDiagonal,
@@ -252,8 +253,8 @@ export interface OpenMenuOptions {
   /** A card menu that does not fit below opens above, its bottom this far over the anchor's top, when it fits there. */
   coverFlipOffset?: number;
   /**
-   * The row (item name) tinted on open. The tint follows the pointer and keyboard,
-   * and stays on the last row after the pointer leaves the menu.
+   * The row (item name) tinted when the menu opens from the keyboard. It goes once
+   * the pointer or the keyboard moves to a row; a mouse open tints nothing.
    */
   highlight?: string;
 }
@@ -261,19 +262,23 @@ export interface OpenMenuOptions {
 /** Hover-tinted in database.css. */
 const LIT_ATTR = 'data-blok-database-menu-lit';
 
-/** Keeps one row of `popover` tinted, starting on `name`. */
-const keepHighlight = (popover: PopoverDesktop, name: string): void => {
-  const state = { lit: popover.getElement().querySelector<HTMLElement>(`[data-blok-item-name="${name}"]`) };
+/** Tints row `name` until the current row changes. Keyboard opens only: the focus law. */
+const startHighlight = (popover: PopoverDesktop, name: string): void => {
+  if (!isKeyboardModality()) {
+    return;
+  }
+  const lit = popover.getElement().querySelector<HTMLElement>(`[data-blok-item-name="${name}"]`);
 
-  state.lit?.setAttribute(LIT_ATTR, '');
-  // A null current row is the pointer leaving: the tint stays where it was.
-  popover.onCurrentItemChange((current) => {
-    if (current === null || current.element === state.lit) {
+  if (lit === null) {
+    return;
+  }
+  lit.setAttribute(LIT_ATTR, '');
+  const stop = popover.onCurrentItemChange((current) => {
+    if (current?.element === lit) {
       return;
     }
-    state.lit?.removeAttribute(LIT_ATTR);
-    state.lit = current.element;
-    state.lit.setAttribute(LIT_ATTR, '');
+    lit.removeAttribute(LIT_ATTR);
+    stop();
   });
 };
 
@@ -371,7 +376,7 @@ export const openMenu = (
   });
   popover.show();
   if (options.highlight !== undefined) {
-    keepHighlight(popover, options.highlight);
+    startHighlight(popover, options.highlight);
   }
 
   return popover;

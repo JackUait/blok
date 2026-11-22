@@ -194,6 +194,9 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   private nestedKeyboard: KeyboardEngagement | null = null;
 
+  /** True when a hover opened the submenu: then Escape does not move focus to its row. */
+  private nestedOpenedByHover = false;
+
   /**
    * Last hovered item inside popover.
    * Is used to determine if cursor is moving inside one item or already moved away to another one.
@@ -1106,7 +1109,7 @@ export class PopoverDesktop extends PopoverAbstract {
     // A list's search field holds DOM focus; removing it would drop focus to <body>.
     const hadFocus = this.nestedPopover.getElement().contains(document.activeElement);
     // Read before the destroy: it clears the trigger.
-    const row = this.nestedPopoverTriggerItem?.childrenEscapeFocusesRow === true ? this.nestedPopoverTriggerItem.getElement() : null;
+    const row = this.nestedPopoverTriggerItem?.childrenEscapeFocusesRow === true && !this.nestedOpenedByHover ? this.nestedPopoverTriggerItem.getElement() : null;
 
     this.destroyNestedPopoverIfExists(true);
     if (row?.isConnected === true) {
@@ -1334,6 +1337,11 @@ export class PopoverDesktop extends PopoverAbstract {
     this.cancelNestedCloseIntent();
 
     if (this.nestedPopover !== null && this.nestedPopover !== undefined) {
+      // A click on the row a hover already opened counts as a click open.
+      if (this.nestedPopoverTriggerItem === item) {
+        this.nestedOpenedByHover = false;
+      }
+
       return;
     }
 
@@ -1589,6 +1597,7 @@ export class PopoverDesktop extends PopoverAbstract {
     this.destroyNestedPopoverIfExists(false);
 
     this.nestedPopoverTriggerItem = item;
+    this.nestedOpenedByHover = true;
     // The hover is the gesture that opened it: open hooks must see pointer modality.
     recordPointerGesture();
     this.showNestedPopoverForItem(item);
@@ -1686,6 +1695,7 @@ export class PopoverDesktop extends PopoverAbstract {
     this.nestedPopoverTriggerItem?.onChildrenClose();
     // Reset trigger item so clicking the same item again will open the nested popover
     this.nestedPopoverTriggerItem = null;
+    this.nestedOpenedByHover = false;
   }
 
   /**

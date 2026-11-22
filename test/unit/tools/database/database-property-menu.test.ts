@@ -419,6 +419,13 @@ describe('DatabasePropertyMenu', () => {
     expect(cb.onRename).not.toHaveBeenCalled();
   });
 
+  // notion-motion.md R113 §1 #1 (r113-n-changetype-click-escape.raw): Escape from a clicked Change type puts focus on its row.
+  it('the Change type list asks Escape to put focus on its row', () => {
+    open(prop('text'));
+
+    expect(byName(lastItems(), 'changeType').children).toMatchObject({ escapeFocusesRow: true });
+  });
+
   // notion-motion.md Round 44 §3 (r44-tp-change.raw): a plain 200-wide list, the current type kept with a ✓.
   it('keeps the current type in the 200-wide Change type list, checked, and picking it changes nothing', () => {
     const cb = open(prop('text'));
@@ -1376,6 +1383,27 @@ describe('DatabasePropertyMenu', () => {
       menu.destroy();
     });
 
+    // notion-motion.md R113 §1 #2 (r113-n-decimal-pick.raw): after a Decimal places pick Notion's focus is on the "Decimal places" row.
+    it('after a Decimal places pick, DOM focus is on the Decimal places row', () => {
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+      menu.openRowPage(prop('number'), document.createElement('div'), { edit: true });
+      const rows = byName(lastItems(), 'decimals').children?.items ?? [];
+
+      byName(rows, 'decimals-1').onActivate?.(byName(rows, 'decimals-1'));
+
+      expect([...document.querySelectorAll('[data-blok-item-name="decimals"]')].at(-1)).toHaveFocus();
+      menu.destroy();
+    });
+
+    // notion-motion.md R113 §1 #1: Escape from Decimal places or Color puts focus on the row that opened it.
+    it('the Decimal places and Color lists ask Escape to put focus on their row', () => {
+      const items = editItems(prop('number', { number: { showAs: 'bar' } }));
+
+      expect(byName(items, 'decimals').children).toMatchObject({ escapeFocusesRow: true });
+      expect(byName(items, 'color').children).toMatchObject({ escapeFocusesRow: true });
+    });
+
     it('a color picked after Bar then Ring keeps Ring', () => {
       const { cb, menu } = headerMenu(prop('number'));
 
@@ -1659,6 +1687,14 @@ describe('DatabasePropertyMenu', () => {
       const items = byName(lastItems(), 'editProperty').children?.items ?? [];
 
       expect(byName(items, 'dateFormat').children?.class?.split(' ')).toEqual(['blok-database-panel-list', 'blok-database-date-format-list']);
+    });
+
+    // notion-motion.md R113 §1 #1 (r113-n-dateformat-escape.raw): Escape puts focus on the Date format row.
+    it('the Date format list asks Escape to put focus on its row', () => {
+      open(prop('date'));
+      const items = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+      expect(byName(items, 'dateFormat').children).toMatchObject({ escapeFocusesRow: true });
     });
 
     // research/37 §2: an untouched Date property shows "Full date" and "12 hour".

@@ -995,3 +995,15 @@ describe('Edit property list after Escape on a submenu (Round 94)', () => {
     expect(declared(LIST, 'outline')).toEqual(['none']);
   });
 });
+
+// notion-motion.md Round 113 §1 #1: Escape from Decimal places, Date format or Color puts focus on that row,
+// :focus-visible with a solid 2px outline. Change type (header menu) shows none, so it is left out.
+describe('Edit property rows after Escape on their submenu (Round 113)', () => {
+  const ROWS = ['decimals', 'dateFormat', 'color'];
+
+  it.each(ROWS)('paints the keyboard ring on the %s row', (name) => {
+    const row = `[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="${name}"]:focus-visible`;
+
+    expect(declared(row, 'outline')).toEqual(['2px solid var(--blok-focus-ring)']);
+  });
+});

@@ -472,8 +472,8 @@ export class DatabasePropertyMenu {
       // The redraw dropped DOM focus to <body>; Notion keeps it in the flyout, so arrows go on from the row.
       const rowElement = this.popover?.getElement().querySelector<HTMLElement>(`[data-blok-item-name="${row}"]`);
 
-      // notion-motion.md R84b §1: Number format puts focus on the row itself. Decimals is unmeasured, so it keeps the list.
-      if (row === 'numberFormat' && rowElement !== null && rowElement !== undefined) {
+      // notion-motion.md R84b §1, R113 §1 #2: Number format and Decimal places put focus on the row itself.
+      if ((row === 'numberFormat' || row === 'decimals') && rowElement !== null && rowElement !== undefined) {
         rowElement.setAttribute('tabindex', '-1');
         rowElement.focus({ preventScroll: true });
 
@@ -1002,7 +1002,8 @@ export class DatabasePropertyMenu {
           title: this.t('tools.database.changeType'),
           icon: IconChangeType,
           // notion-motion.md Round 44 §3 (r44-tp-change.raw): a plain 200-wide list.
-          children: { items: this.typeChoices(property), width: '200px', class: CHANGE_TYPE_LIST_CLASS },
+          // notion-motion.md R113 §1 #1: Escape from a clicked list puts focus on this row.
+          children: { items: this.typeChoices(property), width: '200px', class: CHANGE_TYPE_LIST_CLASS, escapeFocusesRow: true },
         };
       case 'duplicate':
         return { name: entry, title: this.t('tools.database.duplicateProperty'), icon: IconCopy, closeOnActivate: true, onActivate: () => this.options.onDuplicate(id) };
@@ -1556,6 +1557,8 @@ export class DatabasePropertyMenu {
         icon: IconCalendar,
         children: {
           ...VALUE_LIST,
+          // notion-motion.md R113 §1 #1: Escape puts focus on this row.
+          escapeFocusesRow: true,
           class: DATE_FORMAT_LIST_CLASS,
           items: DATE_FORMATS.map((format) => ({
             name: `dateFormat-${format}`,
@@ -1677,6 +1680,8 @@ export class DatabasePropertyMenu {
         valueLabel: number.decimals === undefined ? this.t('tools.database.decimalPlacesDefault') : String(number.decimals),
         children: {
           ...CLICK_ONLY_UNDER,
+          // notion-motion.md R113 §1 #1: Escape puts focus on this row.
+          escapeFocusesRow: true,
           class: PANEL_LIST_CLASS,
           width: '250px',
           // Its hint does not stay while the list is open, also when a key opened it.
@@ -1716,6 +1721,8 @@ export class DatabasePropertyMenu {
             children: {
               placement: 'dropdown' as const,
               fromButton: true,
+              // notion-motion.md R113 §1 #1: Escape puts focus on this row.
+              escapeFocusesRow: true,
               minWidth: '150px',
               items: OPTION_COLORS.map((color) => ({
                 name: `color-${color}`,

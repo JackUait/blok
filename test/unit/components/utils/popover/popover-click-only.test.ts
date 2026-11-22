@@ -210,6 +210,53 @@ describe('Popover: children.clickOnly and placement under', () => {
     expect(itemEl('decimals')?.getAttribute('data-blok-focused')).toBe('true');
   });
 
+  // notion-motion.md R113 §2: Escape from a hover-opened Change type leaves focus on the menu, not on the row.
+  const changeType = (): PopoverDesktop => {
+    const popover = new PopoverDesktop({
+      items: [
+        { title: 'Change type', name: 'change', children: { escapeFocusesRow: true, items: [{ title: 'Text', name: 'text', onActivate: vi.fn() }] } },
+        { title: 'Display as', name: 'display', children: { items: [{ title: 'Select', name: 'select', onActivate: vi.fn() }] } },
+      ],
+    });
+
+    popovers.push(popover);
+    document.body.appendChild(popover.getElement());
+    document.body.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 1, clientY: 1 }));
+    popover.show();
+    popover.escapeClosesSubmenuFirst = true;
+
+    return popover;
+  };
+
+  it('children.escapeFocusesRow: a hover open keeps Escape off the row', () => {
+    vi.useFakeTimers();
+    const popover = changeType();
+
+    hover(itemEl('change'), 20);
+    vi.advanceTimersByTime(3000);
+    expect(itemEl('text')).not.toBeNull();
+
+    popover.closeSubmenuOnEscape();
+
+    expect(itemEl('text')).toBeNull();
+    expect(itemEl('change')).not.toHaveFocus();
+  });
+
+  // notion-motion.md R113 §1 #1 (r113-n-changetype-click-escape.raw): the pointer rests on the row, then clicks it.
+  it('children.escapeFocusesRow: a click on a row whose list a hover opened still sends Escape to the row', () => {
+    vi.useFakeTimers();
+    const popover = changeType();
+
+    hover(itemEl('change'), 20);
+    vi.advanceTimersByTime(3000);
+    itemEl('change')?.click();
+    expect(itemEl('text')).not.toBeNull();
+
+    popover.closeSubmenuOnEscape();
+
+    expect(itemEl('change')).toHaveFocus();
+  });
+
   it('other rows still open on hover', () => {
     vi.useFakeTimers();
     open();

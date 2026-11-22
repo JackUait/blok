@@ -88,8 +88,9 @@ export interface PopoverItemChildren {
 
   /**
    * True if Escape on the children puts DOM focus on the item itself, not on
-   * the parent list. Needs `escapeClosesSubmenuFirst` on the root popover.
-   * False by default.
+   * the parent list, when a click or key opened them. After a hover open,
+   * Escape keeps focus on the parent list. Needs `escapeClosesSubmenuFirst`
+   * on the root popover. False by default.
    */
   escapeFocusesRow?: boolean;
 

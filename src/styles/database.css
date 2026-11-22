@@ -3909,6 +3909,14 @@ button[data-blok-database-board-lane-count]:hover {
   outline: none;
 }
 
+/* notion-motion.md Round 113 §1 #1: Escape from these rows' submenus puts focus on the row, with a ring.
+   Rows draw no outline by default; a mouse pick never matches :focus-visible. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="decimals"]:focus-visible,
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="dateFormat"]:focus-visible,
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="color"]:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+}
+
 /* notion-motion.md, Round 8b "Board group ⋯ menu": the 20px icon at x 8, the text at x 36.
    Round 9: the column menu and its Edit property flyout too. Round 112 §1 #2: the title ⋯ menu. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item-icon],

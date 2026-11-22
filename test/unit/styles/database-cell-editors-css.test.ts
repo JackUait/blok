@@ -835,6 +835,21 @@ describe('cell editor CSS', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] > [data-blok-popover-container]", 'transform-origin')).toEqual(['center']);
   });
 
+  // Table full screen sets `role` on its host. Chrome then restyles every descendant that
+  // could match a rule's subject under a `[role…]` ancestor; every block carries a test id.
+  it('keys no rule under a role ancestor on a test id or a bare `*`', () => {
+    const selectors = [...database.matchAll(/([^{}@;]+?)\s*\{/g)]
+      .flatMap((rule) => rule[1].split(/,(?![^(]*\))/).map((part) => part.trim()));
+    const broad = selectors.filter((selector) => {
+      const role = selector.search(/\[role[\]=~]/);
+      const subject = selector.slice(role).match(/\]\s*[ >+~]\s*(.*)$/)?.[1] ?? '';
+
+      return role >= 0 && /^(\*|\[data-blok-testid[^\]]*\]|[^[]*:is\([^)]*data-blok-testid[^)]*\))$/.test(subject.split(/\s*[ >+~]\s*(?![^(]*\))/).at(-1) ?? '');
+    });
+
+    expect(broad).toEqual([]);
+  });
+
   // notion-motion.md Round 62 §1: search box 306x28 at +12,+12; result rows 322x28 at +4, radius 6, icon 18 at +13, title 14/16.8 at +40.
   describe('Move to picker', () => {
     const MOVE = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']";
@@ -848,7 +863,7 @@ describe('cell editor CSS', () => {
       expect(declared(`${MOVE} [role='option']`, 'min-height')).toEqual(['28px']);
       expect(declared(`${MOVE} [role='option']`, 'padding')).toEqual(['var(--blok-space-1-25) var(--blok-space-2) var(--blok-space-1-25) var(--blok-space-2-25)']);
       expect(declared(`${MOVE} [role='option']`, 'gap')).toEqual(['var(--blok-space-2-25)']);
-      expect(declared(`${MOVE} [role='option'] > div > :is([data-blok-page-picker-line], [data-blok-testid='page-picker-option-path'])`, 'line-height')).toEqual(['16.8px']);
+      expect(declared(`${MOVE} [role='option'] > div > :is([data-blok-page-picker-line], [data-blok-page-picker-path])`, 'line-height')).toEqual(['16.8px']);
       expect(declared(`${MOVE} [data-blok-testid='page-picker-option-icon']`, 'width')).toEqual(['18px']);
       expect(declared(`${MOVE} [data-blok-testid='page-picker-option-icon']`, 'height')).toEqual(['18px']);
     });
@@ -876,7 +891,7 @@ describe('cell editor CSS', () => {
         expect(declared(TREE_ROW, 'padding-block')).toEqual(['0']);
         expect(declared(TREE_ROW, 'gap')).toEqual(['0']);
         expect(declared(TREE_ROW, 'align-items')).toEqual(['center']);
-        expect(declared(`${TREE_ROW} > div > :is([data-blok-page-picker-line], [data-blok-testid='page-picker-option-path'])`, 'line-height')).toEqual(['21px']);
+        expect(declared(`${TREE_ROW} > div > :is([data-blok-page-picker-line], [data-blok-page-picker-path])`, 'line-height')).toEqual(['21px']);
       });
 
       it('puts the 20 chevron, then the 16 icon 3px after it, then the title 7px after that', () => {
@@ -887,9 +902,9 @@ describe('cell editor CSS', () => {
         expect(declared(CHEVRON, 'color')).toEqual(['var(--blok-database-table-header-icon)']);
         // notion-motion.md Round 65 §3: IconChevronRight at 20 paints Notion's 4.5 x 8 open chevron.
         expect(declared(`${CHEVRON} svg`, 'width')).toEqual(['20px']);
-        expect(declared(`${TREE_ROW} [data-blok-testid='page-picker-option-icon']`, 'width')).toEqual(['16px']);
-        expect(declared(`${TREE_ROW} [data-blok-testid='page-picker-option-icon']`, 'height')).toEqual(['16px']);
-        expect(declared(`${TREE_ROW} [data-blok-testid='page-picker-option-icon']`, 'margin-inline-end')).toEqual(['var(--blok-space-1-75)']);
+        expect(declared(`${TREE_ROW} [data-blok-page-picker-icon]`, 'width')).toEqual(['16px']);
+        expect(declared(`${TREE_ROW} [data-blok-page-picker-icon]`, 'height')).toEqual(['16px']);
+        expect(declared(`${TREE_ROW} [data-blok-page-picker-icon]`, 'margin-inline-end')).toEqual(['var(--blok-space-1-75)']);
       });
 
       // page-picker.ts plays the 0.2s turn on `rotate` (Round 65 §3), so no transition is declared.

@@ -5,6 +5,7 @@ import { DATA_ATTR } from '../../../../src/components/constants/data-attributes'
 import { Paragraph } from '../../../../src/tools/paragraph';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
+import type { API } from '../../../../types';
 
 let editor: Blok | undefined;
 let holder: HTMLDivElement | undefined;
@@ -33,6 +34,8 @@ describe('a full-page database description in the editor\'s saved data', () => {
 
   // notion-motion.md Round 99 #7: the new empty line stays on screen, but a reload drops it.
   it('leaves a new empty description out of the save, and keeps a typed one', async () => {
+    let api: API | undefined;
+
     editor = new Blok({
       holder, dataModel: 'hierarchical', pageTitle: true,
       tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
@@ -45,13 +48,15 @@ describe('a full-page database description in the editor\'s saved data', () => {
           activeViewId: 'v',
         },
       }] },
-    } as never);
+      onReady: (readyApi) => { api = readyApi; },
+    });
     await editor.isReady;
     await vi.waitFor(() => {
       if (holder?.querySelector(`[${DATA_ATTR.pageHeaderAction}="database-description"]`) === null) throw new Error('no Add description');
     });
     const savedDescription = async (): Promise<unknown> => {
-      const block = (await editor?.save())?.blocks.find((b) => b.id === 'db');
+      if (api === undefined) throw new Error('editor did not expose its ready API');
+      const block = (await api.saver.save()).blocks.find((b) => b.id === 'db');
 
       return (block?.data as Record<string, unknown>).description;
     };

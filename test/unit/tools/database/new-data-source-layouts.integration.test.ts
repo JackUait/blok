@@ -344,6 +344,59 @@ describe('New data source: every layout on a second source', () => {
     expect(own('[data-blok-database-timeline]').querySelector('[data-blok-database-timeline-zoom]')).toHaveFocus();
   });
 
+  // notion-motion.md Round 115 §1 #4 (r115-n-zoom-kbopen.raw): a keyboard open starts on the current zoom.
+  // User decision 2026-11-22: a mouse open starts on no row.
+  describe('zoom menu start row', () => {
+    const ownTimelineZoom = async (): Promise<HTMLElement | null> => {
+      await make([{
+        id: 'db', type: 'database', content: [],
+        data: {
+          title: 'Plain',
+          schema: [...parentSchema, { id: 'when', name: 'When', type: 'date', position: 'a2' }],
+          views: [table('v1', 'a0', { type: 'timeline', timelineBy: 'when' })],
+          activeViewId: 'v1',
+        },
+      }]);
+
+      return own('[data-blok-database-timeline]').querySelector<HTMLElement>('[data-blok-database-timeline-zoom]');
+    };
+    const cursor = (): Array<string | null> => [...document.querySelectorAll('[data-blok-popover-opened] [data-blok-focused="true"]')]
+      .map((row) => row.closest('[data-blok-item-name]')?.getAttribute('data-blok-item-name') ?? null);
+    const press = async (key: string): Promise<void> => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+      await quiet();
+    };
+
+    afterEach(() => {
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
+    });
+
+    it('a keyboard open starts on Month, and ArrowUp twice lands on Week', async () => {
+      const button = await ownTimelineZoom();
+
+      button?.focus();
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
+      await click(button);
+
+      expect(cursor()).toEqual(['database-timeline-zoom-month']);
+
+      await press('ArrowUp');
+      await press('ArrowUp');
+
+      expect(cursor()).toEqual(['database-timeline-zoom-week']);
+    });
+
+    it('a mouse open starts on no row', async () => {
+      const button = await ownTimelineZoom();
+
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      await click(button);
+
+      expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+      expect(cursor()).toEqual([]);
+    });
+  });
+
   it('a zoom pick on a database\'s own timeline moves the closing menu under the new button', async () => {
     await make([{
       id: 'db', type: 'database', content: [],

@@ -47,6 +47,7 @@ import type { TemplateRepeatHost } from './database-template-menu';
 import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
 import { announce } from '../../components/utils/announcer';
+import { isKeyboardModality } from '../../components/utils/input-modality';
 import { bulkCloseClearsSelection, bulkEditableProperties, bulkStartValue, createSelectionBar, watchBulkCloseKey } from './database-selection-bar';
 import { CALC_MENU_MIN_WIDTH, CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, openMenu, rowMenuFooter, rowMenuItems, selectionActionItems, selectionMenuItems } from './database-table-menus';
 import type { OpenMenuOptions, RowFavorite } from './database-table-menus';
@@ -7457,7 +7458,11 @@ export class DatabaseTool implements BlockTool {
           menu?.hide();
         });
       },
-    })), undefined, { minWidth: '180px' });
+    })), undefined, {
+      minWidth: '180px',
+      // notion-motion.md Round 115 §1 #4: a keyboard open starts on the current zoom. A mouse open starts on none (focus law).
+      ...(isKeyboardModality() ? { highlight: `database-timeline-zoom-${current}` } : {}),
+    });
   }
 
   /** "+" on a day: a new row dated that day, plus what the view's filters ask for. */

@@ -1508,15 +1508,28 @@ export class ViewSettingsPages {
       disabled: !this.shared,
       onClick: () => {
         opener.setAttribute('aria-expanded', 'true');
-        openFlyout(opener, panel, `database-${item.name}-menu`, LAYOUT_MENU_WIDTH, (pick) => (item.children ?? []).map((child) => panelRow({
-          label: child.title,
-          testId: `database-${child.name}`,
-          checked: child.active,
-          onClick: () => pick(() => {
-            child.activate?.();
-            panel.refresh();
-          }),
-        })), { alignEnd: true, onClose: () => opener.setAttribute('aria-expanded', 'false') });
+        openFlyout(opener, panel, `database-${item.name}-menu`, LAYOUT_MENU_WIDTH, (pick) => {
+          const rows = (item.children ?? []).map((child) => panelRow({
+            label: child.title,
+            testId: `database-${child.name}`,
+            checked: child.active,
+            onClick: () => pick(() => {
+              child.activate?.();
+              panel.refresh();
+            }),
+          }));
+
+          // notion-motion.md Round 105 §1 #4: the first row opens filled; the one fill follows the pointer and the focus.
+          rows.forEach((row, index) => {
+            const light = (): void => rows.forEach((other) => other.toggleAttribute('data-active', other === row));
+
+            row.toggleAttribute('data-active', index === 0);
+            row.addEventListener('mousemove', light);
+            row.addEventListener('focus', light);
+          });
+
+          return rows;
+        }, { alignEnd: true, onClose: () => opener.setAttribute('aria-expanded', 'false') });
       },
     });
 

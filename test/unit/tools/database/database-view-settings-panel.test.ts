@@ -758,6 +758,25 @@ describe('view settings panel', () => {
       expect(q('database-calendar-show-as')?.getAttribute('aria-expanded')).toBe('false');
     });
 
+    // notion-motion.md Round 105 §1 #4 (r105-n-calas-open-week.raw): the first row opens filled, whichever is checked;
+    // the fill then follows the pointer, one row at a time.
+    it('opens with the first row filled, then the fill follows the pointer', () => {
+      calendar(vi.fn());
+      click('database-calendar-show-as');
+      const month = q('database-calendar-range-month');
+      const week = q('database-calendar-range-week');
+
+      expect(month?.hasAttribute('data-active')).toBe(true);
+      expect(week?.hasAttribute('data-active')).toBe(false);
+      week?.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+      expect(week?.hasAttribute('data-active')).toBe(true);
+      expect(month?.hasAttribute('data-active')).toBe(false);
+      month?.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+      week?.focus();
+      expect(week?.hasAttribute('data-active')).toBe(true);
+      expect(month?.hasAttribute('data-active')).toBe(false);
+    });
+
     it('turns the chevron back when Escape closes the menu', () => {
       calendar(vi.fn());
       click('database-calendar-show-as');

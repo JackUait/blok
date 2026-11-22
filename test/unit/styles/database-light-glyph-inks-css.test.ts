@@ -77,3 +77,15 @@ describe('card page glyph', () => {
     ]);
   });
 });
+
+describe('table OPEN pill', () => {
+  // L7549: the open glyph is rgb(142, 139, 134); the OPEN label keeps its AA ink.
+  it('draws the glyph in Notion\'s gray, dark unchanged', () => {
+    expect(ruleBody('[data-blok-database-table-open] svg')).toContain('color: var(--blok-database-table-open-icon)');
+    expect(tokenValues('--blok-database-table-open-icon')).toEqual([
+      'rgb(142, 139, 134)',
+      'var(--blok-database-table-header-text)',
+      'var(--blok-database-table-header-text)',
+    ]);
+  });
+});

@@ -1545,6 +1545,20 @@ describe('DatabasePropertyMenu', () => {
       expect(cb.onUpdate).toHaveBeenNthCalledWith(2, 'p', { optionSort: undefined });
     });
 
+    // R112 (notion-motion.md §1 #5): Sort opens with its current row in the hover tint.
+    it.each([[undefined, 'optionSort-manual'], ['alphabetical', 'optionSort-alphabetical']] as const)('Sort %s opens with %s highlighted', async (optionSort, row) => {
+      open(prop('select', { config: { options }, ...(optionSort === undefined ? {} : { optionSort }) }));
+      const sort = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'optionSort');
+      const popover = captured.popovers[captured.popovers.length - 1];
+
+      if (popover === undefined) throw new Error('no menu');
+      popover.focused = [];
+      sort.children?.onOpen?.();
+      await Promise.resolve();
+
+      expect(popover.focused).toEqual([row]);
+    });
+
     it('lists the options in the Sort order', () => {
       open(prop('select', { config: { options }, optionSort: 'alphabetical' }));
       const list = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'options').element;

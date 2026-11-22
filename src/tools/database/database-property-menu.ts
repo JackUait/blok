@@ -1448,6 +1448,8 @@ export class DatabasePropertyMenu {
       valueLabel: this.t(current[1]),
       children: {
         ...VALUE_LIST,
+        // R112: the current row opens in the hover tint. After show: the list is not drawn yet.
+        onOpen: () => queueMicrotask(() => this.focusCurrentRow(`optionSort-${current[0]}`)),
         items: OPTION_SORTS.map(([sort, labelKey]) => ({
           name: `optionSort-${sort}`,
           title: this.t(labelKey),

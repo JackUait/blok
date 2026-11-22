@@ -598,6 +598,12 @@ describe('Round 45 gallery, calendar and settings panel', () => {
     expect(ruleBody('[data-blok-database-layout-tiles]')).toMatch(/margin-block-start:\s*var\(--blok-space-2-75\)/);
   });
 
+  // notion-motion.md Round 105 §1 #5 (r105-n-layout-cal-page.raw): the first row 12 under the tiles, the last 8 above the bottom.
+  it('leaves 12 under the Layout tiles and 8 under the last row', () => {
+    expect(ruleBody('[data-blok-database-layout-tiles]')).toMatch(/padding:\s*var\(--blok-space-1\) var\(--blok-space-2\) var\(--blok-space-3\)/);
+    expect(ruleBody('[data-blok-database-panel][data-blok-database-panel-page="layout"]')).toMatch(/padding-block-end:\s*var\(--blok-space-2\)/);
+  });
+
   // Round 90 §1 #8: light ring rgb(230,229,227) (r89-n-layout.raw); dark rgb(56,56,54) already matched Blok's ring.
   it('rings Layout tiles with Notion\'s light ring and keeps the dark one', () => {
     const values = [...css.matchAll(/--blok-database-layout-tile-ring:\s*([^;]+);/g)].map((m) => m[1].trim());

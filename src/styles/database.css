@@ -15091,7 +15091,13 @@ button[data-blok-database-table-group-count]:hover {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--blok-space-2);
   margin-block-start: var(--blok-space-2-75);
-  padding: var(--blok-space-1) var(--blok-space-2) var(--blok-space-2);
+  /* Round 105 §1 #5: the first row 12 under the tiles. */
+  padding: var(--blok-space-1) var(--blok-space-2) var(--blok-space-3);
+}
+
+/* Round 105 §1 #5: the last row 8 above the panel bottom. */
+[data-blok-database-panel][data-blok-database-panel-page="layout"] {
+  padding-block-end: var(--blok-space-2);
 }
 
 [data-blok-database-layout-tile] {

@@ -10634,8 +10634,6 @@ export class DatabaseTool implements BlockTool {
         : {}),
       onDuplicate: () => {
         if (!writable()) return;
-        // Round 109 §1 #1: Duplicate fades the ••• menu out. Move to, the other closing item, goes at once.
-        if (fromDots && this.cardMenuPopover !== null) this.cardMenuPopover.itemCloseFades = true;
         this.duplicateTableRow(rowId);
         duplicated.done = true;
       },

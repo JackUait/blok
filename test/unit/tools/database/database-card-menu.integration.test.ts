@@ -106,6 +106,32 @@ const itemByTitle = (title: string): HTMLElement => {
 const menuItem = (name: string): HTMLElement | null =>
   document.querySelector<HTMLElement>(`[data-blok-popover-item][data-blok-item-name="${name}"]`);
 
+/**
+ * Runs `act` with a stub Popover API and a running transition on every element,
+ * so a close that keeps its motion leaves the menu closing. Returns one entry per hide().
+ */
+const closingAfter = (act: () => void): boolean[] => {
+  const closing: boolean[] = [];
+  const hide = PopoverAbstract.prototype.hide;
+  const pending = { finished: new Promise<Animation>(() => undefined) } as unknown as Animation;
+
+  Object.defineProperty(HTMLElement.prototype, 'popover', { configurable: true, writable: true, value: null });
+  Object.defineProperty(HTMLElement.prototype, 'showPopover', { configurable: true, writable: true, value: vi.fn() });
+  Object.defineProperty(HTMLElement.prototype, 'hidePopover', { configurable: true, writable: true, value: vi.fn() });
+  Object.defineProperty(HTMLElement.prototype, 'getAnimations', { configurable: true, writable: true, value: () => [pending] });
+  vi.spyOn(PopoverAbstract.prototype, 'hide').mockImplementation(function (this: PopoverAbstract) {
+    hide.call(this);
+    closing.push(this.isClosing);
+  });
+  try {
+    act();
+  } finally {
+    ['popover', 'showPopover', 'hidePopover', 'getAnimations'].forEach((key) => Reflect.deleteProperty(HTMLElement.prototype, key));
+  }
+
+  return closing;
+};
+
 // research/08 shots-08/65-row-handle-menu.png: search, "Page", then three groups and the footer.
 const PAGE = [
   'heading:tools.database.rowMenuPage',
@@ -280,24 +306,20 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     away.remove();
   });
 
-  // notion-motion.md Round 109 §1 #1: Duplicate on a card's ••• menu makes the copy and removes the menu.
+  // notion-motion.md Round 110 §1 #1: every item click empties the card's ••• menu by the first frame; nothing visible fades.
   // The table's ⋮⋮ menu closed only because the table redraw destroys it; the board keeps its card menu.
-  it('Duplicate on a board card\'s ••• menu closes the menu with a fade', () => {
+  it('Duplicate on a board card\'s ••• menu closes the menu at once', () => {
     const doc = oneRow();
     const { el } = buildTool(doc, {}, viewData('board'));
-    const fades: boolean[] = [];
-    const hide = PopoverAbstract.prototype.hide;
-
-    vi.spyOn(PopoverAbstract.prototype, 'hide').mockImplementation(function (this: PopoverAbstract) {
-      fades.push(this.itemCloseFades);
-      hide.call(this);
+    const closing = closingAfter(() => {
+      openMenu(el, 'board');
+      menuItem('database-row-duplicate')?.click();
     });
-    openMenu(el, 'board');
-    menuItem('database-row-duplicate')?.click();
 
+    expect(closing.length).toBeGreaterThan(0);
+    expect(closing.every((still) => !still)).toBe(true);
     expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
     expect(doc.api.blocks.insertAt).toHaveBeenCalled();
-    expect(fades[0]).toBe(true);
   });
 
   it('Duplicate on a board card\'s ••• menu leaves focus on that card\'s •••', () => {
@@ -311,18 +333,14 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
 
   it('Duplicate on a board card\'s right-click menu closes it at once', () => {
     const { el } = buildTool(oneRow(), {}, viewData('board'));
-    const fades: boolean[] = [];
-    const hide = PopoverAbstract.prototype.hide;
-
-    vi.spyOn(PopoverAbstract.prototype, 'hide').mockImplementation(function (this: PopoverAbstract) {
-      fades.push(this.itemCloseFades);
-      hide.call(this);
+    const closing = closingAfter(() => {
+      rowEl(el, 'board').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+      menuItem('database-row-duplicate')?.click();
     });
-    rowEl(el, 'board').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
-    menuItem('database-row-duplicate')?.click();
 
+    expect(closing.length).toBeGreaterThan(0);
+    expect(closing.every((still) => !still)).toBe(true);
     expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
-    expect(fades[0]).toBe(false);
   });
 
   // notion-motion.md Round 109 §1 #2: a middle click away keeps a card's ••• menu open too.
@@ -758,18 +776,14 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
 
   it('Move to Trash on a card closes its ••• menu at once', () => {
     const { el } = buildTool(oneRow(), {}, viewData('board'));
-    const fades: boolean[] = [];
-    const hide = PopoverAbstract.prototype.hide;
-
-    vi.spyOn(PopoverAbstract.prototype, 'hide').mockImplementation(function (this: PopoverAbstract) {
-      fades.push(this.itemCloseFades);
-      hide.call(this);
+    const closing = closingAfter(() => {
+      openMenu(el, 'board');
+      menuItem('database-row-delete')?.click();
     });
-    openMenu(el, 'board');
-    menuItem('database-row-delete')?.click();
 
+    expect(closing.length).toBeGreaterThan(0);
+    expect(closing.every((still) => !still)).toBe(true);
     expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
-    expect(fades.every((fade) => !fade)).toBe(true);
   });
 
   it('Move to Trash on a card removes the row', () => {
@@ -819,21 +833,16 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       document.querySelectorAll('[data-blok-database-move-picker]').forEach((picker) => picker.remove());
     });
 
-    // Only Duplicate's fade is measured (Round 109 §1 #1). Move to's picker takes the menu's place, so the menu goes at once.
+    // Round 110 §1 #1: every item click on a card's ••• menu closes it at once.
     it('••• › Move to closes the board card menu at once, with no fade', () => {
       const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('board'));
-      const fades: boolean[] = [];
-      const hide = PopoverAbstract.prototype.hide;
-
-      vi.spyOn(PopoverAbstract.prototype, 'hide').mockImplementation(function (this: PopoverAbstract) {
-        fades.push(this.itemCloseFades);
-        hide.call(this);
+      const closing = closingAfter(() => {
+        openMenu(el, 'board');
+        menuItem('database-row-move-to')?.click();
       });
-      openMenu(el, 'board');
-      menuItem('database-row-move-to')?.click();
 
-      expect(fades.length).toBeGreaterThan(0);
-      expect(fades.every((fade) => !fade)).toBe(true);
+      expect(closing.length).toBeGreaterThan(0);
+      expect(closing.every((still) => !still)).toBe(true);
     });
 
     it('a picked board card lists the other databases on ⌘⇧P', async () => {

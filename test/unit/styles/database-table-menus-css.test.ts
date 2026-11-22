@@ -415,7 +415,10 @@ describe('row page property menu (research parity row 9)', () => {
     const note = (menu: string): string => `${menu} [data-blok-database-property-menu-note]`;
 
     expect(declared(note(ROW_PAGE), 'padding')).toEqual(['var(--blok-space-3) calc(var(--blok-space-5) + var(--blok-space-0-5)) 0']);
-    expect(declared(note(SUB), 'padding')).toEqual(['var(--blok-space-3) calc(var(--blok-space-3) + var(--blok-space-0-5)) 0']);
+    // notion-motion.md Round 113 §1 #9: Notion's 12 above is a margin, and 6 + 4 + 4 sit under the text.
+    // Box 264 wide at the text's x; the menu's own 4 is the last of the three.
+    expect(declared(note(SUB), 'margin')).toEqual(['var(--blok-space-3) var(--blok-space-3-5) var(--blok-space-1)']);
+    expect(declared(note(SUB), 'padding')).toEqual(['0 0 var(--blok-space-1-5)']);
     expect(declared(note(ROW_PAGE), 'line-height')).toEqual(['18px']);
     expect(declared(note(SUB), 'line-height')).toEqual(['18px']);
   });

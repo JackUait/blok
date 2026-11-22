@@ -12707,7 +12707,8 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-database-property-menu-note] {
-  padding: var(--blok-space-3) calc(var(--blok-space-3) + var(--blok-space-0-5)) 0;
+  margin: var(--blok-space-3) var(--blok-space-3-5) var(--blok-space-1);
+  padding: 0 0 var(--blok-space-1-5);
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"], [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"] {

@@ -9357,8 +9357,11 @@ textarea[data-blok-database-cell-input] {
   padding: var(--blok-space-3) calc(var(--blok-space-5) + var(--blok-space-0-5)) 0;
 }
 
+/* notion-motion.md Round 113 §1 #9: Notion's 12 above is a margin; under the text sit 6 padding,
+   its list's 4 (the bottom margin here) and the menu's 4. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-database-property-menu-note] {
-  padding: var(--blok-space-3) calc(var(--blok-space-3) + var(--blok-space-0-5)) 0;
+  margin: var(--blok-space-3) var(--blok-space-3-5) var(--blok-space-1);
+  padding: 0 0 var(--blok-space-1-5);
 }
 
 /* notion-spec-2 §2, §9: Color and Divide by share one box at the tiles' x, 12px under them.

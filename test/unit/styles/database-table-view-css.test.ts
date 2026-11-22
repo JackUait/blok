@@ -512,6 +512,17 @@ describe('database table calculation footer', () => {
     expect(ruleBody('[data-blok-database-timeline-table-footer]:hover [data-blok-database-table-calc-placeholder]')).toBe('');
   });
 
+  // notion-motion.md Round 110 §1 #5 (r110-n-filtered-empty-light.raw): "Edit filters" fills 0.051 on hover, background 0.02s ease-in.
+  // The bordered rule's transparent background must not win over it. New page's hover is unread in Notion.
+  it('fills "Edit filters" with the hover tint', () => {
+    const hover = exactRule('[data-blok-database-table-edit-filters]:hover');
+    const bordered = css.indexOf('[data-blok-database-table-empty] [data-blok-database-table-add-row] {\n  display: inline-flex');
+
+    expect(hover).toMatch(/background-color:\s*var\(--blok-database-hover-bg\)/);
+    expect(css.indexOf('[data-blok-database-table-edit-filters]:hover')).toBeGreaterThan(bordered);
+    expect(ruleBody('[data-blok-database-table-edit-filters]')).toMatch(/transition:\s*background-color 20ms ease-in/);
+  });
+
   // Shot 66: the value ends 11px short of the column edge; the box's 6px plus the cell's 4px.
   it('pads the cell 4px so the box keeps the value 10px from the column edge', () => {
     expect(ruleBody('[data-blok-database-table-calc]')).toMatch(/padding:\s*0 var\(--blok-space-1\)/);

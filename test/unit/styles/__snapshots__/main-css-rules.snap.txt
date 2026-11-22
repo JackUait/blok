@@ -15130,6 +15130,11 @@ a[data-blok-database-comment-mention-chip] {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+  transition: background-color 20ms ease-in;
+}
+
+[data-blok-database-table-edit-filters]:hover {
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-table-edit-filters] {

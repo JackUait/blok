@@ -66,16 +66,29 @@ describe('table view menus', () => {
   });
 
   // notion-motion.md Round 85c §1 (Escape), Round 105 §1 #2 (a click away, an item click): the row handle menu
-  // goes at once on every close; every other menu fades.
-  it('closes the row handle menus at once on every close, and no other menu', () => {
+  // goes at once on every close. Round 108 §1 #1, #5: so does a card's (Escape ≤ 11 ms, gone by +120 ms after a
+  // click away). Every other menu fades.
+  it('closes the row handle and card menus at once on every close, and no other menu', () => {
     const anchor = (): HTMLElement => document.createElement('button');
 
     expect(openMenu(anchor(), [], { kind: 'row' }).closesAtOnce).toBe(true);
     expect(openMenu(anchor(), [], { kind: 'handle' }).closesAtOnce).toBe(true);
-    expect(openMenu(anchor(), [], { kind: 'card' }).closesAtOnce).not.toBe(true);
+    expect(openMenu(anchor(), [], { kind: 'card' }).closesAtOnce).toBe(true);
     expect(openMenu(anchor(), [], { kind: 'header' }).closesAtOnce).not.toBe(true);
     expect(openMenu(anchor(), []).closesAtOnce).not.toBe(true);
     expect(openMenu(anchor(), []).escapeClosesAtOnce).not.toBe(true);
+  });
+
+  // notion-motion.md Round 105, Round 107 §1 #1, Round 108 §1 #1: the row and card menus sit on a full-window
+  // backdrop, so a click away acts on nothing under it. Other menus let it through.
+  it('gives the row handle and card menus a click-away backdrop, and no other menu', () => {
+    const anchor = (): HTMLElement => document.createElement('button');
+
+    expect(openMenu(anchor(), [], { kind: 'row' }).swallowsOutsideClick).toBe(true);
+    expect(openMenu(anchor(), [], { kind: 'handle' }).swallowsOutsideClick).toBe(true);
+    expect(openMenu(anchor(), [], { kind: 'card' }).swallowsOutsideClick).toBe(true);
+    expect(openMenu(anchor(), [], { kind: 'header' }).swallowsOutsideClick).not.toBe(true);
+    expect(openMenu(anchor(), []).swallowsOutsideClick).not.toBe(true);
   });
 
   // notion-motion.md Round 86 §1 #1: with "Open in" open, the first Escape closes only that submenu.

@@ -298,9 +298,10 @@ export const openMenu = (
     popover.escapeClosesSubmenuFirst = true;
   }
   // notion-motion.md Round 85c §1, Round 105 §1 #2: Escape, a click away and an item click remove the row handle menu at once.
-  if (options.kind === 'row' || options.kind === 'handle') {
+  // Round 108 §1 #1, #5: a card's menu too (Escape ≤ 11 ms; gone by +120 ms after a click away).
+  if (options.kind === 'row' || options.kind === 'handle' || options.kind === 'card') {
     popover.closesAtOnce = true;
-    // Round 105 §1 #2, Round 107 §1 #1: a click away hits Notion's full-window backdrop and acts on nothing under it.
+    // Round 105 §1 #2, Round 107 §1 #1, Round 108 §1 #1: a click away hits Notion's full-window backdrop and acts on nothing under it.
     popover.swallowsOutsideClick = true;
   }
   popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;

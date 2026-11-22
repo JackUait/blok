@@ -2040,7 +2040,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R291_BYTES = 267;
     // Lane r292: "Edit filters" hover fill, the title row ⋯ 4 after the title with several views, the sort picker
     // scrolls as one surface; "Calculate" lost its fade (Round 110). Net database.css growth.
-    const DATABASE_R292_BYTES = 789;
+    const DATABASE_R292_BYTES = 1123;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

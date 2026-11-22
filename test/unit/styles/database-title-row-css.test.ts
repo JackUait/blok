@@ -83,6 +83,12 @@ describe('a long title stays one line', () => {
     expect(rule('[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title-more]')).toContain(`margin-inline: var(--blok-space-1) ${trail}`);
   });
 
+  // Round 8b: an empty title spans its row with several views. The ⋯ lies over its end, so it takes no room and Tab still reaches it.
+  it('with several views an empty title keeps its whole row under the "…"', () => {
+    expect(rule('[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title]:is(:empty, [data-blok-empty="true"]) + [data-blok-database-title-more]'))
+      .toMatch(/margin-inline-start: calc\(-1 \* var\(--blok-space-6\)\)/);
+  });
+
   it('"+" and "…" keep their 24px while the title gives way', () => {
     expect(rule('[data-blok-database-title-row][data-single-view] [data-blok-database-add-view]')).toMatch(/flex-shrink: 0/);
     expect(rule('[data-blok-database-title-more]')).toMatch(/flex-shrink: 0/);

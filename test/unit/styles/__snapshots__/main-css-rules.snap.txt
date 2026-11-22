@@ -17765,6 +17765,10 @@ button[data-blok-database-table-group-count]:hover {
   margin-block-start: var(--blok-space-0-25);
 }
 
+[data-blok-database-panel-page="layout"] > [data-blok-database-panel-separator] {
+  margin-block: var(--blok-space-2);
+}
+
 [data-blok-database-panel-page="group"] > [data-blok-database-panel-header] + [data-blok-database-panel-row] {
   margin-block-start: var(--blok-space-1-75);
 }

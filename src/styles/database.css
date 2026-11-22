@@ -15195,6 +15195,11 @@ button[data-blok-database-table-group-count]:hover {
   margin-block-start: var(--blok-space-0-25);
 }
 
+/* r25-lay-board.raw: the card rows' line sits 8px under Load limit and 8px over Card preview. */
+[data-blok-database-panel-page="layout"] > [data-blok-database-panel-separator] {
+  margin-block: var(--blok-space-2);
+}
+
 /* notion-motion.md Round 9 (r9-vs-group.raw): grouped, Group by sits at y+46 and the rows are 29px apart. */
 [data-blok-database-panel-page="group"] > [data-blok-database-panel-header] + [data-blok-database-panel-row] {
   margin-block-start: var(--blok-space-1-75);

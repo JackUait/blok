@@ -264,6 +264,12 @@ describe('View settings Layout page rows (notion-motion Round 9)', () => {
   it('put 1px between rows, a 29px pitch', () => {
     expect(ruleBody(NEXT)).toContain('margin-block-start: var(--blok-space-0-25)');
   });
+
+  // r25-lay-board.raw: Load limit ends 583.7, the line sits at 591.7, Card preview starts at 600.7.
+  // Round 114 §1 #10: Load limit 469.7 to Card preview 514.7 on a gallery too.
+  it('keep the card rows\' line 8px from the row above and below it', () => {
+    expect(ruleBody('[data-blok-database-panel-page="layout"] > [data-blok-database-panel-separator]')).toContain('margin-block: var(--blok-space-2)');
+  });
 });
 
 // r35:497-509 (two rules 32 tall at y 133 and 173) and r10-sort-popover.png (box top 305, rule 313, Add sort 351, bottom 412).

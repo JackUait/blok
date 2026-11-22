@@ -2113,6 +2113,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R319_HANDLE_BYTES = 111;
     // Lane r319: the closed timeline »'s icon ink (R114 §1 #9). Measured growth.
     const DATABASE_R319_TOGGLE_BYTES = 505;
+    // Lane r319: the Layout page's card-row line, 8px each side (R114 §1 #10). Measured growth.
+    const DATABASE_R319_LAYOUT_LINE_BYTES = 220;
     // file.css: the object on a file card — pages, editor tab, filmstrip, record, folder, punch card (measured file.css growth).
     const FILE_CARD_OBJECT_BYTES = 27_626;
     // emoji-picker.css: the database icon pickers' keyboard highlight (measured emoji-picker.css growth).
@@ -2797,7 +2799,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R308_BYTES
       + DATABASE_R318_BYTES
       + DATABASE_R319_HANDLE_BYTES
-      + DATABASE_R319_TOGGLE_BYTES;
+      + DATABASE_R319_TOGGLE_BYTES
+      + DATABASE_R319_LAYOUT_LINE_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

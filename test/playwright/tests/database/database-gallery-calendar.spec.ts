@@ -144,6 +144,86 @@ test.describe('gallery', () => {
     await expect(page.locator('[data-blok-database-gallery-grid]')).toHaveCSS('gap', '16px');
   });
 
+  /** Opens Settings › Layout, then the menu behind `row`, and reads boxes once the motion is done. */
+  const openLayoutMenu = async (page: Page, row: string, menu: string): Promise<Record<string, { x: number; y: number; width: number; height: number; right: number; bottom: number }>> => {
+    await page.getByTestId('database-toolbar-settings').click();
+    await page.getByTestId('database-settings-layout').click();
+    await page.getByTestId(row).click();
+    await expect(page.getByTestId(menu)).toBeVisible();
+
+    return page.evaluate(async (ids) => {
+      await Promise.all(document.getAnimations().map((animation) => animation.finished));
+
+      return Object.fromEntries(ids.map((id) => {
+        const r = document.querySelector(`[data-blok-testid="${id}"]`)?.getBoundingClientRect() ?? new DOMRect();
+
+        return [id, { x: r.x, y: r.y, width: r.width, height: r.height, right: r.right, bottom: r.bottom }];
+      }));
+    }, [row, menu]);
+  };
+
+  // notion-motion.md Round 114 §1 #4 (r114-n-cardsize-menu.raw): a 250x94 menu, its top on the row's bottom and its
+  // right edge on the row's; rows 28 tall at a 29 pitch.
+  test('Card size opens a 250x94 menu under its row, end edges aligned', async ({ page }) => {
+    await mount(page, blocks({ type: 'gallery', cardSize: 'medium' }));
+    const boxes = await openLayoutMenu(page, 'database-gallery-card-size', 'database-gallery-card-size-menu');
+    const row = boxes['database-gallery-card-size'];
+    const menu = boxes['database-gallery-card-size-menu'];
+    const items = await page.getByTestId('database-gallery-card-size-menu').getByRole('menuitemradio').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().top));
+
+    expect(menu.y).toBeCloseTo(row.bottom, 0);
+    expect(menu.right).toBeCloseTo(row.right, 0);
+    expect(menu.width).toBe(250);
+    expect(menu.height).toBeCloseTo(94, 0);
+    expect(items.slice(1).map((top, i) => top - items[i])).toEqual([29, 29]);
+    await expect(page.getByTestId('database-gallery-card-size-medium')).toHaveAttribute('aria-checked', 'true');
+  });
+
+  // notion-motion.md Round 114 §1 #4 (r114-n-cardpreview-roombelow.raw) and Round 113 §1 #6: below the row when it fits,
+  // above it (bottom on the row's top) when it does not.
+  test('Card preview opens below its row when it fits', async ({ page }) => {
+    await mount(page, blocks({ type: 'gallery' }));
+    const boxes = await openLayoutMenu(page, 'database-gallery-card-preview', 'database-gallery-card-preview-menu');
+
+    expect(boxes['database-gallery-card-preview-menu'].y).toBeCloseTo(boxes['database-gallery-card-preview'].bottom, 0);
+  });
+
+  test('Card preview opens above its row, its bottom on the row\'s top, when it does not fit below', async ({ page }) => {
+    // A short window with the database pushed down: the Layout page slides up to the window's bottom.
+    await page.setViewportSize({ width: 1400, height: 600 });
+    await mount(page, blocks({ type: 'gallery' }));
+    await page.evaluate(() => {
+      const holder = document.getElementById('blok');
+
+      if (holder !== null) holder.style.marginTop = '400px';
+    });
+    const boxes = await openLayoutMenu(page, 'database-gallery-card-preview', 'database-gallery-card-preview-menu');
+    const row = boxes['database-gallery-card-preview'];
+    const menu = boxes['database-gallery-card-preview-menu'];
+
+    expect(row.bottom + menu.height).toBeGreaterThan(600 - 12);
+    expect(menu.bottom).toBeCloseTo(row.y, 0);
+  });
+
+  // notion-motion.md Round 114 §4 (r114-n-cardpreview-pageprops.raw): the Page properties list is centred on its row and,
+  // with no room on the right, sits left of it, its right edge on the row's left.
+  test('Card preview › Page properties opens its list beside the row, centred on it', async ({ page }) => {
+    await mount(page, blocks({ type: 'gallery' }));
+    await openLayoutMenu(page, 'database-gallery-card-preview', 'database-gallery-card-preview-menu');
+    await page.getByTestId('database-gallery-card-preview-properties').click();
+    await expect(page.getByTestId('database-gallery-card-preview-properties-menu')).toBeVisible();
+    const placed = await page.evaluate(async () => {
+      await Promise.all(document.getAnimations().map((animation) => animation.finished));
+      const row = document.querySelector('[data-blok-testid="database-gallery-card-preview-properties"]')?.getBoundingClientRect();
+      const list = document.querySelector('[data-blok-testid="database-gallery-card-preview-properties-menu"]')?.getBoundingClientRect();
+
+      return row === undefined || list === undefined ? null : { rowMid: row.top + row.height / 2, listMid: list.top + list.height / 2, rowLeft: row.left, listRight: list.right };
+    });
+
+    expect(placed?.listMid).toBeCloseTo(placed?.rowMid ?? 0, 0);
+    expect(placed?.listRight).toBeCloseTo(placed?.rowLeft ?? 0, 0);
+  });
+
   test('shows a url property as the card image, and fits it on request', async ({ page }) => {
     const rows = [{ id: 'r1', properties: { 'p-title': 'Pic', 'p-image': 'data:image/gif;base64,R0lGODlhAQABAAAAACw=' } }];
 

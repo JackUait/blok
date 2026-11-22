@@ -1,6 +1,7 @@
 import { IconArrowDiagonal, IconBolt, IconCalendar, IconCheck, IconChevronDown, IconChevronRight, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconEyeSlash, IconFilter, IconGallery, IconLink, IconListBulleted, IconLock, IconPaintRoller, IconPin, IconPinFilled, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
 import { onHover } from '../../components/utils/tooltip';
+import { isKeyboardModality } from '../../components/utils/input-modality';
 import {
   DatabasePanel,
   panelCloseButton,
@@ -1486,8 +1487,8 @@ export class ViewSettingsPages {
       }
 
       if (item.name === 'calendar-show-as') return this.layoutMenuRow(panel, item);
-      // notion-motion.md Round 113 §1 #6, r25-cp.raw: Card preview opens the same menu, above the row when it has no room under it.
-      if (item.name.endsWith('-card-preview')) return this.layoutMenuRow(panel, item, true);
+      // notion-motion.md Round 113 §1 #6, Round 114 §1 #4: Card preview and Card size open the same menu, above the row when it has no room under it.
+      if (item.name.endsWith('-card-preview') || item.name.endsWith('-card-size')) return this.layoutMenuRow(panel, item, true);
 
       return panelRow({
         label: item.title,
@@ -1521,7 +1522,8 @@ export class ViewSettingsPages {
             };
 
             if (child.children !== undefined) {
-              // A group row (Card preview › Page properties) opens its own list beside it.
+              // A group row (Card preview › Page properties) opens its own list beside it, centred on it
+              // (notion-motion.md Round 114 §4: r114-n-cardpreview-pageprops.raw, left of the menu with no room on its right).
               const group = panelRow({
                 label: child.title,
                 testId: `database-${child.name}`,
@@ -1534,7 +1536,7 @@ export class ViewSettingsPages {
                     inner.activate?.();
                     panel.refresh();
                   })),
-                })), { beside: 0 }),
+                })), { aside: { side: 'right', gap: 0, flip: true } }),
               });
 
               return group;
@@ -1549,13 +1551,18 @@ export class ViewSettingsPages {
             });
           });
 
-          // notion-motion.md Round 105 §1 #4: the first row opens filled; the one fill follows the pointer and the focus.
+          // notion-motion.md Round 105 §1 #4: the first row opens filled (a keyboard open only: focus law); the one fill follows the pointer and the focus.
+          const keyboard = isKeyboardModality();
+
           rows.forEach((row, index) => {
             const light = (): void => rows.forEach((other) => other.toggleAttribute('data-active', other === row));
 
-            row.toggleAttribute('data-active', index === 0);
+            row.toggleAttribute('data-active', keyboard && index === 0);
             row.addEventListener('mousemove', light);
-            row.addEventListener('focus', light);
+            // Opening focuses the first row; after a mouse open that focus must not fill it.
+            row.addEventListener('focus', () => {
+              if (isKeyboardModality()) light();
+            });
           });
 
           return rows;

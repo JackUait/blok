@@ -676,6 +676,37 @@ describe('view settings panel', () => {
     expect(document.querySelector('[data-blok-testid="database-layout-board"]')?.getAttribute('aria-checked')).toBe('true');
   });
 
+  // notion-motion.md Round 114 §1 #4 (r114-n-cardsize-menu.raw): Card size opens a 250 menu over the Layout page,
+  // not a page; the size in use is checked; Escape gives the row the focus back.
+  it('opens Card size as a 250 menu over the Layout page', () => {
+    const h = harness({ type: 'gallery' });
+
+    h.ctx.layoutItems = () => [{
+      type: PopoverItemType.Default,
+      name: 'gallery-card-size',
+      title: 'Card size',
+      children: { items: [
+        { type: PopoverItemType.Default, name: 'gallery-card-size-small', title: 'Small', isActive: false, onActivate: vi.fn() },
+        { type: PopoverItemType.Default, name: 'gallery-card-size-medium', title: 'Medium', isActive: true, onActivate: vi.fn() },
+      ] },
+    }];
+    h.open();
+    click('database-settings-layout');
+
+    expect(q('database-gallery-card-size')?.getAttribute('aria-haspopup')).toBe('menu');
+    click('database-gallery-card-size');
+
+    const menu = q('database-gallery-card-size-menu');
+
+    expect(menu?.style.width).toBe('250px');
+    expect(q('database-view-settings')?.getAttribute('data-blok-database-panel-page')).toBe('layout');
+    expect(q('database-gallery-card-size-medium')?.getAttribute('aria-checked')).toBe('true');
+    menu?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(q('database-gallery-card-size-menu')).toBeNull();
+    expect(q('database-gallery-card-size')).toHaveFocus();
+  });
+
   it('mounts the layout rows a gallery or calendar gives: a page per choice list, a switch per toggle', () => {
     const h = harness({ type: 'gallery' });
     const pickLarge = vi.fn();
@@ -758,10 +789,22 @@ describe('view settings panel', () => {
       expect(q('database-calendar-show-as')?.getAttribute('aria-expanded')).toBe('false');
     });
 
-    // notion-motion.md Round 105 §1 #4 (r105-n-calas-open-week.raw): the first row opens filled, whichever is checked;
-    // the fill then follows the pointer, one row at a time.
-    it('opens with the first row filled, then the fill follows the pointer', () => {
+    // A mouse open fills no row: the keyboard-only focus law (user decision over Notion's filled first row).
+    it('opens with no row filled after a mouse open', () => {
       calendar(vi.fn(), true);
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      click('database-calendar-show-as');
+
+      expect(q('database-calendar-range-month')?.hasAttribute('data-active')).toBe(false);
+      expect(q('database-calendar-range-week')?.hasAttribute('data-active')).toBe(false);
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+    });
+
+    // notion-motion.md Round 105 §1 #4 (r105-n-calas-open-week.raw): a keyboard open fills the first row, whichever is checked;
+    // the fill then follows the pointer, one row at a time.
+    it('opens with the first row filled after a keyboard open, then the fill follows the pointer', () => {
+      calendar(vi.fn(), true);
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
       click('database-calendar-show-as');
       const month = q('database-calendar-range-month');
       const week = q('database-calendar-range-week');

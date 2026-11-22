@@ -9047,6 +9047,15 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control);
 }
 
+/* notion-motion.md Round 113 §1 #8: the token × fills on hover. Notion's dark fill is unread. */
+[data-blok-database-cell-editor] [data-blok-database-select-chip-remove] {
+  transition: background-color 100ms ease-in-out;
+}
+
+[data-blok-database-cell-editor] [data-blok-database-select-chip-remove]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
 [data-blok-database-place-clear] svg,
 [data-blok-database-file-remove] svg {
   width: 12px;

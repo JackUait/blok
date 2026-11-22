@@ -1255,6 +1255,18 @@ describe('cell editor CSS', () => {
   });
   // notion-motion.md Round 26 "Option ⋯ menu", Round 55 §4: 220×418.9. Name field 196×28 at +12/+12, Delete at +52,
   // a rule and "Colors", Default at +125.9, colour rows 212×28 at +4 with pitch 29, and 4 under the last row.
+  // notion-motion.md Round 113 §1 #8 (r113-n-multiselect-token-remove.raw): the token × fills
+  // rgba(33,27,23,0.051) on hover, background-color 100ms ease-in-out. Dark is unmeasured: the hover token.
+  describe('token ×', () => {
+    const REMOVE = '[data-blok-database-cell-editor] [data-blok-database-select-chip-remove]';
+
+    it('fills on hover as Notion', () => {
+      expect(declared(`${REMOVE}:hover`, 'background-color')).toEqual(['var(--blok-database-hover-bg)']);
+      expect(declared(REMOVE, 'transition')).toEqual(['background-color 100ms ease-in-out']);
+      expect(database).toContain('--blok-database-hover-bg: rgba(33, 27, 23, 0.051);');
+    });
+  });
+
   describe('option ⋯ menu', () => {
     const MENU = "[data-blok-popover-custom-class~='blok-database-option-menu']";
 

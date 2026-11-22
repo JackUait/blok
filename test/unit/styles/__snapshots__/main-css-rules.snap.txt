@@ -12448,6 +12448,14 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control);
 }
 
+[data-blok-database-cell-editor] [data-blok-database-select-chip-remove] {
+  transition: background-color 100ms ease-in-out;
+}
+
+[data-blok-database-cell-editor] [data-blok-database-select-chip-remove]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
 [data-blok-database-place-clear] svg, [data-blok-database-file-remove] svg {
   width: 12px;
   height: 12px;

@@ -3910,12 +3910,13 @@ button[data-blok-database-board-lane-count]:hover {
 }
 
 /* notion-motion.md, Round 8b "Board group ⋯ menu": the 20px icon at x 8, the text at x 36.
-   Round 9: the column menu and its Edit property flyout too. */
+   Round 9: the column menu and its Edit property flyout too. Round 112 §1 #2: the title ⋯ menu. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item-icon],
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-item-icon],
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-page-actions-menu'] [data-blok-popover-item-icon],
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] [data-blok-popover-item-icon],
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-lock-menu'] [data-blok-popover-item-icon] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-lock-menu'] [data-blok-popover-item-icon],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-title-menu'] [data-blok-popover-item-icon] {
   width: 20px;
   margin-inline-end: var(--blok-space-2);
 }
@@ -4083,6 +4084,16 @@ button[data-blok-database-board-lane-count]:hover {
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator] {
   padding-block: var(--blok-space-0-75) var(--blok-space-1);
   padding-inline: var(--blok-space-2);
+}
+
+/* notion-motion.md Round 112 §1 #2 (r112-n-titlemore-menu-1view.raw): the title ⋯ menu's rule is 176 wide, 12 in,
+   4 under the row above (its 1px gap + 3) and 4 over the next. The last row ends 4 over the bottom. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-title-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator] {
+  padding: var(--blok-space-0-75) var(--blok-space-2) var(--blok-space-1);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-title-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item]:last-child {
+  margin-block-end: 0;
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-item-name='name'] {

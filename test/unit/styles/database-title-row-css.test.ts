@@ -409,3 +409,22 @@ describe('the selection bar on the tab row starts left of the tabs, as in Notion
     expect(body).toMatch(/inset-inline-start: calc\(max\(0px, \(100% - var\(--blok-content-max-width, var\(--max-width-content\)\)\) \* var\(--_blok-database-lead, 0\.5\)\) - 10px\)/);
   });
 });
+
+// notion-motion.md Round 111 §1 #2, Round 112 §1 #2 (r112-n-titlemore-menu-1view.raw): the title ⋯ menu's
+// 20px icon at +8 and text at +36; a rule 176 wide, 12 in from the menu, 4 under the row above and 4 over the next.
+describe('the title "…" menu', () => {
+  it('draws 20px icons with 8 after them', () => {
+    expect(database).toMatch(/\[data-blok-popover\]\[data-blok-popover-custom-class~='blok-database-title-menu'\] \[data-blok-popover-item-icon\] ?[,{]/);
+  });
+
+  it('spaces its rules 4 from the rows, 12 in from the menu', () => {
+    expect(rule("[data-blok-popover][data-blok-popover-custom-class~='blok-database-title-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator]"))
+      .toMatch(/padding: var\(--blok-space-0-75\) var\(--blok-space-2\) var\(--blok-space-1\)/);
+  });
+
+  // 200x255 with 8 rows: the last row ends 4 over the menu's bottom.
+  it('leaves no row gap under the last row', () => {
+    expect(rule("[data-blok-popover][data-blok-popover-custom-class~='blok-database-title-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item]:last-child"))
+      .toMatch(/margin-block-end: 0/);
+  });
+});

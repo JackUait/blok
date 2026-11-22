@@ -1221,8 +1221,8 @@ export class DatabaseTabBar {
 
   /**
    * The title row's "…" (feel/findings-toolbar V03): Notion's items that Blok
-   * can back, in Notion's order. With several views Notion drops the view rows
-   * and adds View database and Edit icon (notion-motion.md Round 111 §1 #2).
+   * can back, in Notion's order (notion-motion.md Round 112 §1 #2). With several
+   * views Notion drops the view rows (Round 111 §1 #2).
    */
   createTitleMoreButton(several = false): HTMLElement {
     const button = document.createElement('button');
@@ -1239,7 +1239,7 @@ export class DatabaseTabBar {
       if (this.contextPopover !== null) return;
       const { onCopyLink, onEditTitle, onEditLayout, onEditIcon, onDataSourceTitlesToggle } = this.options;
       const hidden = this.options.dataSourceTitlesHidden === true;
-      const openFullPage = several ? this.options.openFullPage?.() : undefined;
+      const openFullPage = this.options.openFullPage?.();
       const view: PopoverItemParams[] = several ? [] : [
         ...(onCopyLink === undefined ? [] : [{
           icon: IconLink,
@@ -1272,7 +1272,7 @@ export class DatabaseTabBar {
           closeOnActivate: true,
           onActivate: onEditTitle,
         }]),
-        ...(!several || onEditIcon === undefined || hidden ? [] : [{
+        ...(onEditIcon === undefined || hidden ? [] : [{
           icon: IconEmojiSmile,
           name: 'database-title-edit-icon',
           title: t('tools.database.tableEditIcon', 'Edit icon'),
@@ -1298,8 +1298,8 @@ export class DatabaseTabBar {
         .filter((group) => group.length > 0)
         .flatMap((group, index) => index === 0 ? group : [{ type: PopoverItemType.Separator as const }, ...group]);
 
-      // r111-n-titlemore-menu-2views.raw: 200 wide, 28px rows, 4 under the ⋯. The one-view menu is unmeasured since V1.
-      this.showMenu(button, items, several ? { class: DATABASE_HEADER_MENU_CLASS, minWidth: '200px', offset: 4 } : undefined);
+      // r111-n-titlemore-menu-2views.raw, r112-n-titlemore-menu-1view.raw: 200 wide, 28px rows, 4 under the ⋯.
+      this.showMenu(button, items, { class: `${DATABASE_HEADER_MENU_CLASS} blok-database-title-menu`, minWidth: '200px', offset: 4 });
     });
 
     return button;

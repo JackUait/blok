@@ -377,7 +377,9 @@ describe('view tabs (feel/findings-toolbar)', () => {
         return groups;
       }, [[]]);
 
-    it('sits after "+" and lists Notion\'s groups: view, title and layout, then Hide title', async () => {
+    // notion-motion.md Round 112 §1 #2 (r112-n-titlemore-menu-1view.raw): Copy link to view, Duplicate view |
+    // View database, Edit title, Edit icon, Edit layout | Hide title (Manage in Calendar is Notion's own app).
+    it('sits after "+" and lists Notion\'s groups: view, database and title, then Hide title', async () => {
       await make(doc([table('v1', 'a0')]));
 
       expect(titleMore()?.previousElementSibling?.hasAttribute('data-blok-database-add-view')).toBe(true);
@@ -386,9 +388,21 @@ describe('view tabs (feel/findings-toolbar)', () => {
 
       expect(menuGroups()).toEqual([
         ['database-title-copy-link', 'database-title-duplicate'],
-        ['database-title-edit', 'database-title-edit-layout'],
+        ['database-title-view-database', 'database-title-edit', 'database-title-edit-icon', 'database-title-edit-layout'],
         ['database-title-hide'],
       ]);
+    });
+
+    it('is the 200px title menu, as with two views', async () => {
+      await make(doc([table('v1', 'a0')]));
+
+      titleMore()?.click();
+      await quiet();
+      const popover = document.querySelector<HTMLElement>('[data-blok-popover-opened="true"]');
+
+      expect(popover?.getAttribute('data-blok-popover-custom-class')?.split(' ')).toEqual(expect.arrayContaining(['blok-database-header-menu', 'blok-database-title-menu']));
+      // jsdom measures 0, so --width is the 200px floor.
+      expect(popover?.style.getPropertyValue('--width')).toBe('200px');
     });
 
     it('Hide title hides the title and saves it; the "…" stays and offers Show title', async () => {
@@ -503,7 +517,7 @@ describe('view tabs (feel/findings-toolbar)', () => {
       await quiet();
       const popover = document.querySelector<HTMLElement>('[data-blok-popover-opened="true"]');
 
-      expect(popover?.getAttribute('data-blok-popover-custom-class')?.split(' ')).toContain('blok-database-header-menu');
+      expect(popover?.getAttribute('data-blok-popover-custom-class')?.split(' ')).toEqual(expect.arrayContaining(['blok-database-header-menu', 'blok-database-title-menu']));
       // jsdom measures 0, so --width is the 200px floor.
       expect(popover?.style.getPropertyValue('--width')).toBe('200px');
     });

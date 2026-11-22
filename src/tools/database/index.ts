@@ -7427,6 +7427,9 @@ export class DatabaseTool implements BlockTool {
       onActivate: () => {
         const menu = this.groupMenuPopover;
 
+        // A keyboard open leaves focus on the button: the redraw would refocus its twin, and focus
+        // outside the menu closes it before it can move. The microtask below focuses the twin.
+        if (document.activeElement === anchor) anchor.blur();
         this.updateActiveView({ timelineZoom: zoom });
         // A bound view redraws in a microtask; close after it, on the redrawn button.
         queueMicrotask(() => {

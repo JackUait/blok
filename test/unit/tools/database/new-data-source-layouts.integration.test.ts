@@ -293,8 +293,10 @@ describe('New data source: every layout on a second source', () => {
     });
   };
 
-  const pickMovesMenu = async (zoomButton: () => Element | null, picked: string): Promise<void> => {
+  const pickMovesMenu = async (zoomButton: () => Element | null, picked: string, keepFocus = false): Promise<void> => {
     zoomButtonAt(picked);
+    // A keyboard open leaves focus on the button; the redraw then hands it to the new button.
+    if (keepFocus) (zoomButton() as HTMLElement | null)?.focus();
     await click(zoomButton());
     const menu = document.querySelector<HTMLElement>('[data-blok-popover-opened]');
 
@@ -325,6 +327,21 @@ describe('New data source: every layout on a second source', () => {
     await make(doc('vb', {}, { type: 'timeline', timelineBy: 'due' }));
 
     await pickMovesMenu(() => layoutRoot('[data-blok-database-timeline]').querySelector('[data-blok-database-timeline-zoom]'), 'quarter');
+  });
+
+  it('a keyboard zoom pick also moves the closing menu under the new button', async () => {
+    await make([{
+      id: 'db', type: 'database', content: [],
+      data: {
+        title: 'Plain',
+        schema: [...parentSchema, { id: 'when', name: 'When', type: 'date', position: 'a2' }],
+        views: [table('v1', 'a0', { type: 'timeline', timelineBy: 'when' })],
+        activeViewId: 'v1',
+      },
+    }]);
+
+    await pickMovesMenu(() => own('[data-blok-database-timeline]').querySelector('[data-blok-database-timeline-zoom]'), 'year', true);
+    expect(own('[data-blok-database-timeline]').querySelector('[data-blok-database-timeline-zoom]')).toHaveFocus();
   });
 
   it('a zoom pick on a database\'s own timeline moves the closing menu under the new button', async () => {

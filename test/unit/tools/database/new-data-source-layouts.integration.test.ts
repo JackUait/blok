@@ -281,6 +281,66 @@ describe('New data source: every layout on a second source', () => {
     expect(zoomButton()).toHaveFocus();
   });
 
+  // notion-motion.md Round 105 §1 #8 (r105-n-tlzoom-pick.raw): the closing menu moves under the narrower new button.
+  const zoomButtonAt = (picked: string): void => {
+    const real = HTMLElement.prototype.getBoundingClientRect;
+
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (!this.hasAttribute('data-blok-database-timeline-zoom')) return real.call(this);
+      const x = this.closest('[data-blok-database-timeline]')?.getAttribute('data-zoom') === picked ? 605 : 600;
+
+      return new DOMRect(x, 40, 70, 28);
+    });
+  };
+
+  const pickMovesMenu = async (zoomButton: () => Element | null, picked: string): Promise<void> => {
+    zoomButtonAt(picked);
+    await click(zoomButton());
+    const menu = document.querySelector<HTMLElement>('[data-blok-popover-opened]');
+
+    if (menu === null) throw new Error('no zoom menu');
+    const { top } = menu.style;
+    const openLeft = menu.getAttribute('data-blok-popover-open-left');
+    const align = menu.getAttribute('data-align');
+
+    expect(menu.style.left).toBe('600px');
+    // jsdom has no top layer, so the close settles at once and clears left; the records keep each step.
+    const records: MutationRecord[] = [];
+    const watch = new MutationObserver((seen) => records.push(...seen));
+
+    watch.observe(menu, { attributes: true, attributeOldValue: true, attributeFilter: ['style', 'data-align', 'data-blok-popover-open-left'] });
+    await click(document.querySelector(`[data-blok-item-name="database-timeline-zoom-${picked}"]`));
+    records.push(...watch.takeRecords());
+    const before = (name: string): Array<string | null> => records.filter((r) => r.attributeName === name).map((r) => r.oldValue);
+    const styleOf = (value: string | null, prop: string): string | undefined => value?.match(new RegExp(`(?:^|;\\s*)${prop}:\\s*([^;]+)`))?.[1];
+
+    watch.disconnect();
+    expect(before('style').map((v) => styleOf(v, 'left'))).toContain('605px');
+    expect(new Set(before('style').map((v) => styleOf(v, 'top')).filter((v) => v !== undefined))).toEqual(new Set([top]));
+    expect(before('data-blok-popover-open-left').every((v) => v === openLeft)).toBe(true);
+    expect(before('data-align').every((v) => v === align)).toBe(true);
+  };
+
+  it('a zoom pick moves the closing menu under the redrawn button', async () => {
+    await make(doc('vb', {}, { type: 'timeline', timelineBy: 'due' }));
+
+    await pickMovesMenu(() => layoutRoot('[data-blok-database-timeline]').querySelector('[data-blok-database-timeline-zoom]'), 'quarter');
+  });
+
+  it('a zoom pick on a database\'s own timeline moves the closing menu under the new button', async () => {
+    await make([{
+      id: 'db', type: 'database', content: [],
+      data: {
+        title: 'Plain',
+        schema: [...parentSchema, { id: 'when', name: 'When', type: 'date', position: 'a2' }],
+        views: [table('v1', 'a0', { type: 'timeline', timelineBy: 'when' })],
+        activeViewId: 'v1',
+      },
+    }]);
+
+    await pickMovesMenu(() => own('[data-blok-database-timeline]').querySelector('[data-blok-database-timeline-zoom]'), 'year');
+  });
+
   it('a form answer in the Preview becomes a source row', async () => {
     const api = await make(doc('vb', {}, { type: 'form' }));
 

@@ -7424,11 +7424,20 @@ export class DatabaseTool implements BlockTool {
       title: this.api.i18n.t(timelineZoomLabelKey(zoom)),
       isActive: zoom === current,
       // notion-motion.md Round 90 §1 #1: a pick closes the menu, focus back on the zoom button.
-      closeOnActivate: true,
       onActivate: () => {
+        const menu = this.groupMenuPopover;
+
         this.updateActiveView({ timelineZoom: zoom });
-        // Focus was in the menu, so a redraw that replaced the button could not hand focus to its twin.
-        (anchor.isConnected ? anchor : this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-timeline-zoom]'))?.focus({ preventScroll: true });
+        // A bound view redraws in a microtask; close after it, on the redrawn button.
+        queueMicrotask(() => {
+          const button = anchor.isConnected ? anchor : (this.binding?.owner ?? this).boardContainer?.querySelector<HTMLElement>('[data-blok-database-timeline-zoom]');
+
+          // notion-motion.md Round 105 §1 #8: the menu moves under the new, narrower button, then fades.
+          if (button !== null && button !== undefined) menu?.updatePosition(button.getBoundingClientRect(), { positionContext: button });
+          // Focus was in the menu, so a redraw that replaced the button could not hand focus to its twin.
+          button?.focus({ preventScroll: true });
+          menu?.hide();
+        });
       },
     })), undefined, { minWidth: '180px' });
   }

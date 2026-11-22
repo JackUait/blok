@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "ڪجهه به نه",
   "tools.database.galleryCardPreviewCover": "صفحي جو ڪور",
   "tools.database.galleryCardPreviewContent": "صفحي جو مواد",
+  "tools.database.galleryCardPreviewContentDescription": "صفحي جو پهريون بلاڪ استعمال ڪري ٿو",
+  "tools.database.galleryCardPreviewProperties": "صفحي جون پراپرٽيون",
   "tools.database.galleryFitImage": "تصوير پوري ڏيکاريو",
   "tools.database.galleryFitMedia": "ميڊيا پوري ڏيکاريو",
   "tools.database.calendarLabel": "ڪئلينڊر",

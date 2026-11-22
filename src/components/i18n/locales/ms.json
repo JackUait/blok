@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "Tiada",
   "tools.database.galleryCardPreviewCover": "Muka depan halaman",
   "tools.database.galleryCardPreviewContent": "Kandungan halaman",
+  "tools.database.galleryCardPreviewContentDescription": "Menggunakan blok pertama pada halaman",
+  "tools.database.galleryCardPreviewProperties": "Sifat halaman",
   "tools.database.galleryFitImage": "Muatkan imej",
   "tools.database.galleryFitMedia": "Muatkan media",
   "tools.database.calendarLabel": "Kalendar",

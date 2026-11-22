@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "কিছু না",
   "tools.database.galleryCardPreviewCover": "পৃষ্ঠার প্রচ্ছদ",
   "tools.database.galleryCardPreviewContent": "পৃষ্ঠার বিষয়বস্তু",
+  "tools.database.galleryCardPreviewContentDescription": "পৃষ্ঠার প্রথম ব্লক ব্যবহার করে",
+  "tools.database.galleryCardPreviewProperties": "পৃষ্ঠার বৈশিষ্ট্য",
   "tools.database.galleryFitImage": "ছবি ফিট করুন",
   "tools.database.galleryFitMedia": "মিডিয়া ফিট করুন",
   "tools.database.calendarLabel": "ক্যালেন্ডার",

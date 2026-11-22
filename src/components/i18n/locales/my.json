@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "မရှိ",
   "tools.database.galleryCardPreviewCover": "စာမျက်နှာ အဖုံးပုံ",
   "tools.database.galleryCardPreviewContent": "စာမျက်နှာ အကြောင်းအရာ",
+  "tools.database.galleryCardPreviewContentDescription": "စာမျက်နှာ၏ ပထမဆုံး ဘလောက်ကို အသုံးပြုသည်",
+  "tools.database.galleryCardPreviewProperties": "စာမျက်နှာ ဂုဏ်သတ္တိများ",
   "tools.database.galleryFitImage": "ပုံကို အံကိုက်ညှိရန်",
   "tools.database.galleryFitMedia": "မီဒီယာကို အံကိုက်ညှိရန်",
   "tools.database.calendarLabel": "ပြက္ခဒိန်",

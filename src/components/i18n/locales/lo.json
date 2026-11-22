@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "ບໍ່ມີ",
   "tools.database.galleryCardPreviewCover": "ຮູບປົກໜ້າ",
   "tools.database.galleryCardPreviewContent": "ເນື້ອຫາໜ້າ",
+  "tools.database.galleryCardPreviewContentDescription": "ໃຊ້ບລັອກທຳອິດໃນໜ້າ",
+  "tools.database.galleryCardPreviewProperties": "ຄຸນສົມບັດໜ້າ",
   "tools.database.galleryFitImage": "ປັບຮູບໃຫ້ພໍດີ",
   "tools.database.galleryFitMedia": "ປັບສື່ໃຫ້ພໍດີ",
   "tools.database.calendarLabel": "ປະຕິທິນ",

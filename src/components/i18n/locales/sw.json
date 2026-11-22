@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "Hakuna",
   "tools.database.galleryCardPreviewCover": "Jalada la ukurasa",
   "tools.database.galleryCardPreviewContent": "Maudhui ya ukurasa",
+  "tools.database.galleryCardPreviewContentDescription": "Hutumia kizuizi cha kwanza kwenye ukurasa",
+  "tools.database.galleryCardPreviewProperties": "Sifa za ukurasa",
   "tools.database.galleryFitImage": "Linganisha picha",
   "tools.database.galleryFitMedia": "Linganisha midia",
   "tools.database.calendarLabel": "Kalenda",

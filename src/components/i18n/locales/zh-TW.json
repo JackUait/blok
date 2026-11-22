@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "無",
   "tools.database.galleryCardPreviewCover": "頁面封面",
   "tools.database.galleryCardPreviewContent": "頁面內容",
+  "tools.database.galleryCardPreviewContentDescription": "使用頁面的第一個區塊",
+  "tools.database.galleryCardPreviewProperties": "頁面屬性",
   "tools.database.galleryFitImage": "完整顯示圖片",
   "tools.database.galleryFitMedia": "完整顯示媒體",
   "tools.database.calendarLabel": "行事曆",

@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "کوئی نہیں",
   "tools.database.galleryCardPreviewCover": "صفحے کا کور",
   "tools.database.galleryCardPreviewContent": "صفحے کا مواد",
+  "tools.database.galleryCardPreviewContentDescription": "صفحے کا پہلا بلاک استعمال کرتا ہے",
+  "tools.database.galleryCardPreviewProperties": "صفحے کی پراپرٹیز",
   "tools.database.galleryFitImage": "تصویر پوری دکھائیں",
   "tools.database.galleryFitMedia": "میڈیا پورا دکھائیں",
   "tools.database.calendarLabel": "کیلنڈر",

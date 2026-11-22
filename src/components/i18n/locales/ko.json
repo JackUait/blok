@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "없음",
   "tools.database.galleryCardPreviewCover": "페이지 커버",
   "tools.database.galleryCardPreviewContent": "페이지 콘텐츠",
+  "tools.database.galleryCardPreviewContentDescription": "페이지의 첫 번째 블록을 사용합니다",
+  "tools.database.galleryCardPreviewProperties": "페이지 속성",
   "tools.database.galleryFitImage": "이미지 맞추기",
   "tools.database.galleryFitMedia": "미디어 맞추기",
   "tools.database.calendarLabel": "캘린더",

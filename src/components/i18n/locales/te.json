@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "ఏదీ లేదు",
   "tools.database.galleryCardPreviewCover": "పేజీ కవర్",
   "tools.database.galleryCardPreviewContent": "పేజీ కంటెంట్",
+  "tools.database.galleryCardPreviewContentDescription": "పేజీలోని మొదటి బ్లాక్‌ను ఉపయోగిస్తుంది",
+  "tools.database.galleryCardPreviewProperties": "పేజీ ప్రాపర్టీలు",
   "tools.database.galleryFitImage": "చిత్రాన్ని సరిపోల్చు",
   "tools.database.galleryFitMedia": "మీడియాను సరిపోల్చు",
   "tools.database.calendarLabel": "క్యాలెండర్",

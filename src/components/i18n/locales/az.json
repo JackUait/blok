@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "Heç biri",
   "tools.database.galleryCardPreviewCover": "Səhifənin üz qabığı",
   "tools.database.galleryCardPreviewContent": "Səhifənin məzmunu",
+  "tools.database.galleryCardPreviewContentDescription": "Səhifənin ilk blokundan istifadə edir",
+  "tools.database.galleryCardPreviewProperties": "Səhifənin xüsusiyyətləri",
   "tools.database.galleryFitImage": "Şəkli sığdır",
   "tools.database.galleryFitMedia": "Medianı sığdır",
   "tools.database.calendarLabel": "Təqvim",

@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "Yok",
   "tools.database.galleryCardPreviewCover": "Sayfa kapağı",
   "tools.database.galleryCardPreviewContent": "Sayfa içeriği",
+  "tools.database.galleryCardPreviewContentDescription": "Sayfadaki ilk bloku kullanır",
+  "tools.database.galleryCardPreviewProperties": "Sayfa özellikleri",
   "tools.database.galleryFitImage": "Görseli sığdır",
   "tools.database.galleryFitMedia": "Medyayı sığdır",
   "tools.database.calendarLabel": "Takvim",

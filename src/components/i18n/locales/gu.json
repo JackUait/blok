@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "કંઈ નહીં",
   "tools.database.galleryCardPreviewCover": "પૃષ્ઠનું કવર",
   "tools.database.galleryCardPreviewContent": "પૃષ્ઠની સામગ્રી",
+  "tools.database.galleryCardPreviewContentDescription": "પૃષ્ઠના પહેલા બ્લોકનો ઉપયોગ કરે છે",
+  "tools.database.galleryCardPreviewProperties": "પૃષ્ઠના ગુણધર્મો",
   "tools.database.galleryFitImage": "છબી ફિટ કરો",
   "tools.database.galleryFitMedia": "મીડિયા ફિટ કરો",
   "tools.database.calendarLabel": "કૅલેન્ડર",

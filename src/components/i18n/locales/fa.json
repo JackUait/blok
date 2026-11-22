@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "هیچ‌کدام",
   "tools.database.galleryCardPreviewCover": "جلدنگاره صفحه",
   "tools.database.galleryCardPreviewContent": "محتوای صفحه",
+  "tools.database.galleryCardPreviewContentDescription": "از نخستین بلوک صفحه استفاده می‌کند",
+  "tools.database.galleryCardPreviewProperties": "ویژگی‌های صفحه",
   "tools.database.galleryFitImage": "متناسب‌سازی تصویر",
   "tools.database.galleryFitMedia": "متناسب‌سازی رسانه",
   "tools.database.calendarLabel": "تقویم",

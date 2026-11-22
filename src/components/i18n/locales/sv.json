@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "Ingen",
   "tools.database.galleryCardPreviewCover": "Sidans omslagsbild",
   "tools.database.galleryCardPreviewContent": "Sidans innehåll",
+  "tools.database.galleryCardPreviewContentDescription": "Använder sidans första block",
+  "tools.database.galleryCardPreviewProperties": "Sidans egenskaper",
   "tools.database.galleryFitImage": "Anpassa bild",
   "tools.database.galleryFitMedia": "Anpassa media",
   "tools.database.calendarLabel": "Kalender",

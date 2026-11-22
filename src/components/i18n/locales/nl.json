@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "Geen",
   "tools.database.galleryCardPreviewCover": "Omslagafbeelding van pagina",
   "tools.database.galleryCardPreviewContent": "Pagina-inhoud",
+  "tools.database.galleryCardPreviewContentDescription": "Gebruikt het eerste blok van de pagina",
+  "tools.database.galleryCardPreviewProperties": "Pagina-eigenschappen",
   "tools.database.galleryFitImage": "Afbeelding passend maken",
   "tools.database.galleryFitMedia": "Media passend maken",
   "tools.database.calendarLabel": "Kalender",

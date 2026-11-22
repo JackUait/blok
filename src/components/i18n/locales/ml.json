@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "ഒന്നുമില്ല",
   "tools.database.galleryCardPreviewCover": "പേജ് കവർ",
   "tools.database.galleryCardPreviewContent": "പേജ് ഉള്ളടക്കം",
+  "tools.database.galleryCardPreviewContentDescription": "പേജിലെ ആദ്യ ബ്ലോക്ക് ഉപയോഗിക്കുന്നു",
+  "tools.database.galleryCardPreviewProperties": "പേജ് പ്രോപ്പർട്ടികൾ",
   "tools.database.galleryFitImage": "ചിത്രം അനുയോജ്യമാക്കുക",
   "tools.database.galleryFitMedia": "മീഡിയ അനുയോജ്യമാക്കുക",
   "tools.database.calendarLabel": "കലണ്ടർ",

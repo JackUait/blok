@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "எதுவுமில்லை",
   "tools.database.galleryCardPreviewCover": "பக்க அட்டைப்படம்",
   "tools.database.galleryCardPreviewContent": "பக்க உள்ளடக்கம்",
+  "tools.database.galleryCardPreviewContentDescription": "பக்கத்தின் முதல் தொகுதியைப் பயன்படுத்துகிறது",
+  "tools.database.galleryCardPreviewProperties": "பக்கப் பண்புகள்",
   "tools.database.galleryFitImage": "படத்தைப் பொருத்து",
   "tools.database.galleryFitMedia": "மீடியாவைப் பொருத்து",
   "tools.database.calendarLabel": "நாட்காட்டி",

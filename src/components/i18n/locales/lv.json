@@ -1659,6 +1659,8 @@
   "tools.database.galleryCardPreviewNone": "Nav",
   "tools.database.galleryCardPreviewCover": "Lapas vāka attēls",
   "tools.database.galleryCardPreviewContent": "Lapas saturs",
+  "tools.database.galleryCardPreviewContentDescription": "Izmanto lapas pirmo bloku",
+  "tools.database.galleryCardPreviewProperties": "Lapas rekvizīti",
   "tools.database.galleryFitImage": "Ietilpināt attēlu",
   "tools.database.galleryFitMedia": "Ietilpināt multividi",
   "tools.database.calendarLabel": "Kalendārs",

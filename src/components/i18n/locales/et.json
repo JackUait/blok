@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "Puudub",
   "tools.database.galleryCardPreviewCover": "Lehe kaanepilt",
   "tools.database.galleryCardPreviewContent": "Lehe sisu",
+  "tools.database.galleryCardPreviewContentDescription": "Kasutab lehe esimest plokki",
+  "tools.database.galleryCardPreviewProperties": "Lehe omadused",
   "tools.database.galleryFitImage": "Sobita pilt",
   "tools.database.galleryFitMedia": "Sobita meedia",
   "tools.database.calendarLabel": "Kalender",

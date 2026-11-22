@@ -1675,6 +1675,8 @@
   "tools.database.galleryCardPreviewNone": "Žiadny",
   "tools.database.galleryCardPreviewCover": "Obálka stránky",
   "tools.database.galleryCardPreviewContent": "Obsah stránky",
+  "tools.database.galleryCardPreviewContentDescription": "Použije prvý blok na stránke",
+  "tools.database.galleryCardPreviewProperties": "Vlastnosti stránky",
   "tools.database.galleryFitImage": "Prispôsobiť obrázok",
   "tools.database.galleryFitMedia": "Prispôsobiť médiá",
   "tools.database.calendarLabel": "Kalendár",

@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "कुनै पनि होइन",
   "tools.database.galleryCardPreviewCover": "पृष्ठको कभर",
   "tools.database.galleryCardPreviewContent": "पृष्ठको सामग्री",
+  "tools.database.galleryCardPreviewContentDescription": "पृष्ठको पहिलो ब्लक प्रयोग गर्छ",
+  "tools.database.galleryCardPreviewProperties": "पृष्ठका गुणहरू",
   "tools.database.galleryFitImage": "तस्बिर मिलाउनुहोस्",
   "tools.database.galleryFitMedia": "मिडिया मिलाउनुहोस्",
   "tools.database.calendarLabel": "पात्रो",

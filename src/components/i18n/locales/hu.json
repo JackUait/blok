@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "Nincs",
   "tools.database.galleryCardPreviewCover": "Oldal borítóképe",
   "tools.database.galleryCardPreviewContent": "Oldal tartalma",
+  "tools.database.galleryCardPreviewContentDescription": "Az oldal első blokkját használja",
+  "tools.database.galleryCardPreviewProperties": "Oldal tulajdonságai",
   "tools.database.galleryFitImage": "Kép illesztése",
   "tools.database.galleryFitMedia": "Média illesztése",
   "tools.database.calendarLabel": "Naptár",

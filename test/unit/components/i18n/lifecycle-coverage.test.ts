@@ -302,7 +302,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2262 + 146 + 611 + 12 closure for all 3031 keys', () => {
+  it('rebuilds a disjoint 2264 + 146 + 611 + 12 closure for all 3033 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -316,7 +316,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(3031);
+    expect(lifecycle.size).toBe(3033);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -592,7 +592,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the link field calls tools.link.webPage by literal for web addresses.
       // +3: the link field calls its three refusal reasons (tools.link.invalidSpaces, invalidUnsafe, invalidKind) by literal.
       // -1: tools.database.groupWeekOf, now that a week group reads Intl's day range; still shipped.
-      'executable-literal': 2262,
+      // +2: Card preview's Page properties group and Page content hint call their tools.database.galleryCardPreview* keys by literal.
+      'executable-literal': 2264,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

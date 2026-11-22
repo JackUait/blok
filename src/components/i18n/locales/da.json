@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "Ingen",
   "tools.database.galleryCardPreviewCover": "Sidens coverbillede",
   "tools.database.galleryCardPreviewContent": "Sidens indhold",
+  "tools.database.galleryCardPreviewContentDescription": "Bruger den første blok på siden",
+  "tools.database.galleryCardPreviewProperties": "Sidens egenskaber",
   "tools.database.galleryFitImage": "Tilpas billede",
   "tools.database.galleryFitMedia": "Tilpas medier",
   "tools.database.calendarLabel": "Kalender",

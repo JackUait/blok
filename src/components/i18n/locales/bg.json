@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "Няма",
   "tools.database.galleryCardPreviewCover": "Корица на страницата",
   "tools.database.galleryCardPreviewContent": "Съдържание на страницата",
+  "tools.database.galleryCardPreviewContentDescription": "Използва първия блок на страницата",
+  "tools.database.galleryCardPreviewProperties": "Свойства на страницата",
   "tools.database.galleryFitImage": "Побери изображението",
   "tools.database.galleryFitMedia": "Побери медията",
   "tools.database.calendarLabel": "Календар",

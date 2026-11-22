@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "Ոչ մեկը",
   "tools.database.galleryCardPreviewCover": "Էջի շապիկ",
   "tools.database.galleryCardPreviewContent": "Էջի բովանդակություն",
+  "tools.database.galleryCardPreviewContentDescription": "Օգտագործում է էջի առաջին բլոկը",
+  "tools.database.galleryCardPreviewProperties": "Էջի հատկություններ",
   "tools.database.galleryFitImage": "Հարմարեցնել պատկերը",
   "tools.database.galleryFitMedia": "Հարմարեցնել մեդիան",
   "tools.database.calendarLabel": "Օրացույց",

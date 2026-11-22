@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "无",
   "tools.database.galleryCardPreviewCover": "页面封面",
   "tools.database.galleryCardPreviewContent": "页面内容",
+  "tools.database.galleryCardPreviewContentDescription": "使用页面的第一个块",
+  "tools.database.galleryCardPreviewProperties": "页面属性",
   "tools.database.galleryFitImage": "完整显示图片",
   "tools.database.galleryFitMedia": "完整显示媒体",
   "tools.database.calendarLabel": "日历",

@@ -788,6 +788,77 @@ describe('view settings panel', () => {
     });
   });
 
+  // notion-motion.md Round 112 §1 #6, Round 113 §1 #6 (r113-n-settings-cardpreview-{menu,escape}.raw): a 250 menu
+  // over the Layout page, end edges aligned; None filled on open; Page properties › opens the properties; Escape
+  // gives the row the focus back.
+  describe('"Card preview"', () => {
+    const item = (name: string, title: string, extra: Partial<{ isActive: boolean; onActivate: () => void; description: string; children: { items: PopoverItemParams[] } }> = {}): PopoverItemParams =>
+      ({ type: PopoverItemType.Default, name, title, ...extra } as PopoverItemParams);
+    const gallery = (pickFiles: () => void, files = false): Harness => {
+      const h = harness({ type: 'gallery' });
+
+      h.ctx.layoutItems = () => [item('gallery-card-preview', 'Card preview', { children: { items: [
+        item('gallery-card-preview-none', 'None', { isActive: false, onActivate: vi.fn() }),
+        item('gallery-card-preview-cover', 'Page cover', { isActive: false, onActivate: vi.fn() }),
+        item('gallery-card-preview-properties', 'Page properties', { children: { items: [
+          item('gallery-card-preview-p-files', 'Files', { isActive: files, onActivate: pickFiles }),
+        ] } }),
+        item('gallery-card-preview-content', 'Page content', { isActive: !files, onActivate: vi.fn(), description: 'Uses first block on the page' }),
+      ] } })];
+      h.open();
+      click('database-settings-layout');
+
+      return h;
+    };
+    const menu = (): HTMLElement | null => q('database-gallery-card-preview-menu');
+
+    it('opens a 250 menu and keeps the Layout page', () => {
+      gallery(vi.fn());
+      const row = q('database-gallery-card-preview');
+
+      expect(row?.getAttribute('aria-haspopup')).toBe('menu');
+      click('database-gallery-card-preview');
+
+      expect(menu()?.style.width).toBe('250px');
+      expect(q('database-view-settings')?.getAttribute('data-blok-database-panel-page')).toBe('layout');
+      expect(q('database-gallery-card-preview')?.getAttribute('aria-expanded')).toBe('true');
+      expect(q('database-gallery-card-preview-none')?.hasAttribute('data-active')).toBe(true);
+      expect(q('database-gallery-card-preview-content')?.getAttribute('aria-checked')).toBe('true');
+      expect(q('database-gallery-card-preview-content')?.querySelector('[data-blok-database-panel-description]')?.textContent).toBe('Uses first block on the page');
+    });
+
+    it('shows a property picked inside Page properties as the row value', () => {
+      gallery(vi.fn(), true);
+
+      expect(q('database-gallery-card-preview')?.querySelector('[data-blok-database-panel-value]')?.textContent).toBe('Files');
+    });
+
+    it('opens the properties from Page properties and runs a pick', () => {
+      const pickFiles = vi.fn();
+
+      gallery(pickFiles);
+      click('database-gallery-card-preview');
+      click('database-gallery-card-preview-properties');
+
+      expect(menu()).not.toBeNull();
+      expect(q('database-gallery-card-preview-properties-menu')?.style.width).toBe('250px');
+      click('database-gallery-card-preview-p-files');
+
+      expect(pickFiles).toHaveBeenCalledTimes(1);
+      expect(q('database-gallery-card-preview-properties-menu')).toBeNull();
+    });
+
+    it('gives the row the focus back when Escape closes the menu', () => {
+      gallery(vi.fn());
+      click('database-gallery-card-preview');
+      menu()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(menu()).toBeNull();
+      expect(q('database-gallery-card-preview')).toHaveFocus();
+      expect(q('database-view-settings')?.getAttribute('data-blok-database-panel-page')).toBe('layout');
+    });
+  });
+
   it('lists the tool actions on the root page; a click closes the panel and runs it', () => {
     const h = harness();
     const exportCsv = vi.fn();

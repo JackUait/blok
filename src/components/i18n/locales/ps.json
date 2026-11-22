@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "هېڅ",
   "tools.database.galleryCardPreviewCover": "د پاڼې پوښ",
   "tools.database.galleryCardPreviewContent": "د پاڼې منځپانګه",
+  "tools.database.galleryCardPreviewContentDescription": "د پاڼې لومړی بلاک کاروي",
+  "tools.database.galleryCardPreviewProperties": "د پاڼې ځانګړتیاوې",
   "tools.database.galleryFitImage": "انځور برابر کړئ",
   "tools.database.galleryFitMedia": "رسنۍ برابرې کړئ",
   "tools.database.calendarLabel": "جنتري",

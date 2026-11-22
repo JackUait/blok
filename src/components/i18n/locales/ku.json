@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "هیچ",
   "tools.database.galleryCardPreviewCover": "بەرگی پەڕە",
   "tools.database.galleryCardPreviewContent": "ناوەڕۆکی پەڕە",
+  "tools.database.galleryCardPreviewContentDescription": "یەکەم بلۆکی پەڕەکە بەکاردەهێنێت",
+  "tools.database.galleryCardPreviewProperties": "تایبەتمەندییەکانی پەڕە",
   "tools.database.galleryFitImage": "گونجاندنی وێنە",
   "tools.database.galleryFitMedia": "گونجاندنی میدیا",
   "tools.database.calendarLabel": "ساڵنامە",

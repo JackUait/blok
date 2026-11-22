@@ -1675,6 +1675,8 @@
   "tools.database.galleryCardPreviewNone": "Nėra",
   "tools.database.galleryCardPreviewCover": "Puslapio viršelis",
   "tools.database.galleryCardPreviewContent": "Puslapio turinys",
+  "tools.database.galleryCardPreviewContentDescription": "Naudoja pirmąjį puslapio bloką",
+  "tools.database.galleryCardPreviewProperties": "Puslapio savybės",
   "tools.database.galleryFitImage": "Pritaikyti vaizdą",
   "tools.database.galleryFitMedia": "Pritaikyti mediją",
   "tools.database.calendarLabel": "Kalendorius",

@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "גאָרנישט",
   "tools.database.galleryCardPreviewCover": "בלאַט־הילע",
   "tools.database.galleryCardPreviewContent": "בלאַט־אינהאַלט",
+  "tools.database.galleryCardPreviewContentDescription": "ניצט דעם ערשטן בלאָק אויפֿן בלאַט",
+  "tools.database.galleryCardPreviewProperties": "בלאַט־אייגנשאַפֿטן",
   "tools.database.galleryFitImage": "צופּאַסן דאָס בילד",
   "tools.database.galleryFitMedia": "צופּאַסן די מעדיע",
   "tools.database.calendarLabel": "קאַלענדאַר",

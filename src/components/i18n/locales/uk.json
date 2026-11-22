@@ -1675,6 +1675,8 @@
   "tools.database.galleryCardPreviewNone": "Немає",
   "tools.database.galleryCardPreviewCover": "Обкладинка сторінки",
   "tools.database.galleryCardPreviewContent": "Вміст сторінки",
+  "tools.database.galleryCardPreviewContentDescription": "Використовує перший блок сторінки",
+  "tools.database.galleryCardPreviewProperties": "Властивості сторінки",
   "tools.database.galleryFitImage": "Вписати зображення",
   "tools.database.galleryFitMedia": "Вписати медіа",
   "tools.database.calendarLabel": "Календар",

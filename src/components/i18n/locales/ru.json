@@ -1675,6 +1675,8 @@
   "tools.database.galleryCardPreviewNone": "Нет",
   "tools.database.galleryCardPreviewCover": "Обложка страницы",
   "tools.database.galleryCardPreviewContent": "Содержимое страницы",
+  "tools.database.galleryCardPreviewContentDescription": "Используется первый блок страницы",
+  "tools.database.galleryCardPreviewProperties": "Свойства страницы",
   "tools.database.galleryFitImage": "Вписать изображение",
   "tools.database.galleryFitMedia": "Вписать медиа",
   "tools.database.calendarLabel": "Календарь",

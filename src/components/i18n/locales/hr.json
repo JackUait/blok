@@ -1659,6 +1659,8 @@
   "tools.database.galleryCardPreviewNone": "Ništa",
   "tools.database.galleryCardPreviewCover": "Naslovnica stranice",
   "tools.database.galleryCardPreviewContent": "Sadržaj stranice",
+  "tools.database.galleryCardPreviewContentDescription": "Koristi prvi blok na stranici",
+  "tools.database.galleryCardPreviewProperties": "Svojstva stranice",
   "tools.database.galleryFitImage": "Prilagodi sliku",
   "tools.database.galleryFitMedia": "Prilagodi medij",
   "tools.database.calendarLabel": "Kalendar",

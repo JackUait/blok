@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "Wala",
   "tools.database.galleryCardPreviewCover": "Cover ng pahina",
   "tools.database.galleryCardPreviewContent": "Nilalaman ng pahina",
+  "tools.database.galleryCardPreviewContentDescription": "Ginagamit ang unang block sa pahina",
+  "tools.database.galleryCardPreviewProperties": "Mga property ng pahina",
   "tools.database.galleryFitImage": "Ipagkasya ang larawan",
   "tools.database.galleryFitMedia": "Ipagkasya ang media",
   "tools.database.calendarLabel": "Kalendaryo",

@@ -1659,6 +1659,8 @@
   "tools.database.galleryCardPreviewNone": "Aucun",
   "tools.database.galleryCardPreviewCover": "Couverture de la page",
   "tools.database.galleryCardPreviewContent": "Contenu de la page",
+  "tools.database.galleryCardPreviewContentDescription": "Utilise le premier bloc de la page",
+  "tools.database.galleryCardPreviewProperties": "Propriétés de la page",
   "tools.database.galleryFitImage": "Ajuster l’image",
   "tools.database.galleryFitMedia": "Ajuster le média",
   "tools.database.calendarLabel": "Calendrier",

@@ -21,16 +21,18 @@ const i18n = { t: (key: string) => key };
 
 interface Flat {
   title?: string;
+  description?: string;
   isActive?: boolean;
   onActivate?: () => void;
   children?: Flat[];
 }
 
 const flat = (items: PopoverItemParams[]): Flat[] => items.map((item) => {
-  const record = item as unknown as { title?: string; isActive?: boolean; onActivate?: () => void; children?: { items: PopoverItemParams[] } };
+  const record = item as unknown as { title?: string; description?: string; isActive?: boolean; onActivate?: () => void; children?: { items: PopoverItemParams[] } };
 
   return {
     title: record.title,
+    ...(record.description !== undefined ? { description: record.description } : {}),
     isActive: record.isActive,
     onActivate: record.onActivate,
     ...(record.children !== undefined ? { children: flat(record.children.items) } : {}),
@@ -64,8 +66,9 @@ describe('database layout items', () => {
     });
 
     expect(named(galleryLayoutItems(view(), schema, i18n, vi.fn()))).toEqual([
-      'gallery-card-preview', 'gallery-card-preview-none', 'gallery-card-preview-cover', 'gallery-card-preview-content',
-      'gallery-card-preview-p-link', 'gallery-card-preview-p-files',
+      'gallery-card-preview', 'gallery-card-preview-none', 'gallery-card-preview-cover',
+      'gallery-card-preview-properties', 'gallery-card-preview-p-link', 'gallery-card-preview-p-files',
+      'gallery-card-preview-content',
       'gallery-card-size', 'gallery-card-size-small', 'gallery-card-size-medium', 'gallery-card-size-large',
       'gallery-fit-image',
     ]);
@@ -91,7 +94,9 @@ describe('database layout items', () => {
       expect(update).toHaveBeenCalledWith({ cardSize: 'large' });
     });
 
-    it('offers none, cover, content and each files or url property as the preview', () => {
+    // notion-motion.md Round 112 §1 #6 (r112-n-gallery-cardpreview-menu.raw): None, Page cover, Page properties ›, Page content
+    // with "Uses first block on the page"; the properties sit one level down.
+    it('offers none, cover, a Page properties group and content as the preview', () => {
       const update = vi.fn();
       const items = flat(galleryLayoutItems(view(), schema, i18n, update));
       const preview = find(items, 'tools.database.galleryCardPreview').children ?? [];
@@ -99,12 +104,32 @@ describe('database layout items', () => {
       expect(preview.map((item) => [item.title, item.isActive])).toEqual([
         ['tools.database.galleryCardPreviewNone', false],
         ['tools.database.galleryCardPreviewCover', false],
+        ['tools.database.galleryCardPreviewProperties', undefined],
         ['tools.database.galleryCardPreviewContent', true],
-        ['Image', false],
-        ['Attachments', false],
       ]);
-      find(preview, 'Image').onActivate?.();
+      expect(find(preview, 'tools.database.galleryCardPreviewContent').description).toBe('tools.database.galleryCardPreviewContentDescription');
+      const properties = find(preview, 'tools.database.galleryCardPreviewProperties').children ?? [];
+
+      expect(properties.map((item) => [item.title, item.isActive])).toEqual([['Image', false], ['Attachments', false]]);
+      find(properties, 'Image').onActivate?.();
       expect(update).toHaveBeenCalledWith({ cardPreview: 'property:p-link' });
+    });
+
+    it('marks the picked property inside the Page properties group', () => {
+      const preview = find(flat(galleryLayoutItems(view({ cardPreview: 'property:p-files' }), schema, i18n, vi.fn())), 'tools.database.galleryCardPreview').children ?? [];
+      const group = find(preview, 'tools.database.galleryCardPreviewProperties');
+
+      expect(find(group.children ?? [], 'Attachments').isActive).toBe(true);
+      expect(find(group.children ?? [], 'Image').isActive).toBe(false);
+    });
+
+    it('drops the Page properties group when no property can be the preview', () => {
+      const plain = schema.filter((p) => p.type !== 'url' && p.type !== 'files');
+      const preview = find(flat(galleryLayoutItems(view(), plain, i18n, vi.fn())), 'tools.database.galleryCardPreview').children ?? [];
+
+      expect(preview.map((item) => item.title)).toEqual([
+        'tools.database.galleryCardPreviewNone', 'tools.database.galleryCardPreviewCover', 'tools.database.galleryCardPreviewContent',
+      ]);
     });
 
     // notion-motion.md Round 24 §4 Gallery: the row reads "Fit media".

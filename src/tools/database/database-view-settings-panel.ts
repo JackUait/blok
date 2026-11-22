@@ -276,6 +276,7 @@ export interface ViewSettingsAction {
 interface LayoutItem {
   name: string;
   title: string;
+  description?: string;
   active: boolean;
   activate?: () => void;
   children?: LayoutItem[];
@@ -286,6 +287,7 @@ const readLayoutItems = (items: PopoverItemParams[]): LayoutItem[] => items.flat
   const record = item as {
     name?: string;
     title?: string;
+    description?: string;
     isActive?: boolean | (() => boolean);
     onActivate?: (self: PopoverItemParams) => void;
     children?: { items?: PopoverItemParams[] };
@@ -299,6 +301,7 @@ const readLayoutItems = (items: PopoverItemParams[]): LayoutItem[] => items.flat
   return [{
     name: record.name,
     title: record.title,
+    ...(record.description !== undefined ? { description: record.description } : {}),
     active: typeof record.isActive === 'function' ? record.isActive() : record.isActive === true,
     ...(onActivate !== undefined ? { activate: () => onActivate(item) } : {}),
     ...(record.children?.items !== undefined ? { children: readLayoutItems(record.children.items) } : {}),
@@ -1483,6 +1486,8 @@ export class ViewSettingsPages {
       }
 
       if (item.name === 'calendar-show-as') return this.layoutMenuRow(panel, item);
+      // notion-motion.md Round 113 §1 #6, r25-cp.raw: Card preview opens the same menu, above the row when it has no room under it.
+      if (item.name.endsWith('-card-preview')) return this.layoutMenuRow(panel, item, true);
 
       return panelRow({
         label: item.title,
@@ -1499,25 +1504,50 @@ export class ViewSettingsPages {
    * notion-motion.md Round 14 (r14-cal-showas.png), Round 87 §2 (r87-n-calas-open-mo.raw): "Show calendar as"
    * opens a 250 menu under the row, end edges aligned, and its › turns down while it is open.
    */
-  private layoutMenuRow(panel: DatabasePanel, item: LayoutItem): HTMLElement {
+  private layoutMenuRow(panel: DatabasePanel, item: LayoutItem, flip = false): HTMLElement {
     const opener = panelRow({
       label: item.title,
       testId: `database-${item.name}`,
-      value: item.children?.find((child) => child.active)?.title ?? '',
+      value: activeLayoutChild(item.children ?? [])?.title ?? '',
       opensPage: true,
       disabled: !this.shared,
       onClick: () => {
         opener.setAttribute('aria-expanded', 'true');
-        openFlyout(opener, panel, `database-${item.name}-menu`, LAYOUT_MENU_WIDTH, (pick) => {
-          const rows = (item.children ?? []).map((child) => panelRow({
-            label: child.title,
-            testId: `database-${child.name}`,
-            checked: child.active,
-            onClick: () => pick(() => {
+        const menu = openFlyout(opener, panel, `database-${item.name}-menu`, LAYOUT_MENU_WIDTH, (pick) => {
+          const rows = (item.children ?? []).map((child) => {
+            const write = (): void => {
               child.activate?.();
               panel.refresh();
-            }),
-          }));
+            };
+
+            if (child.children !== undefined) {
+              // A group row (Card preview › Page properties) opens its own list beside it.
+              const group = panelRow({
+                label: child.title,
+                testId: `database-${child.name}`,
+                opensPage: true,
+                onClick: () => openFlyout(group, menu, `database-${child.name}-menu`, LAYOUT_MENU_WIDTH, (pickInner) => (child.children ?? []).map((inner) => panelRow({
+                  label: inner.title,
+                  testId: `database-${inner.name}`,
+                  checked: inner.active,
+                  onClick: () => pickInner(() => pick(() => {
+                    inner.activate?.();
+                    panel.refresh();
+                  })),
+                })), { beside: 0 }),
+              });
+
+              return group;
+            }
+
+            return panelRow({
+              label: child.title,
+              testId: `database-${child.name}`,
+              ...(child.description !== undefined ? { description: child.description } : {}),
+              checked: child.active,
+              onClick: () => pick(write),
+            });
+          });
 
           // notion-motion.md Round 105 §1 #4: the first row opens filled; the one fill follows the pointer and the focus.
           rows.forEach((row, index) => {
@@ -1529,7 +1559,7 @@ export class ViewSettingsPages {
           });
 
           return rows;
-        }, { alignEnd: true, onClose: () => opener.setAttribute('aria-expanded', 'false') });
+        }, { alignEnd: true, ...(flip ? { flip: true } : {}), onClose: () => opener.setAttribute('aria-expanded', 'false') });
       },
     });
 
@@ -3852,6 +3882,17 @@ export const openFilterList = (anchor: HTMLElement, ctx: ViewSettingsContext, te
 const MANAGE_SOURCE_MENU_WIDTH = 200;
 /** notion-motion.md Round 87 §2: the Show calendar as menu is 250 wide. */
 const LAYOUT_MENU_WIDTH = 250;
+
+/** The checked choice, looking inside groups too (a Card preview property sits under Page properties). */
+const activeLayoutChild = (items: LayoutItem[]): LayoutItem | undefined => {
+  for (const child of items) {
+    const found = child.active ? child : activeLayoutChild(child.children ?? []);
+
+    if (found !== undefined) return found;
+  }
+
+  return undefined;
+};
 /** notion-motion.md Round 19 §1 (r19-adv-rulemore.raw, r19-adv-groupmore.raw): the rule and group ⋯ menus. */
 const RULE_MORE_WIDTH = 150.8;
 /** notion-motion.md Round 19 §1 (r19-adv-andor.raw). */

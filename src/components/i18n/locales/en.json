@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "None",
   "tools.database.galleryCardPreviewCover": "Page cover",
   "tools.database.galleryCardPreviewContent": "Page content",
+  "tools.database.galleryCardPreviewContentDescription": "Uses first block on the page",
+  "tools.database.galleryCardPreviewProperties": "Page properties",
   "tools.database.galleryFitImage": "Fit image",
   "tools.database.galleryFitMedia": "Fit media",
   "tools.database.calendarLabel": "Calendar",

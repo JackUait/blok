@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "Ei mitään",
   "tools.database.galleryCardPreviewCover": "Sivun kansikuva",
   "tools.database.galleryCardPreviewContent": "Sivun sisältö",
+  "tools.database.galleryCardPreviewContentDescription": "Käyttää sivun ensimmäistä lohkoa",
+  "tools.database.galleryCardPreviewProperties": "Sivun ominaisuudet",
   "tools.database.galleryFitImage": "Sovita kuva",
   "tools.database.galleryFitMedia": "Sovita media",
   "tools.database.calendarLabel": "Kalenteri",

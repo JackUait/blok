@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "არცერთი",
   "tools.database.galleryCardPreviewCover": "გვერდის გარეკანი",
   "tools.database.galleryCardPreviewContent": "გვერდის შიგთავსი",
+  "tools.database.galleryCardPreviewContentDescription": "იყენებს გვერდის პირველ ბლოკს",
+  "tools.database.galleryCardPreviewProperties": "გვერდის თვისებები",
   "tools.database.galleryFitImage": "სურათის მორგება",
   "tools.database.galleryFitMedia": "მედიის მორგება",
   "tools.database.calendarLabel": "კალენდარი",

@@ -1659,6 +1659,8 @@
   "tools.database.galleryCardPreviewNone": "Niciuna",
   "tools.database.galleryCardPreviewCover": "Coperta paginii",
   "tools.database.galleryCardPreviewContent": "Conținutul paginii",
+  "tools.database.galleryCardPreviewContentDescription": "Folosește primul bloc din pagină",
+  "tools.database.galleryCardPreviewProperties": "Proprietățile paginii",
   "tools.database.galleryFitImage": "Încadrează imaginea",
   "tools.database.galleryFitMedia": "Încadrează conținutul media",
   "tools.database.calendarLabel": "Calendar",

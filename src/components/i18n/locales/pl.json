@@ -1675,6 +1675,8 @@
   "tools.database.galleryCardPreviewNone": "Brak",
   "tools.database.galleryCardPreviewCover": "Okładka strony",
   "tools.database.galleryCardPreviewContent": "Zawartość strony",
+  "tools.database.galleryCardPreviewContentDescription": "Używa pierwszego bloku strony",
+  "tools.database.galleryCardPreviewProperties": "Właściwości strony",
   "tools.database.galleryFitImage": "Dopasuj obraz",
   "tools.database.galleryFitMedia": "Dopasuj multimedia",
   "tools.database.calendarLabel": "Kalendarz",

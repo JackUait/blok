@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "ምንም",
   "tools.database.galleryCardPreviewCover": "የገጽ ሽፋን",
   "tools.database.galleryCardPreviewContent": "የገጽ ይዘት",
+  "tools.database.galleryCardPreviewContentDescription": "የገጹን የመጀመሪያ ብሎክ ይጠቀማል",
+  "tools.database.galleryCardPreviewProperties": "የገጽ ንብረቶች",
   "tools.database.galleryFitImage": "ምስሉን አስማማ",
   "tools.database.galleryFitMedia": "ሚዲያውን አስማማ",
   "tools.database.calendarLabel": "ቀን መቁጠሪያ",

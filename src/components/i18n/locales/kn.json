@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "ಯಾವುದೂ ಇಲ್ಲ",
   "tools.database.galleryCardPreviewCover": "ಪುಟದ ಕವರ್",
   "tools.database.galleryCardPreviewContent": "ಪುಟದ ವಿಷಯ",
+  "tools.database.galleryCardPreviewContentDescription": "ಪುಟದ ಮೊದಲ ಬ್ಲಾಕ್ ಅನ್ನು ಬಳಸುತ್ತದೆ",
+  "tools.database.galleryCardPreviewProperties": "ಪುಟದ ಗುಣಲಕ್ಷಣಗಳು",
   "tools.database.galleryFitImage": "ಚಿತ್ರವನ್ನು ಹೊಂದಿಸಿ",
   "tools.database.galleryFitMedia": "ಮಾಧ್ಯಮವನ್ನು ಹೊಂದಿಸಿ",
   "tools.database.calendarLabel": "ಕ್ಯಾಲೆಂಡರ್",

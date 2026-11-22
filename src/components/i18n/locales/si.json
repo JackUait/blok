@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "කිසිවක් නැත",
   "tools.database.galleryCardPreviewCover": "පිටු කවරය",
   "tools.database.galleryCardPreviewContent": "පිටු අන්තර්ගතය",
+  "tools.database.galleryCardPreviewContentDescription": "පිටුවේ පළමු කොටස භාවිත කරයි",
+  "tools.database.galleryCardPreviewProperties": "පිටු ගුණාංග",
   "tools.database.galleryFitImage": "රූපය ගළපන්න",
   "tools.database.galleryFitMedia": "මාධ්‍ය ගළපන්න",
   "tools.database.calendarLabel": "දින දර්ශනය",

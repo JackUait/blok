@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "Байхгүй",
   "tools.database.galleryCardPreviewCover": "Хуудасны хавтас",
   "tools.database.galleryCardPreviewContent": "Хуудасны агуулга",
+  "tools.database.galleryCardPreviewContentDescription": "Хуудасны эхний блокийг ашиглана",
+  "tools.database.galleryCardPreviewProperties": "Хуудасны шинжүүд",
   "tools.database.galleryFitImage": "Зургийг багтаах",
   "tools.database.galleryFitMedia": "Медиаг багтаах",
   "tools.database.calendarLabel": "Хуанли",

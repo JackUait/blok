@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "なし",
   "tools.database.galleryCardPreviewCover": "ページカバー",
   "tools.database.galleryCardPreviewContent": "ページコンテンツ",
+  "tools.database.galleryCardPreviewContentDescription": "ページの最初のブロックを使用",
+  "tools.database.galleryCardPreviewProperties": "ページプロパティ",
   "tools.database.galleryFitImage": "画像を枠に合わせる",
   "tools.database.galleryFitMedia": "メディアを枠に合わせる",
   "tools.database.calendarLabel": "カレンダー",

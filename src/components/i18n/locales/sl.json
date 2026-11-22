@@ -1675,6 +1675,8 @@
   "tools.database.galleryCardPreviewNone": "Brez",
   "tools.database.galleryCardPreviewCover": "Naslovnica strani",
   "tools.database.galleryCardPreviewContent": "Vsebina strani",
+  "tools.database.galleryCardPreviewContentDescription": "Uporabi prvi blok na strani",
+  "tools.database.galleryCardPreviewProperties": "Lastnosti strani",
   "tools.database.galleryFitImage": "Prilagodi sliko",
   "tools.database.galleryFitMedia": "Prilagodi medij",
   "tools.database.calendarLabel": "Koledar",

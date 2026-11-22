@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "ไม่มี",
   "tools.database.galleryCardPreviewCover": "ภาพปกหน้า",
   "tools.database.galleryCardPreviewContent": "เนื้อหาหน้า",
+  "tools.database.galleryCardPreviewContentDescription": "ใช้บล็อกแรกในหน้า",
+  "tools.database.galleryCardPreviewProperties": "คุณสมบัติหน้า",
   "tools.database.galleryFitImage": "ปรับภาพให้พอดี",
   "tools.database.galleryFitMedia": "ปรับสื่อให้พอดี",
   "tools.database.calendarLabel": "ปฏิทิน",

@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "Asnjë",
   "tools.database.galleryCardPreviewCover": "Kopertina e faqes",
   "tools.database.galleryCardPreviewContent": "Përmbajtja e faqes",
+  "tools.database.galleryCardPreviewContentDescription": "Përdor bllokun e parë të faqes",
+  "tools.database.galleryCardPreviewProperties": "Vetitë e faqes",
   "tools.database.galleryFitImage": "Përshtat imazhin",
   "tools.database.galleryFitMedia": "Përshtat median",
   "tools.database.calendarLabel": "Kalendar",

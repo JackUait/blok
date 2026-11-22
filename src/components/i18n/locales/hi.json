@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "कोई नहीं",
   "tools.database.galleryCardPreviewCover": "पृष्ठ कवर",
   "tools.database.galleryCardPreviewContent": "पृष्ठ सामग्री",
+  "tools.database.galleryCardPreviewContentDescription": "पृष्ठ के पहले ब्लॉक का उपयोग करता है",
+  "tools.database.galleryCardPreviewProperties": "पृष्ठ प्रॉपर्टी",
   "tools.database.galleryFitImage": "छवि फ़िट करें",
   "tools.database.galleryFitMedia": "मीडिया फ़िट करें",
   "tools.database.calendarLabel": "कैलेंडर",

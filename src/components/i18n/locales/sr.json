@@ -1659,6 +1659,8 @@
   "tools.database.galleryCardPreviewNone": "Ништа",
   "tools.database.galleryCardPreviewCover": "Насловна слика странице",
   "tools.database.galleryCardPreviewContent": "Садржај странице",
+  "tools.database.galleryCardPreviewContentDescription": "Користи први блок на страници",
+  "tools.database.galleryCardPreviewProperties": "Својства странице",
   "tools.database.galleryFitImage": "Уклопи слику",
   "tools.database.galleryFitMedia": "Уклопи медиј",
   "tools.database.calendarLabel": "Календар",

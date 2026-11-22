@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "Keine",
   "tools.database.galleryCardPreviewCover": "Titelbild der Seite",
   "tools.database.galleryCardPreviewContent": "Seiteninhalt",
+  "tools.database.galleryCardPreviewContentDescription": "Verwendet den ersten Block der Seite",
+  "tools.database.galleryCardPreviewProperties": "Seiteneigenschaften",
   "tools.database.galleryFitImage": "Bild einpassen",
   "tools.database.galleryFitMedia": "Medien einpassen",
   "tools.database.calendarLabel": "Kalender",

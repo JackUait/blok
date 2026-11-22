@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "Không có",
   "tools.database.galleryCardPreviewCover": "Ảnh bìa trang",
   "tools.database.galleryCardPreviewContent": "Nội dung trang",
+  "tools.database.galleryCardPreviewContentDescription": "Dùng khối đầu tiên trên trang",
+  "tools.database.galleryCardPreviewProperties": "Thuộc tính trang",
   "tools.database.galleryFitImage": "Thu vừa ảnh",
   "tools.database.galleryFitMedia": "Thu vừa phương tiện",
   "tools.database.calendarLabel": "Lịch",

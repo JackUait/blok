@@ -1643,6 +1643,8 @@
   "tools.database.galleryCardPreviewNone": "គ្មាន",
   "tools.database.galleryCardPreviewCover": "រូបគម្របទំព័រ",
   "tools.database.galleryCardPreviewContent": "ខ្លឹមសារទំព័រ",
+  "tools.database.galleryCardPreviewContentDescription": "ប្រើប្លុកដំបូងនៅលើទំព័រ",
+  "tools.database.galleryCardPreviewProperties": "លក្ខណៈទំព័រ",
   "tools.database.galleryFitImage": "សម្រួលរូបភាពឱ្យសម",
   "tools.database.galleryFitMedia": "សម្រួលមេឌៀឱ្យសម",
   "tools.database.calendarLabel": "ប្រតិទិន",

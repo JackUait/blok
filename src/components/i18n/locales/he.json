@@ -1659,6 +1659,8 @@
   "tools.database.galleryCardPreviewNone": "ללא",
   "tools.database.galleryCardPreviewCover": "תמונת הכיסוי של הדף",
   "tools.database.galleryCardPreviewContent": "תוכן הדף",
+  "tools.database.galleryCardPreviewContentDescription": "משתמש בבלוק הראשון בדף",
+  "tools.database.galleryCardPreviewProperties": "מאפייני הדף",
   "tools.database.galleryFitImage": "התאם תמונה",
   "tools.database.galleryFitMedia": "התאם מדיה",
   "tools.database.calendarLabel": "לוח שנה",

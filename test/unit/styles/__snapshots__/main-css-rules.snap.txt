@@ -4821,6 +4821,7 @@ span[data-blok-slash-search] {
   --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-table-calc-value: var(--blok-database-ink-secondary);
   --blok-database-table-gutter-icon: rgb(173, 169, 163);
+  --blok-database-sort-handle-ink: rgb(173, 169, 163);
   --blok-database-table-load-more-hover-bg: rgba(55, 53, 47, 0.024);
   --blok-database-table-control-border: rgba(28, 19, 1, 0.11);
   --blok-database-cell-link-underline: rgba(28, 19, 1, 0.11);
@@ -18724,6 +18725,7 @@ button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-fie
 
 [data-blok-database-panel-page="sort"] [data-blok-database-panel-handle] {
   margin-inline-end: var(--blok-space-2-25);
+  color: var(--blok-database-sort-handle-ink);
 }
 
 [data-blok-database-panel-page="sort"] [data-blok-database-panel-handle] svg {

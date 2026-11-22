@@ -14330,7 +14330,7 @@ export class DatabaseTool implements BlockTool {
 
       return;
     }
-    const viewItems = (hostTable?.headerItems(propertyId, anchor) ?? []).map((item): PopoverItemParams => {
+    const viewItems = (hostTable?.headerItems(propertyId, anchor, (name) => menu.startCursor(name)) ?? []).map((item): PopoverItemParams => {
       // A widget holds its redraw while this menu is open, so these writes close it; onClose redraws.
       if (context !== undefined && item.type === PopoverItemType.Default && WIDGET_CLOSING_HEADER_ITEMS.has(item.name ?? '')
         && !('children' in item) && !('confirmation' in item)) return { ...item, closeOnActivate: true };

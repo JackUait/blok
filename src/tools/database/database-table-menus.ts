@@ -387,6 +387,8 @@ export interface HeaderMenuContext {
   showPageIcon: boolean;
   calculation: CalculationFn | undefined;
   countCap?: CountCap;
+  /** Puts the cursor on a row of the menu's open submenu. */
+  startCursor?: (name: string) => void;
   onFilter: () => void;
   onSort: () => void;
   onGroup: () => void;
@@ -426,7 +428,15 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
     type: PopoverItemType.Default,
     title: i18n.t('tools.database.tableCalculate'),
     icon: IconSigma,
-    children: { items: calculationItems(property, ctx.calculation, i18n, ctx.onCalculate, ctx.countCap), minWidth: CALC_MENU_MIN_WIDTH, class: DATABASE_CALC_MENU_CLASS },
+    children: {
+      items: calculationItems(property, ctx.calculation, i18n, ctx.onCalculate, ctx.countCap),
+      minWidth: CALC_MENU_MIN_WIDTH,
+      class: DATABASE_CALC_MENU_CLASS,
+      // notion-motion.md Round 115 §1 #4: a keyboard open starts on the current row. After open: the list is not drawn yet.
+      onOpen: () => {
+        if (isKeyboardModality()) queueMicrotask(() => ctx.startCursor?.(calcHighlight(property, ctx.calculation)));
+      },
+    },
   };
   // research/08: Files and ID offer no Group; research/20 §1d: nor does Place. None can group a view.
   const groupable = property.type !== 'files' && property.type !== 'uniqueId' && property.type !== 'place';

@@ -400,6 +400,52 @@ describe('New data source: every layout on a second source', () => {
     });
   });
 
+  // notion-motion.md Round 115 §1 #4 (r115-n-hdr-calc-kbopen.raw): Enter on Calculate opens the list on None
+  // (first and current); ArrowDown goes to Count. User decision 2026-11-22: a mouse open starts on no row.
+  describe('header Calculate submenu start row', () => {
+    const openCalculate = async (): Promise<void> => {
+      await make([{
+        id: 'db', type: 'database', content: [],
+        data: { title: 'Plain', schema: parentSchema, views: [table('v1', 'a0')], activeViewId: 'v1' },
+      }]);
+      await click(own('[data-blok-database-table]').querySelector('[role="columnheader"][data-property-id="notes"]'));
+      const calculate = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened] [data-blok-popover-item]')]
+        .find((row) => row.textContent?.includes('Calculate'));
+
+      await click(calculate);
+    };
+    const cursor = (): Array<string | null> => [...document.querySelectorAll('[data-blok-nested] [data-blok-focused="true"]')]
+      .map((row) => row.closest('[data-blok-item-name]')?.getAttribute('data-blok-item-name') ?? null);
+
+    // A menu left open keeps its arrow keys and its cursor into the next test.
+    afterEach(async () => {
+      for (let i = 0; i < 3; i++) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      await quiet();
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
+    });
+
+    it('a keyboard open starts on None, and ArrowDown lands on Count', async () => {
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
+      await openCalculate();
+
+      expect(document.querySelector('[data-blok-nested] [data-blok-item-name="database-calc-none"]')).not.toBeNull();
+      expect(cursor()).toEqual(['database-calc-none']);
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      await quiet();
+
+      expect(cursor()).toEqual(['database-calc-group-count']);
+    });
+
+    it('a mouse open starts on no row', async () => {
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      await openCalculate();
+
+      expect(document.querySelector('[data-blok-nested] [data-blok-item-name="database-calc-none"]')).not.toBeNull();
+      expect(cursor()).toEqual([]);
+    });
+  });
+
   // notion-motion.md Round 115 §1 #4 (r115-n-tlfoot-calc-kbopen.raw): a keyboard open starts on None; ArrowDown goes to Count.
   // User decision 2026-11-22: a mouse open starts on no row.
   describe('timeline footer Calculate start row', () => {

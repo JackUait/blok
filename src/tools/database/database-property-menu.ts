@@ -763,6 +763,11 @@ export class DatabasePropertyMenu {
     }];
   }
 
+  /** Puts the cursor on row `name` of the open submenu, else of the menu. */
+  startCursor(name: string): void {
+    this.popover?.focusItemByName(name);
+  }
+
   close(): void {
     const popover = this.popover;
 

@@ -2856,6 +2856,39 @@ describe('DatabaseTableView', () => {
       });
     });
 
+    // notion-motion.md Round 115 §1 #4: the header's Calculate list starts on its current row on a keyboard open.
+    // The table opens the header menu itself when the database is locked.
+    describe('header Calculate list on its own header menu', () => {
+      const cursor = (): string[] => [...document.querySelectorAll<HTMLElement>('[data-blok-nested] [data-blok-focused="true"]')].map((el) => el.textContent ?? '');
+      const openCalculate = async (): Promise<void> => {
+        const { root, view } = mount({ view: tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }] }) });
+
+        view.openHeaderMenu('p-amount', root.querySelector<HTMLElement>('[role="columnheader"][data-property-id="p-amount"]') ?? root);
+        [...document.querySelectorAll<HTMLElement>('[data-blok-popover-item]')].find((el) => el.textContent?.includes('tools.database.tableCalculate'))?.click();
+        await Promise.resolve();
+      };
+
+      afterEach(() => {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+      });
+
+      it('a keyboard open starts on More options when Sum is set', async () => {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+        await openCalculate();
+
+        expect(cursor()).toHaveLength(1);
+        expect(cursor()[0]).toContain('tools.database.calcMoreOptions');
+      });
+
+      it('a mouse open starts on no row', async () => {
+        document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+        await openCalculate();
+
+        expect(document.querySelector('[data-blok-nested] [data-blok-popover-item]')).not.toBeNull();
+        expect(cursor()).toEqual([]);
+      });
+    });
+
     // r11-calc-count-sub.png and r11-group-agg-menu.raw: the Count list is 250 wide.
     it('opens the Count list 250 wide', () => {
       const items = calculationItems({ type: 'number' }, undefined, { t: (key: string) => key }, vi.fn()) as Array<{ title?: string; children?: { width?: string } }>;

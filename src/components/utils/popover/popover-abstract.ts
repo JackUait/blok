@@ -317,6 +317,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   public swallowsOutsideClick = false;
 
+  /** Opt-in, with swallowsOutsideClick: a middle click away keeps the popover open and reaches nothing under it. */
+  public holdsOnMiddleClick = false;
+
   /** True only inside {@link hideOnEscape}. */
   private hidingOnEscape = false;
 

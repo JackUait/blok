@@ -10668,6 +10668,8 @@ export class DatabaseTool implements BlockTool {
       },
     });
 
+    // notion-motion.md Round 108 §1 #6: a middle click away keeps a right-click menu open. The ••• menu's is unread.
+    popover.holdsOnMiddleClick = options.pointer !== undefined;
     this.cardMenuPopover = popover;
   }
 

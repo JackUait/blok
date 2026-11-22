@@ -846,6 +846,47 @@ describe('PopoverRegistry', () => {
       el.remove();
     });
 
+    /** A middle press: pointerdown, mousedown, mouseup, auxclick. Returns whether auxclick kept its default. */
+    const middlePress = (element: HTMLElement): boolean => {
+      element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 1 }));
+      element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 1 }));
+      element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 1 }));
+
+      return element.dispatchEvent(new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 }));
+    };
+
+    // notion-motion.md Round 108 §1 #6: a middle click away keeps the card right-click menu open, and opens no tab.
+    it('a middle click away leaves a holding popover open and reaches nothing under it', () => {
+      const { popover, trigger, popoverEl } = createMockPopover();
+      const { el, seen } = outsideTarget();
+
+      el.addEventListener('auxclick', () => seen.push('auxclick'));
+      document.body.appendChild(popoverEl);
+      popover.swallowsOutsideClick = true;
+      popover.holdsOnMiddleClick = true;
+      registry.register(popover, trigger);
+
+      expect(middlePress(el)).toBe(false);
+      expect(seen).toEqual([]);
+      expect(popover.hide).not.toHaveBeenCalled();
+      popoverEl.remove();
+      el.remove();
+    });
+
+    it('a middle click away still closes a popover that does not hold (the default)', () => {
+      const { popover, trigger, popoverEl } = createMockPopover();
+      const { el } = outsideTarget();
+
+      document.body.appendChild(popoverEl);
+      popover.swallowsOutsideClick = true;
+      registry.register(popover, trigger);
+      middlePress(el);
+
+      expect(popover.hide).toHaveBeenCalledOnce();
+      popoverEl.remove();
+      el.remove();
+    });
+
     it('an unflagged popover lets the click away through (the default)', () => {
       const { popover, trigger } = createMockPopover();
       const { el, seen } = outsideTarget();

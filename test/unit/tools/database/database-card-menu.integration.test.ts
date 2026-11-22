@@ -267,6 +267,19 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     expect(card.hasAttribute('data-blok-database-card-picked')).toBe(false);
   });
 
+  // notion-motion.md Round 108 §1 #6: a middle click away keeps the card right-click menu open.
+  it('keeps a board card\'s right-click menu open on a middle click away', () => {
+    const { el } = buildTool(oneRow(), {}, viewData('board'));
+    const away = document.createElement('div');
+
+    document.body.appendChild(away);
+    rowEl(el, 'board').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+    away.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 1 }));
+
+    expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+    away.remove();
+  });
+
   // notion-motion.md Round 58 §6: a board card's menu opens at the pointer x, not the card's left.
   it('anchors a board card\'s right-click menu at the pointer', () => {
     const { el } = buildTool(oneRow(), {}, viewData('board'));

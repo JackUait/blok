@@ -2115,6 +2115,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R319_TOGGLE_BYTES = 505;
     // Lane r319: the Layout page's card-row line, 8px each side (R114 §1 #10). Measured growth.
     const DATABASE_R319_LAYOUT_LINE_BYTES = 220;
+    // Lane r320: Notion's separator line in database menus (R113 light audit #1). Measured growth.
+    const DATABASE_R320_SEPARATOR_BYTES = 719;
     // file.css: the object on a file card — pages, editor tab, filmstrip, record, folder, punch card (measured file.css growth).
     const FILE_CARD_OBJECT_BYTES = 27_626;
     // emoji-picker.css: the database icon pickers' keyboard highlight (measured emoji-picker.css growth).
@@ -2800,7 +2802,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R318_BYTES
       + DATABASE_R319_HANDLE_BYTES
       + DATABASE_R319_TOGGLE_BYTES
-      + DATABASE_R319_LAYOUT_LINE_BYTES;
+      + DATABASE_R319_LAYOUT_LINE_BYTES
+      + DATABASE_R320_SEPARATOR_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

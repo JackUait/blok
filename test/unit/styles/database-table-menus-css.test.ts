@@ -1017,3 +1017,23 @@ describe('database menu kept highlight', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-database-menu-lit]", 'background-color')).toEqual(['var(--blok-database-hover-bg)']);
   });
 });
+
+// notion-motion.md L322, L489, L9789: Notion's menu separators are 1px rgba(42,28,0,0.07) in every database menu.
+// Dark is unmeasured, so it keeps the shared line: popover-border (0.14 white) at 60%.
+describe('database menu separators', () => {
+  const LINE = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item-separator-line]";
+  const token = (): string[] => [...database.matchAll(/--blok-database-menu-separator: ([^;]+);/g)].map((m) => m[1]);
+
+  it('draws the line in Notion\'s rule colour', () => {
+    expect(declared(LINE, 'background-color')).toEqual(['var(--blok-database-menu-separator)']);
+    expect(token()[0]).toBe('rgba(42, 28, 0, 0.07)');
+  });
+
+  it('keeps the shared line under both dark switches', () => {
+    expect(token().slice(1)).toEqual([
+      'color-mix(in oklab, rgba(255, 255, 255, 0.14) 60%, transparent)',
+      'color-mix(in oklab, rgba(255, 255, 255, 0.14) 60%, transparent)',
+    ]);
+    expect(colors).toContain('--blok-popover-border: rgba(255, 255, 255, 0.14)');
+  });
+});

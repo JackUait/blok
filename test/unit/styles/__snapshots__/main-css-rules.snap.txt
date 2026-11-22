@@ -4810,6 +4810,7 @@ span[data-blok-slash-search] {
   --blok-database-form-respondent-bg: var(--blok-database-column-bg);
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(42, 28, 0, 0.07);
+  --blok-database-menu-separator: rgba(42, 28, 0, 0.07);
   --blok-database-layout-tile-ring: rgb(230, 229, 227);
   --blok-database-form-answer-mark-ring: rgba(27, 21, 0, 0.19);
   --blok-database-table-header-text: var(--blok-database-ink-secondary);
@@ -5136,6 +5137,7 @@ span[data-blok-slash-search] {
   --blok-database-card-drag-source-bg: initial;
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(255, 255, 243, 0.082);
+  --blok-database-menu-separator: color-mix(in oklab, rgba(255, 255, 255, 0.14) 60%, transparent);
   --blok-database-layout-tile-ring: rgba(255, 255, 243, 0.082);
   --blok-database-form-answer-mark-ring: rgba(255, 255, 243, 0.082);
   --blok-database-table-header-text: rgb(173, 169, 163);
@@ -5469,6 +5471,7 @@ span[data-blok-slash-search] {
   --blok-database-card-drag-source-bg: initial;
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(255, 255, 243, 0.082);
+  --blok-database-menu-separator: color-mix(in oklab, rgba(255, 255, 255, 0.14) 60%, transparent);
   --blok-database-layout-tile-ring: rgba(255, 255, 243, 0.082);
   --blok-database-form-answer-mark-ring: rgba(255, 255, 243, 0.082);
   --blok-database-table-header-text: rgb(173, 169, 163);
@@ -7612,6 +7615,10 @@ button[data-blok-database-board-lane-count]:hover {
 
 [data-blok-theme="dark"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'], [data-blok-theme="dark"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover] {
   --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item-separator-line] {
+  background-color: var(--blok-database-menu-separator);
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item-more] {

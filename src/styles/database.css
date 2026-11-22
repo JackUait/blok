@@ -181,6 +181,8 @@
   /* Table view (research/07 and 08). */
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(42, 28, 0, 0.07);
+  /* notion-motion.md L322, L489: Notion's menu separators. */
+  --blok-database-menu-separator: rgba(42, 28, 0, 0.07);
   /* notion-motion.md Round 90 §1 #8: Layout tile ring. */
   --blok-database-layout-tile-ring: rgb(230, 229, 227);
   /* notion-motion.md Round 78 §3: a respondent's checkbox ring. Dark is unmeasured: the builder mark's dark ring. */
@@ -608,6 +610,8 @@
     /* Table view (research/07, 08; research/21 §1a, §1d; research/22 §12 for OPEN and "+ New page"). The gutter is unmeasured in dark. */
     --blok-database-table-bg: var(--blok-bg-primary);
     --blok-database-table-border: rgba(255, 255, 243, 0.082);
+    /* Dark is unmeasured: the shared popover separator (popover-border at 60%). */
+    --blok-database-menu-separator: color-mix(in oklab, rgba(255, 255, 255, 0.14) 60%, transparent);
     --blok-database-layout-tile-ring: rgba(255, 255, 243, 0.082);
     --blok-database-form-answer-mark-ring: rgba(255, 255, 243, 0.082);
     --blok-database-table-header-text: rgb(173, 169, 163);
@@ -997,6 +1001,8 @@
   /* Table view (research/07, 08; research/21 §1a, §1d; research/22 §12 for OPEN and "+ New page"). The gutter is unmeasured in dark. */
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(255, 255, 243, 0.082);
+  /* Dark is unmeasured: the shared popover separator (popover-border at 60%). */
+  --blok-database-menu-separator: color-mix(in oklab, rgba(255, 255, 255, 0.14) 60%, transparent);
   --blok-database-layout-tile-ring: rgba(255, 255, 243, 0.082);
   --blok-database-form-answer-mark-ring: rgba(255, 255, 243, 0.082);
   --blok-database-table-header-text: rgb(173, 169, 163);
@@ -3604,6 +3610,11 @@ button[data-blok-database-board-lane-count]:hover {
 [data-blok-theme="dark"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'],
 [data-blok-theme="dark"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover] {
   --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
+}
+
+/* Beats the separator's shared bg-popover-border/60. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item-separator-line] {
+  background-color: var(--blok-database-menu-separator);
 }
 
 /* A template row's "…" (research/35 §1.8): icon gray, which passes the 3:1 icon rule on the menu.

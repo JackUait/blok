@@ -372,6 +372,15 @@ describe('fills and lines that differed from Notion', () => {
   it('timeline zoom, "+ New" and "Show table" labels are icon-gray text at the AA step (research/07:195)', () => {
     expect(ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom]')).toContain('color: var(--blok-database-ink-secondary)');
   });
+
+  // notion-motion.md Round 114 §1 #9 (r114-n-tl-closedpanel-ink.raw): the closed » is an icon, not text, so no AA step.
+  it('the closed timeline » takes Notion\'s icon ink: 142 in light, 173 in dark', () => {
+    expect(ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle]:not([aria-pressed="true"])'))
+      .toContain('color: var(--blok-database-timeline-closed-toggle-ink)');
+    expect(themed('--blok-database-timeline-closed-toggle-ink')).toEqual({ light: 'rgb(142, 139, 134)', dark: 'rgb(173, 169, 163)', attr: 'rgb(173, 169, 163)' });
+    // WCAG 1.4.11: an icon needs 3:1.
+    expect(contrast('rgb(142, 139, 134)', WHITE)).toBeGreaterThanOrEqual(3);
+  });
 });
 
 describe('pass 2: research/33 §4 colour dump', () => {

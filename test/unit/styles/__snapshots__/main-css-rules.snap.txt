@@ -4822,6 +4822,7 @@ span[data-blok-slash-search] {
   --blok-database-table-calc-value: var(--blok-database-ink-secondary);
   --blok-database-table-gutter-icon: rgb(173, 169, 163);
   --blok-database-sort-handle-ink: rgb(142, 139, 134);
+  --blok-database-timeline-closed-toggle-ink: rgb(142, 139, 134);
   --blok-database-table-load-more-hover-bg: rgba(55, 53, 47, 0.024);
   --blok-database-table-control-border: rgba(28, 19, 1, 0.11);
   --blok-database-cell-link-underline: rgba(28, 19, 1, 0.11);
@@ -5147,6 +5148,7 @@ span[data-blok-slash-search] {
   --blok-database-table-calc-value: rgb(173, 169, 163);
   --blok-database-table-gutter-icon: rgb(125, 122, 117);
   --blok-database-sort-handle-ink: rgb(173, 169, 163);
+  --blok-database-timeline-closed-toggle-ink: rgb(173, 169, 163);
   --blok-database-toolbar-expand-ink: rgb(125, 122, 117);
   --blok-database-table-load-more-hover-bg: var(--blok-database-table-header-hover-bg);
   --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
@@ -5479,6 +5481,7 @@ span[data-blok-slash-search] {
   --blok-database-table-calc-value: rgb(173, 169, 163);
   --blok-database-table-gutter-icon: rgb(125, 122, 117);
   --blok-database-sort-handle-ink: rgb(173, 169, 163);
+  --blok-database-timeline-closed-toggle-ink: rgb(173, 169, 163);
   --blok-database-toolbar-expand-ink: rgb(125, 122, 117);
   --blok-database-table-load-more-hover-bg: var(--blok-database-table-header-hover-bg);
   --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
@@ -19807,6 +19810,10 @@ button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-fie
 
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom], [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle], [data-blok-database-timeline-new], [data-blok-database-timeline-load-more] {
   color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle]:not([aria-pressed="true"]) {
+  color: var(--blok-database-timeline-closed-toggle-ink);
 }
 
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-manage-calendar], [data-blok-database-calendar-nav] [data-blok-database-calendar-manage-calendar] {

@@ -1225,6 +1225,16 @@ describe('DatabasePropertyMenu', () => {
       menu.destroy();
     });
 
+    it('a saved Divide by survives a Percent bar and shows again under Number', () => {
+      const { cb, menu } = headerMenu(prop('number', { number: { showAs: 'bar', divideBy: 50 } }));
+
+      pick('numberFormat', 'format-percent');
+      expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { number: { showAs: 'bar', divideBy: 50, format: 'percent' } });
+      pick('numberFormat', 'format-number');
+      expect(byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'divideBy').element?.querySelector('input')?.value).toBe('50');
+      menu.destroy();
+    });
+
     // Divide by saves on blur without a redraw, so a later pick must not write the old value back.
     it('a color picked after typing Divide by keeps the typed Divide by and still redraws', () => {
       const { cb, menu } = headerMenu(prop('number', { number: { showAs: 'bar', divideBy: 100 } }));

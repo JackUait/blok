@@ -141,8 +141,15 @@ const readFormatted = (text: string, display: NumberDisplay, locale: string): nu
   return bare === '' ? undefined : Number(bare);
 };
 
-/** What a bar or ring divides by: percent by 1, everything else by 100, unless the property says otherwise. */
-export const numberDivideBy = (display: NumberDisplay): number => display.divideBy ?? (display.format === 'percent' ? 1 : 100);
+/**
+ * What a bar or ring divides by: percent by 1, everything else by 100, unless the property says otherwise.
+ * A Percent bar always uses 1: its menu has no Divide by row, so a saved one stays in data but is not applied.
+ */
+export const numberDivideBy = (display: NumberDisplay): number => {
+  if (display.showAs === 'bar' && display.format === 'percent') return 1;
+
+  return display.divideBy ?? (display.format === 'percent' ? 1 : 100);
+};
 
 /** How full a bar or ring is, 0 to 1. */
 export const numberFill = (value: number, display: NumberDisplay): number => {

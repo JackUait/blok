@@ -7429,6 +7429,15 @@ button[data-blok-database-board-lane-count]:hover {
   min-width: 0;
 }
 
+[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title]:not(:empty, [data-blok-empty="true"]):has(+ [data-blok-database-title-more]) {
+  flex: 0 1 auto;
+  padding-inline-end: 0;
+}
+
+[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title-more] {
+  margin-inline: var(--blok-space-1) max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
+}
+
 [data-blok-database-title-row] > [data-blok-database-title]:focus:not([hidden]) {
   display: block;
   -webkit-line-clamp: none;

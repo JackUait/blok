@@ -433,13 +433,33 @@ describe('view tabs (feel/findings-toolbar)', () => {
       expect(own('[data-blok-database-title]')).toHaveFocus();
     });
 
-    it('is not drawn with two views, nor when read-only', async () => {
-      await make(doc());
+    it('is not drawn when read-only', async () => {
+      const api = await make(doc([table('v1', 'a0')]));
+
+      await api.readOnly.set(true);
+      await quiet();
 
       expect(titleMore()).toBeNull();
-      editor?.destroy();
-      editor = undefined;
-      const api = await make(doc([table('v1', 'a0')]));
+    });
+  });
+
+  // notion-motion.md Round 110 §1 #2 (r110-n-titlemore-2views.raw): with two views the title row's ⋯ shows on hover,
+  // 4 after the title. Blok keeps it in the row so Tab still reaches it (database.css shows it on hover and focus).
+  describe('the title row "…" with two views', () => {
+    const titleMore = (): HTMLElement | null => parentRoot().querySelector<HTMLElement>('[data-blok-database-title-row] [data-blok-database-title-more]');
+
+    it('sits right after the title and opens the title menu', async () => {
+      await make(doc());
+
+      expect(titleMore()?.previousElementSibling?.hasAttribute('data-blok-database-title')).toBe(true);
+      titleMore()?.click();
+      await quiet();
+
+      expect(menuItems()).toEqual(expect.arrayContaining(['database-title-copy-link', 'database-title-duplicate', 'database-title-edit']));
+    });
+
+    it('is not drawn when read-only', async () => {
+      const api = await make(doc());
 
       await api.readOnly.set(true);
       await quiet();

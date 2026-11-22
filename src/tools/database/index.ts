@@ -5741,6 +5741,13 @@ export class DatabaseTool implements BlockTool {
       if (!this.readOnly && !this.structureLocked() && addBtn !== null && tabBarEl !== null && !tabBarEl.contains(addBtn)) {
         tabBarEl.appendChild(addBtn);
       }
+      // notion-motion.md Round 110 §1 #2: several views keep the ⋯, right after the title, shown on hover.
+      // After a second source's title too: paintSourceTitle puts that right after the block's own title.
+      const lastTitle = this.sourceTitleElement ?? this.titleElement;
+
+      if (!this.readOnly && !this.structureLocked() && lastTitle !== null) {
+        lastTitle.after(this.tabBar.createTitleMoreButton());
+      }
       if (tabBarEl instanceof HTMLElement) {
         tabBarEl.style.display = views.length >= 2 ? '' : 'none';
       }

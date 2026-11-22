@@ -73,6 +73,16 @@ describe('a long title stays one line', () => {
     expect(rule('[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title]')).toMatch(/flex: 1 1 0%; min-width: 0/);
   });
 
+  // notion-motion.md Round 110 §1 #2 (r110-n-titlemore-2views.raw): with two views the ⋯ sits 4 after the title text,
+  // and the title still stops at the column end.
+  it('with several views a titled database\'s "…" sits 4 after the title text', () => {
+    const trail = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)))';
+
+    expect(rule('[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title]:not(:empty, [data-blok-empty="true"]):has(+ [data-blok-database-title-more])'))
+      .toMatch(/flex: 0 1 auto; padding-inline-end: 0/);
+    expect(rule('[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title-more]')).toContain(`margin-inline: var(--blok-space-1) ${trail}`);
+  });
+
   it('"+" and "…" keep their 24px while the title gives way', () => {
     expect(rule('[data-blok-database-title-row][data-single-view] [data-blok-database-add-view]')).toMatch(/flex-shrink: 0/);
     expect(rule('[data-blok-database-title-more]')).toMatch(/flex-shrink: 0/);

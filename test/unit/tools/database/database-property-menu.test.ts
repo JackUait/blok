@@ -1696,6 +1696,45 @@ describe('DatabasePropertyMenu', () => {
       expect(byName(items, 'dateFormat').children?.class?.split(' ')).toEqual(['blok-database-panel-list', 'blok-database-date-format-list']);
     });
 
+    // notion-motion.md R115 §1 #2 (r115-n-datefmt-kbpick.raw): a Date format pick closes only its list; focus lands on the Date format row.
+    it('picking a date format keeps Edit property open and highlights the Date format row', () => {
+      const cb = callbacks();
+      const onClose = vi.fn();
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...cb, onClose });
+
+      menu.open(prop('date'), document.createElement('button'));
+      const formats = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'dateFormat').children?.items ?? [];
+
+      expect(formats.every((f) => f.closeOnActivate !== true)).toBe(true);
+      byName(formats, 'dateFormat-short').onActivate?.(byName(formats, 'dateFormat-short'));
+
+      expect(cb.onUpdate).toHaveBeenCalledWith('p', { date: { dateFormat: 'short' } });
+      expect(onClose).not.toHaveBeenCalled();
+      expect(menu.isOpen).toBe(true);
+      expect(captured.popovers[captured.popovers.length - 1]?.activated).toEqual(['editProperty']);
+      expect(byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'dateFormat').valueLabel).toBe('tools.database.dateFormat.short');
+      // The mock draws no submenu rows; the row page test below checks DOM focus.
+      expect(captured.popovers[captured.popovers.length - 1]?.focused).toEqual(['dateFormat']);
+      menu.destroy();
+    });
+
+    it('picking a date format on the row page panel keeps the panel open and puts focus on the Date format row', () => {
+      const cb = callbacks();
+      const onClose = vi.fn();
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...cb, onClose });
+
+      menu.openRowPage(prop('date'), document.createElement('div'), { edit: true });
+      const formats = byName(lastItems(), 'dateFormat').children?.items ?? [];
+
+      byName(formats, 'dateFormat-relative').onActivate?.(byName(formats, 'dateFormat-relative'));
+
+      expect(onClose).not.toHaveBeenCalled();
+      expect(menu.isOpen).toBe(true);
+      expect(byName(lastItems(), 'dateFormat').valueLabel).toBe('tools.database.dateFormat.relative');
+      expect([...document.querySelectorAll('[data-blok-item-name="dateFormat"]')].at(-1)).toHaveFocus();
+      menu.destroy();
+    });
+
     // notion-motion.md R113 §1 #1 (r113-n-dateformat-escape.raw): Escape puts focus on the Date format row.
     it('the Date format list asks Escape to put focus on its row', () => {
       open(prop('date'));

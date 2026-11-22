@@ -458,10 +458,11 @@ export class DatabasePropertyMenu {
   private showAsUpdate(property: PropertyDefinition, name: HTMLElement, redraw: (patch: Partial<PropertySettingsV2>, typed: string | undefined) => void): (patch: Partial<PropertySettingsV2>) => void {
     return (patch) => {
       this.options.onUpdate(property.id, patch);
-      if (patch.number === undefined && patch.rollup === undefined) return;
-      const input = name.querySelector('input');
-
       const row = this.pickedRow;
+
+      // Other date writes (time zone, notifications) stay quiet: only a picked row redraws.
+      if (patch.number === undefined && patch.rollup === undefined && row === null) return;
+      const input = name.querySelector('input');
 
       this.pickedRow = null;
       // The old field goes away without a blur: save its name first, as leaving it would.
@@ -472,8 +473,8 @@ export class DatabasePropertyMenu {
       // The redraw dropped DOM focus to <body>; Notion keeps it in the flyout, so arrows go on from the row.
       const rowElement = this.popover?.getElement().querySelector<HTMLElement>(`[data-blok-item-name="${row}"]`);
 
-      // notion-motion.md R84b §1, R113 §1 #2: Number format and Decimal places put focus on the row itself.
-      if ((row === 'numberFormat' || row === 'decimals') && rowElement !== null && rowElement !== undefined) {
+      // notion-motion.md R84b §1, R113 §1 #2, R115 §1 #2: Number format, Decimal places and Date format put focus on the row itself.
+      if ((row === 'numberFormat' || row === 'decimals' || row === 'dateFormat') && rowElement !== null && rowElement !== undefined) {
         rowElement.setAttribute('tabindex', '-1');
         rowElement.focus({ preventScroll: true });
 
@@ -1565,8 +1566,8 @@ export class DatabasePropertyMenu {
             name: `dateFormat-${format}`,
             title: this.t(`tools.database.dateFormat.${format}`),
             ...checkedIf((date.dateFormat ?? 'full') === format),
-            closeOnActivate: true,
-            onActivate: () => setDate({ dateFormat: format }),
+            // notion-motion.md R115 §1 #2: the pick closes only this list; focus goes to its row.
+            onActivate: () => this.pickFrom('dateFormat', () => setDate({ dateFormat: format })),
           })),
         },
       },

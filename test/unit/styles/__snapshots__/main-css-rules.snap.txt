@@ -5024,6 +5024,7 @@ span[data-blok-slash-search] {
   --blok-database-card-glyph: rgb(142, 139, 134);
   --blok-database-pinned-unpin-icon: rgb(161, 158, 153);
   --blok-database-table-open-icon: rgb(142, 139, 134);
+  --blok-database-map-add-pin-icon: rgb(142, 139, 134);
   --blok-database-favorite-star: rgb(246, 192, 80);
   --blok-database-comment-badge-text: rgb(44, 44, 43);
   --blok-database-comment-badge-icon: rgb(142, 139, 134);
@@ -5360,6 +5361,7 @@ span[data-blok-slash-search] {
   --blok-database-card-glyph: var(--blok-database-card-actions-icon);
   --blok-database-pinned-unpin-icon: var(--blok-database-table-muted-text);
   --blok-database-table-open-icon: var(--blok-database-table-header-text);
+  --blok-database-map-add-pin-icon: var(--blok-database-ink-secondary);
   --blok-database-comment-badge-text: rgb(240, 239, 237);
   --blok-database-comment-badge-icon: rgb(173, 169, 163);
   --blok-database-select-head-bg: rgba(255, 255, 255, 0.03);
@@ -5699,6 +5701,7 @@ span[data-blok-slash-search] {
   --blok-database-card-glyph: var(--blok-database-card-actions-icon);
   --blok-database-pinned-unpin-icon: var(--blok-database-table-muted-text);
   --blok-database-table-open-icon: var(--blok-database-table-header-text);
+  --blok-database-map-add-pin-icon: var(--blok-database-ink-secondary);
   --blok-database-comment-badge-text: rgb(240, 239, 237);
   --blok-database-comment-badge-icon: rgb(173, 169, 163);
   --blok-database-select-head-bg: rgba(255, 255, 255, 0.03);
@@ -24482,7 +24485,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   border: 0;
   border-radius: var(--blok-radius-control-sm);
   background-color: transparent;
-  color: var(--blok-database-ink-secondary);
+  color: var(--blok-database-map-add-pin-icon);
   cursor: pointer;
   transition: background-color 0.1s ease-in-out;
 }

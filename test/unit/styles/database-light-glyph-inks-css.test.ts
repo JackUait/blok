@@ -89,3 +89,15 @@ describe('table OPEN pill', () => {
     ]);
   });
 });
+
+describe('map add-pin button', () => {
+  // L3269, L5658: the pin glyph is rgb(142, 139, 134). The button has no text, only an aria-label.
+  it('draws the pin in Notion\'s gray, dark unchanged', () => {
+    expect(ruleBody('[data-blok-database-map-add-pin]')).toContain('color: var(--blok-database-map-add-pin-icon)');
+    expect(tokenValues('--blok-database-map-add-pin-icon')).toEqual([
+      'rgb(142, 139, 134)',
+      'var(--blok-database-ink-secondary)',
+      'var(--blok-database-ink-secondary)',
+    ]);
+  });
+});

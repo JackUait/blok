@@ -697,46 +697,52 @@ describe('PopoverRegistry', () => {
     };
 
     it('a click away closes a flagged popover and reaches nothing under it', () => {
-      const { popover, trigger } = createMockPopover();
+      const { popover, trigger, popoverEl } = createMockPopover();
       const { el, seen } = outsideTarget();
 
+      document.body.appendChild(popoverEl);
       popover.swallowsOutsideClick = true;
       registry.register(popover, trigger);
       press(el);
 
       expect(seen).toEqual([]);
       expect(popover.hide).toHaveBeenCalledOnce();
+      popoverEl.remove();
       el.remove();
     });
 
     it('moves focus to the body', () => {
-      const { popover, trigger } = createMockPopover();
+      const { popover, trigger, popoverEl } = createMockPopover();
       const { el } = outsideTarget();
       const input = document.createElement('input');
 
       document.body.appendChild(input);
       input.focus();
+      document.body.appendChild(popoverEl);
       popover.swallowsOutsideClick = true;
       registry.register(popover, trigger);
       press(el);
 
       expect(document.body).toHaveFocus();
+      popoverEl.remove();
       el.remove();
       input.remove();
     });
 
     it('the next click acts again, even when the swallowed press made no click', () => {
-      const { popover, trigger } = createMockPopover();
+      const { popover, trigger, popoverEl } = createMockPopover();
       const { el, seen } = outsideTarget();
 
       // A real popover leaves the registry when it hides.
       vi.mocked(popover.hide).mockImplementation(() => registry.unregister(popover));
+      document.body.appendChild(popoverEl);
       popover.swallowsOutsideClick = true;
       registry.register(popover, trigger);
       el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }));
       press(el);
 
       expect(seen).toEqual(['pointerdown', 'mousedown', 'mouseup', 'click']);
+      popoverEl.remove();
       el.remove();
     });
 
@@ -758,6 +764,18 @@ describe('PopoverRegistry', () => {
       expect(seen).toEqual(['click']);
       expect(parent.popover.hide).not.toHaveBeenCalled();
       parent.popoverEl.remove();
+    });
+
+    it('a flagged popover no longer in the document lets the click through', () => {
+      const { popover, trigger } = createMockPopover();
+      const { el, seen } = outsideTarget();
+
+      popover.swallowsOutsideClick = true;
+      registry.register(popover, trigger);
+      press(el);
+
+      expect(seen).toEqual(['pointerdown', 'mousedown', 'mouseup', 'click']);
+      el.remove();
     });
 
     it('an unflagged popover lets the click away through (the default)', () => {

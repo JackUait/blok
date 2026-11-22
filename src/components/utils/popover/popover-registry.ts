@@ -428,7 +428,8 @@ export class PopoverRegistry {
       entriesToClose.push(entry);
     }
 
-    if (!entriesToClose.some(entry => entry.popover.swallowsOutsideClick)) {
+    // A popover no longer in the document (its editor was torn down) shows no backdrop.
+    if (!entriesToClose.some(entry => entry.popover.swallowsOutsideClick && entry.popover.getElement().isConnected)) {
       return;
     }
 

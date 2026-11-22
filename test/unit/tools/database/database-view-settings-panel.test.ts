@@ -711,7 +711,7 @@ describe('view settings panel', () => {
 
   // notion-motion.md Round 14 (r14-cal-showas.png), Round 87 §2 (r87-n-calas-open-mo.raw): a 250 menu under the row, end edges aligned; the › turns.
   describe('"Show calendar as"', () => {
-    const calendar = (pickWeek: () => void): Harness => {
+    const calendar = (pickWeek: () => void, week = false): Harness => {
       const h = harness({ type: 'calendar' });
 
       h.ctx.layoutItems = () => [{
@@ -719,8 +719,8 @@ describe('view settings panel', () => {
         name: 'calendar-show-as',
         title: 'Show calendar as',
         children: { items: [
-          { type: PopoverItemType.Default, name: 'calendar-range-month', title: 'Month', isActive: true, onActivate: vi.fn() },
-          { type: PopoverItemType.Default, name: 'calendar-range-week', title: 'Week', isActive: false, onActivate: pickWeek },
+          { type: PopoverItemType.Default, name: 'calendar-range-month', title: 'Month', isActive: !week, onActivate: vi.fn() },
+          { type: PopoverItemType.Default, name: 'calendar-range-week', title: 'Week', isActive: week, onActivate: pickWeek },
         ] },
       }];
       h.open();
@@ -761,7 +761,7 @@ describe('view settings panel', () => {
     // notion-motion.md Round 105 §1 #4 (r105-n-calas-open-week.raw): the first row opens filled, whichever is checked;
     // the fill then follows the pointer, one row at a time.
     it('opens with the first row filled, then the fill follows the pointer', () => {
-      calendar(vi.fn());
+      calendar(vi.fn(), true);
       click('database-calendar-show-as');
       const month = q('database-calendar-range-month');
       const week = q('database-calendar-range-week');

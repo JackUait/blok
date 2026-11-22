@@ -19,6 +19,9 @@ const rule = (selector: string): string => {
   return database.slice(at + 2, database.indexOf('}', at + 2));
 };
 
+/** One view's "+" and several views' "…" sit after the same hidden placeholder copy. */
+const PLACEHOLDER_COPY = '[data-blok-database-title-row][data-single-view] [data-blok-database-title]:is(:empty, [data-blok-empty="true"])::after, [data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title]:is(:empty, [data-blok-empty="true"]):has(+ [data-blok-database-title-more])::after';
+
 describe('one view: the toolbar shares the title row (V01)', () => {
   it('the emptied view bar takes no room', () => {
     expect(rule('[data-blok-database-view-bar][data-single-view]')).toMatch(/display: none/);
@@ -39,7 +42,7 @@ describe('one view: the toolbar shares the title row (V01)', () => {
 
 describe('the empty title keeps its placeholder width (V02)', () => {
   it('a hidden copy of the placeholder holds the title open', () => {
-    const body = rule('[data-blok-database-title-row][data-single-view] [data-blok-database-title]:is(:empty, [data-blok-empty="true"])::after');
+    const body = rule(PLACEHOLDER_COPY);
 
     expect(body).toMatch(/content: attr\(data-placeholder\)/);
     expect(body).toMatch(/visibility: hidden/);
@@ -78,15 +81,21 @@ describe('a long title stays one line', () => {
   it('with several views a titled database\'s "…" sits 4 after the title text', () => {
     const trail = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)))';
 
-    expect(rule('[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title]:not(:empty, [data-blok-empty="true"]):has(+ [data-blok-database-title-more])'))
-      .toMatch(/flex: 0 1 auto; padding-inline-end: 0/);
     expect(rule('[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title-more]')).toContain(`margin-inline: var(--blok-space-1) ${trail}`);
   });
 
-  // Round 8b: an empty title spans its row with several views. The ⋯ lies over its end, so it takes no room and Tab still reaches it.
-  it('with several views an empty title keeps its whole row under the "…"', () => {
-    expect(rule('[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title]:is(:empty, [data-blok-empty="true"]) + [data-blok-database-title-more]'))
-      .toMatch(/margin-inline-start: calc\(-1 \* var\(--blok-space-6\)\)/);
+  // notion-motion.md Round 111 §1 #1 (r111-n-titlemore-empty-2views.raw): with two views an empty title is the
+  // placeholder's width (155.9) and the ⋯ sits 4 after it, as with a typed title.
+  it('with several views an empty title hugs its placeholder and the "…" sits 4 after it', () => {
+    expect(rule('[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title]:has(+ [data-blok-database-title-more])'))
+      .toMatch(/flex: 0 1 auto; padding-inline-end: 0/);
+    const copy = rule(PLACEHOLDER_COPY);
+
+    expect(copy).toMatch(/content: attr\(data-placeholder\)/);
+    expect(copy).toMatch(/visibility: hidden/);
+    expect(copy).toMatch(/height: 0/);
+    expect(copy).toMatch(/white-space: nowrap/);
+    expect(database).not.toContain('+ [data-blok-database-title-more] { margin-inline-start: calc(-1 * var(--blok-space-6))');
   });
 
   it('"+" and "…" keep their 24px while the title gives way', () => {

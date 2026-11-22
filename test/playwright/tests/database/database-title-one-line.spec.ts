@@ -211,8 +211,8 @@ test.describe('Database — a long title stays one line', () => {
     expect((tab?.y ?? 0) - (title?.y ?? 0)).toBeCloseTo(44.6, 0);
   });
 
-  // Notion's title box spans its own row (Round 8b: 388 wide in a 400 database), so an empty one still shows its placeholder.
-  test('with several views an empty title spans the row and shows its placeholder', async ({ page }) => {
+  // notion-motion.md Round 111 §1 #1: with two views an empty title is the placeholder's width (155.9), ⋯ 4 after it.
+  test('with several views an empty title hugs its placeholder and the ⋯ sits 4 after it', async ({ page }) => {
     await create(page, {
       title: '',
       views: [
@@ -222,9 +222,12 @@ test.describe('Database — a long title stays one line', () => {
     });
     await setRowWidth(page, 400);
     const box = await page.locator(TITLE).boundingBox();
+    const more = await page.locator(ROW).locator('[data-blok-database-title-more]').boundingBox();
 
-    expect(box?.width).toBeCloseTo(400, 0);
+    // "New database" at 24px; the font decides the last pixel.
+    expect(box?.width).toBeCloseTo(156, -1);
     expect(box?.height).toBeCloseTo(31.2, 0);
+    expect((more?.x ?? 0) - ((box?.x ?? 0) + (box?.width ?? 0))).toBeCloseTo(4, 0);
   });
 
   test('an empty title keeps its placeholder width', async ({ page }) => {

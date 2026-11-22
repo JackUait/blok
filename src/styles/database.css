@@ -3381,20 +3381,15 @@ button[data-blok-database-board-lane-count]:hover {
   min-width: 0;
 }
 
-/* notion-motion.md Round 110 §1 #2 (r110-n-titlemore-2views.raw): with several views the ⋯ sits 4 after the title text.
-   The ⋯ takes over the title's trailing gutter, so a long title still stops at the column end. */
-[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title]:not(:empty, [data-blok-empty="true"]):has(+ [data-blok-database-title-more]) {
+/* notion-motion.md Round 110 §1 #2, Round 111 §1 #1: with several views the ⋯ sits 4 after the title text, or after
+   an empty title's placeholder. The ⋯ takes over the title's trailing gutter, so a long title still stops at the column end. */
+[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title]:has(+ [data-blok-database-title-more]) {
   flex: 0 1 auto;
   padding-inline-end: 0;
 }
 
 [data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title-more] {
   margin-inline: var(--blok-space-1) max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
-}
-
-/* Round 8b: an empty title spans its row. The ⋯ lies over its end, so it takes no room and Tab still reaches it. */
-[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title]:is(:empty, [data-blok-empty="true"]) + [data-blok-database-title-more] {
-  margin-inline-start: calc(-1 * var(--blok-space-6));
 }
 
 /* While edited it stays one line and scrolls sideways to the caret (Round 8b). */
@@ -3409,8 +3404,9 @@ button[data-blok-database-board-lane-count]:hover {
 }
 
 /* The placeholder has no width (placeholder-layout-inert law), so a hidden copy
-   holds the empty title open and "+" lands after it (feel/findings-toolbar V02). */
-[data-blok-database-title-row][data-single-view] [data-blok-database-title]:is(:empty, [data-blok-empty="true"])::after {
+   holds the empty title open and "+" or "⋯" lands after it (feel/findings-toolbar V02, Round 111 §1 #1). */
+[data-blok-database-title-row][data-single-view] [data-blok-database-title]:is(:empty, [data-blok-empty="true"])::after,
+[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title]:is(:empty, [data-blok-empty="true"]):has(+ [data-blok-database-title-more])::after {
   content: attr(data-placeholder);
   display: block;
   height: 0;

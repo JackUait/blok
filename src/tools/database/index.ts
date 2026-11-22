@@ -11189,10 +11189,12 @@ export class DatabaseTool implements BlockTool {
     const popover = this.groupMenuPopover;
 
     if (popover === null) return;
+    // Round 100 §1 #1: the popup sits on a full-window backdrop, so a click away acts on nothing under it.
+    popover.swallowsOutsideClick = true;
     popover.on(PopoverEvent.Closed, () => {
       done(result.label);
       // Round 100 §1 #1: after a click outside, the pill gets focus once the close motion ends.
-      // The click's mousedown moves focus to the body after `done` focused the pill.
+      // The click away moves focus to the body after `done` focused the pill.
       const target = document.activeElement;
       const refocus = (): void => {
         if (popover.isClosing) {

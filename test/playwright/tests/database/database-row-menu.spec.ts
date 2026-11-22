@@ -218,3 +218,85 @@ test('a click on a list row\'s ⋮⋮ opens the list row menu, with no Layout or
   await expect(row).toHaveCSS('background-color', 'rgba(55, 53, 47, 0.06)');
   await expect(handle).toBeVisible();
 });
+
+/**
+ * notion-motion.md Round 104 §1 #1, Round 105 §1 #2, Round 107 §1 #1: Notion's row menus sit on a
+ * transparent full-window backdrop, so a click away only closes the menu. Blok's click used to
+ * reach the editor's bottom zone and add a paragraph.
+ */
+test.describe('a click away from a row menu', () => {
+  const blockCount = (page: Page): Promise<number> => page.evaluate(() => window.blokInstance?.blocks.getBlocksCount() ?? -1);
+
+  /** A point on the editor's bottom zone, checked to be the hit there and outside the open menu. */
+  const bottomZonePoint = async (page: Page): Promise<{ x: number; y: number }> => {
+    const zone = await page.getByTestId('bottom-zone').boundingBox();
+    const menu = await page.locator('[data-blok-popover-opened] [data-blok-popover-container]').boundingBox();
+
+    if (zone === null || menu === null) throw new Error('no box');
+    const point = { x: Math.round(zone.x + zone.width - 20), y: Math.round(zone.y + zone.height / 2) };
+
+    expect(point.x < menu.x || point.x > menu.x + menu.width || point.y < menu.y || point.y > menu.y + menu.height).toBe(true);
+    expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('[data-blok-bottom-zone]') !== null, point)).toBe(true);
+
+    return point;
+  };
+
+  const clickAway = async (page: Page): Promise<number> => {
+    await expect(page.getByPlaceholder('Search actions…')).toBeVisible();
+    const before = await blockCount(page);
+    const point = await bottomZonePoint(page);
+
+    await page.mouse.click(point.x, point.y);
+
+    return before;
+  };
+
+  test('from the table ⋮⋮ adds no block, and focus goes to the body', async ({ page }) => {
+    await mount(page, 'table');
+    const handle = page.locator('[data-row-id="r1"] [data-blok-database-table-row-handle]');
+
+    await page.locator('[data-blok-database-table-row][data-row-id="r1"]').hover();
+    await handle.click();
+    const before = await clickAway(page);
+
+    await expect(page.locator('[data-blok-popover-opened]')).toHaveCount(0);
+    expect(await blockCount(page)).toBe(before);
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+  });
+
+  test('from a table row\'s right-click menu adds no block', async ({ page }) => {
+    await mount(page, 'table');
+    await page.getByRole('gridcell').filter({ hasText: 'Launch plan' }).click({ button: 'right' });
+    const before = await clickAway(page);
+
+    await expect(page.locator('[data-blok-popover-opened]')).toHaveCount(0);
+    expect(await blockCount(page)).toBe(before);
+    expect(await page.locator('[data-blok-bottom-zone]').evaluate((zone) => zone.contains(document.activeElement))).toBe(false);
+  });
+
+  test('from the list ⋮⋮ adds no block, and focus goes to the body', async ({ page }) => {
+    await mount(page, 'list');
+    const row = page.locator('[data-blok-database-list-row][data-row-id="r1"]');
+
+    await row.hover();
+    await row.getByRole('button', { name: 'Drag to move, click to open menu' }).click();
+    const before = await clickAway(page);
+
+    await expect(page.locator('[data-blok-popover-opened]')).toHaveCount(0);
+    expect(await blockCount(page)).toBe(before);
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+  });
+
+  test('from a board group\'s rename popup adds no block', async ({ page }) => {
+    await page.locator('[data-blok-database-column-pill]', { hasText: 'Todo' }).click();
+    await expect(page.locator('[data-blok-database-group-name-field] input')).toBeFocused();
+    const before = await blockCount(page);
+    const zone = await page.getByTestId('bottom-zone').boundingBox();
+
+    if (zone === null) throw new Error('no zone');
+    await page.mouse.click(Math.round(zone.x + zone.width - 20), Math.round(zone.y + zone.height / 2));
+
+    await expect(page.locator('[data-blok-database-group-name-field]')).toHaveCount(0);
+    expect(await blockCount(page)).toBe(before);
+  });
+});

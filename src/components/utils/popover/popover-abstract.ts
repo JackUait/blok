@@ -310,6 +310,12 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   /** Opt-in, with animateClose: every close skips the close motion. */
   public closesAtOnce = false;
 
+  /**
+   * Opt-in: a primary click away acts like a click on a full-window backdrop.
+   * It only closes the popover, reaches nothing under it, and leaves focus on the body.
+   */
+  public swallowsOutsideClick = false;
+
   /** True only inside {@link hideOnEscape}. */
   private hidingOnEscape = false;
 

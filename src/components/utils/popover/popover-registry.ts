@@ -22,6 +22,30 @@ const isInteractiveTriggerControl = (element: HTMLElement): boolean =>
   element.matches('button, [role="button"]');
 
 /**
+ * Eats the mousedown, mouseup and click that follow a swallowed pointerdown.
+ * Lives outside the registry's listeners: closing the popover empties the stack,
+ * which removes those. Ends on the click, or on the next pointerdown when the
+ * press made no click, so it never eats a later click.
+ */
+const swallowRestOfPress = (): void => {
+  const types = ['mousedown', 'mouseup', 'click'] as const;
+  const swallow = (event: Event): void => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (event.type === 'click') {
+      stop();
+    }
+  };
+  const stop = (): void => {
+    types.forEach(type => window.removeEventListener(type, swallow, true));
+    window.removeEventListener('pointerdown', stop, true);
+  };
+
+  types.forEach(type => window.addEventListener(type, swallow, true));
+  window.addEventListener('pointerdown', stop, true);
+};
+
+/**
  * Singleton registry that manages open popovers.
  * Enforces mutual exclusion (only one popover open at a time)
  * and handles click-outside-to-close behavior.
@@ -75,6 +99,12 @@ export class PopoverRegistry {
    * {@link handleDocumentClickCapture} to make that click a no-op.
    */
   private pressedOpenTrigger: HTMLElement | null = null;
+
+  /**
+   * Bound reference to the window capture-phase pointerdown handler that runs
+   * the {@link PopoverAbstract.swallowsOutsideClick} backdrop
+   */
+  private boundBackdropPointerDown: ((e: PointerEvent) => void) | null = null;
 
   /**
    * Bound reference to the capture-phase keydown handler for add/remove symmetry
@@ -376,6 +406,48 @@ export class PopoverRegistry {
   }
 
   /**
+   * Backdrop for popovers with {@link PopoverAbstract.swallowsOutsideClick}. Runs at
+   * window capture, before any page handler: when a primary press away closes such a
+   * popover, it closes the same entries the bubble handler would and eats the rest of
+   * the gesture, so the press does not act on what lies under it.
+   * @param event - the pointerdown event
+   */
+  private handleBackdropPointerDown(event: PointerEvent): void {
+    const target = event.target;
+
+    if (event.button !== 0 || !(target instanceof Node)) {
+      return;
+    }
+
+    const entriesToClose: PopoverRegistryEntry[] = [];
+
+    for (const entry of [...this.stack].reverse()) {
+      if (entry.popover.hasNode(target) || entry.triggerElement.contains(target)) {
+        break;
+      }
+      entriesToClose.push(entry);
+    }
+
+    if (!entriesToClose.some(entry => entry.popover.swallowsOutsideClick)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    swallowRestOfPress();
+
+    for (const entry of entriesToClose) {
+      entry.popover.hide();
+    }
+
+    const active = document.activeElement;
+
+    if (active instanceof HTMLElement && active !== document.body) {
+      active.blur();
+    }
+  }
+
+  /**
    * Capture-phase click handler enforcing the same-trigger law: a click that
    * started (pointerdown) on the interactive trigger of an already-open
    * popover must do nothing. The popover neither closes (guaranteed by
@@ -430,6 +502,9 @@ export class PopoverRegistry {
     this.boundKeyDown = (e: KeyboardEvent): void => this.handleDocumentKeyDown(e);
     this.boundFocusIn = (e: FocusEvent): void => this.handleDocumentFocusIn(e);
 
+    this.boundBackdropPointerDown = (e: PointerEvent): void => this.handleBackdropPointerDown(e);
+
+    window.addEventListener('pointerdown', this.boundBackdropPointerDown, true);
     document.addEventListener('pointerdown', this.boundPointerDown);
     document.addEventListener('click', this.boundClickCapture, true);
     document.addEventListener('keydown', this.boundKeyDown, true);
@@ -445,6 +520,11 @@ export class PopoverRegistry {
     if (this.boundPointerDown !== null) {
       document.removeEventListener('pointerdown', this.boundPointerDown);
       this.boundPointerDown = null;
+    }
+
+    if (this.boundBackdropPointerDown !== null) {
+      window.removeEventListener('pointerdown', this.boundBackdropPointerDown, true);
+      this.boundBackdropPointerDown = null;
     }
 
     if (this.boundClickCapture !== null) {

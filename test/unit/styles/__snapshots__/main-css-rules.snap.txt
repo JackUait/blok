@@ -17659,6 +17659,15 @@ button[data-blok-database-table-group-count]:hover {
   margin-block-start: var(--blok-space-2);
 }
 
+[data-blok-database-panel-page="picker"] > [data-blok-database-picker-list="filter"] {
+  padding-block-end: var(--blok-space-1);
+}
+
+[data-blok-database-panel-page="picker"] > [data-blok-database-panel-separator] {
+  margin-block-start: 0;
+  margin-inline: var(--blok-space-2);
+}
+
 [data-blok-database-panel-page="picker"] [data-blok-database-panel-icon] svg {
   width: 20px;
   height: 20px;

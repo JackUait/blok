@@ -207,4 +207,40 @@ test.describe('filter popover geometry', () => {
     await page.evaluate(() => Promise.allSettled(document.getAnimations().map((animation) => animation.finished)));
     await expect(page.getByTestId('database-advanced-filter')).toBeVisible();
   });
+  // notion-motion.md Round 107 §1 #4 (r107-n-filter-picker-17.raw): scrolled to its end, the list leaves 4 under its
+  // last row, and the footer divider is 12 in from each side. The footer stays 9 under a list that fits.
+  test('ends a scrolled filter picker 4 under its last row, over a divider 12 in', async ({ page }) => {
+    const many = Array.from({ length: 16 }, (_, at) => ({ id: `p-${at}`, name: `P${at}`, type: 'text', position: `b${at}` }));
+    const [database, ...rest] = blocks({ filters: [] });
+    const data = database.data as { schema: unknown[] };
+
+    await page.setViewportSize({ width: 1400, height: 717 });
+    await mount(page, [{ ...database, data: { ...data, schema: [SCHEMA[0], ...many] } }, ...rest]);
+    await page.getByTestId('database-toolbar-filter').click();
+    const picker = await settledBox(page.getByTestId('database-filter-picker'));
+    const list = page.getByTestId('database-filter-picker').locator('[data-blok-database-picker-list]');
+    const separator = await boxOf(page.getByTestId('database-filter-picker').locator('[data-blok-database-panel-separator]'));
+    const geometry = await list.evaluate((element) => {
+      element.scrollTo({ top: element.scrollHeight });
+      const last = element.lastElementChild?.getBoundingClientRect();
+
+      return { overflows: element.scrollHeight > element.clientHeight, gap: element.getBoundingClientRect().bottom - (last?.bottom ?? 0) };
+    });
+
+    expect(geometry.overflows).toBe(true);
+    expect(geometry.gap).toBeCloseTo(4, 0);
+    expect(separator.x - picker.x).toBeCloseTo(12, 1);
+    expect(separator.width).toBeCloseTo(picker.width - 24, 1);
+  });
+
+  test('keeps the filter picker footer 9 under a list that fits', async ({ page }) => {
+    await mount(page, blocks({ filters: [] }));
+    await page.getByTestId('database-toolbar-filter').click();
+    await settledBox(page.getByTestId('database-filter-picker'));
+    const lastBottom = await page.getByTestId('database-filter-picker').locator('[data-blok-database-picker-list]')
+      .evaluate((element) => element.lastElementChild?.getBoundingClientRect().bottom ?? 0);
+    const footer = await boxOf(page.getByTestId('database-filter-picker-advanced'));
+
+    expect(footer.y - lastBottom).toBeCloseTo(9, 1);
+  });
 });

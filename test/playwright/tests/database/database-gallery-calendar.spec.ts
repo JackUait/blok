@@ -934,6 +934,38 @@ test.describe('calendar', () => {
     await expect(clicked).toBeFocused();
   });
 
+  // The test page has nothing after the grid, so Tab out of it leaves focus on <body> with the database still current.
+  test('after a clicked day, Tab out of the grid and Shift+Tab back lands on that day\'s "+"', async ({ page }) => {
+    await mount(page, blocks({ type: 'calendar' }));
+    const clicked = day(page, '2026-10-20');
+    const add = clicked.locator('[data-blok-database-calendar-add]');
+
+    await clicked.click({ position: { x: 10, y: 60 } });
+    await page.keyboard.press('Tab');
+    await expect(add).toBeFocused();
+    await page.keyboard.press('Tab');
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+    await page.keyboard.press('Shift+Tab');
+    await expect(add).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(clicked).toBeFocused();
+  });
+
+  test('after a clicked day, Tab out of the grid and Tab again leaves the database where it is', async ({ page }) => {
+    await mount(page, [{ id: 'above', type: 'paragraph', data: { text: 'Above' } }, ...blocks({ type: 'calendar' })]);
+    const clicked = day(page, '2026-10-20');
+
+    await clicked.click({ position: { x: 10, y: 60 } });
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+    await page.keyboard.press('Tab');
+
+    const parent = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks.find((block) => block.id === 'db-1')?.parent ?? null);
+
+    expect(parent).toBeNull();
+  });
+
   test('next, previous and Today navigate, and the range survives a reload for this person', async ({ page }) => {
     await mount(page, blocks({ type: 'calendar' }));
 

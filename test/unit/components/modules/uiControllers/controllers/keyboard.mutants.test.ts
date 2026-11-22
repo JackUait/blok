@@ -1671,7 +1671,28 @@ describe('KeyboardController — mutation coverage', () => {
 
       expect(harness.blok.BlockEvents.keydown).not.toHaveBeenCalledWith(event);
       expect(harness.blok.BlockEvents.keydown).not.toHaveBeenCalledWith(shifted.event);
-      expect(event.defaultPrevented).toBe(true);
+      // The browser still moves focus, so Shift+Tab goes back into the block.
+      expect(event.defaultPrevented).toBe(false);
+      expect(shifted.event.defaultPrevented).toBe(false);
+    });
+
+    it('does not move the block when a key took focus off one of its buttons', () => {
+      const harness = enabledHarness();
+      const block = makeBlock('db');
+      const button = document.createElement('button');
+
+      block.holder.appendChild(button);
+      harness.redactor.appendChild(block.holder);
+      Object.assign(harness.state, { currentBlock: block });
+
+      button.focus();
+      harness.press(button, { key: 'Tab' });
+      button.blur();
+
+      const shifted = harness.press(document.body, { key: 'Tab', shiftKey: true });
+
+      expect(harness.blok.BlockEvents.keydown).not.toHaveBeenCalledWith(shifted.event);
+      expect(shifted.event.defaultPrevented).toBe(false);
     });
 
     it('still forwards Tab when a click made the block current', () => {

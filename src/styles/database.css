@@ -9136,6 +9136,17 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-hover-bg);
 }
 
+/* notion-motion.md Round 115 §1 #6: the filter token × is 18×18 and fills on hover. Dark is unread. */
+[data-blok-database-chip-tokens] [data-blok-database-select-chip-remove] {
+  width: 18px;
+  height: 18px;
+  transition: background-color 100ms ease-in-out;
+}
+
+[data-blok-database-chip-tokens] [data-blok-database-select-chip-remove]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
 [data-blok-database-place-clear] svg,
 [data-blok-database-file-remove] svg {
   width: 12px;

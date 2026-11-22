@@ -49,14 +49,12 @@ describe('board and table group actions', () => {
     ]);
   });
 
-  // L2365: "Unpin group" pinFill is rgb(161, 158, 153).
-  it('"Unpin group" draws its pin in Notion\'s gray, dark unchanged', () => {
-    expect(ruleBody('[data-blok-database-pinned-group-unpin]')).toContain('color: var(--blok-database-pinned-unpin-icon)');
-    expect(tokenValues('--blok-database-pinned-unpin-icon')).toEqual([
-      'rgb(161, 158, 153)',
-      'var(--blok-database-table-muted-text)',
-      'var(--blok-database-table-muted-text)',
-    ]);
+  // L2365: Notion's pin is rgb(161, 158, 153), 2.67:1 on white. The button has no text, so it keeps Blok's 3:1 ink.
+  it('"Unpin group" keeps Blok\'s 114 ink, not Notion\'s 161', () => {
+    expect(ruleBody('[data-blok-database-pinned-group-unpin]')).toContain('color: var(--blok-database-table-muted-text)');
+    expect(tokenValues('--blok-database-table-muted-text')[0]).toBe('var(--blok-database-ink-tertiary)');
+    expect(tokenValues('--blok-database-ink-tertiary')[0]).toBe('rgb(114, 111, 106)');
+    expect(database).not.toContain('--blok-database-pinned-unpin-icon');
   });
 });
 

@@ -394,13 +394,15 @@ describe('minimized database toolbar', () => {
 
   // notion-motion.md Round 102 §1 #5 (r102-n-expand-table5.raw, -timeline2.raw, -expand-zone.raw): a view bar keeps «
   // with the pointer away; a one-view title row shows it only on hover.
-  it('keeps « in a view bar, and shows it in a title row only while the pointer is on the row', () => {
+  // Round 107 §1 #2: the title row's zone is its controls strip, so a minimized toolbar fills the row past the title.
+  it('keeps « in a view bar, and shows it in a title row only while the pointer is on the controls strip', () => {
     const TITLE_EXPAND = `[data-blok-database-title-row] > ${TOOLBAR} > ${EXPAND}`;
 
     expect(body(database, EXPAND)).not.toContain('opacity');
     expect(body(database, TITLE_EXPAND)).toContain('opacity: 0');
-    expect(body(database, `[data-blok-database-title-row]:hover > ${TOOLBAR} > ${EXPAND}`)).toContain('opacity: 1');
+    expect(body(database, `[data-blok-database-title-row] > ${TOOLBAR}:hover > ${EXPAND}`)).toContain('opacity: 1');
     expect(body(database, `${TITLE_EXPAND}:focus-visible`)).toContain('opacity: 1');
+    expect(body(database, `[data-blok-database-title-row] > ${TOOLBAR}[data-minimized]`)).toContain('flex-grow: 1');
   });
 
   // notion-motion.md Round 104 §1 #2: in a view bar, once the pointer has left «, it shows only while the pointer is
@@ -415,7 +417,7 @@ describe('minimized database toolbar', () => {
 
     expect(body(outsideReducedMotion, pair)).toContain('transition: background-color 0.1s ease-in-out, opacity 0.2s ease');
     expect(body(startStyle, pair)).toContain('opacity: 0');
-    expect(body(startStyle, `[data-blok-database-title-row]:hover > ${TOOLBAR} > ${EXPAND}`)).toContain('opacity: 0');
+    expect(body(startStyle, `[data-blok-database-title-row] > ${TOOLBAR}:hover > ${EXPAND}`)).toContain('opacity: 0');
     expect(body(reducedMotion, pair)).toContain('transition: none');
   });
 

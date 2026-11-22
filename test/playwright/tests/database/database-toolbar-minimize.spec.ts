@@ -123,3 +123,62 @@ test.describe('Database — » Minimize from the keyboard', () => {
     });
   }
 });
+
+const expandOpacityAt = async (page: Page, x: number, y: number): Promise<string> => {
+  await page.mouse.move(x, y);
+
+  // « fades over 200ms: read it once the fade is done, or a mid-fade 0 passes for hidden.
+  return page.getByTestId('database-toolbar-expand').evaluate(async (el) => {
+    await Promise.all(el.getAnimations().map(async (animation) => animation.finished));
+
+    return getComputedStyle(el).opacity;
+  });
+};
+
+test.describe('Database — « hover zone in a one-view title row', () => {
+  test.beforeAll(() => {
+    ensureBlokBundleBuilt();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 717 });
+    await gotoTestPage(page);
+  });
+
+  // notion-motion.md Round 107 §1 #2 (r107-n-expand-zone.raw): « shows only over the controls strip, from the title
+  // strip's end to the controls' end. Not over the title, and not past the last control.
+  test('shows « only between the title strip and the end of the controls', async ({ page }) => {
+    await create(page, [], 2);
+    await page.evaluate(async () => {
+      const blok = window.blokInstance;
+      const block = (await blok?.save())?.blocks[0];
+
+      if (blok === undefined || block === undefined) return;
+      const data = block.data as { views: Array<Record<string, unknown>> };
+
+      data.views = [{ ...data.views[0], toolbarMinimized: true }];
+      await blok.render({ blocks: [block] });
+    });
+    const row = page.locator('[data-blok-database-title-row]');
+    const toolbar = row.locator('[data-blok-database-view-toolbar]');
+    const title = row.locator('[data-blok-database-title]');
+
+    await expect(page.getByTestId('database-toolbar-expand')).toBeVisible();
+    const rowBox = await row.boundingBox();
+    const toolbarBox = await toolbar.boundingBox();
+    const titleBox = await title.boundingBox();
+    const stripEnd = await row.evaluate((el) => Math.max(...[...el.children]
+      .filter((child) => !child.hasAttribute('data-blok-database-view-toolbar'))
+      .map((child) => child.getBoundingClientRect().right)));
+
+    if (rowBox === null || toolbarBox === null || titleBox === null) throw new Error('title row not laid out');
+    const y = rowBox.y + rowBox.height / 2;
+    const controlsEnd = toolbarBox.x + toolbarBox.width;
+
+    expect(rowBox.x + rowBox.width - controlsEnd).toBeGreaterThan(8);
+    await expect.poll(() => expandOpacityAt(page, titleBox.x + titleBox.width / 2, y)).toBe('0');
+    await expect.poll(() => expandOpacityAt(page, controlsEnd + 4, y)).toBe('0');
+    await expect.poll(() => expandOpacityAt(page, stripEnd + 4, y)).toBe('1');
+    await expect.poll(() => expandOpacityAt(page, controlsEnd - 2, y)).toBe('1');
+  });
+});

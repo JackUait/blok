@@ -24,9 +24,9 @@ const isInteractiveTriggerControl = (element: HTMLElement): boolean =>
 /**
  * Eats the mousedown, mouseup and click (auxclick for a middle press, contextmenu for a
  * right one) that follow a swallowed pointerdown. Lives outside the registry's listeners:
- * closing the popover empties the stack, which removes those. The click is eaten once, so
- * a later one acts. Mousedown and mouseup are eaten until the next pointerdown, since a
- * right press on macOS fires its mouseup after the contextmenu.
+ * closing the popover empties the stack, which removes those. Ends on the click, or on the
+ * next pointerdown when the press made none. A right press on macOS fires its mouseup after
+ * the contextmenu, so that one eats the contextmenu once and ends on the next pointerdown.
  * The contextmenu keeps its default: the browser's own menu still opens, as in Notion.
  * @param button - the pressed button
  */
@@ -38,8 +38,10 @@ const swallowRestOfPress = (button: number): void => {
       event.preventDefault();
     }
     event.stopImmediatePropagation();
-    if (event.type === last) {
+    if (event.type === 'contextmenu') {
       window.removeEventListener(last, swallow, true);
+    } else if (event.type === last) {
+      stop();
     }
   };
   const stop = (): void => {

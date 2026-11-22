@@ -17622,8 +17622,10 @@ button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-fie
   margin-inline-end: 21px;
 }
 
+/* r9-timeline-dark: the open « is 125 in dark. The token is dark-only, so light keeps the button's ink. */
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] svg {
   transform: scaleX(-1);
+  color: var(--blok-database-toolbar-expand-ink, currentColor);
 }
 
 [dir="rtl"] [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] svg {

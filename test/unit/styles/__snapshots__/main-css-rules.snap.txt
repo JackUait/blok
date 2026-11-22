@@ -19987,6 +19987,7 @@ button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-fie
 
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] svg {
   transform: scaleX(-1);
+  color: var(--blok-database-toolbar-expand-ink, currentColor);
 }
 
 [dir="rtl"] [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] svg {

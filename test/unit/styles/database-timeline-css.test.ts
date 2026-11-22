@@ -425,6 +425,14 @@ describe('timeline in dark (research/21 §1i)', () => {
     expect(ruleBody('[data-blok-database-timeline-table-header]')).toContain('color: var(--blok-database-timeline-header-text)');
   });
 
+  // notion-motion.md r9-timeline-dark: the open panel's « is fill rgb(125, 122, 117). Light keeps the button's ink.
+  it('inks the open panel\'s « like the toolbar «, 125 in dark only', () => {
+    expect(ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] svg'))
+      .toContain('color: var(--blok-database-toolbar-expand-ink, currentColor)');
+    expect(Array.from(css.matchAll(/--blok-database-toolbar-expand-ink:\s*([^;]+);/g)).map((m) => (m[1] ?? '').trim()))
+      .toEqual(['rgb(125, 122, 117)', 'rgb(125, 122, 117)']);
+  });
+
   // The dark icon ink is unmeasured. White on the measured chip is 2.3:1, under the 3:1 icon minimum; page ink is 7.5:1.
   it('draws the off-screen arrow in page ink on the light chip, so it stays readable', () => {
     expect(darkValues('--blok-database-timeline-arrow-icon')).toEqual(['rgb(25, 25, 25)', 'rgb(25, 25, 25)']);

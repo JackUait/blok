@@ -537,6 +537,15 @@ describe('database table calculation footer', () => {
     expect(css.indexOf(selector)).toBeGreaterThan(bordered);
   });
 
+  // notion-motion.md Round 113 §1 #4 (r113-n-clearsearch-hover.raw): "Clear search" fills 0.051 light, white 0.055 dark.
+  it('fills "Clear search" with the hover tint', () => {
+    const selector = '[data-blok-database-table-clear-search]:hover';
+    const bordered = css.indexOf('[data-blok-database-table-empty] [data-blok-database-table-add-row] {\n  display: inline-flex');
+
+    expect(exactRule(selector)).toMatch(/background-color:\s*var\(--blok-database-hover-bg\)/);
+    expect(css.indexOf(selector)).toBeGreaterThan(bordered);
+  });
+
   // Shot 66: the value ends 11px short of the column edge; the box's 6px plus the cell's 4px.
   it('pads the cell 4px so the box keeps the value 10px from the column edge', () => {
     expect(ruleBody('[data-blok-database-table-calc]')).toMatch(/padding:\s*0 var\(--blok-space-1\)/);

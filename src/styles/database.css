@@ -12204,8 +12204,13 @@ a[data-blok-database-comment-mention-chip] {
   background-color: var(--blok-database-hover-bg);
 }
 
-/* notion-motion.md Round 111 §1 #7: "New page" fills like "Edit filters". Dark is unmeasured. */
+/* notion-motion.md Round 111 §1 #7, Round 113 §1 #5 (dark 0.055): "New page" fills like "Edit filters". */
 [data-blok-database-table-empty] [data-blok-database-table-add-row]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
+/* notion-motion.md Round 113 §1 #4: "Clear search" fills the same, light and dark. */
+[data-blok-database-table-clear-search]:hover {
   background-color: var(--blok-database-hover-bg);
 }
 

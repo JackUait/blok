@@ -112,8 +112,8 @@ export interface TabBarOptions {
   onEditTitle?: () => void;
   /** "Edit layout" in the title row's "…": Customize layout on a row page. */
   onEditLayout?: () => void;
-  /** "Edit icon" in the title row's "…" with several views. */
-  onEditIcon?: () => void;
+  /** "Edit icon" in the title row's "…": the "…" gets focus back, and the picker sits under the row (when measured). */
+  onEditIcon?: (trigger: HTMLElement, row?: DOMRect) => void;
   /** This person's "Display as". Defaults to both. */
   display?: DatabaseTabDisplay;
   /** Offers "Display as" in the tab menu. */
@@ -1291,7 +1291,9 @@ export class DatabaseTabBar {
           name: 'database-title-edit-icon',
           title: t('tools.database.tableEditIcon', 'Edit icon'),
           closeOnActivate: true,
-          onActivate: onEditIcon,
+          // Read before the menu closes and takes the row with it.
+          onActivate: () => onEditIcon(button, this.contextPopover?.getElement()
+            .querySelector('[data-blok-item-name="database-title-edit-icon"]')?.getBoundingClientRect()),
         }]),
         ...(onEditLayout === undefined ? [] : [{
           icon: IconPageLayout,

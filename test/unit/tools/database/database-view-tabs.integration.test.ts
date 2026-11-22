@@ -97,6 +97,41 @@ const tab = (viewId: string): HTMLElement => own(`[data-blok-database-tab][data-
 const menuItems = (): string[] => [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened="true"] [data-blok-popover-items] > [data-blok-item-name]')]
   .map((item) => item.getAttribute('data-blok-item-name') ?? '');
 
+/**
+ * notion-motion.md Round 114 §1 #5 (r114-n-editicon-open.raw, r112-n-titlemore-menu-1view.raw): the ⋯ menu's Edit icon
+ * row at 651.7,384 192×28 in a 1512×717 window gave a 408×390 picker at 543.7,319: centred under the row, and held
+ * 8 off the bottom rather than flipped above it.
+ */
+/** The emoji data loads cold in jsdom and can outlast the 5s default. */
+const PICKER_LOAD_TIMEOUT = 20000;
+
+const openIconPickerFromTitleMore = async (titleMore: HTMLElement): Promise<HTMLElement> => {
+  vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+  vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
+  // jsdom has no matchMedia; the picker reads the colour scheme on open.
+  vi.stubGlobal('matchMedia', () => ({ matches: false }));
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function getOffsetWidth(this: HTMLElement): number {
+    return this.hasAttribute('data-blok-emoji-picker') ? 408 : 0;
+  });
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function getOffsetHeight(this: HTMLElement): number {
+    return this.hasAttribute('data-blok-emoji-picker') ? Number.parseFloat(this.style.height) || 0 : 0;
+  });
+  titleMore.click();
+  await quiet();
+  const row = menuItem('database-title-edit-icon');
+
+  vi.spyOn(row, 'getBoundingClientRect').mockReturnValue(new DOMRect(651.7, 384, 192, 28));
+  row.click();
+  await quiet();
+  const picker = document.querySelector<HTMLElement>('[data-blok-emoji-picker]');
+
+  if (picker === null) throw new Error('no icon picker');
+  // The picker places itself once its emoji data has loaded.
+  await vi.waitFor(() => expect(picker.style.top).not.toBe(''), { timeout: 10000 });
+
+  return picker;
+};
+
 const menuItem = (name: string): HTMLElement => {
   const found = document.querySelector<HTMLElement>(`[data-blok-popover-opened="true"] [data-blok-item-name="${name}"]`);
 
@@ -464,6 +499,29 @@ describe('view tabs (feel/findings-toolbar)', () => {
       expect(await viewIds(api)).toHaveLength(2);
     });
 
+    it('Edit icon opens the 390-tall picker centred under its row, held 8 off the bottom', async () => {
+      await make(doc([table('v1', 'a0')]));
+      const more = titleMore();
+
+      if (more === null) throw new Error('no title ⋯');
+      const picker = await openIconPickerFromTitleMore(more);
+
+      expect([picker.style.left, picker.style.top, picker.style.height]).toEqual(['543.7px', '319px', '390px']);
+    }, PICKER_LOAD_TIMEOUT);
+
+    // r114-n-editicon-esc.raw: Escape puts focus back on the ⋯ ("Collection actions"), not on the title.
+    it('Escape from its icon picker puts focus back on the ⋯', async () => {
+      await make(doc([table('v1', 'a0')]));
+      const more = titleMore();
+
+      if (more === null) throw new Error('no title ⋯');
+      await openIconPickerFromTitleMore(more);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await quiet();
+
+      expect(more).toHaveFocus();
+    }, PICKER_LOAD_TIMEOUT);
+
     it('Edit title puts the caret in the title', async () => {
       await make(doc([table('v1', 'a0')]));
 
@@ -550,18 +608,20 @@ describe('view tabs (feel/findings-toolbar)', () => {
       history.replaceState(null, '', '/');
     });
 
-    it('Edit icon opens the icon picker', async () => {
-      // jsdom has no matchMedia; the emoji picker reads the theme from it.
-      vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    // Notion was read with one view; with several the menu has no Copy link group, so the same rule is applied.
+    it('Edit icon opens the 390-tall picker centred under its row, and Escape returns to the ⋯', async () => {
       await make(doc());
+      const more = titleMore();
 
-      titleMore()?.click();
-      await quiet();
-      menuItem('database-title-edit-icon').click();
+      if (more === null) throw new Error('no title ⋯');
+      const picker = await openIconPickerFromTitleMore(more);
+
+      expect([picker.style.left, picker.style.top, picker.style.height]).toEqual(['543.7px', '319px', '390px']);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       await quiet();
 
-      expect(document.querySelector('[data-blok-emoji-picker]')).not.toBeNull();
-    });
+      expect(more).toHaveFocus();
+    }, PICKER_LOAD_TIMEOUT);
 
     it('is not drawn when read-only', async () => {
       const api = await make(doc());

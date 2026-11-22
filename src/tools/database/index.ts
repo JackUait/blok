@@ -2908,13 +2908,15 @@ export class DatabaseTool implements BlockTool {
    * Edit icon: the emoji picker the row pages use. A pick or Remove is one change.
    * notion-motion.md Round 67 §1: centred under the ⋮⋮ handle from the menu, or under the icon when it is clicked.
    * A menu opened with no handle shown keeps the icon or title as anchor: unmeasured.
+   * From the title row's "…" (`menuRow` is its Edit icon row): centred under that row and kept below it,
+   * 390 tall, and Escape returns to the "…" (notion-motion.md Round 114 §1 #5).
    */
-  private openIconPicker(from?: HTMLElement): void {
+  private openIconPicker(from?: HTMLElement, menuRow?: DOMRect): void {
     const anchor = from ?? this.iconElement ?? this.titleElement;
 
     if (anchor === null || !this.titleEditable()) return;
     // Read now: the handle hides once the menu closes.
-    const handle = from !== undefined ? undefined : [...this.block.holder.closest(`[${DATA_ATTR.editor}]`)?.querySelectorAll<HTMLElement>(`[${DATA_ATTR.settingsToggler}]`) ?? []]
+    const handle = from !== undefined ? menuRow : [...this.block.holder.closest(`[${DATA_ATTR.editor}]`)?.querySelectorAll<HTMLElement>(`[${DATA_ATTR.settingsToggler}]`) ?? []]
       .map((el) => el.getBoundingClientRect())
       .find((rect) => rect.width > 0);
     const write = (emoji: string): void => {
@@ -2947,6 +2949,8 @@ export class DatabaseTool implements BlockTool {
       height: from !== undefined ? 390 : 356,
       current: this.databaseEmoji,
       removable: this.databaseEmoji !== '' || this.databaseIcon !== undefined,
+      // r114-n-editicon-open.raw: with no room below the row, Notion holds the picker 8 off the bottom.
+      stayBelow: menuRow !== undefined,
     });
   }
 
@@ -5859,7 +5863,7 @@ export class DatabaseTool implements BlockTool {
       openFullPage: () => (this.fullPageOpener() === undefined ? undefined : (viewId) => this.openFullPage(viewId)),
       onEditTitle: () => this.focusTitle(),
       // The ⋮⋮ menu's Edit icon gate (renderSettings).
-      ...(this.isLocked() || !this.titleEditable() ? {} : { onEditIcon: () => this.openIconPicker() }),
+      ...(this.isLocked() || !this.titleEditable() ? {} : { onEditIcon: (trigger, row) => this.openIconPicker(trigger, row) }),
       sourceTitle: () => (this.title.trim() === '' ? this.api.i18n.t('tools.database.titlePlaceholder') : this.title.trim()),
       ...this.editLayoutOption(),
       display: this.tabDisplay.get(),

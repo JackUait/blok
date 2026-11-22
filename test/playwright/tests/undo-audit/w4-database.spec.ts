@@ -335,9 +335,6 @@ const GESTURES: Gesture[] = [
     await page.mouse.move(t.x + 10, t.y + 20, { steps: 20 });
     await page.mouse.up();
   } },
-  { id: 'W4D-C5', name: 'switching the view tab', run: async (page) => {
-    await page.locator('[data-blok-database-tab][data-view-id="view-2"]').click();
-  } },
   { id: 'W4D-C6', name: 'adding a view', run: async (page) => {
     await page.locator('[data-blok-database-add-view]').click();
     await page.locator('[data-blok-database-view-option="list"]').click();
@@ -393,6 +390,28 @@ test.describe('W4D database-level gestures (work)', () => {
       expect(await snap(page)).toEqual(s1);
     });
   }
+});
+
+// A view switch is not an undo step, as in Notion: one undo after it reverts the edit before it.
+test.describe('W4D view switch', () => {
+  test('W4D-C5: switching the view tab saves the new view and adds no undo step', async ({ page }) => {
+    await mount(page);
+    await gap(page);
+    const before = await canUndo(page);
+
+    await page.locator('[data-blok-database-tab][data-view-id="view-2"]').click();
+    await gap(page);
+    const activeView = async (): Promise<unknown> => (await save(page)).find(b => b.id === 'db-1')?.data.activeViewId;
+
+    expect(await activeView()).toBe('view-2');
+    expect(await canUndo(page)).toBe(before);
+
+    await park(page);
+    await gap(page);
+    await undo(page);
+    expect(await activeView()).toBe('view-2');
+    await expect(page.locator('[data-blok-database-tab][data-view-id="view-2"]')).toHaveAttribute('aria-selected', 'true');
+  });
 });
 
 test.describe('W4D column delete keeps rows', () => {

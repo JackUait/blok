@@ -632,6 +632,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     const title = document.createElement('span');
 
     cell.setAttribute('data-blok-database-timeline-table-title', '');
+    // Takes focus when the row's menu closes (Round 114 §1 #6); Tab still skips it.
+    cell.setAttribute('tabindex', '-1');
     title.setAttribute('data-blok-database-timeline-table-title-text', '');
     title.textContent = this.titleOf(row);
     cell.append(rowPageGlyph(row, this.rowHasBody(row.id), true) ?? '', title);

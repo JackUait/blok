@@ -10550,7 +10550,12 @@ export class DatabaseTool implements BlockTool {
       const placement = pointerMenuPlacement(rowEl, event);
       const anchor = placement?.anchor ?? rowEl;
 
-      this.openCardMenu(anchor, rowEl, rowId, undefined, 'card', placement?.coverFlipOffset, event);
+      // notion-motion.md Round 114 §1 #6: a timeline panel row's menu hands focus to the row's Name cell.
+      const refocus = rowEl.matches('[data-blok-database-timeline-table-row]')
+        ? (): void => this.boardContainer?.querySelector<HTMLElement>(`[data-blok-database-timeline-table-row][data-row-id="${CSS.escape(rowId)}"] [data-blok-database-timeline-table-title]`)?.focus({ preventScroll: true })
+        : undefined;
+
+      this.openCardMenu(anchor, rowEl, rowId, undefined, 'card', placement?.coverFlipOffset, event, refocus);
       if (anchor !== rowEl) this.cardMenuPopover?.on(PopoverEvent.Closed, () => anchor.remove());
     });
     boardEl.addEventListener('click', (event) => {
@@ -10609,7 +10614,7 @@ export class DatabaseTool implements BlockTool {
    * Board and gallery carry Layout and Property visibility; a list row does not (research/12 §3).
    * A timeline bar has no Comment; its table panel row does (research/22 §11).
    */
-  private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string, at?: OpenMenuOptions['at'], kind: 'card' | 'handle' = 'card', coverFlipOffset?: number, pointer?: Pick<MouseEvent, 'clientX' | 'clientY'>): void {
+  private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string, at?: OpenMenuOptions['at'], kind: 'card' | 'handle' = 'card', coverFlipOffset?: number, pointer?: Pick<MouseEvent, 'clientX' | 'clientY'>, refocus?: () => void): void {
     const type = this.shownView()?.type;
 
     this.openRowMenu(rowId, anchor, cardEl, {
@@ -10619,6 +10624,7 @@ export class DatabaseTool implements BlockTool {
       ...(at !== undefined ? { at } : {}),
       ...(coverFlipOffset !== undefined ? { coverFlipOffset } : {}),
       ...(pointer !== undefined ? { pointer } : {}),
+      ...(refocus !== undefined ? { refocus } : {}),
     });
   }
 
@@ -10637,7 +10643,7 @@ export class DatabaseTool implements BlockTool {
    * `rowMenuItems` as the table's ⋮⋮ so they cannot drift. `card` keeps its
    * hover buttons while the menu is up.
    */
-  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean; at?: OpenMenuOptions['at']; kind?: 'card' | 'handle'; viewportMargin?: number; coverFlipOffset?: number; pointer?: Pick<MouseEvent, 'clientX' | 'clientY'> }): void {
+  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean; at?: OpenMenuOptions['at']; kind?: 'card' | 'handle'; viewportMargin?: number; coverFlipOffset?: number; pointer?: Pick<MouseEvent, 'clientX' | 'clientY'>; refocus?: () => void }): void {
     // notion-motion.md Round 64 §3: Move to opens at a right-click's point, read now while the card is where it was clicked.
     const spot = options.pointer === undefined ? undefined : pointerFrom(card, options.pointer);
     const comment = options.comment === false ? undefined : this.commentLever().comment;
@@ -10706,6 +10712,18 @@ export class DatabaseTool implements BlockTool {
       popover.on(PopoverEvent.Closed, () => {
         if (duplicated.done) this.boardContainer?.querySelector<HTMLElement>(`[data-blok-database-card-menu][data-row-id="${CSS.escape(rowId)}"]`)?.focus({ preventScroll: true });
       });
+    }
+    // Escape, a click away or Duplicate refocus; another item opens something that takes focus itself.
+    // ClosedOnActivate fires right after Closed, so the check waits a microtask.
+    const refocus = options.refocus;
+
+    if (refocus !== undefined) {
+      const byItem = { closed: false };
+
+      popover.on(PopoverEvent.ClosedOnActivate, () => { byItem.closed = true; });
+      popover.on(PopoverEvent.Closed, () => queueMicrotask(() => {
+        if (!byItem.closed || duplicated.done) refocus();
+      }));
     }
     this.cardMenuPopover = popover;
   }

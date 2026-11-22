@@ -551,6 +551,14 @@ describe('timeline toolbar row (Round 32, Round 47 A4)', () => {
     expect(body).toContain('padding-block-start: var(--blok-space-3-25)');
   });
 
+  // notion-motion.md Round 105 §1 #6 (r105-n-dstitles-off.raw): with data source titles hidden, the zoom button sits
+  // 46.5 under the tabs' top, not 50.5. A full page's title row was not read, so it keeps its place.
+  it('rises 4 when no title row is shown', () => {
+    const hidden = ':not([data-blok-database-page]) > [data-blok-database-title-row][hidden] ~ [data-blok-database-board-container] [data-blok-database-timeline-toolbar]';
+
+    expect(ruleBody(hidden)).toContain('margin-block-start: calc(-1 * var(--blok-space-1))');
+  });
+
   // notion-motion.md Round 47 A4: Notion's content starts 4 under the view top; r46-n-tltable.png: the card's border starts there.
   it('starts the table card 4px under the toolbar top', () => {
     expect(ruleBody('[data-blok-database-timeline-table]')).toContain('--blok-database-timeline-panel-reach: 36px');

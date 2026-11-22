@@ -17107,6 +17107,11 @@ button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-fie
   padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
+/* notion-motion.md Round 105 §1 #6: with no title row the zoom sits 46.5 under the tabs' top, not 50.5. Full page unread. */
+:not([data-blok-database-page]) > [data-blok-database-title-row][hidden] ~ [data-blok-database-board-container] [data-blok-database-timeline-toolbar] {
+  margin-block-start: calc(-1 * var(--blok-space-1));
+}
+
 /* The panel starts at the view's edge, so its « and the month are placed from there. */
 [data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"]) {
   padding-inline-start: 0;

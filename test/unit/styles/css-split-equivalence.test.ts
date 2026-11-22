@@ -2027,6 +2027,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r283: a colour rule's ⌄ level with "Select..." and 8 in; 16 under the Conditional color intro text;
     // +334: « is hover-only in a view bar once the pointer has left it.
     const DATABASE_R283_BYTES = 283 + 334;
+    // Lane r284: the dark OPEN pill hover token, and the timeline toolbar rising 4 with no title row (Round 105).
+    // Net database.css growth against origin/main.
+    const DATABASE_R284_BYTES = 332;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2731,6 +2734,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R281_BYTES
       + DATABASE_R282_BYTES
       + DATABASE_R283_BYTES
+      + DATABASE_R284_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

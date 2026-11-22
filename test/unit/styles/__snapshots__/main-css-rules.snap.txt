@@ -19564,6 +19564,10 @@ button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-fie
   padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)));
 }
 
+:not([data-blok-database-page]) > [data-blok-database-title-row][hidden] ~ [data-blok-database-board-container] [data-blok-database-timeline-toolbar] {
+  margin-block-start: calc(-1 * var(--blok-space-1));
+}
+
 [data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"]) {
   padding-inline-start: 0;
   padding-inline-end: 0;

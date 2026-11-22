@@ -887,6 +887,43 @@ describe('PopoverRegistry', () => {
       el.remove();
     });
 
+    // Mouse events a script fires come with no pointerdown, so only the click can end the swallow.
+    it('mouse events after the swallowed click reach their target, with no pointerdown between', () => {
+      const { popover, trigger, popoverEl } = createMockPopover();
+      const { el, seen } = outsideTarget();
+
+      el.addEventListener('auxclick', () => seen.push('auxclick'));
+      vi.mocked(popover.hide).mockImplementation(() => registry.unregister(popover));
+      document.body.appendChild(popoverEl);
+      popover.swallowsOutsideClick = true;
+      registry.register(popover, trigger);
+      press(el);
+      el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+      el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 0 }));
+
+      expect(seen).toEqual(['mousedown', 'mouseup']);
+      popoverEl.remove();
+      el.remove();
+    });
+
+    it('mouse events after a held middle click\'s auxclick reach their target, with no pointerdown between', () => {
+      const { popover, trigger, popoverEl } = createMockPopover();
+      const { el, seen } = outsideTarget();
+
+      el.addEventListener('auxclick', () => seen.push('auxclick'));
+      document.body.appendChild(popoverEl);
+      popover.swallowsOutsideClick = true;
+      popover.holdsOnMiddleClick = true;
+      registry.register(popover, trigger);
+      middlePress(el);
+      el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+      el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 0 }));
+
+      expect(seen).toEqual(['mousedown', 'mouseup']);
+      popoverEl.remove();
+      el.remove();
+    });
+
     it('an unflagged popover lets the click away through (the default)', () => {
       const { popover, trigger } = createMockPopover();
       const { el, seen } = outsideTarget();

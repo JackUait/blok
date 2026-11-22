@@ -555,7 +555,7 @@ describe.each(['dateFormat', 'timeFormat', 'timeZone'])('date editor %s menu', (
 });
 
 // notion-motion.md Round 87 §1 #3 (r87-n-timefmt-open-mo.raw): Edit property › Time format scales from .96 about its top right.
-// The other lists under Edit property are unmeasured, so they keep the core .98.
+// Decimal places is unmeasured, so it keeps the core .98.
 describe('Edit property Time format list', () => {
   const LIST = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list']";
 
@@ -578,6 +578,43 @@ describe('Edit property Date format list', () => {
 
   it('grows from its top right corner', () => {
     expect(body(database, `${LIST} > [data-blok-popover-container]`)).toContain('transform-origin: top right');
+  });
+});
+
+// notion-motion.md Round 26 (r26-numfmt-list.raw), Round 81: Edit property › Number format scales like Date format.
+describe('Edit property Number format list', () => {
+  const LIST = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-format-list']";
+
+  it('opens from scale .96', () => {
+    expect(body(database, `${LIST}:not([data-blok-popover-opened='true']) > [data-blok-popover-container]`)).toContain('transform: scale(0.96)');
+  });
+
+  it('grows from its top right corner', () => {
+    expect(body(database, `${LIST} > [data-blok-popover-container]`)).toContain('transform-origin: top right');
+  });
+});
+
+// notion-motion.md Round 26, Round 81, Round 88 (NM:2675, NM:9415, NM:10042): the Number format and Date format
+// rows turn their › 90° over 200ms ease-in-out while their list is open.
+describe('Edit property Number format and Date format chevrons', () => {
+  const FLYOUT = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property']";
+  const CHEVRON = (name: string, open = ''): string =>
+    `${FLYOUT} [data-blok-item-name="${name}"]${open} [data-blok-popover-item-icon-chevron-right] svg`;
+
+  it.each(['numberFormat', 'dateFormat'])('%s turns over 200ms ease-in-out', (name) => {
+    expect(body(outsideReducedMotion, CHEVRON(name))).toContain('transition: transform 0.2s ease-in-out');
+  });
+
+  it.each(['numberFormat', 'dateFormat'])('%s points down while its list is open', (name) => {
+    expect(body(outsideReducedMotion, CHEVRON(name, "[aria-expanded='true']"))).toContain('transform: rotate(90deg)');
+  });
+
+  it.each(['numberFormat', 'dateFormat'])('%s keeps the RTL flip first while open', (name) => {
+    expect(body(outsideReducedMotion, `[dir="rtl"] ${CHEVRON(name, "[aria-expanded='true']")}`)).toContain('transform: scaleX(-1) rotate(90deg)');
+  });
+
+  it.each(['numberFormat', 'dateFormat'])('%s does not animate under reduced motion', (name) => {
+    expect(body(reducedMotion, CHEVRON(name))).toContain('transition: none');
   });
 });
 

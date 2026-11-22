@@ -13349,12 +13349,24 @@ textarea[data-blok-database-cell-input] {
   padding-block: 0;
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list']:not([data-blok-popover-opened='true']) > [data-blok-popover-container], [data-blok-popover][data-blok-popover-custom-class~='blok-database-date-format-list']:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list']:not([data-blok-popover-opened='true']) > [data-blok-popover-container], [data-blok-popover][data-blok-popover-custom-class~='blok-database-date-format-list']:not([data-blok-popover-opened='true']) > [data-blok-popover-container], [data-blok-popover][data-blok-popover-custom-class~='blok-database-format-list']:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
   transform: scale(0.96);
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list'] > [data-blok-popover-container], [data-blok-popover][data-blok-popover-custom-class~='blok-database-date-format-list'] > [data-blok-popover-container] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list'] > [data-blok-popover-container], [data-blok-popover][data-blok-popover-custom-class~='blok-database-date-format-list'] > [data-blok-popover-container], [data-blok-popover][data-blok-popover-custom-class~='blok-database-format-list'] > [data-blok-popover-container] {
   transform-origin: top right;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="numberFormat"] [data-blok-popover-item-icon-chevron-right] svg, [data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="dateFormat"] [data-blok-popover-item-icon-chevron-right] svg {
+  transition: transform 0.2s ease-in-out;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="numberFormat"][aria-expanded='true'] [data-blok-popover-item-icon-chevron-right] svg, [data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="dateFormat"][aria-expanded='true'] [data-blok-popover-item-icon-chevron-right] svg {
+  transform: rotate(90deg);
+}
+
+[dir="rtl"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="numberFormat"][aria-expanded='true'] [data-blok-popover-item-icon-chevron-right] svg, [dir="rtl"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="dateFormat"][aria-expanded='true'] [data-blok-popover-item-icon-chevron-right] svg {
+  transform: scaleX(-1) rotate(90deg);
 }
 
 [data-blok-database-option-group-value] {
@@ -13643,7 +13655,7 @@ textarea[data-blok-database-cell-input] {
   transform: translateX(-12px);
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-checkbox], [data-blok-database-select-option-handle], [data-blok-database-select-option-menu], [data-blok-database-options-editor] [data-blok-database-select-option-menu] svg, [data-blok-database-option-group-chevron] svg, [data-blok-database-options-add-row], [data-blok-database-option-reordering] [data-blok-database-select-option], [data-blok-database-switch-track], [data-blok-database-switch-track] > span {
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-checkbox], [data-blok-database-select-option-handle], [data-blok-database-select-option-menu], [data-blok-database-options-editor] [data-blok-database-select-option-menu] svg, [data-blok-database-option-group-chevron] svg, [data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="numberFormat"] [data-blok-popover-item-icon-chevron-right] svg, [data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="dateFormat"] [data-blok-popover-item-icon-chevron-right] svg, [data-blok-database-options-add-row], [data-blok-database-option-reordering] [data-blok-database-select-option], [data-blok-database-switch-track], [data-blok-database-switch-track] > span {
   transition: none;
 }
 

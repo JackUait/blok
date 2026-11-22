@@ -10122,16 +10122,36 @@ textarea[data-blok-database-cell-input] {
   padding-block: 0;
 }
 
-/* notion-motion.md Round 87 §1 #3, Round 88 §1 #1: Edit property › Time format and Date format scale from .96
-   about their top right. The core default is .98; the other lists here are unmeasured. */
+/* notion-motion.md Round 87 §1 #3, Round 88 §1 #1, Round 26 (Number format): Edit property › Time format, Date format
+   and Number format scale from .96 about their top right. The core default is .98; Decimal places' scale is unmeasured. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list']:not([data-blok-popover-opened='true']) > [data-blok-popover-container],
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-date-format-list']:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-date-format-list']:not([data-blok-popover-opened='true']) > [data-blok-popover-container],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-format-list']:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
   transform: scale(0.96);
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list'] > [data-blok-popover-container],
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-date-format-list'] > [data-blok-popover-container] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-date-format-list'] > [data-blok-popover-container],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-format-list'] > [data-blok-popover-container] {
   transform-origin: top right;
+}
+
+/* notion-motion.md Round 26, Round 88 (NM:2675, NM:9415): the Number format and Date format › turn 90° while the list
+   is open. Decimal places and Time format turns are unmeasured. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="numberFormat"] [data-blok-popover-item-icon-chevron-right] svg,
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="dateFormat"] [data-blok-popover-item-icon-chevron-right] svg {
+  transition: transform 0.2s ease-in-out;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="numberFormat"][aria-expanded='true'] [data-blok-popover-item-icon-chevron-right] svg,
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="dateFormat"][aria-expanded='true'] [data-blok-popover-item-icon-chevron-right] svg {
+  transform: rotate(90deg);
+}
+
+/* The flip stays first, so the turn interpolates as a rotation. */
+[dir="rtl"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="numberFormat"][aria-expanded='true'] [data-blok-popover-item-icon-chevron-right] svg,
+[dir="rtl"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="dateFormat"][aria-expanded='true'] [data-blok-popover-item-icon-chevron-right] svg {
+  transform: scaleX(-1) rotate(90deg);
 }
 
 /* Round 56 §5, Round 105 §1 #1: Edit property's option menu grows from its top-right corner, from core's open-left rule.
@@ -10456,6 +10476,8 @@ textarea[data-blok-database-cell-input] {
   [data-blok-database-select-option-menu],
   [data-blok-database-options-editor] [data-blok-database-select-option-menu] svg,
   [data-blok-database-option-group-chevron] svg,
+  [data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="numberFormat"] [data-blok-popover-item-icon-chevron-right] svg,
+  [data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="dateFormat"] [data-blok-popover-item-icon-chevron-right] svg,
   [data-blok-database-options-add-row],
   [data-blok-database-option-reordering] [data-blok-database-select-option],
   [data-blok-database-switch-track],

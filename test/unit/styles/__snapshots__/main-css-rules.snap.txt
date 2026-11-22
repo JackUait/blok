@@ -5145,6 +5145,7 @@ span[data-blok-slash-search] {
   --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-table-calc-value: rgb(173, 169, 163);
   --blok-database-table-gutter-icon: rgb(125, 122, 117);
+  --blok-database-toolbar-expand-ink: rgb(125, 122, 117);
   --blok-database-table-load-more-hover-bg: var(--blok-database-table-header-hover-bg);
   --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
   --blok-database-cell-link-underline: rgba(255, 255, 235, 0.1);
@@ -5474,6 +5475,7 @@ span[data-blok-slash-search] {
   --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-table-calc-value: rgb(173, 169, 163);
   --blok-database-table-gutter-icon: rgb(125, 122, 117);
+  --blok-database-toolbar-expand-ink: rgb(125, 122, 117);
   --blok-database-table-load-more-hover-bg: var(--blok-database-table-header-hover-bg);
   --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
   --blok-database-cell-link-underline: rgba(255, 255, 235, 0.1);
@@ -15772,6 +15774,7 @@ button[data-blok-database-table-group-count]:hover {
 
 [data-blok-database-toolbar-expand] svg {
   transform: scaleX(-1);
+  color: var(--blok-database-toolbar-expand-ink, currentColor);
 }
 
 [dir="rtl"] [data-blok-database-toolbar-expand] svg {

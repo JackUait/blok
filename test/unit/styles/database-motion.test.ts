@@ -411,6 +411,15 @@ describe('minimized database toolbar', () => {
     expect(body(database, `[data-blok-database-view-bar] > ${TOOLBAR}[data-minimized]`)).toContain('padding-inline-start: var(--blok-space-4)');
   });
 
+  // notion-motion.md Round 109 §1 #4 (r109-n-expand-ink-dark.raw): Notion's dark « paints rgb(125, 122, 117).
+  // Light is unread, so it keeps the button's ink: the token is set in the two dark blocks only.
+  it('paints « in rgb(125, 122, 117) in dark, and keeps the button ink in light', () => {
+    const values = [ ...database.matchAll(/--blok-database-toolbar-expand-ink:\s*([^;]+);/g) ].map((match) => match[1]);
+
+    expect(values).toEqual([ 'rgb(125, 122, 117)', 'rgb(125, 122, 117)' ]);
+    expect(body(database, `${EXPAND} svg`)).toContain('color: var(--blok-database-toolbar-expand-ink, currentColor)');
+  });
+
   // notion-motion.md Round 104 §1 #2: in a view bar, once the pointer has left «, it shows only while the pointer is
   // on the toolbar. A keyboard focus on a control still shows it. A title row already shows it on hover only.
   it('hides a hover-only « while the pointer and the keyboard are off the toolbar', () => {

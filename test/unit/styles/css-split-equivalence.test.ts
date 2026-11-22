@@ -2036,6 +2036,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r290: a minimized view bar's « zone starts 16 left of the toolbar (Round 108). Net database.css growth.
     // +419: the sort picker's last row ends 4 over the surface's bottom.
     const DATABASE_R290_BYTES = 258 + 419;
+    // Lane r291: the dark « ink, rgb(125, 122, 117) (Round 109). Net database.css growth.
+    const DATABASE_R291_BYTES = 267;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2743,6 +2745,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R284_BYTES
       + DATABASE_R287_BYTES
       + DATABASE_R290_BYTES
+      + DATABASE_R291_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

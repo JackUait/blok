@@ -102,8 +102,8 @@ describe('Popover: children.placement dropdown', () => {
     placeRow(popover);
     itemEl('color')?.click();
 
-    // Button left 409 - 8 = 401, bottom 428 + 4 = 432; in the menu's space (280, 180).
-    expect(listBox()?.style.left).toBe('121px');
+    // Button left 409 - 8 = 401, list 3px further, bottom 428 + 4 = 432; in the menu's space (280, 180).
+    expect(listBox()?.style.left).toBe('118px');
     expect(listBox()?.style.top).toBe('252px');
   });
 
@@ -116,8 +116,27 @@ describe('Popover: children.placement dropdown', () => {
     itemEl('color')?.querySelector<HTMLElement>('[data-blok-popover-item-value]')?.style.setProperty('padding-left', '12px');
     itemEl('color')?.click();
 
-    // Content left 409 + 12, button 8 before it: 413, in the menu's space 133.
-    expect(listBox()?.style.left).toBe('133px');
+    // Content left 409 + 12, button 8 before it: 413, list 3px further: 410, in the menu's space 130.
+    expect(listBox()?.style.left).toBe('130px');
+  });
+
+  // R112 (notion-motion.md §1 #7): Notion's Color list starts 3px left of its button (875 vs 878).
+  it('opens 3px left of the drawn button box, whatever the value\'s padding', () => {
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(900);
+    const popover = open();
+
+    placeRow(popover);
+    const row = itemEl('color');
+    const button = row?.querySelector<HTMLElement>('[data-blok-popover-item-dropdown-button]');
+
+    if (button === null || button === undefined) throw new Error('no button');
+    row?.querySelector<HTMLElement>('[data-blok-popover-item-value]')?.style.setProperty('padding-left', '16px');
+    vi.spyOn(button, 'getBoundingClientRect').mockReturnValue(rect(401, 396, 123, 36));
+    row?.click();
+
+    // Button left 401 - 3 = 398, bottom 432; in the menu's space (280, 180).
+    expect(listBox()?.style.left).toBe('118px');
+    expect(listBox()?.style.top).toBe('252px');
   });
 
   it('opens over the button when there is no room under it', () => {

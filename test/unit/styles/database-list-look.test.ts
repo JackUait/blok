@@ -328,6 +328,15 @@ describe('list title edit (findings-listgallery L05)', () => {
     expect(ruleBody(database, '[data-blok-database-list-row] > [data-blok-database-page-icon-placeholder]')).toContain('margin-inline-end: var(--blok-space-1)');
   });
 
+  // notion-motion.md Round 95 §2 "Dark list row": Notion's page icon ink is 125 in dark. Light keeps the card-actions ink.
+  it('inks the page glyph 125 in dark without changing light', () => {
+    expect(ruleBody(database, '[data-blok-database-list-row] > [data-blok-database-page-icon-placeholder]'))
+      .toContain('color: var(--blok-database-list-row-icon, var(--blok-database-card-actions-icon))');
+    expect(ruleBody(database, ':where([data-blok-theme="dark"] [data-blok-interface])')).toContain('--blok-database-list-row-icon: rgb(125, 122, 117)');
+    expect(database).toMatch(/prefers-color-scheme: dark[^@]*--blok-database-list-row-icon: rgb\(125, 122, 117\)/);
+    expect(ruleBody(database, ':where([data-blok-interface])')).not.toContain('--blok-database-list-row-icon:');
+  });
+
   // sweep9a/pixel-scans.txt (LIST ROW): Notion's glyph ink starts 8px into the row and its title 31px; Blok's were 6 and 34.
   it('moves the glyph or emoji 2px in and the title 3px back', () => {
     expect(ruleBody(database, '[data-blok-database-list-row] > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder])')).toContain('margin-inline: var(--blok-space-0-5) -1px');

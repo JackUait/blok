@@ -5368,6 +5368,7 @@ span[data-blok-slash-search] {
   --blok-database-list-row-ring-gap: var(--blok-bg-primary);
   --blok-database-list-row-ring-halo: var(--blok-bg-primary);
   --blok-database-list-row-ring: rgb(35, 131, 226);
+  --blok-database-list-row-icon: rgb(125, 122, 117);
 }
 
 :where([data-blok-theme="dark"] [data-blok-interface]), :where([data-blok-theme="dark"] [data-blok-popover]), :where([data-blok-theme="dark"] [data-blok-top-layer]:not([data-blok-interface] *)) {
@@ -5698,6 +5699,7 @@ span[data-blok-slash-search] {
   --blok-database-list-row-ring-gap: var(--blok-bg-primary);
   --blok-database-list-row-ring-halo: var(--blok-bg-primary);
   --blok-database-list-row-ring: rgb(35, 131, 226);
+  --blok-database-list-row-icon: rgb(125, 122, 117);
 }
 
 [data-blok-database-wrapper] {
@@ -8787,7 +8789,7 @@ button[data-blok-database-board-lane-count]:hover {
   flex-shrink: 0;
   width: 18px;
   margin-inline-end: var(--blok-space-1);
-  color: var(--blok-database-card-actions-icon);
+  color: var(--blok-database-list-row-icon, var(--blok-database-card-actions-icon));
 }
 
 [data-blok-database-list-row] > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder]) {

@@ -878,6 +878,8 @@
     --blok-database-list-row-ring-gap: var(--blok-bg-primary);
     --blok-database-list-row-ring-halo: var(--blok-bg-primary);
     --blok-database-list-row-ring: rgb(35, 131, 226);
+    /* notion-motion.md Round 95 §2: the dark list row's page icon is 125. */
+    --blok-database-list-row-icon: rgb(125, 122, 117);
   }
 }
 
@@ -1260,6 +1262,8 @@
   --blok-database-list-row-ring-gap: var(--blok-bg-primary);
   --blok-database-list-row-ring-halo: var(--blok-bg-primary);
   --blok-database-list-row-ring: rgb(35, 131, 226);
+  /* notion-motion.md Round 95 §2: the dark list row's page icon is 125. */
+  --blok-database-list-row-icon: rgb(125, 122, 117);
 }
 
 /* Notion's primary ink for every database text that has no colour of its own (cards, list rows, title). */
@@ -4992,7 +4996,7 @@ button[data-blok-database-board-lane-count]:hover {
   flex-shrink: 0;
   width: 18px;
   margin-inline-end: var(--blok-space-1);
-  color: var(--blok-database-card-actions-icon);
+  color: var(--blok-database-list-row-icon, var(--blok-database-card-actions-icon));
 }
 
 /* sweep9a/pixel-scans.txt: Notion's glyph ink starts 8px into the row, its title 31px. */

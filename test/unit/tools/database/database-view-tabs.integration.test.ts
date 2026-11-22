@@ -228,6 +228,40 @@ describe('view tabs (feel/findings-toolbar)', () => {
       expect(settingsPanel()?.querySelector('[data-blok-testid="database-panel-close"]')).toHaveFocus();
     });
 
+    // notion-motion.md Round 110 §1 #3 (r110-n-source-opens.raw): Source opens its panel over the tab menu, which stays open.
+    // Escape closes the panel only; focus goes back to the Source row.
+    describe('Source', () => {
+      const tabMenuOpen = (): boolean => document.querySelector('[data-blok-popover-opened="true"] [data-blok-item-name="database-view-source"]') !== null;
+      const openSource = async (): Promise<void> => {
+        await make(doc());
+        tab('v1').click();
+        await quiet();
+        menuItem('database-view-source').click();
+        await quiet();
+      };
+
+      it('opens the source panel and keeps the tab menu open under it', async () => {
+        await openSource();
+
+        expect(settingsPanel()).not.toBeNull();
+        expect(settingsPanel()?.querySelector('input')).toHaveFocus();
+        expect(tabMenuOpen()).toBe(true);
+      });
+
+      it('Escape closes the source panel only and puts focus back on the Source row', async () => {
+        await openSource();
+
+        document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        await quiet();
+
+        expect(settingsPanel()).toBeNull();
+        expect(tabMenuOpen()).toBe(true);
+        // Blok's menus hold DOM focus on the list and mark the row with the cursor.
+        expect(menuItem('database-view-source').closest('[data-blok-popover-items]')).toHaveFocus();
+        expect(menuItem('database-view-source').getAttribute('data-blok-focused')).toBe('true');
+      });
+    });
+
     it('Copy link to view copies the link of the view it was opened on', async () => {
       const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);
 

@@ -750,9 +750,13 @@ export class DatabaseViewControls {
     this.openSettings(this.settingsButton.isConnected ? this.settingsButton : fallback, start);
   }
 
-  openSettings(anchor: HTMLElement, start: ViewSettingsStart): void {
+  /** `onClose` runs after the panel's own close steps, so it may move focus last. */
+  openSettings(anchor: HTMLElement, start: ViewSettingsStart, onClose?: (escape: boolean) => void): void {
     this.panel?.close();
-    this.panel = openViewSettings(anchor, this.settingsContext(anchor), start, (escape) => this.panelClosed(anchor, escape));
+    this.panel = openViewSettings(anchor, this.settingsContext(anchor), start, (escape) => {
+      this.panelClosed(anchor, escape);
+      onClose?.(escape);
+    });
     anchor.setAttribute('data-popover-open', '');
   }
 

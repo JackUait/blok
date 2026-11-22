@@ -90,7 +90,8 @@ export interface TabBarOptions {
   /** "Source ›": the view's data source, read when the menu opens; undefined leaves the row out. */
   viewSource?: (viewId: string) => { name: string; enabled: boolean } | undefined;
   /** "Source ›" pressed: opens the view settings' Source picker. */
-  onViewSource?: (viewId: string, anchor: HTMLElement) => void;
+  /** `onClose` runs once the source panel has closed, after it has put focus back. */
+  onViewSource?: (viewId: string, anchor: HTMLElement, onClose?: (escape: boolean) => void) => void;
   /** "Copy link to view". */
   onCopyLink?: (viewId: string) => void;
   /** "Open as full page": read when the menu opens; undefined leaves the row out. */
@@ -696,9 +697,29 @@ export class DatabaseTabBar {
       valueLabel: source.name,
       chevron: true,
       isDisabled: !source.enabled,
-      closeOnActivate: true,
-      onActivate: () => onSource(viewId, anchor),
+      onActivate: () => this.openSourceFromMenu(viewId, anchor, onSource),
     }];
+  }
+
+  /**
+   * notion-motion.md Round 110 §1 #3: the source panel opens over the tab menu, which stays.
+   * Escape closes the panel only and gives focus back to the Source row; any other close takes the menu too.
+   */
+  private openSourceFromMenu(viewId: string, anchor: HTMLElement, onSource: NonNullable<TabBarOptions['onViewSource']>): void {
+    const popover = this.contextPopover;
+    const release = popover?.holdOpen();
+
+    onSource(viewId, anchor, (escape) => {
+      // A rebuild (the view switched) already closed this menu.
+      if (popover === null || this.contextPopover !== popover) return;
+      if (escape && release !== undefined) {
+        release('database-view-source');
+        popover.getElement().querySelector('[data-blok-item-name="database-view-source"]')?.closest<HTMLElement>('[data-blok-popover-items]')?.focus({ preventScroll: true });
+
+        return;
+      }
+      this.closeContextPopover();
+    });
   }
 
   /** "Hide data source titles" (research/23 §10). The item stays with one source too. */

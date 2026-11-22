@@ -195,8 +195,8 @@
   --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-table-calc-value: var(--blok-database-ink-secondary);
   --blok-database-table-gutter-icon: rgb(173, 169, 163);
-  /* Round 91 §2 (r91-n-dark-sortpanel.raw): the sort rule handle stays 173 in dark too. */
-  --blok-database-sort-handle-ink: rgb(173, 169, 163);
+  /* Round 114 §1 #8: the sort rule handle is 142 in light, 173 in dark (Round 91 §2). */
+  --blok-database-sort-handle-ink: rgb(142, 139, 134);
   /* notion-motion.md Round 29 §1: the Load more row's hover fill. */
   --blok-database-table-load-more-hover-bg: rgba(55, 53, 47, 0.024);
   --blok-database-table-control-border: rgba(28, 19, 1, 0.11);
@@ -619,6 +619,7 @@
     --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
     --blok-database-table-calc-value: rgb(173, 169, 163);
     --blok-database-table-gutter-icon: rgb(125, 122, 117);
+    --blok-database-sort-handle-ink: rgb(173, 169, 163);
     /* Round 109 §1 #4: the dark « ink. Light is unread and keeps the button's. */
     --blok-database-toolbar-expand-ink: rgb(125, 122, 117);
     /* Dark is unmeasured: the header hover fill. */
@@ -1006,6 +1007,7 @@
   --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-table-calc-value: rgb(173, 169, 163);
   --blok-database-table-gutter-icon: rgb(125, 122, 117);
+  --blok-database-sort-handle-ink: rgb(173, 169, 163);
   --blok-database-toolbar-expand-ink: rgb(125, 122, 117);
   /* Dark is unmeasured: the header hover fill. */
   --blok-database-table-load-more-hover-bg: var(--blok-database-table-header-hover-bg);

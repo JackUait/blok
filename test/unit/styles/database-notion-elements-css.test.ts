@@ -300,10 +300,11 @@ describe('sort panel insets (Round 35 gap 6)', () => {
     expect(ruleBody(`${PAGE} [data-blok-database-panel-handle] svg`)).toContain('height: 16px');
   });
 
-  // notion-motion.md Round 91 §2 (r91-n-dark-sortpanel.raw): the handle glyph is 173 in dark, as in light.
-  it('inks the sort rule handle rgb(173, 169, 163) in light and dark', () => {
+  // notion-motion.md Round 114 §1 #8 (r114-n-sortrule-handle-ink.raw): the handle glyph is 142 in light, 173 in dark.
+  it('inks the sort rule handle 142 in light and 173 in dark', () => {
     expect(ruleBody(`${PAGE} [data-blok-database-panel-handle]`)).toContain('color: var(--blok-database-sort-handle-ink)');
-    expect(tokenValues('--blok-database-sort-handle-ink')).toEqual(['rgb(173, 169, 163)']);
+    // Order: light, the dark media query, the dark theme attribute.
+    expect(tokenValues('--blok-database-sort-handle-ink')).toEqual(['rgb(142, 139, 134)', 'rgb(173, 169, 163)', 'rgb(173, 169, 163)']);
   });
 
   it('keeps the × glyph 20px after the direction button and 18px from the edge', () => {

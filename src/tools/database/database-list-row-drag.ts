@@ -222,7 +222,7 @@ export class DatabaseListRowDrag {
       const rect = beforeEl.getBoundingClientRect();
 
       // notion-motion.md Round 52 §1: the 4px line's top is the target row's top − 2.
-      this.dropLine.showHorizontal({ left: rect.left, centerY: rect.top, width: rect.width });
+      this.dropLine.showHorizontal({ left: rect.left, centerY: rect.top, width: rect.width, slot: beforeEl });
 
       return;
     }
@@ -238,7 +238,7 @@ export class DatabaseListRowDrag {
 
     const rect = last.getBoundingClientRect();
 
-    this.dropLine.showHorizontal({ left: rect.left, centerY: rect.bottom, width: rect.width });
+    this.dropLine.showHorizontal({ left: rect.left, centerY: rect.bottom, width: rect.width, slot: 'end' });
   }
 
   private getDropPosition(clientY: number): { beforeEl: Element | null } {

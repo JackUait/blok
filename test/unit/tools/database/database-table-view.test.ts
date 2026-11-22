@@ -2629,6 +2629,32 @@ describe('DatabaseTableView', () => {
       document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 5, clientY: 60 }));
     });
 
+    // notion-live/motion-rowdrag.json 4536/4546: during the hold the old line fades 1→0 at y 333 while a new one
+    // fades 0→1 at y 448. Escape leaves no line behind.
+    it('crossfades the drop line when it changes slot, and Escape clears both lines', () => {
+      const { root } = mount();
+      const rowEls = [...root.querySelectorAll<HTMLElement>('[data-blok-database-table-row]')];
+
+      rowEls.forEach((el, i) => vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(rect(i * 37)));
+      rowEls[0].querySelector<HTMLElement>('[data-blok-database-table-row-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 5, clientY: 10, button: 0 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 5, clientY: 60 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 5, clientY: 62 }));
+
+      expect(root.querySelectorAll('[data-blok-database-table-drop-line]')).toHaveLength(1);
+
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 5, clientY: 100 }));
+
+      const lines = [...root.querySelectorAll<HTMLElement>('[data-blok-database-table-drop-line]')];
+
+      expect(lines.map((line) => [line.style.top, line.hasAttribute('data-visible')])).toEqual([['74px', false], ['111px', true]]);
+
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(root.querySelector('[data-blok-database-table-drop-line]')).toBeNull();
+      expect(document.querySelector('[data-blok-database-table-row-ghost]')).toBeNull();
+    });
+
     // Notion's row ghost moves sideways with the pointer (notion-live/rowdrag-mid.png: +74px).
     it('moves the row ghost sideways with the pointer, keeping the press offset', () => {
       const { root } = mount();

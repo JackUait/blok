@@ -14,6 +14,8 @@ export class DatabaseDropLine {
   private el: HTMLElement | null = null;
   /** Lines fading out, each with the timer that removes it. */
   private readonly leaving = new Map<HTMLElement, number>();
+  /** The slot the line marks, when the caller names one. */
+  private slot: unknown = undefined;
 
   /**
    * @param tokenSource - an element inside the editor, where the colour token resolves
@@ -21,7 +23,14 @@ export class DatabaseDropLine {
    */
   constructor(private readonly tokenSource?: HTMLElement, private readonly host?: HTMLElement) {}
 
-  public showHorizontal({ left, centerY, width }: { left: number; centerY: number; width: number }): void {
+  /**
+   * @param slot - names the drop slot. With one, a new line fades in and a change of slot crossfades,
+   *   as Notion's row and card lines do (notion-live/motion-r14-listdrag.json, motion-carddrag.json)
+   */
+  public showHorizontal({ left, centerY, width, slot }: { left: number; centerY: number; width: number; slot?: unknown }): void {
+    if (slot !== undefined) {
+      this.crossfadeTo(slot);
+    }
     this.place(left, centerY - THICKNESS / 2, width, THICKNESS);
   }
 
@@ -37,6 +46,7 @@ export class DatabaseDropLine {
       return;
     }
     this.el = null;
+    this.slot = undefined;
 
     if (prefersReducedMotion()) {
       el.remove();
@@ -53,11 +63,33 @@ export class DatabaseDropLine {
   public destroy(): void {
     this.el?.remove();
     this.el = null;
+    this.slot = undefined;
     this.leaving.forEach((timer, el) => {
       window.clearTimeout(timer);
       el.remove();
     });
     this.leaving.clear();
+  }
+
+  private crossfadeTo(slot: unknown): void {
+    if (prefersReducedMotion()) {
+      return;
+    }
+    const fresh = this.el === null || this.slot !== slot;
+
+    if (this.el !== null && this.slot !== slot) {
+      this.hide();
+    }
+    this.slot = slot;
+    if (!fresh) {
+      return;
+    }
+    const el = this.create();
+
+    el.style.opacity = '0';
+    // Resolve the 0 first, or the fade has no start.
+    void window.getComputedStyle(el).getPropertyValue('opacity');
+    el.style.opacity = '';
   }
 
   private place(left: number, top: number, width: number, height: number): void {

@@ -1010,3 +1010,10 @@ describe('Edit property rows after Escape on their submenu (Round 113)', () => {
     expect(declared(row, 'outline')).toEqual(['2px solid var(--blok-focus-ring)']);
   });
 });
+
+// notion-motion.md Round 111 §1 #4: the kept row takes the hover fill, never a blue selected fill.
+describe('database menu kept highlight', () => {
+  it('tints the kept row with the hover fill', () => {
+    expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-database-menu-lit]", 'background-color')).toEqual(['var(--blok-database-hover-bg)']);
+  });
+});

@@ -124,6 +124,25 @@ export interface CountCap {
   onCapCounts: (cap: boolean) => void;
 }
 
+/** A group row's name; the group's first calculation tells them apart. */
+const calcGroupName = (fns: readonly CalculationFn[]): string => `database-calc-group-${fns[0]}`;
+
+/**
+ * The calculation menu row that holds `current`: None, or the group whose list has it.
+ * notion-motion.md Round 111 §1 #4: the footer menu opens with this row tinted.
+ */
+export const calcHighlight = (property: Pick<PropertyDefinition, 'type'>, current: CalculationFn | undefined): string => {
+  if (current === undefined) {
+    return 'database-calc-none';
+  }
+  const groups = property.type === 'checkbox'
+    ? [CHECKBOX_COUNT_FNS, CHECKBOX_PERCENT_FNS]
+    : [COUNT_FNS, PERCENT_FNS, NUMBER_FNS, DATE_FNS];
+  const holder = groups.find((fns) => fns.includes(current));
+
+  return holder === undefined ? 'database-calc-none' : calcGroupName(holder);
+};
+
 /**
  * The calculation menu for one column (research/08): None, Count ›,
  * Percent ›, then More options › for numbers or Date › for dates and
@@ -147,6 +166,7 @@ export const calculationItems = (
   });
   const group = (titleKey: string, fns: readonly CalculationFn[], lead: PopoverItemParams[] = []): PopoverItemParams => ({
     type: PopoverItemType.Default,
+    name: calcGroupName(fns),
     title: i18n.t(titleKey),
     // notion-motion.md Round 64 §5: the group stays unmarked; only the picked calculation inside it is.
     children: { items: [...lead, ...fns.map(leaf)], width: CALC_LIST_WIDTH },
@@ -231,7 +251,31 @@ export interface OpenMenuOptions {
   alignEnd?: boolean;
   /** A card menu that does not fit below opens above, its bottom this far over the anchor's top, when it fits there. */
   coverFlipOffset?: number;
+  /**
+   * The row (item name) tinted on open. The tint follows the pointer and keyboard,
+   * and stays on the last row after the pointer leaves the menu.
+   */
+  highlight?: string;
 }
+
+/** Hover-tinted in database.css. */
+const LIT_ATTR = 'data-blok-database-menu-lit';
+
+/** Keeps one row of `popover` tinted, starting on `name`. */
+const keepHighlight = (popover: PopoverDesktop, name: string): void => {
+  const state = { lit: popover.getElement().querySelector<HTMLElement>(`[data-blok-item-name="${name}"]`) };
+
+  state.lit?.setAttribute(LIT_ATTR, '');
+  // A null current row is the pointer leaving: the tint stays where it was.
+  popover.onCurrentItemChange((current) => {
+    if (current === null || current.element === state.lit) {
+      return;
+    }
+    state.lit?.removeAttribute(LIT_ATTR);
+    state.lit = current.element;
+    state.lit.setAttribute(LIT_ATTR, '');
+  });
+};
 
 const MENU_CLASS = {
   header: DATABASE_HEADER_MENU_CLASS,
@@ -326,6 +370,9 @@ export const openMenu = (
     queueMicrotask(() => popover.destroy());
   });
   popover.show();
+  if (options.highlight !== undefined) {
+    keepHighlight(popover, options.highlight);
+  }
 
   return popover;
 };

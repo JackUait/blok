@@ -9,7 +9,7 @@ import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/component
 import { TOOLTIP_MUTED_INK } from '../../../../src/components/modules/toolbar/tooltip';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 import { hover, shownHint } from './hint-harness';
-import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, PropertyType, PropertyValue } from '../../../../src/tools/database/types';
+import type { CalculationFn, DatabaseRow, DatabaseViewConfig, PropertyDefinition, PropertyType, PropertyValue } from '../../../../src/tools/database/types';
 
 const schema: PropertyDefinition[] = [
   { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
@@ -2712,6 +2712,60 @@ describe('DatabaseTableView', () => {
       root.querySelector<HTMLElement>('[data-blok-database-table-calc][data-property-id="p-amount"] [data-blok-database-table-calc-box]')?.click();
 
       expect(document.querySelector('[data-blok-popover-custom-class~="blok-database-calc-menu"]')).not.toBeNull();
+    });
+
+    // notion-motion.md Round 111 §1 #4 (r111-n-footer-{sum,countall}-rows.raw): the menu opens with the row that
+    // holds the current calculation tinted. The tint follows the pointer and stays on the last row after it leaves.
+    describe('footer menu highlight', () => {
+      const lit = (): string[] => [...document.querySelectorAll<HTMLElement>('[data-blok-database-menu-lit]')].map((el) => el.textContent ?? '');
+      const row = (key: string): HTMLElement | undefined =>
+        [...document.querySelectorAll<HTMLElement>('[data-blok-popover-item]')].find((el) => el.textContent?.includes(key));
+      const openFooter = (calculations: Array<{ id: string; fn: CalculationFn }>, propertyId: string): void => {
+        const { root } = mount({ view: tableView({ calculations }) });
+
+        // The popover ignores hovers until the pointer moves from where it rested at open.
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: 1, clientY: 1, bubbles: true }));
+        root.querySelector<HTMLElement>(`[data-blok-database-table-calc][data-property-id="${propertyId}"] [data-blok-database-table-calc-box]`)?.click();
+      };
+
+      it('starts on More options when Sum is set', () => {
+        openFooter([{ id: 'p-amount', fn: 'sum' }], 'p-amount');
+
+        expect(lit()).toHaveLength(1);
+        expect(lit()[0]).toContain('tools.database.calcMoreOptions');
+      });
+
+      it('starts on Count when Count all is set', () => {
+        openFooter([{ id: 'p-amount', fn: 'count' }], 'p-amount');
+
+        expect(lit()).toHaveLength(1);
+        expect(lit()[0]).toContain('tools.database.calcCount');
+      });
+
+      it('starts on None when nothing is set', () => {
+        // Another column's sum keeps the footer row; p-notes has nothing set.
+        openFooter([{ id: 'p-amount', fn: 'sum' }], 'p-notes');
+
+        expect(lit()).toHaveLength(1);
+        expect(lit()[0]).toContain('tools.database.calcNone');
+      });
+
+      it('moves to the hovered row and stays there after the pointer leaves the menu', () => {
+        openFooter([{ id: 'p-amount', fn: 'sum' }], 'p-amount');
+        const none = row('tools.database.calcNone');
+
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 5, bubbles: true }));
+        none?.dispatchEvent(new MouseEvent('mouseover', { clientX: 10, clientY: 10, bubbles: true }));
+
+        expect(lit()).toHaveLength(1);
+        expect(lit()[0]).toContain('tools.database.calcNone');
+
+        document.querySelector<HTMLElement>('[data-blok-popover-opened="true"] [data-blok-popover-container]')
+          ?.dispatchEvent(new MouseEvent('mouseleave', { clientX: 900, clientY: 900 }));
+
+        expect(lit()).toHaveLength(1);
+        expect(lit()[0]).toContain('tools.database.calcNone');
+      });
     });
 
     // r11-calc-count-sub.png and r11-group-agg-menu.raw: the Count list is 250 wide.

@@ -30,7 +30,7 @@ import { cellText } from './database-table-clipboard';
 import type { CellChange, CellRef, TableState } from './database-table-grid';
 import { fileChipIcon, rowPageGlyph, showsPageIcon } from './page-icon';
 
-import { CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, headerViewItems, loadLimitItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
+import { CALCULATION_LABEL_KEYS, calcHighlight, calcMenuAt, calculationItems, headerViewItems, loadLimitItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
 import type { CountCap, OpenMenuOptions, RowFavorite } from './database-table-menus';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { DatabaseTableColumnResize, MIN_COLUMN_WIDTH } from './database-table-resize';
@@ -2261,7 +2261,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     this.showMenu(cell, calculationItems(this.shown(property), current, this.options.i18n, (fn: CalculationFn | null) => {
       this.handlers?.updateView({ calculations: withCalculation(this.options.view, propertyId, fn) });
-    }, this.countCap(propertyId)), { kind: 'calc', at: calcMenuAt(cell) });
+    }, this.countCap(propertyId)), { kind: 'calc', at: calcMenuAt(cell), highlight: calcHighlight(this.shown(property), current) });
   }
 
   private countCap(propertyId: string): CountCap {

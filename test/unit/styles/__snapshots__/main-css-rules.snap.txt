@@ -7960,6 +7960,10 @@ button[data-blok-database-board-lane-count]:hover {
   margin-bottom: 0;
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-database-menu-lit] {
+  background-color: var(--blok-database-hover-bg);
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-popover-item]:last-child {
   margin-block-end: 0;
 }

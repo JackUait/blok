@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types';
 import type { PopoverItemDefaultBaseParams, PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
+import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_CLOSE_DELAY_MS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { isKeyboardModality } from '../../components/utils/input-modality';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
@@ -358,6 +358,7 @@ export const openMenu = (
     popover.holdsOnMiddleClick = true;
   }
   popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
+  popover.nestedCloseDelay = DATABASE_SUBMENU_CLOSE_DELAY_MS;
   popover.alignEnd = options.alignEnd === true;
 
   const state = { closed: false };

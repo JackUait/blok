@@ -358,6 +358,13 @@ describe('DatabasePropertyMenu', () => {
     expect((captured.instances.at(-1) as unknown as { nestedOpenDelay?: number }).nestedOpenDelay).toBe(125);
   });
 
+  // notion-motion.md R11 "Edit property flyout close timing": the flyout starts to fade 110–120ms after the pointer moves on.
+  it('closes a hovered submenu 115ms after the pointer moves to another row', () => {
+    open(prop('select'));
+
+    expect((captured.instances.at(-1) as unknown as { nestedCloseDelay?: number }).nestedCloseDelay).toBe(115);
+  });
+
   // notion-live/motion-header.json + header.png: the Name cell spans x 539..818, its menu box starts at x 533, y 296 (the cell's bottom).
   it('opens the header menu 6px left of its cell, at the cell\'s bottom', () => {
     const anchor = document.body.appendChild(document.createElement('div'));

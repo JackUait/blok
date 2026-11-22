@@ -281,7 +281,13 @@ export class PopoverDesktop extends PopoverAbstract {
   private static readonly NESTED_CLOSE_INTENT_DELAY_MS = 300;
 
   /**
-   * Pending pointer close-intent timer (see {@link NESTED_CLOSE_INTENT_DELAY_MS}).
+   * How long an open submenu stands after the pointer leaves its trigger. A
+   * root menu may set its own before a submenu opens; its submenus inherit it.
+   */
+  public nestedCloseDelay = PopoverDesktop.NESTED_CLOSE_INTENT_DELAY_MS;
+
+  /**
+   * Pending pointer close-intent timer (see {@link nestedCloseDelay}).
    * Null when no close is pending.
    */
   private nestedCloseIntentTimer: number | null = null;
@@ -1560,7 +1566,7 @@ export class PopoverDesktop extends PopoverAbstract {
       }
 
       this.destroyNestedPopoverIfExists(false);
-    }, PopoverDesktop.NESTED_CLOSE_INTENT_DELAY_MS);
+    }, this.nestedCloseDelay);
   }
 
   /**
@@ -1748,6 +1754,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
     this.nestedPopover.arrowLeftClosesSubmenu = this.arrowLeftClosesSubmenu;
     this.nestedPopover.nestedOpenDelay = this.nestedOpenDelay;
+    this.nestedPopover.nestedCloseDelay = this.nestedCloseDelay;
     item.onChildrenOpen();
 
     /**

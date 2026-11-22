@@ -1,7 +1,7 @@
 import { IconChevronDown, IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconForm, IconViewTimeline, IconViewDashboard, IconLink, IconDotsHorizontal, IconPageLayout, IconEyeSlash, IconExpandDiagonal, IconArrowDiagonal, IconEmojiSmile } from '../../components/icons';
 import { ADD_VIEW_MENU_WIDTH, DatabaseViewPopover } from './database-view-popover';
 import type { ViewPopoverPlacement } from './database-view-popover';
-import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
+import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_CLOSE_DELAY_MS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { DATABASE_HEADER_MENU_CLASS } from './database-table-menus';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
@@ -694,6 +694,8 @@ export class DatabaseTabBar {
     });
 
     this.contextPopover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
+
+    this.contextPopover.nestedCloseDelay = DATABASE_SUBMENU_CLOSE_DELAY_MS;
     this.contextPopover.show();
   }
 

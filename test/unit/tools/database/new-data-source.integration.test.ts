@@ -556,12 +556,17 @@ describe('New data source: a view bound to a second source in the same block', (
     expect(byTestId('database-source-option-src-b')?.textContent).toContain('Src B');
   });
 
-  it('the view menu\'s "Source" is greyed, as View settings\' is, with no second source', async () => {
+  // notion-motion.md Round 109 §1 #5: with one source, Notion's "Source" is in normal ink. What its click opens is unread.
+  it('the view menu\'s "Source" is not greyed with no second source, and opens the Source picker', async () => {
     await make(plainDoc());
     const row = await viewMenuSource('v1');
 
     expect(row?.textContent).toContain('Projects');
-    expect(row?.getAttribute('aria-disabled')).toBe('true');
+    expect(row?.getAttribute('aria-disabled')).toBeNull();
+    row?.click();
+    await quiet();
+
+    expect(byTestId('database-source-search')).not.toBeNull();
   });
 
   // notion-motion.md Round 35: an untitled database's own source reads "New database", the title placeholder.

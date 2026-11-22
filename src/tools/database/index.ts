@@ -5990,7 +5990,7 @@ export class DatabaseTool implements BlockTool {
   /** This block's own data, then its second sources: the child database blocks, whether a view shows them or not. */
   /**
    * The view tab menu's "Source" (notion-motion.md Round 35): the view's source name, as View settings
-   * names it, and whether there is another source to pick, as View settings enables its row.
+   * names it. Round 109 §1 #5: one source does not grey it. A locked database does; Notion's locked case is unread.
    */
   private viewSource(viewId: string): { name: string; enabled: boolean } {
     const current = this.model.getView(viewId)?.dataSourceId ?? this.dataId;
@@ -5999,7 +5999,7 @@ export class DatabaseTool implements BlockTool {
     const fallback = current === this.dataId ? 'tools.database.titlePlaceholder' : 'tools.database.newDataSource';
     const name = choice === undefined || choice.title.trim() === '' ? this.api.i18n.t(fallback) : choice.title;
 
-    return { name, enabled: !this.structureLocked() && choices.some((option) => option.id !== current && option.fits) };
+    return { name, enabled: !this.structureLocked() };
   }
 
   private dataSourceChoices(viewId = this.activeViewId): DataSourceChoice[] {

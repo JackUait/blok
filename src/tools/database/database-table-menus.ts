@@ -304,6 +304,10 @@ export const openMenu = (
     // Round 105 §1 #2, Round 107 §1 #1, Round 108 §1 #1: a click away hits Notion's full-window backdrop and acts on nothing under it.
     popover.swallowsOutsideClick = true;
   }
+  // Round 109 §1 #3: a middle click away keeps the table ⋮⋮ menu open. A card's menu sets its own (index.ts).
+  if (options.kind === 'row') {
+    popover.holdsOnMiddleClick = true;
+  }
   popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
   popover.alignEnd = options.alignEnd === true;
 
@@ -607,13 +611,13 @@ export interface RowActionContext {
  * Copy link, Duplicate, Move to and Move to Trash, shared so the two menus cannot drift.
  * Notion's row page shows no shortcut on Move to Trash (research/12, 15-row-page-actions.png).
  */
-export const rowActionItems = (ctx: RowActionContext, options: { trashShortcut: boolean }): PopoverItemParams[] => {
+export const rowActionItems = (ctx: RowActionContext, options: { trashShortcut: boolean; duplicateCloses?: boolean }): PopoverItemParams[] => {
   const { i18n, onDuplicate, onDelete, onMoveTo } = ctx;
 
   return [
     { type: PopoverItemType.Default, name: 'database-row-copy-link', title: i18n.t('tools.database.tableCopyLink'), icon: IconLink, onActivate: ctx.onCopyLink },
     ...(onDuplicate !== undefined
-      ? [{ type: PopoverItemType.Default as const, name: 'database-row-duplicate', title: i18n.t('tools.database.tableDuplicate'), icon: IconCopy, secondaryLabel: beautifyShortcut('CMD+D'), onActivate: onDuplicate }]
+      ? [{ type: PopoverItemType.Default as const, name: 'database-row-duplicate', title: i18n.t('tools.database.tableDuplicate'), icon: IconCopy, secondaryLabel: beautifyShortcut('CMD+D'), ...(options.duplicateCloses === true ? { closeOnActivate: true } : {}), onActivate: onDuplicate }]
       : []),
     ...(onMoveTo !== undefined
       ? [{
@@ -745,7 +749,8 @@ export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
     ...(page.length > 0 ? [line] : []),
     ...open,
     line,
-    ...rowActionItems(ctx, { trashShortcut: true }),
+    // notion-motion.md Round 109 §1 #1: Duplicate removes the row menu. The row page's menu is unmeasured.
+    ...rowActionItems(ctx, { trashShortcut: true, duplicateCloses: true }),
     ...(ctx.lastEdited !== undefined || ctx.counts !== undefined ? [line, rowFooter(i18n, ctx.lastEdited, ctx.counts)] : []),
   ];
 };

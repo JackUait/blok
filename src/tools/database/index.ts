@@ -10617,6 +10617,8 @@ export class DatabaseTool implements BlockTool {
     const spot = options.pointer === undefined ? undefined : pointerFrom(card, options.pointer);
     const comment = options.comment === false ? undefined : this.commentLever().comment;
     const writable = (): boolean => !this.readOnly && !this.destroyed;
+    const fromDots = options.pointer === undefined && anchor.hasAttribute('data-blok-database-card-menu');
+    const duplicated = { done: false };
     // notion-motion.md Round 42 §2: Edit property › lists every property A→Z, shown or not; Created time and ID were not in it.
     const properties = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n)
       .filter((p) => !['title', 'createdTime', 'uniqueId'].includes(p.type))
@@ -10630,7 +10632,11 @@ export class DatabaseTool implements BlockTool {
           onPropertyVisibility: () => this.controls.openSettingsPage('properties', card),
         }
         : {}),
-      onDuplicate: () => { if (writable()) this.duplicateTableRow(rowId); },
+      onDuplicate: () => {
+        if (!writable()) return;
+        this.duplicateTableRow(rowId);
+        duplicated.done = true;
+      },
       onDelete: () => { if (writable()) this.deleteTableRows([rowId]); },
       ...(this.canMoveRow() ? { onMoveTo: (menu: DOMRect | undefined) => { if (writable()) this.openMoveTo(rowId, card, spot ?? menuFrom(menu, card)); } } : {}),
     };
@@ -10668,8 +10674,16 @@ export class DatabaseTool implements BlockTool {
       },
     });
 
-    // notion-motion.md Round 108 §1 #6: a middle click away keeps a right-click menu open. The ••• menu's is unread.
-    popover.holdsOnMiddleClick = options.pointer !== undefined;
+    // notion-motion.md Round 108 §1 #6, Round 109 §1 #2: a middle click away keeps a right-click or ••• menu open.
+    popover.holdsOnMiddleClick = options.pointer !== undefined || fromDots;
+    // Round 109 §1 #1: an item click fades the ••• menu out; Escape and a click away still remove it at once.
+    popover.itemCloseFades = fromDots;
+    // Round 109 §1 #1: after Duplicate, focus is on the card's •••. The redraw may have replaced the button, so find it again.
+    if (fromDots) {
+      popover.on(PopoverEvent.Closed, () => {
+        if (duplicated.done) this.boardContainer?.querySelector<HTMLElement>(`[data-blok-database-card-menu][data-row-id="${CSS.escape(rowId)}"]`)?.focus({ preventScroll: true });
+      });
+    }
     this.cardMenuPopover = popover;
   }
 

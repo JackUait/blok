@@ -383,6 +383,53 @@ describe('PopoverDesktop close motion (animateClose)', () => {
     });
   });
 
+  describe('itemCloseFades', () => {
+    const openWithClosingItem = (): PopoverDesktop => {
+      const trigger = document.createElement('button');
+
+      document.body.appendChild(trigger);
+      const popover = new PopoverDesktop({ items: [{ title: 'Go', name: 'go', closeOnActivate: true, onActivate: vi.fn() }], trigger, animateClose: true });
+
+      popover.show();
+      popover.closesAtOnce = true;
+      stubAnimations(popover, [controllableAnimation().animation]);
+
+      return popover;
+    };
+    const clickGo = (popover: PopoverDesktop): void => {
+      popover.getElement().querySelector<HTMLElement>('[data-blok-item-name="go"]')?.click();
+    };
+
+    it('with closesAtOnce, an item click still plays the close motion', () => {
+      const popover = openWithClosingItem();
+
+      popover.itemCloseFades = true;
+      clickGo(popover);
+
+      expect(popover.isShown).toBe(false);
+      expect(popover.isClosing).toBe(true);
+    });
+
+    it('a plain hide stays instant', () => {
+      const popover = openWithClosingItem();
+
+      popover.itemCloseFades = true;
+      popover.hide();
+
+      expect(popover.isClosing).toBe(false);
+    });
+
+    it('is off by default: an item click closes at once', () => {
+      const popover = openWithClosingItem();
+
+      clickGo(popover);
+
+      expect(popover.itemCloseFades).toBe(false);
+      expect(popover.isShown).toBe(false);
+      expect(popover.isClosing).toBe(false);
+    });
+  });
+
   describe('a submenu', () => {
     const openWithSubmenu = (animateClose: boolean): { root: PopoverDesktop; nested: HTMLElement } => {
       const trigger = document.createElement('button');

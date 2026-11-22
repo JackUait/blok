@@ -280,6 +280,79 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     away.remove();
   });
 
+  // notion-motion.md Round 109 §1 #1: Duplicate on a card's ••• menu makes the copy and removes the menu.
+  // The table's ⋮⋮ menu closed only because the table redraw destroys it; the board keeps its card menu.
+  it('Duplicate on a board card\'s ••• menu closes the menu with a fade', () => {
+    const doc = oneRow();
+    const { el } = buildTool(doc, {}, viewData('board'));
+    const fades: boolean[] = [];
+    const hide = PopoverAbstract.prototype.hide;
+
+    vi.spyOn(PopoverAbstract.prototype, 'hide').mockImplementation(function (this: PopoverAbstract) {
+      fades.push(this.itemCloseFades);
+      hide.call(this);
+    });
+    openMenu(el, 'board');
+    menuItem('database-row-duplicate')?.click();
+
+    expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    expect(doc.api.blocks.insertAt).toHaveBeenCalled();
+    expect(fades[0]).toBe(true);
+  });
+
+  it('Duplicate on a board card\'s ••• menu leaves focus on that card\'s •••', () => {
+    const { el } = buildTool(oneRow(), {}, viewData('board'));
+
+    openMenu(el, 'board');
+    menuItem('database-row-duplicate')?.click();
+
+    expect(el.querySelector('[data-blok-database-card][data-row-id="a"] [data-blok-database-card-menu]')).toHaveFocus();
+  });
+
+  it('Duplicate on a board card\'s right-click menu closes it at once', () => {
+    const { el } = buildTool(oneRow(), {}, viewData('board'));
+    const fades: boolean[] = [];
+    const hide = PopoverAbstract.prototype.hide;
+
+    vi.spyOn(PopoverAbstract.prototype, 'hide').mockImplementation(function (this: PopoverAbstract) {
+      fades.push(this.itemCloseFades);
+      hide.call(this);
+    });
+    rowEl(el, 'board').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+    menuItem('database-row-duplicate')?.click();
+
+    expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    expect(fades[0]).toBe(false);
+  });
+
+  // notion-motion.md Round 109 §1 #2: a middle click away keeps a card's ••• menu open too.
+  it('keeps a board card\'s ••• menu open on a middle click away', () => {
+    const { el } = buildTool(oneRow(), {}, viewData('board'));
+    const away = document.createElement('div');
+
+    document.body.appendChild(away);
+    openMenu(el, 'board');
+    away.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 1 }));
+
+    expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+    away.remove();
+  });
+
+  // notion-motion.md Round 109 §1 #3: a middle click on a cell keeps the table ⋮⋮ menu open, and the cell takes no focus.
+  it('keeps a table row\'s ⋮⋮ menu open on a middle click on a cell', () => {
+    const { el } = buildTool(oneRow(), {}, viewData('table'));
+
+    openMenu(el, 'table');
+    const cell = el.querySelector<HTMLElement>('[data-row-id="a"] [data-blok-database-table-cell]');
+
+    if (cell === null) throw new Error('no cell');
+    cell.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 1 }));
+    cell.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 1 }));
+
+    expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+    expect(cell.contains(document.activeElement)).toBe(false);
+  });
+
   // notion-motion.md Round 58 §6: a board card's menu opens at the pointer x, not the card's left.
   it('anchors a board card\'s right-click menu at the pointer', () => {
     const { el } = buildTool(oneRow(), {}, viewData('board'));

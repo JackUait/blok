@@ -310,6 +310,12 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   /** Opt-in, with animateClose: every close skips the close motion. */
   public closesAtOnce = false;
 
+  /** Opt-in, with closesAtOnce: a close from an item click (closeOnActivate) keeps the close motion. */
+  public itemCloseFades = false;
+
+  /** True only while an item click closes the popover. */
+  private hidingOnItem = false;
+
   /**
    * Opt-in: a left or right click away acts like a click on a full-window backdrop.
    * It only closes the popover, reaches nothing under it, and leaves focus on the body.
@@ -348,7 +354,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     const mountTarget = this.nodes.popover;
     const alreadyClosing = this.closing !== null;
     const isPromoted = mountTarget !== null && supportsPopoverAPI() && isPromotedToTopLayer(mountTarget);
-    const animates = isPromoted && !alreadyClosing && this.params.animateClose === true && !this.closesAtOnce && !this.hidingOnEscape && !prefersReducedMotion();
+    const animates = isPromoted && !alreadyClosing && this.params.animateClose === true && (!this.closesAtOnce || this.hidingOnItem) && !this.hidingOnEscape && !prefersReducedMotion();
 
     if (animates) {
       // Hide now, so the UA's own close steps run at once; the attribute and
@@ -837,7 +843,12 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     }
 
     if (item.closeOnActivate === true) {
-      this.hide();
+      this.hidingOnItem = this.itemCloseFades;
+      try {
+        this.hide();
+      } finally {
+        this.hidingOnItem = false;
+      }
 
       this.emit(PopoverEvent.ClosedOnActivate);
     }

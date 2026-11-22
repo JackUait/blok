@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { isEscapeConsumed, markEscapeConsumed } from '../../../src/components/utils/consumed-escape';
 import { registerLayer } from '../../../src/components/utils/dismissable-layer';
+import '../../../src/components/utils/input-modality';
 import { PopoverRegistry } from '../../../src/components/utils/popover/popover-registry';
 import type { PopoverAbstract } from '../../../src/components/utils/popover/popover-abstract';
 
@@ -434,6 +435,35 @@ describe('PopoverRegistry', () => {
       registry.closeTopmost();
 
       expect(focusSpy).toHaveBeenCalledOnce();
+
+      trigger.remove();
+    });
+
+    it('keeps a mouse-opened popover\'s trigger free of a focus ring after Escape', () => {
+      const { popover, trigger } = createMockPopover();
+
+      document.body.appendChild(trigger);
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      registry.register(popover, trigger);
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
+
+      expect(trigger).toHaveFocus();
+      expect(document.documentElement).toHaveAttribute('data-blok-modality', 'pointer');
+
+      trigger.remove();
+    });
+
+    it('keeps the focus ring on a keyboard-opened popover\'s trigger after Escape', () => {
+      const { popover, trigger } = createMockPopover();
+
+      document.body.appendChild(trigger);
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+      registry.register(popover, trigger);
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
+
+      expect(trigger).toHaveFocus();
+      expect(document.documentElement).toHaveAttribute('data-blok-modality', 'keyboard');
 
       trigger.remove();
     });

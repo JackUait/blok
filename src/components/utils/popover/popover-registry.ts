@@ -1,5 +1,6 @@
 import { isEscapeConsumed, markEscapeConsumed } from '../consumed-escape';
 import { hasEscapeLayer } from '../dismissable-layer';
+import { isKeyboardModality, recordActionKey } from '../input-modality';
 
 import type { PopoverAbstract } from './popover-abstract';
 
@@ -9,6 +10,8 @@ import type { PopoverAbstract } from './popover-abstract';
 interface PopoverRegistryEntry {
   popover: PopoverAbstract;
   triggerElement: HTMLElement;
+  /** The popover opened from the mouse: Escape gives focus back without a ring. */
+  openedByPointer: boolean;
 }
 
 /**
@@ -167,7 +170,7 @@ export class PopoverRegistry {
       this.stack.splice(existingIndex, 1);
     }
 
-    this.stack.push({ popover, triggerElement });
+    this.stack.push({ popover, triggerElement, openedByPointer: !isKeyboardModality() });
     this.ensureDocumentListener();
   }
 
@@ -194,7 +197,7 @@ export class PopoverRegistry {
     }
 
     const topmost = this.stack[this.stack.length - 1];
-    const { triggerElement } = topmost;
+    const { triggerElement, openedByPointer } = topmost;
 
     // A menu that opted in closes an open submenu before itself. The type check is for test mocks.
     if (typeof topmost.popover.closeSubmenuOnEscape === 'function' && topmost.popover.closeSubmenuOnEscape()) {
@@ -228,6 +231,10 @@ export class PopoverRegistry {
      * in the document — a stale trigger would throw or steal focus.
      */
     if (triggerElement.isConnected) {
+      // The Escape itself set keyboard modality, which would paint a ring on a mouse flow.
+      if (openedByPointer) {
+        recordActionKey();
+      }
       triggerElement.focus();
     }
 

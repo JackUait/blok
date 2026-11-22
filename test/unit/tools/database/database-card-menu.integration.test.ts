@@ -756,6 +756,22 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     expect(document.querySelector('[data-blok-testid="database-view-settings"] [data-blok-database-panel-header]')?.textContent).toContain(title);
   });
 
+  it('Move to Trash on a card closes its ••• menu at once', () => {
+    const { el } = buildTool(oneRow(), {}, viewData('board'));
+    const fades: boolean[] = [];
+    const hide = PopoverAbstract.prototype.hide;
+
+    vi.spyOn(PopoverAbstract.prototype, 'hide').mockImplementation(function (this: PopoverAbstract) {
+      fades.push(this.itemCloseFades);
+      hide.call(this);
+    });
+    openMenu(el, 'board');
+    menuItem('database-row-delete')?.click();
+
+    expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    expect(fades.every((fade) => !fade)).toBe(true);
+  });
+
   it('Move to Trash on a card removes the row', () => {
     const doc = oneRow();
     const { el } = buildTool(doc, {}, viewData('board'));

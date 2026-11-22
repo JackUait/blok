@@ -166,7 +166,7 @@ describe('database list and drawer', () => {
   });
 
   it('small row buttons and tags are small controls; the chevron tip is a notch', () => {
-    expect(radiusOf('database.css', '[data-blok-database-list-row-add], [data-blok-database-list-row-handle]')).toEqual([role('control-sm')]);
+    expect(radiusOf('database.css', '[data-blok-database-list-row-add], [data-blok-database-list-row-handle], [data-blok-database-timeline-table-row-add], [data-blok-database-timeline-table-row-handle]')).toEqual([role('control-sm')]);
     expect(radiusOf('database.css', '[data-blok-database-list-row-edit]')).toEqual([role('control')]);
     expect(radiusOf('database.css', '[data-blok-database-drawer-close]')).toEqual([role('control-sm')]);
   });

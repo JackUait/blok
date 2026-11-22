@@ -4828,8 +4828,12 @@ button[data-blok-database-board-lane-count]:hover {
   background-color: var(--blok-database-add-hover-bg);
 }
 
-/* The ⋮⋮ left of a hovered row, as the table's gutter (research/12 §3, 64-list-row-hover.png). */
-[data-blok-database-list-row-gutter] {
+/*
+ * The + and ⋮⋮ left of a hovered row, as the table's gutter (research/12 §3, 64-list-row-hover.png).
+ * notion-motion.md Round 114 §1 #7: a timeline panel row has the same pair, the ⋮⋮ 2px off the row.
+ */
+[data-blok-database-list-row-gutter],
+[data-blok-database-timeline-table-row-gutter] {
   position: absolute;
   inset-block: 0;
   inset-inline-end: 100%;
@@ -4841,12 +4845,16 @@ button[data-blok-database-board-lane-count]:hover {
 }
 
 [data-blok-database-list-row]:hover > [data-blok-database-list-row-gutter],
-[data-blok-database-list-row][data-popover-open] > [data-blok-database-list-row-gutter] {
+[data-blok-database-list-row][data-popover-open] > [data-blok-database-list-row-gutter],
+[data-blok-database-timeline-table-row]:hover > [data-blok-database-timeline-table-row-gutter],
+[data-blok-database-timeline-table-row][data-popover-open] > [data-blok-database-timeline-table-row-gutter] {
   opacity: 1;
 }
 
 [data-blok-database-list-row-add],
-[data-blok-database-list-row-handle] {
+[data-blok-database-list-row-handle],
+[data-blok-database-timeline-table-row-add],
+[data-blok-database-timeline-table-row-handle] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4860,25 +4868,30 @@ button[data-blok-database-board-lane-count]:hover {
   cursor: grab;
 }
 
-[data-blok-database-list-row-add] {
+[data-blok-database-list-row-add],
+[data-blok-database-timeline-table-row-add] {
   width: 24px;
   cursor: pointer;
 }
 
 [data-blok-database-list-row-add]:hover,
-[data-blok-database-list-row-handle]:hover {
+[data-blok-database-list-row-handle]:hover,
+[data-blok-database-timeline-table-row-add]:hover,
+[data-blok-database-timeline-table-row-handle]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
 /* notion-motion.md Round 69 §4: Notion's 20 svg; the 12-unit plus inks Notion's 12x12 at it. */
-[data-blok-database-list-row-add] svg {
+[data-blok-database-list-row-add] svg,
+[data-blok-database-timeline-table-row-add] svg {
   flex: none;
   width: 20px;
   height: 20px;
 }
 
 /* IconRowGrip is Notion's 8x16 grip at 20px, one unit per pixel. It overflows its 18px button. */
-[data-blok-database-list-row-handle] svg {
+[data-blok-database-list-row-handle] svg,
+[data-blok-database-timeline-table-row-handle] svg {
   flex: none;
   width: 20px;
   height: 20px;
@@ -8139,6 +8152,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   [data-blok-database-list-group-toggle] svg,
   [data-blok-database-list-row],
   [data-blok-database-list-row-gutter],
+  [data-blok-database-timeline-table-row-gutter],
   [data-blok-database-column-reordering] [data-blok-database-column-header],
   [data-blok-database-tab],
   [data-blok-database-tab-bar][data-dragging] [data-blok-database-tab],
@@ -17559,7 +17573,7 @@ button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-fie
 }
 
 [data-blok-database-timeline-table-header] > *,
-[data-blok-database-timeline-table-row] > * {
+[data-blok-database-timeline-table-row] > :not([data-blok-database-timeline-table-row-gutter]) {
   padding-inline: var(--blok-space-2);
 }
 
@@ -17569,11 +17583,13 @@ button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-fie
   color: var(--blok-database-timeline-header-text);
 }
 
+/* Anchors the + and ⋮⋮ gutter left of the row. */
 [data-blok-database-timeline-table-row] {
+  position: relative;
   box-sizing: border-box;
 }
 
-[data-blok-database-timeline-table-row] > * {
+[data-blok-database-timeline-table-row] > :not([data-blok-database-timeline-table-row-gutter]) {
   min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;

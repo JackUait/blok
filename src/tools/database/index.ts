@@ -7321,6 +7321,15 @@ export class DatabaseTool implements BlockTool {
 
           if (rowId !== undefined && this.view instanceof DatabaseTimelineView) this.view.editTitle(rowId);
         },
+        ...(this.readOnly ? {} : {
+          // notion-motion.md Round 114 §1 #7. What Notion's + does here is unmeasured; it is the list's and table's add-below.
+          addRowBelow: (groupKey: string | null, afterRowId: string) => {
+            const rowId = this.addTableRow(groupKey, afterRowId);
+
+            if (rowId !== null && this.view instanceof DatabaseTimelineView) this.view.editTitle(rowId);
+          },
+          openRowMenu: (handle: HTMLElement, rowEl: HTMLElement, rowId: string) => this.openCardMenu(handle, rowEl, rowId, undefined, 'handle'),
+        }),
         renameRow: (rowId, title) => this.updateRowTitleBlock(rowId, titlePropId, title),
         writeDates: (rowId, write) => this.writeTimelineDates(rowId, write, startId, endId),
         moveRow: (result) => this.handleTableRowDrop(result),

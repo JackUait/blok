@@ -221,7 +221,7 @@ describe('database timeline styles', () => {
       expect(body).toContain('inline-size: max-content');
       expect(body).toMatch(/padding-inline: 0[;\s]/);
     }
-    expect(ruleBody('[data-blok-database-timeline-table-row] > *')).toContain('padding-inline: var(--blok-space-2)');
+    expect(ruleBody('[data-blok-database-timeline-table-row] > :not([data-blok-database-timeline-table-row-gutter])')).toContain('padding-inline: var(--blok-space-2)');
     expect(ruleBody('[data-blok-database-timeline-table-header] > *')).toContain('padding-inline: var(--blok-space-2)');
     expect(ruleBody('[data-blok-database-timeline-table-title]')).toContain('margin-inline-end: -1px');
     expect(ruleBody('[data-blok-database-timeline-table-footer] > :first-child')).toBe('');

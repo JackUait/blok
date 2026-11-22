@@ -115,3 +115,61 @@ describe('DatabaseTool — timeline panel row menu: focus after close', () => {
     expect(titleCell(el, 'a')).not.toHaveFocus();
   });
 });
+
+/** notion-motion.md Round 114 §1 #7: the panel ⋮⋮ opens the row menu; its Escape leaves focus on BODY. */
+describe('DatabaseTool — timeline panel row ⋮⋮ and +', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  const gutterPart = (el: HTMLElement, rowId: string, part: 'add' | 'handle'): HTMLElement => {
+    const found = panelRow(el, rowId).querySelector<HTMLElement>(`[data-blok-database-timeline-table-row-${part}]`);
+
+    if (found === null) throw new Error(`no ${part}`);
+
+    return found;
+  };
+
+  it('a ⋮⋮ click opens the row menu and keeps the row\'s gutter up', () => {
+    const { el } = buildTool(timelineDoc(), {}, timelineData());
+
+    gutterPart(el, 'a', 'handle').click();
+
+    expect(menuItem('database-row-duplicate')).not.toBeNull();
+    expect(panelRow(el, 'a').hasAttribute('data-popover-open')).toBe(true);
+  });
+
+  it('Escape from the ⋮⋮ menu does not move focus to the row', async () => {
+    const { el } = buildTool(timelineDoc(), {}, timelineData());
+
+    gutterPart(el, 'a', 'handle').click();
+    pressEscape();
+    await settle();
+
+    expect(titleCell(el, 'a')).not.toHaveFocus();
+  });
+
+  it('a + click inserts a new row right below', () => {
+    const doc = timelineDoc();
+    const { el } = buildTool(doc, {}, timelineData());
+
+    gutterPart(el, 'a', 'add').click();
+
+    const ids = [...el.querySelectorAll('[data-blok-database-timeline-table-row]')].map((row) => row.getAttribute('data-row-id'));
+
+    expect(ids).toHaveLength(3);
+    expect(ids[0]).toBe('a');
+    expect(ids[2]).toBe('b');
+  });
+
+  it('a read-only panel has no ⋮⋮ or +', () => {
+    const { el } = buildTool(timelineDoc(), {}, timelineData(), true);
+
+    expect(el.querySelector('[data-blok-database-timeline-table-row-gutter]')).toBeNull();
+  });
+});

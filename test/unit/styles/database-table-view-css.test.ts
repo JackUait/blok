@@ -513,7 +513,7 @@ describe('database table calculation footer', () => {
   });
 
   // notion-motion.md Round 110 §1 #5 (r110-n-filtered-empty-light.raw): "Edit filters" fills 0.051 on hover, background 0.02s ease-in.
-  // The bordered rule's transparent background must not win over it. New page's hover is unread in Notion.
+  // The bordered rule's transparent background must not win over it.
   it('fills "Edit filters" with the hover tint', () => {
     const hover = exactRule('[data-blok-database-table-edit-filters]:hover');
     const bordered = css.indexOf('[data-blok-database-table-empty] [data-blok-database-table-add-row] {\n  display: inline-flex');
@@ -521,6 +521,15 @@ describe('database table calculation footer', () => {
     expect(hover).toMatch(/background-color:\s*var\(--blok-database-hover-bg\)/);
     expect(css.indexOf('[data-blok-database-table-edit-filters]:hover')).toBeGreaterThan(bordered);
     expect(ruleBody('[data-blok-database-table-edit-filters]')).toMatch(/transition:\s*background-color 20ms ease-in/);
+  });
+
+  // notion-motion.md Round 111 §1 #7 (r111-n-filtered-empty-newpage-hover.raw): "New page" fills 0.051 too, by 49 ms.
+  it('fills the filtered-empty "New page" with the hover tint', () => {
+    const selector = '[data-blok-database-table-empty] [data-blok-database-table-add-row]:hover';
+    const bordered = css.indexOf('[data-blok-database-table-empty] [data-blok-database-table-add-row] {\n  display: inline-flex');
+
+    expect(exactRule(selector)).toMatch(/background-color:\s*var\(--blok-database-hover-bg\)/);
+    expect(css.indexOf(selector)).toBeGreaterThan(bordered);
   });
 
   // Shot 66: the value ends 11px short of the column edge; the box's 6px plus the cell's 4px.

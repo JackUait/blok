@@ -15150,6 +15150,10 @@ a[data-blok-database-comment-mention-chip] {
   background-color: var(--blok-database-hover-bg);
 }
 
+[data-blok-database-table-empty] [data-blok-database-table-add-row]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
 [data-blok-database-table-edit-filters] {
   padding-inline-start: var(--blok-space-1-5);
 }

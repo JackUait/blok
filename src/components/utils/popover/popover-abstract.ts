@@ -311,8 +311,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   public closesAtOnce = false;
 
   /**
-   * Opt-in: a primary click away acts like a click on a full-window backdrop.
+   * Opt-in: a left or right click away acts like a click on a full-window backdrop.
    * It only closes the popover, reaches nothing under it, and leaves focus on the body.
+   * A right click still opens the browser's own menu.
    */
   public swallowsOutsideClick = false;
 

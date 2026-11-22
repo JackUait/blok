@@ -778,6 +778,74 @@ describe('PopoverRegistry', () => {
       el.remove();
     });
 
+    /** A right press, as Chrome fires it on macOS: contextmenu comes before mouseup. */
+    const rightPress = (element: HTMLElement): boolean => {
+      element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 2 }));
+      element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 2 }));
+      const notCancelled = element.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2 }));
+
+      element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 2 }));
+
+      return notCancelled;
+    };
+
+    const rightTarget = (): { el: HTMLElement; seen: string[] } => {
+      const target = outsideTarget();
+
+      target.el.addEventListener('contextmenu', () => target.seen.push('contextmenu'));
+
+      return target;
+    };
+
+    // notion-motion.md Round 108 §1 #2: a right-click away only closes the menu. Notion leaves the browser's own menu alone.
+    it('a right-click away closes a flagged popover, opens nothing under it, and keeps the browser menu', () => {
+      const { popover, trigger, popoverEl } = createMockPopover();
+      const { el, seen } = rightTarget();
+      const input = document.createElement('input');
+
+      document.body.appendChild(input);
+      input.focus();
+      document.body.appendChild(popoverEl);
+      popover.swallowsOutsideClick = true;
+      registry.register(popover, trigger);
+
+      expect(rightPress(el)).toBe(true);
+      expect(seen).toEqual([]);
+      expect(popover.hide).toHaveBeenCalledOnce();
+      expect(document.body).toHaveFocus();
+      popoverEl.remove();
+      el.remove();
+      input.remove();
+    });
+
+    it('the next right-click acts again', () => {
+      const { popover, trigger, popoverEl } = createMockPopover();
+      const { el, seen } = rightTarget();
+
+      vi.mocked(popover.hide).mockImplementation(() => registry.unregister(popover));
+      document.body.appendChild(popoverEl);
+      popover.swallowsOutsideClick = true;
+      registry.register(popover, trigger);
+      rightPress(el);
+      rightPress(el);
+
+      expect(seen).toEqual(['pointerdown', 'mousedown', 'contextmenu', 'mouseup']);
+      popoverEl.remove();
+      el.remove();
+    });
+
+    it('an unflagged popover lets a right-click away through (the default)', () => {
+      const { popover, trigger } = createMockPopover();
+      const { el, seen } = rightTarget();
+
+      registry.register(popover, trigger);
+      rightPress(el);
+
+      expect(seen).toEqual(['pointerdown', 'mousedown', 'contextmenu', 'mouseup']);
+      expect(popover.hide).toHaveBeenCalledOnce();
+      el.remove();
+    });
+
     it('an unflagged popover lets the click away through (the default)', () => {
       const { popover, trigger } = createMockPopover();
       const { el, seen } = outsideTarget();

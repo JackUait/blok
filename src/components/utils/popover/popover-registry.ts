@@ -22,18 +22,24 @@ const isInteractiveTriggerControl = (element: HTMLElement): boolean =>
   element.matches('button, [role="button"]');
 
 /**
- * Eats the mousedown, mouseup and click that follow a swallowed pointerdown.
- * Lives outside the registry's listeners: closing the popover empties the stack,
- * which removes those. Ends on the click, or on the next pointerdown when the
- * press made no click, so it never eats a later click.
+ * Eats the mousedown, mouseup and click (contextmenu for a right press) that follow a
+ * swallowed pointerdown. Lives outside the registry's listeners: closing the popover
+ * empties the stack, which removes those. Stops eating clicks (contextmenus) after the
+ * first, so a later one acts; the rest ends on the next pointerdown. A right press may
+ * fire its mouseup after the contextmenu (macOS), so that one ends there too.
+ * The contextmenu keeps its default: the browser's own menu still opens, as in Notion.
+ * @param button - the pressed button
  */
-const swallowRestOfPress = (): void => {
-  const types = ['mousedown', 'mouseup', 'click'] as const;
+const swallowRestOfPress = (button: number): void => {
+  const last = button === 2 ? 'contextmenu' : 'click';
+  const types = ['mousedown', 'mouseup', last];
   const swallow = (event: Event): void => {
-    event.preventDefault();
+    if (event.type !== 'contextmenu') {
+      event.preventDefault();
+    }
     event.stopImmediatePropagation();
-    if (event.type === 'click') {
-      stop();
+    if (event.type === last) {
+      window.removeEventListener(last, swallow, true);
     }
   };
   const stop = (): void => {
@@ -409,13 +415,14 @@ export class PopoverRegistry {
    * Backdrop for popovers with {@link PopoverAbstract.swallowsOutsideClick}. Runs at
    * window capture, before any page handler: when a primary press away closes such a
    * popover, it closes the same entries the bubble handler would and eats the rest of
-   * the gesture, so the press does not act on what lies under it.
+   * the gesture, so the press does not act on what lies under it. A secondary press does
+   * the same, so no other menu opens under the pointer.
    * @param event - the pointerdown event
    */
   private handleBackdropPointerDown(event: PointerEvent): void {
     const target = event.target;
 
-    if (event.button !== 0 || !(target instanceof Node)) {
+    if ((event.button !== 0 && event.button !== 2) || !(target instanceof Node)) {
       return;
     }
 
@@ -435,7 +442,7 @@ export class PopoverRegistry {
 
     event.preventDefault();
     event.stopImmediatePropagation();
-    swallowRestOfPress();
+    swallowRestOfPress(event.button);
 
     for (const entry of entriesToClose) {
       entry.popover.hide();

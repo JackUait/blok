@@ -259,10 +259,15 @@ describe('database table view styles', () => {
     expect(exactRule('[data-blok-database-table-open]:not([data-compact]):hover')).toBe('');
   });
 
-  // notion-motion.md Round 105 §1 #3 (r105-n-opill-dark-hover.png): dark hover paints the inner box 41; the light fill is unchanged.
+  // notion-motion.md Round 105 §1 #3 (r105-n-opill-dark-hover.png): dark hover paints the inner box 41.
   it('paints the dark OPEN pill hover 41, not the menu tint over its 37 box', () => {
     expect(css.match(/--blok-database-table-open-hover-bg: rgb\(41, 41, 41\);/g)).toHaveLength(2);
-    expect(css.match(/--blok-database-table-open-hover-bg: var\(--blok-database-table-header-hover-bg\);/g)).toHaveLength(1);
+  });
+
+  // notion-motion.md Round 105 §1 #3 (r105-n-opill-light-hover.png): light hover paints the inner box 245.
+  it('paints the light OPEN pill hover 245', () => {
+    expect(css.match(/--blok-database-table-open-hover-bg: rgb\(245, 245, 245\);/g)).toHaveLength(1);
+    expect(css).not.toContain('--blok-database-table-open-hover-bg: var(--blok-database-table-header-hover-bg);');
   });
 
   it('draws the OPEN and CLOSE glyph at 18px, over its 15.25px slot', () => {

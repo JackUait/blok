@@ -152,6 +152,8 @@ export interface SortEditorOptions {
   gap?: number;
   /** The pinned group modal's editor (r27-pm-sortpop.raw): no drag handle, no ×, at least 290 wide. */
   compact?: boolean;
+  /** Opening leaves focus here, outside the panel, and the panel stays open. */
+  focusHost?: HTMLElement;
   onClose: (escape: boolean) => void;
 }
 
@@ -313,6 +315,7 @@ export const sortEditor = (options: SortEditorOptions): DatabasePanel => {
     width: 290,
     backLabel: t('settingsBack'),
     ...(options.gap !== undefined ? { gap: options.gap } : {}),
+    ...(options.focusHost !== undefined ? { focusHost: options.focusHost } : {}),
     onClose: (escape) => {
       state.addPicker?.close();
       options.onClose(escape);

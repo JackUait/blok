@@ -2885,6 +2885,19 @@ describe('DatabaseViewControls', () => {
       expect(q('database-sort-panel')).not.toBeNull();
       expect(q('database-sort-pill')?.hasAttribute('data-popover-open')).toBe(true);
     });
+
+    // notion-motion.md Round 114 §1 #11: after the pick Notion focuses the Sort button, not the new rule's handle.
+    it('focuses the Sort button after a pick, with the sort panel still open', () => {
+      setup({ schema: () => many });
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+      click('database-toolbar-sort');
+      click('database-pick-property-alpha');
+
+      expect(q('database-toolbar-sort')).toHaveFocus();
+      expect(q('database-sort-panel')).not.toBeNull();
+      expect(q('database-sort-pill')?.hasAttribute('data-popover-open')).toBe(true);
+    });
   });
   describe('search box (Notion: the magnifier stays, a clear ×)', () => {
     it('keeps the magnifier in front of the input', () => {
@@ -3259,14 +3272,6 @@ describe('DatabaseViewControls', () => {
 
       expect(q('database-search-input')).toBeNull();
       expect(q('database-toolbar-search')).toHaveFocus();
-    });
-
-    it('leaves the focus alone when a pick closes the picker', () => {
-      setup();
-      click('database-toolbar-sort');
-      click('database-pick-property-num');
-
-      expect(q('database-toolbar-sort')).not.toHaveFocus();
     });
   });
 

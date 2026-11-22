@@ -1190,7 +1190,8 @@ export class DatabaseViewControls {
         // notion-motion.md Round 47 §D: the new sort's panel opens under its chip.
         const chip = this.filterBar.querySelector<HTMLElement>('[data-blok-testid="database-sort-pill"]');
 
-        if (chip !== null && !this.filterBar.hidden) this.openSortPanel(chip, this.sortButton);
+        // notion-motion.md Round 114 §1 #11: focus goes to the Sort button, not into the new panel.
+        if (chip !== null && !this.filterBar.hidden) this.openSortPanel(chip, this.sortButton, this.sortButton);
       }, {
         placeholder: this.t('sortByPlaceholder'),
         kind: 'sort',
@@ -1213,7 +1214,7 @@ export class DatabaseViewControls {
     this.openSortPanel(chip !== null && chip.isConnected && !this.filterBar.hidden ? chip : this.sortButton, this.sortButton);
   }
 
-  private openSortPanel(anchor: HTMLElement, opener: HTMLElement = anchor): void {
+  private openSortPanel(anchor: HTMLElement, opener: HTMLElement = anchor, focusHost?: HTMLElement): void {
     const panel = sortEditor({
       anchor,
       i18n: this.host.i18n,
@@ -1223,6 +1224,7 @@ export class DatabaseViewControls {
       write: (next) => this.updatePersonal({ sorts: next }),
       // notion-motion.md Round 17 §5: chip bottom 301, panel top 305.
       ...(anchor === this.sortButton ? {} : { gap: SORT_PANEL_GAP }),
+      ...(focusHost !== undefined ? { focusHost } : {}),
       onClose: (escape) => this.panelClosed(anchor, escape, opener),
     });
 

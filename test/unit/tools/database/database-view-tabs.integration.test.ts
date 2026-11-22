@@ -125,6 +125,7 @@ describe('view tabs (feel/findings-toolbar)', () => {
     PopoverRegistry.resetForTests();
     document.body.innerHTML = '';
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe('V05: Add view opens the new view\'s settings', () => {
@@ -536,6 +537,8 @@ describe('view tabs (feel/findings-toolbar)', () => {
     });
 
     it('Edit icon opens the icon picker', async () => {
+      // jsdom has no matchMedia; the emoji picker reads the theme from it.
+      vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
       await make(doc());
 
       titleMore()?.click();

@@ -17675,6 +17675,11 @@ button[data-blok-database-table-group-count]:hover {
   padding-block-end: var(--blok-space-1);
 }
 
+[data-blok-database-panel-page="picker"] > [data-blok-database-picker-list="sort"] {
+  padding-block-end: var(--blok-space-1);
+  margin-block-end: calc(-1 * var(--blok-space-1));
+}
+
 [data-blok-database-panel-page="picker"] > [data-blok-database-panel-separator] {
   margin-block-start: 0;
   margin-inline: var(--blok-space-2);

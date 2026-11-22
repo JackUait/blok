@@ -2034,7 +2034,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // the filter picker's list ends 4 under its last row over a divider 12 in (Round 107). Net database.css growth.
     const DATABASE_R287_BYTES = 803;
     // Lane r290: a minimized view bar's « zone starts 16 left of the toolbar (Round 108). Net database.css growth.
-    const DATABASE_R290_BYTES = 447;
+    // +419: the sort picker's last row ends 4 over the surface's bottom.
+    const DATABASE_R290_BYTES = 447 + 419;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

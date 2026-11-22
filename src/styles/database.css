@@ -15060,6 +15060,13 @@ button[data-blok-database-table-group-count]:hover {
   padding-block-end: var(--blok-space-1);
 }
 
+/* Round 108 §1 #4 (r108-n-sort-picker-end.raw): scrolled to the end, the sort list's last row ends 4 over the surface's
+   bottom. The list takes the surface's 4 bottom padding into its scroll, so a list that fits keeps its height. */
+[data-blok-database-panel-page="picker"] > [data-blok-database-picker-list="sort"] {
+  padding-block-end: var(--blok-space-1);
+  margin-block-end: calc(-1 * var(--blok-space-1));
+}
+
 [data-blok-database-panel-page="picker"] > [data-blok-database-panel-separator] {
   margin-block-start: 0;
   margin-inline: var(--blok-space-2);

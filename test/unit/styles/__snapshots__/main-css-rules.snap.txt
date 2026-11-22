@@ -19931,7 +19931,7 @@ button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-fie
   justify-content: center;
   inline-size: 18px;
   block-size: 18px;
-  color: var(--blok-database-table-header-icon);
+  color: var(--blok-database-table-title-icon);
 }
 
 [data-blok-database-timeline-table-title] > [data-blok-database-page-icon-placeholder] svg {

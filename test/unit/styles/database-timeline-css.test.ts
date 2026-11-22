@@ -433,6 +433,13 @@ describe('timeline in dark (research/21 §1i)', () => {
       .toEqual(['rgb(125, 122, 117)', 'rgb(125, 122, 117)']);
   });
 
+  // notion-motion.md r9-timeline-dark: the panel row's pageEmpty icon is fill rgb(125, 122, 117). Light stays 142.
+  it('inks the panel row\'s page icon 125 in dark, like the table title icon', () => {
+    expect(css).toMatch(/\[data-blok-database-timeline-table-title\] > :is\(\[data-blok-database-page-icon\], \[data-blok-database-page-icon-placeholder\]\) \{[^}]*color: var\(--blok-database-table-title-icon\);/);
+    expect(css).toContain('--blok-database-table-title-icon: var(--blok-database-table-header-icon);');
+    expect(darkValues('--blok-database-table-title-icon')).toEqual(['rgb(125, 122, 117)', 'rgb(125, 122, 117)']);
+  });
+
   // The dark icon ink is unmeasured. White on the measured chip is 2.3:1, under the 3:1 icon minimum; page ink is 7.5:1.
   it('draws the off-screen arrow in page ink on the light chip, so it stays readable', () => {
     expect(darkValues('--blok-database-timeline-arrow-icon')).toEqual(['rgb(25, 25, 25)', 'rgb(25, 25, 25)']);

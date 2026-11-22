@@ -332,9 +332,10 @@ describe('cell editor CSS', () => {
   describe('Edit property option row menu', () => {
     const MENU = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-option-menu']";
 
-    it('grows from its top-right corner, top-left in right-to-left', () => {
-      expect(declared(`${MENU} [data-blok-popover-container]`, 'transform-origin')).toEqual(['top right']);
-      expect(declared(`${MENU}[data-blok-popover-open-left='true'] [data-blok-popover-container]`, 'transform-origin')).toEqual(['top left']);
+    // notion-motion.md Round 105 §1 #1: open-left now names the side it grows towards, so core's corners apply.
+    it('grows from the corner core picks for the side it grows towards', () => {
+      expect(declared(`${MENU}[data-blok-popover-open-left='true'] [data-blok-popover-container]`, 'transform-origin')).toEqual([]);
+      expect(declared(`${MENU} [data-blok-popover-container]`, 'transform-origin')).toEqual([]);
     });
 
     it('draws Group and the group picks as menu rows, 28 tall', () => {

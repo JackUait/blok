@@ -13265,14 +13265,6 @@ textarea[data-blok-database-cell-input] {
   transform-origin: top right;
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-option-menu'] [data-blok-popover-container] {
-  transform-origin: top right;
-}
-
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-option-menu'][data-blok-popover-open-left='true'] [data-blok-popover-container] {
-  transform-origin: top left;
-}
-
 [data-blok-database-option-group-value] {
   margin-inline-start: auto;
   color: var(--blok-database-ink-secondary);

@@ -9985,15 +9985,8 @@ textarea[data-blok-database-cell-input] {
   transform-origin: top right;
 }
 
-/* Round 56 §5: Edit property's option menu grows from its top-right corner. Group › reads its group at the end. */
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-option-menu'] [data-blok-popover-container] {
-  transform-origin: top right;
-}
-
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-option-menu'][data-blok-popover-open-left='true'] [data-blok-popover-container] {
-  transform-origin: top left;
-}
-
+/* Round 56 §5, Round 105 §1 #1: Edit property's option menu grows from its top-right corner, from core's open-left rule.
+   Group › reads its group at the end. */
 [data-blok-database-option-group-value] {
   margin-inline-start: auto;
   color: var(--blok-database-ink-secondary);

@@ -1,6 +1,7 @@
 import { IconCheck, IconDotsHorizontal, IconMenu, IconPlus } from '../icons';
 import { DATA_ATTR } from '../constants/data-attributes';
 import { syncPortalDirection } from './portal-direction';
+import { isKeyboardModality } from './input-modality';
 import { SearchInput, SearchInputEvent } from './popover/components/search-input';
 import { createPositionTracker, positionFixedAnchored, type PositionTracker } from './popover/anchored-position';
 import { promoteToTopLayer, removeFromTopLayer } from './top-layer';
@@ -190,7 +191,8 @@ export class OverflowList {
     // Escape, so one press peels only the top layer.
     window.addEventListener('keydown', this.handleKeyDown, true);
     search.focus();
-    this.highlight(this.currentRow());
+    // Keyboard-only focus law: a mouse open tints no row.
+    this.highlight(isKeyboardModality() ? this.currentRow() : null);
   }
 
   public close(escape = false): void {

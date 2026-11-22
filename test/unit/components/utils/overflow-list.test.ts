@@ -130,6 +130,35 @@ describe('OverflowList keyboard (research/21 §2)', () => {
     expect(highlighted()).toBe('b');
   });
 
+  // Keyboard-only focus law: a mouse open tints no row.
+  describe('after a mouse open', () => {
+    beforeEach(() => {
+      list.close();
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      list = make();
+      list.open();
+    });
+
+    afterEach(() => {
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+    });
+
+    it('highlights no row, and the search still has focus', () => {
+      expect(highlighted()).toBeNull();
+      expect(input()).toHaveFocus();
+    });
+
+    it('ArrowDown starts at the first row, ArrowUp at New view', () => {
+      press('ArrowDown');
+
+      expect(highlighted()).toBe('a');
+
+      press('ArrowUp');
+
+      expect(highlighted()).toBe('new');
+    });
+  });
+
   it('wires the search as a combobox over a listbox of options', () => {
     const listbox = document.querySelector(`[${P}-dropdown] [role="listbox"]`);
     const current = document.querySelector(`[${P}-item][data-id="b"]`);

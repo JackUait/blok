@@ -1,4 +1,5 @@
 import { nanoid } from 'nanoid';
+import { isKeyboardModality } from '../../components/utils/input-modality';
 import { IconCross, IconPlus, IconTrash } from '../../components/icons';
 import type { I18n } from '../../../types';
 import { DatabasePanel, panelInput, panelReorderList, panelRow, panelSeparator, panelText } from './database-panel';
@@ -44,7 +45,8 @@ export interface PropertyPickerOptions {
  * highlighted, Name first and then A→Z, each with its type glyph. Not opened yet.
  */
 export const propertyPicker = (options: PropertyPickerOptions): DatabasePanel => {
-  const state = { query: '', active: 0 };
+  // Keyboard-only focus law: a mouse open fills no row (-1).
+  const state = { query: '', active: isKeyboardModality() ? 0 : -1 };
   const list = document.createElement('div');
 
   list.setAttribute('data-blok-database-picker-list', options.kind ?? '');
@@ -111,7 +113,9 @@ export const propertyPicker = (options: PropertyPickerOptions): DatabasePanel =>
           if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
             event.preventDefault();
             if (shown.length === 0) return;
-            state.active = (state.active + (event.key === 'ArrowDown' ? 1 : -1) + shown.length) % shown.length;
+            const from = state.active === -1 && event.key === 'ArrowUp' ? 0 : state.active;
+
+            state.active = (from + (event.key === 'ArrowDown' ? 1 : -1) + shown.length) % shown.length;
             fill();
           } else if (event.key === 'Enter' && !event.isComposing) {
             event.preventDefault();

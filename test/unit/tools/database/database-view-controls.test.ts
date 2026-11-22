@@ -329,6 +329,41 @@ describe('DatabaseViewControls', () => {
       expect(filled()).toEqual([1]);
     });
 
+    // Keyboard-only focus law: a mouse open fills no row; the arrows still start at the ends.
+    describe('after a mouse open', () => {
+      const rows = (): Element[] => [...(q('database-sort-picker')?.querySelectorAll('[data-blok-database-picker-list] [data-blok-database-panel-row]') ?? [])];
+      const filled = (): number[] => rows().flatMap((row, index) => row.hasAttribute('data-active') ? [index] : []);
+      const key = (k: string): void => {
+        q('database-sort-picker-search')?.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+      };
+
+      beforeEach(() => {
+        setup();
+        document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+        click('database-toolbar-sort');
+      });
+
+      afterEach(() => {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+      });
+
+      it('the Sort picker fills no row, and Enter picks nothing', () => {
+        expect(filled()).toEqual([]);
+        key('Enter');
+        expect(q('database-sort-picker')).not.toBeNull();
+      });
+
+      it('ArrowDown fills the first row', () => {
+        key('ArrowDown');
+        expect(filled()).toEqual([0]);
+      });
+
+      it('ArrowUp fills the last row', () => {
+        key('ArrowUp');
+        expect(filled()).toEqual([rows().length - 1]);
+      });
+    });
+
     it('draws Σ in the Sort picker', () => {
       withFormula();
       click('database-toolbar-sort');

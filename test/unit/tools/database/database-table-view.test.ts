@@ -880,6 +880,34 @@ describe('DatabaseTableView', () => {
       expect(document.body).toHaveFocus();
     });
 
+    // notion-motion.md Round 56 §3: with no cell selected after that Tab, ArrowDown selects the edited row; again, the next row.
+    it('ArrowDown after Tab out of a changed Text cell selects the edited row, then the row below', () => {
+      const { root } = mount();
+      const selectedRows = (): Array<string | null> =>
+        [...root.querySelectorAll('[data-blok-database-table-row][aria-selected="true"]')].map((el) => el.getAttribute('data-row-id'));
+
+      cell(root, 'r1', 'p-notes').click();
+      editorField().value = 'typed';
+      editorField().dispatchEvent(new Event('input', { bubbles: true }));
+      press(editorField(), 'Tab');
+      const first = press(document.body, 'ArrowDown');
+
+      expect(selectedRows()).toEqual(['r1']);
+      expect(first.defaultPrevented).toBe(true);
+      expect(selectedCells(root)).toEqual([]);
+
+      press(document.body, 'ArrowDown');
+      expect(selectedRows()).toEqual(['r2']);
+    });
+
+    it('ArrowDown on the page with no edited row selects nothing', () => {
+      const { root } = mount();
+      const event = press(document.body, 'ArrowDown');
+
+      expect(root.querySelectorAll('[data-blok-database-table-row][aria-selected="true"]')).toHaveLength(0);
+      expect(event.defaultPrevented).toBe(false);
+    });
+
     it('Tab in a Number cell editor saves and selects the cell to the right', () => {
       const { root, handlers } = mount();
 

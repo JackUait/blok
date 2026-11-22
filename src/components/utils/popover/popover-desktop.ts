@@ -1105,9 +1105,15 @@ export class PopoverDesktop extends PopoverAbstract {
 
     // A list's search field holds DOM focus; removing it would drop focus to <body>.
     const hadFocus = this.nestedPopover.getElement().contains(document.activeElement);
+    // Read before the destroy: it clears the trigger.
+    const row = this.nestedPopoverTriggerItem?.childrenEscapeFocusesRow === true ? this.nestedPopoverTriggerItem.getElement() : null;
 
     this.destroyNestedPopoverIfExists(true);
-    if (hadFocus && this.search !== undefined) {
+    if (row?.isConnected === true) {
+      // Rows have no tabindex of their own; without one focus() does nothing.
+      row.setAttribute('tabindex', '-1');
+      row.focus({ preventScroll: true });
+    } else if (hadFocus && this.search !== undefined) {
       this.search.focus();
     } else if (hadFocus) {
       this.nodes.items?.focus({ preventScroll: true });

@@ -156,6 +156,13 @@ export abstract class PopoverItem {
     return this.params !== undefined && 'children' in this.params && this.params.children?.clickOnly === true;
   }
 
+  /**
+   * True if Escape on the children puts DOM focus on this item
+   */
+  public get childrenEscapeFocusesRow(): boolean {
+    return this.params !== undefined && 'children' in this.params && this.params.children?.escapeFocusesRow === true;
+  }
+
   /**   * Returns true if the chevron icon should be hidden
    */
   public get isChevronHidden(): boolean {

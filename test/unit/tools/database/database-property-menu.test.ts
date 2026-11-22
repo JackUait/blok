@@ -20,7 +20,7 @@ interface CapturedItem {
   element?: HTMLElement;
   onActivate?: (item: CapturedItem) => void;
   confirmation?: { onActivate: (item: CapturedItem) => void; title?: string };
-  children?: { items: CapturedItem[]; align?: string; searchable?: boolean; width?: string; minWidth?: string; placement?: string; clickOnly?: boolean; class?: string };
+  children?: { items: CapturedItem[]; escapeFocusesRow?: boolean; align?: string; searchable?: boolean; width?: string; minWidth?: string; placement?: string; clickOnly?: boolean; class?: string };
 }
 
 interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; holds?: number; released?: number; params: Record<string, unknown>; activated: string[]; focused: string[]; hidden: Record<string, boolean>; closed?: () => void; hide: () => void; transitionAtShow?: string; moves: Array<{ position: DOMRect; positionContext?: HTMLElement }> }
@@ -1330,6 +1330,29 @@ describe('DatabasePropertyMenu', () => {
       byName(rows, 'decimals-1').onActivate?.(byName(rows, 'decimals-1'));
 
       expect(captured.popovers[captured.popovers.length - 1]?.focused).toEqual(['decimals']);
+      menu.destroy();
+    });
+
+    // notion-motion.md R84b §1, R105 §1 #7: after a Number format pick Notion's focus is on the "Number format" row.
+    it('after a Number format pick, DOM focus is on the Number format row', () => {
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+      menu.openRowPage(prop('number'), document.createElement('div'), { edit: true });
+      const rows = byName(lastItems(), 'numberFormat').children?.items ?? [];
+
+      byName(rows, 'format-euro').onActivate?.(byName(rows, 'format-euro'));
+
+      // The mock leaves the swapped-out menu in the page; the redrawn row is the last one.
+      expect([...document.querySelectorAll('[data-blok-item-name="numberFormat"]')].at(-1)).toHaveFocus();
+      menu.destroy();
+    });
+
+    it('the Number format list asks Escape to put focus on its row', () => {
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+      menu.openRowPage(prop('number'), document.createElement('div'), { edit: true });
+
+      expect(byName(lastItems(), 'numberFormat').children).toMatchObject({ escapeFocusesRow: true });
       menu.destroy();
     });
 

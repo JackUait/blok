@@ -87,6 +87,13 @@ export interface PopoverItemChildren {
   clickOnly?: boolean;
 
   /**
+   * True if Escape on the children puts DOM focus on the item itself, not on
+   * the parent list. Needs `escapeClosesSubmenuFirst` on the root popover.
+   * False by default.
+   */
+  escapeFocusesRow?: boolean;
+
+  /**
    * Width of the nested popover. Defaults to '280px'.
    * Use 'auto' to fit content width.
    */

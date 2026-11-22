@@ -469,7 +469,16 @@ export class DatabasePropertyMenu {
       if (row === null) return;
       this.popover?.focusItemByName(row);
       // The redraw dropped DOM focus to <body>; Notion keeps it in the flyout, so arrows go on from the row.
-      this.popover?.getElement().querySelector(`[data-blok-item-name="${row}"]`)?.closest<HTMLElement>('[data-blok-popover-items]')?.focus({ preventScroll: true });
+      const rowElement = this.popover?.getElement().querySelector<HTMLElement>(`[data-blok-item-name="${row}"]`);
+
+      // notion-motion.md R84b §1: Number format puts focus on the row itself. Decimals is unmeasured, so it keeps the list.
+      if (row === 'numberFormat' && rowElement !== null && rowElement !== undefined) {
+        rowElement.setAttribute('tabindex', '-1');
+        rowElement.focus({ preventScroll: true });
+
+        return;
+      }
+      rowElement?.closest<HTMLElement>('[data-blok-popover-items]')?.focus({ preventScroll: true });
     };
   }
 
@@ -1642,6 +1651,8 @@ export class DatabasePropertyMenu {
         valueLabel: this.t(`tools.database.numberFormat.${number.format ?? 'number'}`).replace(/ \([A-Z]{3}\)$/, ''),
         children: {
           ...CLICK_ONLY_UNDER,
+          // notion-motion.md R94 §1 #6: Escape puts focus on this row.
+          escapeFocusesRow: true,
           class: FORMAT_SEARCH_LIST_CLASS,
           width: '192px',
           searchable: true,

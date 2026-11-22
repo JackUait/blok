@@ -159,6 +159,57 @@ describe('Popover: children.clickOnly and placement under', () => {
     expect(itemEl('format')?.getAttribute('data-blok-focused')).toBe('true');
   });
 
+  // notion-motion.md R94 §1 #6, R105 §1 #7: Notion's Escape on the Number format list puts focus on the "Number format" row.
+  it('children.escapeFocusesRow: Escape on the list puts DOM focus on its row', () => {
+    const popover = new PopoverDesktop({
+      items: [{ title: 'Number format', name: 'format', children: { clickOnly: true, searchable: true, escapeFocusesRow: true, items: [{ title: 'Euro', name: 'euro', onActivate: vi.fn() }] } }],
+    });
+
+    popovers.push(popover);
+    document.body.appendChild(popover.getElement());
+    popover.show();
+    popover.escapeClosesSubmenuFirst = true;
+    itemEl('format')?.click();
+    itemEl('euro')?.closest('[data-blok-popover-container]')?.querySelector<HTMLInputElement>('input')?.focus();
+
+    popover.closeSubmenuOnEscape();
+
+    expect(itemEl('format')).toHaveFocus();
+    expect(itemEl('euro')).toBeNull();
+    expect(itemEl('format')?.getAttribute('data-blok-focused')).toBe('true');
+  });
+
+  it('children.escapeFocusesRow: also from a list two levels down', () => {
+    const popover = new PopoverDesktop({
+      items: [{
+        title: 'Edit property',
+        name: 'edit',
+        children: {
+          items: [
+            { title: 'Number format', name: 'format', children: { clickOnly: true, searchable: true, escapeFocusesRow: true, items: [{ title: 'Euro', name: 'euro', onActivate: vi.fn() }] } },
+            { title: 'Decimals', name: 'decimals', onActivate: vi.fn() },
+          ],
+        },
+      }],
+    });
+
+    popovers.push(popover);
+    document.body.appendChild(popover.getElement());
+    popover.show();
+    popover.escapeClosesSubmenuFirst = true;
+    popover.activateItemByName('edit');
+    itemEl('format')?.click();
+    itemEl('euro')?.closest('[data-blok-popover-container]')?.querySelector<HTMLInputElement>('input')?.focus();
+
+    popover.closeSubmenuOnEscape();
+
+    expect(itemEl('format')).toHaveFocus();
+    expect(itemEl('euro')).toBeNull();
+    // The row holds DOM focus, and the arrows still move the cursor.
+    document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true }));
+    expect(itemEl('decimals')?.getAttribute('data-blok-focused')).toBe('true');
+  });
+
   it('other rows still open on hover', () => {
     vi.useFakeTimers();
     open();

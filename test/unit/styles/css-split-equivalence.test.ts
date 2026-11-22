@@ -2030,6 +2030,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r284: the dark OPEN pill hover token, the timeline toolbar rising 4 with no title row, the Layout page's 12 and 8 (Round 105).
     // Net database.css growth against origin/main.
     const DATABASE_R284_BYTES = 569;
+    // Lane r287: « shows over the title row's controls strip only; no note padding under the Conditional color intro;
+    // the filter picker's list ends 4 under its last row over a divider 12 in (Round 107). Net database.css growth.
+    const DATABASE_R287_BYTES = 803;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2735,6 +2738,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R282_BYTES
       + DATABASE_R283_BYTES
       + DATABASE_R284_BYTES
+      + DATABASE_R287_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

@@ -514,13 +514,18 @@ describe('conditional color intro text', () => {
   it('drops the note padding and takes the button\'s side margins', () => {
     const body = ruleBody(database, '[data-blok-database-panel-note][data-blok-database-color-blurb]');
 
-    expect(body).toContain('padding-inline: 0');
+    expect(body).toContain('padding: 0');
     expect(body).toContain('margin-inline: var(--blok-space-3)');
   });
 
   // Round 104 §1 #5 (r104-n-cc-empty-light.raw): Notion's wrapper has margin 16px 0, so the button sits 16 under the text.
   it('leaves 16 between the text and the New color setting button', () => {
     expect(ruleBody(database, '[data-blok-database-panel-note][data-blok-database-color-blurb]')).toContain('margin-block-end: var(--blok-space-4)');
+  });
+
+  // Round 107 §1 #3 (r107-b-cc-empty.raw): the note's 4px bottom padding made that gap 20.
+  it('drops the note\'s bottom padding, so the margin alone is the gap', () => {
+    expect(ruleBody(database, '[data-blok-database-panel-note][data-blok-database-color-blurb]')).toContain('padding: 0');
   });
 });
 

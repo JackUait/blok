@@ -18221,7 +18221,7 @@ button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-fie
 }
 
 [data-blok-database-panel-note][data-blok-database-color-blurb] {
-  padding-inline: 0;
+  padding: 0;
   margin-inline: var(--blok-space-3);
   margin-block-end: var(--blok-space-4);
 }

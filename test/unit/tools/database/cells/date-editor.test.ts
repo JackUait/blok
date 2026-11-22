@@ -342,6 +342,29 @@ describe('date cell editor', () => {
       expect(q(`[${attribute}]`)).toHaveFocus();
     });
 
+    // notion-motion.md Round 113 §1 #7: the switch is toggled in place, so its track and knob transitions run.
+    it.each(['data-blok-database-date-end-toggle', 'data-blok-database-date-time-toggle'])('keeps the same %s switch element across a click', (attribute) => {
+      openDate('2026-10-09');
+      const toggle = q(`[${attribute}]`);
+
+      toggle.click();
+
+      expect(toggle.isConnected).toBe(true);
+      expect(q(`[${attribute}]`)).toBe(toggle);
+      expect(toggle.getAttribute('aria-checked')).toBe('true');
+    });
+
+    // notion-motion.md Round 113 §1 #7 (r113-n-enddate-on.raw): End date splits the field into two side by side.
+    it('puts the start and end fields side by side, and stacks them again with Include time', () => {
+      openDate('2026-10-09');
+
+      expect(q('[data-blok-database-date-fields]').hasAttribute('data-blok-database-date-split')).toBe(false);
+      q('[data-blok-database-date-end-toggle]').click();
+      expect(q('[data-blok-database-date-fields]').hasAttribute('data-blok-database-date-split')).toBe(true);
+      q('[data-blok-database-date-time-toggle]').click();
+      expect(q('[data-blok-database-date-fields]').hasAttribute('data-blok-database-date-split')).toBe(false);
+    });
+
     it('turning End date off keeps only the start', () => {
       const ctx = openDate('2026-10-09/2026-10-12');
 

@@ -10105,6 +10105,18 @@ textarea[data-blok-database-cell-input] {
   gap: var(--blok-space-2);
 }
 
+/* notion-motion.md Round 113 §1 #7 (r83-n-date-enddate-fields.raw): a range without times splits the 224 row
+   into two 106.4 boxes, 11.2 apart. */
+[data-blok-database-date-fields][data-blok-database-date-split] {
+  flex-direction: row;
+  gap: 11.2px;
+}
+
+[data-blok-database-date-split] > [data-blok-database-date-field] {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 /* The box is field.css's look; Notion's text is 14px/16.8px. */
 [data-blok-database-date-field][data-blok-field],
 [data-blok-database-chip-date-field][data-blok-field] {

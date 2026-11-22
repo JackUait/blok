@@ -13355,6 +13355,16 @@ textarea[data-blok-database-cell-input] {
   gap: var(--blok-space-2);
 }
 
+[data-blok-database-date-fields][data-blok-database-date-split] {
+  flex-direction: row;
+  gap: 11.2px;
+}
+
+[data-blok-database-date-split] > [data-blok-database-date-field] {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 [data-blok-database-date-field][data-blok-field], [data-blok-database-chip-date-field][data-blok-field] {
   font-size: 14px;
   line-height: 16.8px;

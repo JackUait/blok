@@ -9453,6 +9453,14 @@ textarea[data-blok-database-cell-input] {
   text-align: end;
 }
 
+/* R112: Notion's value sits in a 110px box at the row's end; Blok draws its shared field look. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-html][data-blok-item-name="divideBy"] [data-blok-field],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-html][data-blok-item-name="divideBy"] [data-blok-field] {
+  flex: none;
+  inline-size: 110px;
+  margin-inline-start: auto;
+}
+
 /* notion-spec-2 §2. Notion rings the picked tile 2px blue; the no-blue law keeps the 2px ring, neutral.
    Notion's 12px heading and label inks fail AA, so they keep Blok's. */
 [data-blok-database-show-as] {

@@ -12780,6 +12780,12 @@ textarea[data-blok-database-cell-input] {
   text-align: end;
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-html][data-blok-item-name="divideBy"] [data-blok-field], [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-html][data-blok-item-name="divideBy"] [data-blok-field] {
+  flex: none;
+  inline-size: 110px;
+  margin-inline-start: auto;
+}
+
 [data-blok-database-show-as] {
   padding: var(--blok-space-2) var(--blok-space-4);
 }

@@ -9,7 +9,7 @@ import type { PopoverParams } from '../../../types/utils/popover/popover';
 import { PopoverEvent } from '../../../types/utils/popover/popover-event';
 import type { I18n } from '../../../types';
 import { EmojiPicker } from '../callout/emoji-picker';
-import { NUMBER_FORMATS } from './cells/number-format';
+import { NUMBER_FORMATS, numberDivideBy } from './cells/number-format';
 import { OPTION_COLORS, optionColorLabelKey, optionSwatch } from './cells/option-colors';
 import { addablePropertyTypes, propertyTypeMeta } from './database-property-types';
 import { typeSearchHeading } from './database-property-type-popover';
@@ -1719,14 +1719,14 @@ export class DatabasePropertyMenu {
               })),
             },
           },
-          this.inputItem('divideBy', number.divideBy === undefined ? '' : String(number.divideBy), 'tools.database.divideBy', (text) => {
+          this.inputItem('divideBy', String(numberDivideBy(number)), 'tools.database.divideBy', (text) => {
             const divideBy = Number(text);
             const next: NumberDisplay = text === '' || !Number.isFinite(divideBy) || divideBy <= 0 ? without(latest.number, 'divideBy') : { ...latest.number, divideBy };
 
             if (next.divideBy === latest.number.divideBy) return;
             latest.number = next;
             this.options.onUpdate(property.id, { number: next });
-          }),
+          }, true),
           this.switchItem('showNumber', 'tools.database.showNumber', number.showNumber !== false, (on) => {
             latest.number = on ? without(latest.number, 'showNumber') : { ...latest.number, showNumber: false };
             this.options.onUpdate(property.id, { number: latest.number });
@@ -1820,7 +1820,8 @@ export class DatabasePropertyMenu {
     return { type: PopoverItemType.Html, element: button, name };
   }
 
-  private inputItem(name: string, value: string, labelKey: string, onChange: (value: string) => void): PopoverItemParams {
+  /** `boxed`: the input sits in Blok's field box (R112: Notion boxes Divide by). */
+  private inputItem(name: string, value: string, labelKey: string, onChange: (value: string) => void, boxed = false): PopoverItemParams {
     const label = document.createElement('label');
     const input = document.createElement('input');
 
@@ -1829,7 +1830,15 @@ export class DatabasePropertyMenu {
     input.type = 'text';
     input.value = value;
     input.addEventListener('change', () => onChange(input.value.trim()));
-    label.appendChild(input);
+    if (boxed) {
+      const box = document.createElement('span');
+
+      box.setAttribute('data-blok-field', 'text');
+      box.appendChild(input);
+      label.appendChild(box);
+    } else {
+      label.appendChild(input);
+    }
 
     return { type: PopoverItemType.Html, element: label, name };
   }

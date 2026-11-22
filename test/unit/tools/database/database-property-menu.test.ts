@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import type { PropertyDefinition, PropertyType } from '../../../../src/tools/database/types';
+import type { NumberDisplay } from '../../../../src/shared/database/types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
 import { propertyTypeMeta } from '../../../../src/tools/database/database-property-types';
 import { IconAlarm, IconChangeType, IconCheck, IconClock, IconInfo, IconPageLayout, IconPencil, IconPreview, IconReplace, IconSliders, IconSort } from '../../../../src/components/icons';
@@ -1179,6 +1180,25 @@ describe('DatabasePropertyMenu', () => {
       expect(onClose).not.toHaveBeenCalled();
       expect(menu.isOpen).toBe(true);
       menu.destroy();
+    });
+
+    // R112 (notion-motion.md §1 #3): Notion shows "100" in a field box on a bar that never set Divide by.
+    it('shows the Divide by the bar uses, in a Blok field box', () => {
+      const field = (number: NumberDisplay): HTMLInputElement | null | undefined => {
+        const { menu } = headerMenu(prop('number', { number }));
+        const input = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'divideBy').element?.querySelector('input');
+
+        menu.destroy();
+
+        return input;
+      };
+      const plain = field({ showAs: 'bar' });
+
+      expect(plain?.value).toBe('100');
+      expect(plain?.parentElement?.getAttribute('data-blok-field')).toBe('text');
+      // A percent bar divides by 1 (number-format.ts numberFill).
+      expect(field({ showAs: 'bar', format: 'percent' })?.value).toBe('1');
+      expect(field({ showAs: 'bar', divideBy: 50 })?.value).toBe('50');
     });
 
     // Divide by saves on blur without a redraw, so a later pick must not write the old value back.

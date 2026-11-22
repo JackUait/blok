@@ -443,6 +443,9 @@ describe('row page property menu (research parity row 9)', () => {
       expect(declared(divide, 'contain')).toEqual(['inline-size']);
       expect(declared(`${divide} > [data-blok-database-property-menu-field]`, 'padding')).toEqual(['0 var(--blok-space-4)']);
       expect(declared(`${divide} > [data-blok-database-property-menu-field]`, 'gap')).toEqual(['var(--blok-space-4)']);
+      // R112 (notion-motion.md §1 #3): Notion's Divide by value sits in a 110px box at the row's end.
+      expect(declared(`${divide} [data-blok-field]`, 'inline-size')).toEqual(['110px']);
+      expect(declared(`${divide} [data-blok-field]`, 'margin-inline-start')).toEqual(['auto']);
     }
     expect(database).toContain('--blok-database-gauge-box-bg: rgba(84, 72, 49, 0.04);');
   });

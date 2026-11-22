@@ -358,6 +358,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     setEventTabStops(grid);
     grid.addEventListener('keydown', this.onGridTab);
     grid.addEventListener('focusin', this.onGridEnter);
+    grid.addEventListener('focusin', this.onDayFocus);
     watchTab();
 
     return grid;
@@ -760,6 +761,13 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     const stops = gridTabbables(grid);
 
     (event.shiftKey ? stops[0] : stops.at(-1))?.focus();
+  };
+
+  /** A day that gets focus any way, a mouse click too, takes the stop, as the arrow keys do. */
+  private readonly onDayFocus = (event: FocusEvent): void => {
+    if (event.target instanceof HTMLElement && event.target.matches('[data-blok-database-calendar-day]')) {
+      this.moveStop(event.target);
+    }
   };
 
   /** Tab into the grid lands on the first event, Shift+Tab into it on the last stop, whatever the DOM puts first. */

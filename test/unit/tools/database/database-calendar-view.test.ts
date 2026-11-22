@@ -844,6 +844,20 @@ describe('DatabaseCalendarView', () => {
       expect(addOf(day(root, '2026-10-09'))?.tabIndex).toBe(-1);
     });
 
+    // A mouse click focuses the day it lands on, so that day takes the stop, as the arrow keys do.
+    it('moves the day stop and its "+" to a day that gets focus another way', () => {
+      const { root } = mount();
+      const clicked = day(root, '2026-10-20');
+
+      clicked.focus();
+
+      expect(stopDays(root)).toEqual(['2026-10-20']);
+      expect(addOf(clicked)?.tabIndex).toBe(0);
+      expect(addOf(day(root, '2026-10-09'))?.tabIndex).toBe(-1);
+      expect(tab(clicked).defaultPrevented).toBe(true);
+      expect(addOf(clicked)).toHaveFocus();
+    });
+
     it('flips Left and Right in a right-to-left editor', () => {
       const { root } = mount();
 

@@ -922,6 +922,18 @@ test.describe('calendar', () => {
     await expect.poll(async () => (await savedRows(page)).filter((row) => row.properties['p-due'] === '2026-10-10')).toHaveLength(1);
   });
 
+  test('a clicked day becomes the day stop: Tab goes on to its "+", and Shift+Tab back to the day', async ({ page }) => {
+    await mount(page, blocks({ type: 'calendar' }));
+    const clicked = day(page, '2026-10-20');
+
+    await clicked.click({ position: { x: 10, y: 60 } });
+    await expect(clicked).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(clicked.locator('[data-blok-database-calendar-add]')).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(clicked).toBeFocused();
+  });
+
   test('next, previous and Today navigate, and the range survives a reload for this person', async ({ page }) => {
     await mount(page, blocks({ type: 'calendar' }));
 

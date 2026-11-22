@@ -1715,6 +1715,7 @@ export class DatabasePropertyMenu {
             valueIcon: optionSwatch(current),
             children: {
               placement: 'dropdown' as const,
+              fromButton: true,
               minWidth: '150px',
               items: OPTION_COLORS.map((color) => ({
                 name: `color-${color}`,

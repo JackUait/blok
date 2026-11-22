@@ -1900,11 +1900,13 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   private dropdownButtonRect(item: PopoverItem): { left: number; right: number; top: number; bottom: number } | undefined {
     const row = item.getElement();
-    const drawn = row?.querySelector(`[${DATA_ATTR.popoverItemDropdownButton}]`)?.getBoundingClientRect();
+    const drawn = item.childrenFromButton
+      ? row?.querySelector(`[${DATA_ATTR.popoverItemDropdownButton}]`)?.getBoundingClientRect()
+      : undefined;
 
-    // A drawn button is the box itself; its value may carry padding the button already holds.
+    // Notion's list starts 3px outside its button (R112: 875 vs 878). The value may carry padding the button already holds.
     if (drawn !== undefined && drawn.width > 0) {
-      return { left: drawn.left, right: drawn.right, top: drawn.top, bottom: drawn.bottom };
+      return { left: drawn.left - 3, right: drawn.right + 3, top: drawn.top, bottom: drawn.bottom };
     }
     const valueEl = row?.querySelector(`[${DATA_ATTR.popoverItemValue}]`);
     const chevron = row?.querySelector(`[${DATA_ATTR.popoverItemIconChevronRight}]`)?.getBoundingClientRect();
@@ -1984,9 +1986,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
       // In RTL the card's right edge lines up with the trigger's right edge.
       // A dropdown opens on the item's value instead, flush with it.
-      const box = triggerItem.childrenPlacement === 'dropdown' ? this.dropdownButtonRect(triggerItem) : undefined;
-      // Notion's list starts 3px outside its button (R112: 875 vs 878).
-      const button = box === undefined ? undefined : { ...box, left: box.left - 3, right: box.right + 3 };
+      const button = triggerItem.childrenPlacement === 'dropdown' ? this.dropdownButtonRect(triggerItem) : undefined;
       // 'under' drops from the row itself, its end edge on the row's (notion-spec-2 §16.1).
       const under = triggerItem.childrenPlacement === 'under' ? triggerItem.getElement()?.getBoundingClientRect() : undefined;
       // 'over' drops from the item too, start edges together, and covers the parent under it.

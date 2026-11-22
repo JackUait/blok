@@ -250,6 +250,11 @@ export abstract class PopoverItem {
     return this.params.children?.placement ?? 'beside';
   }
 
+  /** True if a 'dropdown' list opens on the drawn button box, not the value. */
+  public get childrenFromButton(): boolean {
+    return this.params !== undefined && 'children' in this.params && this.params.children?.fromButton === true;
+  }
+
   /** Where a 'beside' children popover sits on the vertical axis. */
   public get childrenAlign(): 'center' | 'start' {
     if (this.params === undefined || !('children' in this.params)) {

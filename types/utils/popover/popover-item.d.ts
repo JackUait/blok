@@ -94,6 +94,13 @@ export interface PopoverItemChildren {
   escapeFocusesRow?: boolean;
 
   /**
+   * True if a 'dropdown' list opens on the item's drawn button box (styled
+   * by the host), 3px outside its start edge, instead of on the value.
+   * False by default.
+   */
+  fromButton?: boolean;
+
+  /**
    * Width of the nested popover. Defaults to '280px'.
    * Use 'auto' to fit content width.
    */

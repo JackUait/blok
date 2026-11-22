@@ -24,6 +24,7 @@ import { DATE_FORMATS, HOUR_CYCLES, TIME_FORMATS, resolveHourCycle, resolveLocal
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
 import { hide as hideHint, onHover, type HintOptions } from '../../components/utils/tooltip';
 import { getElementDirection } from '../../components/utils/direction';
+import { isKeyboardModality } from '../../components/utils/input-modality';
 import { openDatabaseConfirm } from './database-confirm-dialog';
 import type {
   DateDisplay,
@@ -1448,8 +1449,11 @@ export class DatabasePropertyMenu {
       valueLabel: this.t(current[1]),
       children: {
         ...VALUE_LIST,
-        // R112: the current row opens in the hover tint. After show: the list is not drawn yet.
-        onOpen: () => queueMicrotask(() => this.focusCurrentRow(`optionSort-${current[0]}`)),
+        // R112: a keyboard open starts on the current row (a mouse open tints nothing: focus law).
+        // After show: the list is not drawn yet.
+        onOpen: () => {
+          if (isKeyboardModality()) queueMicrotask(() => this.focusCurrentRow(`optionSort-${current[0]}`));
+        },
         items: OPTION_SORTS.map(([sort, labelKey]) => ({
           name: `optionSort-${sort}`,
           title: this.t(labelKey),

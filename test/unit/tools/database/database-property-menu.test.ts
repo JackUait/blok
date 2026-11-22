@@ -1545,18 +1545,36 @@ describe('DatabasePropertyMenu', () => {
       expect(cb.onUpdate).toHaveBeenNthCalledWith(2, 'p', { optionSort: undefined });
     });
 
-    // R112 (notion-motion.md §1 #5): Sort opens with its current row in the hover tint.
-    it.each([[undefined, 'optionSort-manual'], ['alphabetical', 'optionSort-alphabetical']] as const)('Sort %s opens with %s highlighted', async (optionSort, row) => {
-      open(prop('select', { config: { options }, ...(optionSort === undefined ? {} : { optionSort }) }));
-      const sort = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'optionSort');
-      const popover = captured.popovers[captured.popovers.length - 1];
+    // R112 (notion-motion.md §1 #5): Sort opens with its current row in the hover tint, after a keyboard open only.
+    describe('Sort list starting highlight', () => {
+      const openSort = async (optionSort?: 'alphabetical'): Promise<string[]> => {
+        open(prop('select', { config: { options }, ...(optionSort === undefined ? {} : { optionSort }) }));
+        const sort = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'optionSort');
+        const popover = captured.popovers[captured.popovers.length - 1];
 
-      if (popover === undefined) throw new Error('no menu');
-      popover.focused = [];
-      sort.children?.onOpen?.();
-      await Promise.resolve();
+        if (popover === undefined) throw new Error('no menu');
+        popover.focused = [];
+        sort.children?.onOpen?.();
+        await Promise.resolve();
 
-      expect(popover.focused).toEqual([row]);
+        return popover.focused;
+      };
+
+      afterEach(() => {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+      });
+
+      it('a mouse open tints no row', async () => {
+        document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+
+        expect(await openSort('alphabetical')).toEqual([]);
+      });
+
+      it.each([[undefined, 'optionSort-manual'], ['alphabetical', 'optionSort-alphabetical']] as const)('a keyboard open on Sort %s tints %s', async (optionSort, row) => {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+
+        expect(await openSort(optionSort)).toEqual([row]);
+      });
     });
 
     it('lists the options in the Sort order', () => {

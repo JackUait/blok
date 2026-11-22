@@ -166,7 +166,7 @@ test('a pill reached by Tab rings like the count beside it', async ({ page }) =>
 });
 
 for (const key of ['Enter', 'Space']) {
-  // notion-motion.md Round 98 §1 #1: a rename popup 4 below the pill, its left edge on the pill's, 240 wide.
+  // notion-motion.md Round 101 §1 #4: the rename popup sits 7 below the coloured pill and 3 left of it.
   test(`${key} on a pill opens the rename popup under it, and Escape gives focus back to the pill`, async ({ page }) => {
     const pill = page.locator('[data-blok-database-column-pill]', { hasText: 'Not started' });
     const field = page.locator('[data-blok-database-group-name-field] input');
@@ -189,8 +189,8 @@ for (const key of ['Enter', 'Space']) {
     const popup = page.locator('[data-blok-popover]:has([data-blok-database-group-name-field]) [data-blok-popover-container]');
     const popupBox = await popup.boundingBox();
 
-    expect(Math.round((popupBox?.x ?? 0) - (pillBox?.x ?? 0))).toBe(0);
-    expect(Math.round((popupBox?.y ?? 0) - (pillBox?.y ?? 0) - (pillBox?.height ?? 0))).toBe(4);
+    expect(Math.round((popupBox?.x ?? 0) - (pillBox?.x ?? 0))).toBe(-3);
+    expect(Math.round((popupBox?.y ?? 0) - (pillBox?.y ?? 0) - (pillBox?.height ?? 0))).toBe(7);
     // The open motion scales the box, so the layout width is read, not the drawn one.
     // notion-motion.md Round 99 §1 #3: a Select option's popup is 300 wide (a Status one's 240).
     expect(await popup.evaluate((el: HTMLElement) => el.offsetWidth)).toBe(300);
@@ -286,7 +286,8 @@ test.describe('sub-grouped board', () => {
     expect(await walk(page, 'Shift+Tab', order.length)).toEqual(order.slice().reverse());
   });
 
-  // notion-motion.md Round 100 §1 #3-#4 (r100-n-band-pill-click.raw, r100-n-band-pill-space.raw): 4 under the pill, 300 wide.
+  // notion-motion.md Round 100 §1 #3-#4 (r100-n-band-pill-click.raw, r100-n-band-pill-space.raw): 300 wide.
+  // Round 101 §1 #4: 7 under the coloured pill and 3 left of it.
   for (const how of ['click', 'Space']) {
     test(`${how} on a band pill opens the rename popup under it`, async ({ page }) => {
       const pill = page.getByRole('region', { name: 'Red' }).locator('[data-blok-database-board-lane-label]');
@@ -302,12 +303,12 @@ test.describe('sub-grouped board', () => {
       await expect(field).toBeFocused();
       await expect(field).toHaveValue('Red');
 
-      const pillBox = await pill.boundingBox();
+      const pillBox = await pill.locator('[data-blok-database-option-pill]').boundingBox();
       const popup = page.locator('[data-blok-popover]:has([data-blok-database-group-name-field]) [data-blok-popover-container]');
       const popupBox = await popup.boundingBox();
 
-      expect(Math.round((popupBox?.x ?? 0) - (pillBox?.x ?? 0))).toBe(0);
-      expect(Math.round((popupBox?.y ?? 0) - (pillBox?.y ?? 0) - (pillBox?.height ?? 0))).toBe(4);
+      expect(Math.round((popupBox?.x ?? 0) - (pillBox?.x ?? 0))).toBe(-3);
+      expect(Math.round((popupBox?.y ?? 0) - (pillBox?.y ?? 0) - (pillBox?.height ?? 0))).toBe(7);
       expect(await popup.evaluate((el: HTMLElement) => el.offsetWidth)).toBe(300);
       expect(await popup.evaluate((el: HTMLElement) => el.offsetHeight)).toBe(36);
     });

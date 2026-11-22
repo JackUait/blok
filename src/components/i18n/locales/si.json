@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "පිටු සම්පූර්ණ පිටුවක් ලෙස විවෘත කරයි.",
   "tools.database.openInCenterPeek": "මැද කවුළුවේ විවෘත කරන්න",
   "tools.database.openAsPage": "පිටුවක් ලෙස විවෘත කරන්න",
+  "tools.database.viewDatabase": "දත්ත සමුදාය බලන්න",
   "tools.database.openPagesDefaultFor": "{layout} සඳහා පෙරනිමි",
   "tools.database.toolbarLabel": "දසුන් මෙවලම්",
   "tools.database.lockedLabel": "දත්ත ගබඩාව අගුළු දමා ඇත",

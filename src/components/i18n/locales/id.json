@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Buka halaman dalam halaman penuh.",
   "tools.database.openInCenterPeek": "Buka di panel tengah",
   "tools.database.openAsPage": "Buka sebagai halaman",
+  "tools.database.viewDatabase": "Lihat basis data",
   "tools.database.openPagesDefaultFor": "Bawaan untuk {layout}",
   "tools.database.toolbarLabel": "Alat tampilan",
   "tools.database.lockedLabel": "Basis data terkunci",

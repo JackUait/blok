@@ -1460,6 +1460,7 @@
   "tools.database.openPagesFullDescription": "Otevírá stránky na celou stránku.",
   "tools.database.openInCenterPeek": "Otevřít ve středovém okně",
   "tools.database.openAsPage": "Otevřít jako stránku",
+  "tools.database.viewDatabase": "Zobrazit databázi",
   "tools.database.openPagesDefaultFor": "Výchozí pro {layout}",
   "tools.database.toolbarLabel": "Nástroje zobrazení",
   "tools.database.lockedLabel": "Databáze je zamčená",

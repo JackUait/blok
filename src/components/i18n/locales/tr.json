@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Sayfaları tam sayfa olarak açar.",
   "tools.database.openInCenterPeek": "Orta panelde aç",
   "tools.database.openAsPage": "Sayfa olarak aç",
+  "tools.database.viewDatabase": "Veritabanını görüntüle",
   "tools.database.openPagesDefaultFor": "{layout} için varsayılan",
   "tools.database.toolbarLabel": "Görünüm araçları",
   "tools.database.lockedLabel": "Veritabanı kilitli",

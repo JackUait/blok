@@ -468,7 +468,68 @@ describe('view tabs (feel/findings-toolbar)', () => {
       titleMore()?.click();
       await quiet();
 
-      expect(menuItems()).toEqual(expect.arrayContaining(['database-title-copy-link', 'database-title-duplicate', 'database-title-edit']));
+      expect(menuItems()).toEqual(expect.arrayContaining(['database-title-edit']));
+    });
+
+    // notion-motion.md Round 111 §1 #2 (r111-n-titlemore-menu-2views.raw): View database, Edit title, Edit icon,
+    // Edit layout | Hide title (Manage in Calendar is Notion's own app). Copy link and Duplicate stay in the tab menu.
+    it('lists Notion\'s two-view groups', async () => {
+      await make(doc());
+
+      titleMore()?.click();
+      await quiet();
+
+      const groups = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened="true"] [data-blok-popover-items] > *')]
+        .reduce<string[][]>((all, item) => {
+          const name = item.getAttribute('data-blok-item-name');
+
+          if (name !== null) all[all.length - 1].push(name);
+          else if (item.getAttribute('data-blok-testid') === 'popover-item-separator') all.push([]);
+
+          return all;
+        }, [[]]);
+
+      expect(groups).toEqual([
+        ['database-title-view-database', 'database-title-edit', 'database-title-edit-icon', 'database-title-edit-layout'],
+        ['database-title-hide'],
+      ]);
+    });
+
+    // r111-n-titlemore-menu-2views.raw: 200 wide, 28px rows (the header menu look).
+    it('is the 200px menu with 28px rows', async () => {
+      await make(doc());
+
+      titleMore()?.click();
+      await quiet();
+      const popover = document.querySelector<HTMLElement>('[data-blok-popover-opened="true"]');
+
+      expect(popover?.getAttribute('data-blok-popover-custom-class')?.split(' ')).toContain('blok-database-header-menu');
+      // jsdom measures 0, so --width is the 200px floor.
+      expect(popover?.style.getPropertyValue('--width')).toBe('200px');
+    });
+
+    it('View database opens the database as a full page', async () => {
+      await make(doc());
+
+      titleMore()?.click();
+      await quiet();
+      menuItem('database-title-view-database').click();
+      await quiet();
+
+      expect(parentRoot().closest('[data-blok-database-full-open-target]')).not.toBeNull();
+      // The full page names the database in the URL.
+      history.replaceState(null, '', '/');
+    });
+
+    it('Edit icon opens the icon picker', async () => {
+      await make(doc());
+
+      titleMore()?.click();
+      await quiet();
+      menuItem('database-title-edit-icon').click();
+      await quiet();
+
+      expect(document.querySelector('[data-blok-emoji-picker]')).not.toBeNull();
     });
 
     it('is not drawn when read-only', async () => {

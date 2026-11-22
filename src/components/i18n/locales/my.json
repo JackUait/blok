@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "စာမျက်နှာများကို စာမျက်နှာအပြည့် ဖွင့်သည်။",
   "tools.database.openInCenterPeek": "အလယ်ဘောင်တွင် ဖွင့်ရန်",
   "tools.database.openAsPage": "စာမျက်နှာအဖြစ် ဖွင့်ရန်",
+  "tools.database.viewDatabase": "ဒေတာဘေ့စ်ကို ကြည့်ရန်",
   "tools.database.openPagesDefaultFor": "{layout} အတွက် မူလ",
   "tools.database.toolbarLabel": "မြင်ကွင်း ကိရိယာများ",
   "tools.database.lockedLabel": "ဒေတာဘေ့စ်ကို သော့ခတ်ထားသည်",

@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Open pagina's als volledige pagina.",
   "tools.database.openInCenterPeek": "Openen in middenweergave",
   "tools.database.openAsPage": "Openen als pagina",
+  "tools.database.viewDatabase": "Database bekijken",
   "tools.database.openPagesDefaultFor": "Standaard voor {layout}",
   "tools.database.toolbarLabel": "Weergavetools",
   "tools.database.lockedLabel": "Database is vergrendeld",

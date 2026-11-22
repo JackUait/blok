@@ -5746,7 +5746,7 @@ export class DatabaseTool implements BlockTool {
       const lastTitle = this.sourceTitleElement ?? this.titleElement;
 
       if (!this.readOnly && !this.structureLocked() && lastTitle !== null) {
-        lastTitle.after(this.tabBar.createTitleMoreButton());
+        lastTitle.after(this.tabBar.createTitleMoreButton(true));
       }
       if (tabBarEl instanceof HTMLElement) {
         tabBarEl.style.display = views.length >= 2 ? '' : 'none';
@@ -5858,6 +5858,8 @@ export class DatabaseTool implements BlockTool {
       onCopyLink: (viewId) => this.copyViewLink(viewId),
       openFullPage: () => (this.fullPageOpener() === undefined ? undefined : (viewId) => this.openFullPage(viewId)),
       onEditTitle: () => this.focusTitle(),
+      // The ⋮⋮ menu's Edit icon gate (renderSettings).
+      ...(this.isLocked() || !this.titleEditable() ? {} : { onEditIcon: () => this.openIconPicker() }),
       sourceTitle: () => (this.title.trim() === '' ? this.api.i18n.t('tools.database.titlePlaceholder') : this.title.trim()),
       ...this.editLayoutOption(),
       display: this.tabDisplay.get(),

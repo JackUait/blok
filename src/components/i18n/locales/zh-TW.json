@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "以整頁開啟頁面。",
   "tools.database.openInCenterPeek": "在置中預覽中開啟",
   "tools.database.openAsPage": "以頁面開啟",
+  "tools.database.viewDatabase": "檢視資料庫",
   "tools.database.openPagesDefaultFor": "{layout} 的預設值",
   "tools.database.toolbarLabel": "檢視工具",
   "tools.database.lockedLabel": "資料庫已鎖定",

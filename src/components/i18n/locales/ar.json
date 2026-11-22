@@ -1490,6 +1490,7 @@
   "tools.database.openPagesFullDescription": "افتح الصفحات بملء الصفحة.",
   "tools.database.openInCenterPeek": "فتح في النافذة الوسطى",
   "tools.database.openAsPage": "فتح كصفحة",
+  "tools.database.viewDatabase": "عرض قاعدة البيانات",
   "tools.database.openPagesDefaultFor": "افتراضي لـ {layout}",
   "tools.database.toolbarLabel": "أدوات العرض",
   "tools.database.lockedLabel": "قاعدة البيانات مقفلة",

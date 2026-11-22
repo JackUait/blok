@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "ਪੰਨੇ ਪੂਰੇ ਪੰਨੇ ਵਿੱਚ ਖੋਲ੍ਹੋ।",
   "tools.database.openInCenterPeek": "ਵਿਚਕਾਰਲੇ ਪੈਨਲ ਵਿੱਚ ਖੋਲ੍ਹੋ",
   "tools.database.openAsPage": "ਪੰਨੇ ਵਜੋਂ ਖੋਲ੍ਹੋ",
+  "tools.database.viewDatabase": "ਡਾਟਾਬੇਸ ਵੇਖੋ",
   "tools.database.openPagesDefaultFor": "{layout} ਲਈ ਮੂਲ",
   "tools.database.toolbarLabel": "ਦ੍ਰਿਸ਼ ਦੇ ਟੂਲ",
   "tools.database.lockedLabel": "ਡਾਟਾਬੇਸ ਲਾਕ ਹੈ",

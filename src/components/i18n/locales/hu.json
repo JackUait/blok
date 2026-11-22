@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Az oldalak teljes oldalon nyílnak meg.",
   "tools.database.openInCenterPeek": "Megnyitás középső ablakban",
   "tools.database.openAsPage": "Megnyitás oldalként",
+  "tools.database.viewDatabase": "Adatbázis megtekintése",
   "tools.database.openPagesDefaultFor": "Alapértelmezett ({layout})",
   "tools.database.toolbarLabel": "Nézet eszközei",
   "tools.database.lockedLabel": "Az adatbázis zárolva van",

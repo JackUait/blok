@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Buksan ang mga pahina nang buong pahina.",
   "tools.database.openInCenterPeek": "Buksan sa gitnang panel",
   "tools.database.openAsPage": "Buksan bilang pahina",
+  "tools.database.viewDatabase": "Tingnan ang database",
   "tools.database.openPagesDefaultFor": "Karaniwan para sa {layout}",
   "tools.database.toolbarLabel": "Mga tool ng view",
   "tools.database.lockedLabel": "Naka-lock ang database",

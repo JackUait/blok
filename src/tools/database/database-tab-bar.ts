@@ -1,4 +1,4 @@
-import { IconChevronDown, IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconForm, IconViewTimeline, IconViewDashboard, IconLink, IconDotsHorizontal, IconPageLayout, IconEyeSlash, IconExpandDiagonal } from '../../components/icons';
+import { IconChevronDown, IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconForm, IconViewTimeline, IconViewDashboard, IconLink, IconDotsHorizontal, IconPageLayout, IconEyeSlash, IconExpandDiagonal, IconArrowDiagonal, IconEmojiSmile } from '../../components/icons';
 import { ADD_VIEW_MENU_WIDTH, DatabaseViewPopover } from './database-view-popover';
 import type { ViewPopoverPlacement } from './database-view-popover';
 import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
@@ -100,6 +100,8 @@ export interface TabBarOptions {
   onEditTitle?: () => void;
   /** "Edit layout" in the title row's "…": Customize layout on a row page. */
   onEditLayout?: () => void;
+  /** "Edit icon" in the title row's "…" with several views. */
+  onEditIcon?: () => void;
   /** This person's "Display as". Defaults to both. */
   display?: DatabaseTabDisplay;
   /** Offers "Display as" in the tab menu. */
@@ -1218,10 +1220,11 @@ export class DatabaseTabBar {
   }
 
   /**
-   * The title row's "…" with one view (feel/findings-toolbar V03): Notion's
-   * items that Blok can back, in Notion's order.
+   * The title row's "…" (feel/findings-toolbar V03): Notion's items that Blok
+   * can back, in Notion's order. With several views Notion drops the view rows
+   * and adds View database and Edit icon (notion-motion.md Round 111 §1 #2).
    */
-  createTitleMoreButton(): HTMLElement {
+  createTitleMoreButton(several = false): HTMLElement {
     const button = document.createElement('button');
     const viewId = this.options.activeViewId;
     const t = this.t.bind(this);
@@ -1234,9 +1237,10 @@ export class DatabaseTabBar {
     button.innerHTML = IconDotsHorizontal;
     button.addEventListener('click', () => {
       if (this.contextPopover !== null) return;
-      const { onCopyLink, onEditTitle, onEditLayout, onDataSourceTitlesToggle } = this.options;
+      const { onCopyLink, onEditTitle, onEditLayout, onEditIcon, onDataSourceTitlesToggle } = this.options;
       const hidden = this.options.dataSourceTitlesHidden === true;
-      const view: PopoverItemParams[] = [
+      const openFullPage = several ? this.options.openFullPage?.() : undefined;
+      const view: PopoverItemParams[] = several ? [] : [
         ...(onCopyLink === undefined ? [] : [{
           icon: IconLink,
           name: 'database-title-copy-link',
@@ -1254,12 +1258,26 @@ export class DatabaseTabBar {
       ];
       // A hidden title has nothing to edit.
       const edit: PopoverItemParams[] = [
+        ...(openFullPage === undefined ? [] : [{
+          icon: IconArrowDiagonal,
+          name: 'database-title-view-database',
+          title: t('tools.database.viewDatabase', 'View database'),
+          closeOnActivate: true,
+          onActivate: () => openFullPage(viewId),
+        }]),
         ...(onEditTitle === undefined || hidden ? [] : [{
           icon: IconPencil,
           name: 'database-title-edit',
           title: t('tools.database.editCardTitle', 'Edit title'),
           closeOnActivate: true,
           onActivate: onEditTitle,
+        }]),
+        ...(!several || onEditIcon === undefined || hidden ? [] : [{
+          icon: IconEmojiSmile,
+          name: 'database-title-edit-icon',
+          title: t('tools.database.tableEditIcon', 'Edit icon'),
+          closeOnActivate: true,
+          onActivate: onEditIcon,
         }]),
         ...(onEditLayout === undefined ? [] : [{
           icon: IconPageLayout,
@@ -1280,7 +1298,8 @@ export class DatabaseTabBar {
         .filter((group) => group.length > 0)
         .flatMap((group, index) => index === 0 ? group : [{ type: PopoverItemType.Separator as const }, ...group]);
 
-      this.showMenu(button, items);
+      // r111-n-titlemore-menu-2views.raw: 200 wide, 28px rows, 4 under the ⋯. The one-view menu is unmeasured since V1.
+      this.showMenu(button, items, several ? { class: DATABASE_HEADER_MENU_CLASS, minWidth: '200px', offset: 4 } : undefined);
     });
 
     return button;

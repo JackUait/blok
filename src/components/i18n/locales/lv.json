@@ -1445,6 +1445,7 @@
   "tools.database.openPagesFullDescription": "Atver lapas pilnā lapā.",
   "tools.database.openInCenterPeek": "Atvērt centra panelī",
   "tools.database.openAsPage": "Atvērt kā lapu",
+  "tools.database.viewDatabase": "Skatīt datubāzi",
   "tools.database.openPagesDefaultFor": "Noklusējuma ({layout})",
   "tools.database.toolbarLabel": "Skata rīki",
   "tools.database.lockedLabel": "Datu bāze ir bloķēta",

@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Åbn sider som hel side.",
   "tools.database.openInCenterPeek": "Åbn i centreret panel",
   "tools.database.openAsPage": "Åbn som side",
+  "tools.database.viewDatabase": "Vis database",
   "tools.database.openPagesDefaultFor": "Standard for {layout}",
   "tools.database.toolbarLabel": "Visningsværktøjer",
   "tools.database.lockedLabel": "Databasen er låst",

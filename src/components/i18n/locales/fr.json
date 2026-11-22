@@ -1445,6 +1445,7 @@
   "tools.database.openPagesFullDescription": "Ouvrez les pages en pleine page.",
   "tools.database.openInCenterPeek": "Ouvrir en aperçu centré",
   "tools.database.openAsPage": "Ouvrir en tant que page",
+  "tools.database.viewDatabase": "Afficher la base de données",
   "tools.database.openPagesDefaultFor": "Par défaut pour {layout}",
   "tools.database.toolbarLabel": "Outils de la vue",
   "tools.database.lockedLabel": "La base de données est verrouillée",

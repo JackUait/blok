@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Öppna sidor som helsida.",
   "tools.database.openInCenterPeek": "Öppna i centrerad vy",
   "tools.database.openAsPage": "Öppna som sida",
+  "tools.database.viewDatabase": "Visa databas",
   "tools.database.openPagesDefaultFor": "Standard för {layout}",
   "tools.database.toolbarLabel": "Vyverktyg",
   "tools.database.lockedLabel": "Databasen är låst",

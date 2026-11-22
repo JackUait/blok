@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "បើកទំព័រពេញទំព័រ។",
   "tools.database.openInCenterPeek": "បើកក្នុងផ្ទាំងកណ្ដាល",
   "tools.database.openAsPage": "បើកជាទំព័រ",
+  "tools.database.viewDatabase": "មើលមូលដ្ឋានទិន្នន័យ",
   "tools.database.openPagesDefaultFor": "លំនាំដើមសម្រាប់ {layout}",
   "tools.database.toolbarLabel": "ឧបករណ៍ទិដ្ឋភាព",
   "tools.database.lockedLabel": "មូលដ្ឋានទិន្នន័យត្រូវបានចាក់សោ",

@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "পৃষ্ঠাগুলি পূর্ণ পৃষ্ঠায় খুলুন।",
   "tools.database.openInCenterPeek": "কেন্দ্রীয় প্যানেলে খুলুন",
   "tools.database.openAsPage": "পৃষ্ঠা হিসেবে খুলুন",
+  "tools.database.viewDatabase": "ডেটাবেস দেখুন",
   "tools.database.openPagesDefaultFor": "{layout}-এর জন্য ডিফল্ট",
   "tools.database.toolbarLabel": "ভিউয়ের টুল",
   "tools.database.lockedLabel": "ডেটাবেস লক করা আছে",

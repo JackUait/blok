@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Open pages in full page.",
   "tools.database.openInCenterPeek": "Open in center peek",
   "tools.database.openAsPage": "Open as page",
+  "tools.database.viewDatabase": "View database",
   "tools.database.openPagesDefaultFor": "Default for {layout}",
   "tools.database.toolbarLabel": "View tools",
   "tools.database.lockedLabel": "Database is locked",

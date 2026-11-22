@@ -1445,6 +1445,7 @@
   "tools.database.openPagesFullDescription": "Abra as páginas em página inteira.",
   "tools.database.openInCenterPeek": "Abrir em visualização central",
   "tools.database.openAsPage": "Abrir como página",
+  "tools.database.viewDatabase": "Ver banco de dados",
   "tools.database.openPagesDefaultFor": "Padrão para {layout}",
   "tools.database.toolbarLabel": "Ferramentas da visualização",
   "tools.database.lockedLabel": "O banco de dados está bloqueado",

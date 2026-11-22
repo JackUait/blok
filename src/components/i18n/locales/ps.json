@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "پاڼې په بشپړه پاڼه کې پرانیزئ.",
   "tools.database.openInCenterPeek": "په منځني پینل کې پرانیزئ",
   "tools.database.openAsPage": "د پاڼې په توګه یې پرانیزئ",
+  "tools.database.viewDatabase": "ډیټابیس وګورئ",
   "tools.database.openPagesDefaultFor": "د {layout} لپاره تلواله",
   "tools.database.toolbarLabel": "د لید وسایل",
   "tools.database.lockedLabel": "ډیټابیس قلف دی",

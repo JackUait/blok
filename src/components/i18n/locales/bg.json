@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Отваряй страниците на цял екран.",
   "tools.database.openInCenterPeek": "Отвори в централния прозорец",
   "tools.database.openAsPage": "Отвори като страница",
+  "tools.database.viewDatabase": "Преглед на базата данни",
   "tools.database.openPagesDefaultFor": "По подразбиране за {layout}",
   "tools.database.toolbarLabel": "Инструменти на изгледа",
   "tools.database.lockedLabel": "Базата данни е заключена",

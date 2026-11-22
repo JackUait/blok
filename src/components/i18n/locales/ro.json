@@ -1445,6 +1445,7 @@
   "tools.database.openPagesFullDescription": "Deschideți paginile pe toată pagina.",
   "tools.database.openInCenterPeek": "Deschide în panoul central",
   "tools.database.openAsPage": "Deschide ca pagină",
+  "tools.database.viewDatabase": "Vezi baza de date",
   "tools.database.openPagesDefaultFor": "Implicit pentru {layout}",
   "tools.database.toolbarLabel": "Instrumentele vizualizării",
   "tools.database.lockedLabel": "Baza de date este blocată",

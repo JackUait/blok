@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "పేజీలను పూర్తి పేజీగా తెరుస్తుంది.",
   "tools.database.openInCenterPeek": "మధ్య విండోలో తెరవండి",
   "tools.database.openAsPage": "పేజీగా తెరవండి",
+  "tools.database.viewDatabase": "డేటాబేస్‌ను చూడండి",
   "tools.database.openPagesDefaultFor": "{layout}కి అప్రమేయం",
   "tools.database.toolbarLabel": "వీక్షణ సాధనాలు",
   "tools.database.lockedLabel": "డేటాబేస్ లాక్ చేయబడింది",

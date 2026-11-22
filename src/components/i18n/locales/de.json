@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Seiten als ganze Seite öffnen.",
   "tools.database.openInCenterPeek": "In zentrierter Vorschau öffnen",
   "tools.database.openAsPage": "Als Seite öffnen",
+  "tools.database.viewDatabase": "Datenbank anzeigen",
   "tools.database.openPagesDefaultFor": "Standard für {layout}",
   "tools.database.toolbarLabel": "Ansichtswerkzeuge",
   "tools.database.lockedLabel": "Datenbank ist gesperrt",

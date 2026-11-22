@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "გვერდები გაიხსნება სრულ გვერდზე.",
   "tools.database.openInCenterPeek": "ცენტრალურ ფანჯარაში გახსნა",
   "tools.database.openAsPage": "გვერდად გახსნა",
+  "tools.database.viewDatabase": "მონაცემთა ბაზის ნახვა",
   "tools.database.openPagesDefaultFor": "ნაგულისხმევი {layout}-ისთვის",
   "tools.database.toolbarLabel": "ხედის ხელსაწყოები",
   "tools.database.lockedLabel": "მონაცემთა ბაზა დაბლოკილია",

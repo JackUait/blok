@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "पृष्ठहरू पूरा पृष्ठमा खोल्नुहोस्।",
   "tools.database.openInCenterPeek": "बीचको प्यानलमा खोल्नुहोस्",
   "tools.database.openAsPage": "पृष्ठका रूपमा खोल्नुहोस्",
+  "tools.database.viewDatabase": "डेटाबेस हेर्नुहोस्",
   "tools.database.openPagesDefaultFor": "{layout} का लागि पूर्वनिर्धारित",
   "tools.database.toolbarLabel": "दृश्य उपकरणहरू",
   "tools.database.lockedLabel": "डेटाबेस लक गरिएको छ",

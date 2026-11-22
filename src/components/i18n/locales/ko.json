@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "페이지를 전체 페이지로 엽니다.",
   "tools.database.openInCenterPeek": "가운데 보기로 열기",
   "tools.database.openAsPage": "페이지로 열기",
+  "tools.database.viewDatabase": "데이터베이스 보기",
   "tools.database.openPagesDefaultFor": "{layout} 기본값",
   "tools.database.toolbarLabel": "보기 도구",
   "tools.database.lockedLabel": "데이터베이스가 잠겨 있습니다",

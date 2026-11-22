@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "ເປີດໜ້າແບບເຕັມໜ້າ.",
   "tools.database.openInCenterPeek": "ເປີດໃນມຸມມອງກາງ",
   "tools.database.openAsPage": "ເປີດເປັນໜ້າ",
+  "tools.database.viewDatabase": "ເບິ່ງຖານຂໍ້ມູນ",
   "tools.database.openPagesDefaultFor": "ຄ່າເລີ່ມຕົ້ນສຳລັບ {layout}",
   "tools.database.toolbarLabel": "ເຄື່ອງມືມຸມມອງ",
   "tools.database.lockedLabel": "ຖານຂໍ້ມູນຖືກລັອກຢູ່",

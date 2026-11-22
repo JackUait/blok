@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "पृष्ठों को पूरे पृष्ठ में खोलें।",
   "tools.database.openInCenterPeek": "केंद्रीय पैनल में खोलें",
   "tools.database.openAsPage": "पृष्ठ के रूप में खोलें",
+  "tools.database.viewDatabase": "डेटाबेस देखें",
   "tools.database.openPagesDefaultFor": "{layout} के लिए डिफ़ॉल्ट",
   "tools.database.toolbarLabel": "दृश्य टूल",
   "tools.database.lockedLabel": "डेटाबेस लॉक है",

@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Ava lehed täislehena.",
   "tools.database.openInCenterPeek": "Ava keskpaneelis",
   "tools.database.openAsPage": "Ava lehena",
+  "tools.database.viewDatabase": "Kuva andmebaas",
   "tools.database.openPagesDefaultFor": "{layout} – vaikimisi",
   "tools.database.toolbarLabel": "Vaate tööriistad",
   "tools.database.lockedLabel": "Andmebaas on lukus",

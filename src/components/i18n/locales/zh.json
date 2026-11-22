@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "以整页打开页面。",
   "tools.database.openInCenterPeek": "在居中预览中打开",
   "tools.database.openAsPage": "以页面打开",
+  "tools.database.viewDatabase": "查看数据库",
   "tools.database.openPagesDefaultFor": "{layout} 的默认值",
   "tools.database.toolbarLabel": "视图工具",
   "tools.database.lockedLabel": "数据库已锁定",

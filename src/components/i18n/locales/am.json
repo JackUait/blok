@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "ገጾችን በሙሉ ገጽ ይክፈቱ።",
   "tools.database.openInCenterPeek": "በመሃል መስኮት ክፈት",
   "tools.database.openAsPage": "እንደ ገጽ ክፈት",
+  "tools.database.viewDatabase": "የውሂብ ጎታውን ክፈት",
   "tools.database.openPagesDefaultFor": "ለ{layout} ነባሪ",
   "tools.database.toolbarLabel": "የዕይታ መሣሪያዎች",
   "tools.database.lockedLabel": "የውሂብ ጎታው ተቆልፏል",

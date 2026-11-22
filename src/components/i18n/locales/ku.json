@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "پەڕەکان بە پەڕەی تەواو بکەرەوە.",
   "tools.database.openInCenterPeek": "لە پانێڵی ناوەڕاست بیکەرەوە",
   "tools.database.openAsPage": "وەک پەڕە بیکەرەوە",
+  "tools.database.viewDatabase": "بینینی داتابەیس",
   "tools.database.openPagesDefaultFor": "بنەڕەت بۆ {layout}",
   "tools.database.toolbarLabel": "ئامرازەکانی بینین",
   "tools.database.lockedLabel": "بنکەدراوە قوفڵ کراوە",

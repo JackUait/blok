@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "صفحات کو پورے صفحے میں کھولیں۔",
   "tools.database.openInCenterPeek": "مرکزی پینل میں کھولیں",
   "tools.database.openAsPage": "صفحے کے طور پر کھولیں",
+  "tools.database.viewDatabase": "ڈیٹابیس دیکھیں",
   "tools.database.openPagesDefaultFor": "{layout} کے لیے طے شدہ",
   "tools.database.toolbarLabel": "ویو ٹولز",
   "tools.database.lockedLabel": "ڈیٹابیس لاک ہے",

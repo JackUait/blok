@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Mở trang ở chế độ toàn trang.",
   "tools.database.openInCenterPeek": "Mở ở chế độ xem giữa",
   "tools.database.openAsPage": "Mở dưới dạng trang",
+  "tools.database.viewDatabase": "Xem cơ sở dữ liệu",
   "tools.database.openPagesDefaultFor": "Mặc định cho {layout}",
   "tools.database.toolbarLabel": "Công cụ chế độ xem",
   "tools.database.lockedLabel": "Cơ sở dữ liệu đã bị khóa",

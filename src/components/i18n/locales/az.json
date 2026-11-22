@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Səhifələri tam səhifədə açır.",
   "tools.database.openInCenterPeek": "Mərkəzi paneldə aç",
   "tools.database.openAsPage": "Səhifə kimi aç",
+  "tools.database.viewDatabase": "Verilənlər bazasına bax",
   "tools.database.openPagesDefaultFor": "{layout} üçün standart",
   "tools.database.toolbarLabel": "Görünüş alətləri",
   "tools.database.lockedLabel": "Verilənlər bazası kilidlidir",

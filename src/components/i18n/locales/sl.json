@@ -1460,6 +1460,7 @@
   "tools.database.openPagesFullDescription": "Odpiraj strani čez ves zaslon.",
   "tools.database.openInCenterPeek": "Odpri v osrednjem oknu",
   "tools.database.openAsPage": "Odpri kot stran",
+  "tools.database.viewDatabase": "Prikaži podatkovno bazo",
   "tools.database.openPagesDefaultFor": "Privzeto za {layout}",
   "tools.database.toolbarLabel": "Orodja pogleda",
   "tools.database.lockedLabel": "Zbirka podatkov je zaklenjena",

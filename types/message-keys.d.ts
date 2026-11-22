@@ -2540,6 +2540,7 @@ export type BlokMessageKey =
   | 'tools.database.verificationExpired'
   | 'tools.database.verificationUnverified'
   | 'tools.database.verificationVerified'
+  | 'tools.database.viewDatabase'
   | 'tools.database.viewLinkCopied'
   | 'tools.database.viewReset'
   | 'tools.database.viewSaveForEveryone'

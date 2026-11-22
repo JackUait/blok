@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "പേജുകൾ പൂർണ്ണ പേജിൽ തുറക്കുക.",
   "tools.database.openInCenterPeek": "മധ്യ പാനലിൽ തുറക്കുക",
   "tools.database.openAsPage": "പേജായി തുറക്കുക",
+  "tools.database.viewDatabase": "ഡാറ്റാബേസ് കാണുക",
   "tools.database.openPagesDefaultFor": "{layout}-നുള്ള സ്ഥിരസ്ഥിതി",
   "tools.database.toolbarLabel": "കാഴ്ച ടൂളുകൾ",
   "tools.database.lockedLabel": "ഡാറ്റാബേസ് ലോക്ക് ചെയ്തിരിക്കുന്നു",

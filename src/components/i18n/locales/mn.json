@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Хуудсыг бүтэн хуудсаар нээнэ.",
   "tools.database.openInCenterPeek": "Төвийн цонхонд нээх",
   "tools.database.openAsPage": "Хуудсаар нээх",
+  "tools.database.viewDatabase": "Мэдээллийн санг харах",
   "tools.database.openPagesDefaultFor": "{layout}-ийн өгөгдмөл",
   "tools.database.toolbarLabel": "Харагдацын хэрэгслүүд",
   "tools.database.lockedLabel": "Мэдээллийн сан түгжээтэй",

@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Άνοιγμα σελίδων σε πλήρη σελίδα.",
   "tools.database.openInCenterPeek": "Άνοιγμα σε κεντρικό πλαίσιο",
   "tools.database.openAsPage": "Άνοιγμα ως σελίδα",
+  "tools.database.viewDatabase": "Προβολή βάσης δεδομένων",
   "tools.database.openPagesDefaultFor": "Προεπιλογή για {layout}",
   "tools.database.toolbarLabel": "Εργαλεία προβολής",
   "tools.database.lockedLabel": "Η βάση δεδομένων είναι κλειδωμένη",

@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "เปิดหน้าแบบเต็มหน้า",
   "tools.database.openInCenterPeek": "เปิดในมุมมองตรงกลาง",
   "tools.database.openAsPage": "เปิดเป็นหน้า",
+  "tools.database.viewDatabase": "ดูฐานข้อมูล",
   "tools.database.openPagesDefaultFor": "ค่าเริ่มต้นสำหรับ {layout}",
   "tools.database.toolbarLabel": "เครื่องมือมุมมอง",
   "tools.database.lockedLabel": "ฐานข้อมูลถูกล็อกอยู่",

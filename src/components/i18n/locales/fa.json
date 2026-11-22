@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "صفحه‌ها را به‌صورت تمام‌صفحه باز کنید.",
   "tools.database.openInCenterPeek": "باز کردن در پنجره مرکزی",
   "tools.database.openAsPage": "باز کردن به‌صورت صفحه",
+  "tools.database.viewDatabase": "مشاهده پایگاه داده",
   "tools.database.openPagesDefaultFor": "پیش‌فرض برای {layout}",
   "tools.database.toolbarLabel": "ابزارهای نما",
   "tools.database.lockedLabel": "پایگاه داده قفل است",

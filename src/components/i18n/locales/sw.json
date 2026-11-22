@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Fungua kurasa kwenye ukurasa mzima.",
   "tools.database.openInCenterPeek": "Fungua kwenye paneli ya katikati",
   "tools.database.openAsPage": "Fungua kama ukurasa",
+  "tools.database.viewDatabase": "Tazama hifadhidata",
   "tools.database.openPagesDefaultFor": "Chaguo-msingi kwa {layout}",
   "tools.database.toolbarLabel": "Zana za mwonekano",
   "tools.database.lockedLabel": "Hifadhidata imefungwa",

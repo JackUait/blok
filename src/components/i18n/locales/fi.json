@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Avaa sivut koko sivuna.",
   "tools.database.openInCenterPeek": "Avaa keskipaneelissa",
   "tools.database.openAsPage": "Avaa sivuna",
+  "tools.database.viewDatabase": "Näytä tietokanta",
   "tools.database.openPagesDefaultFor": "Oletus ({layout})",
   "tools.database.toolbarLabel": "Näkymän työkalut",
   "tools.database.lockedLabel": "Tietokanta on lukittu",

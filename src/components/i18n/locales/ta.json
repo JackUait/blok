@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "பக்கங்களை முழுப் பக்கமாகத் திறக்கும்.",
   "tools.database.openInCenterPeek": "மையச் சாளரத்தில் திற",
   "tools.database.openAsPage": "பக்கமாகத் திற",
+  "tools.database.viewDatabase": "தரவுத்தளத்தைக் காண்க",
   "tools.database.openPagesDefaultFor": "{layout}க்கான இயல்பு",
   "tools.database.toolbarLabel": "காட்சிக் கருவிகள்",
   "tools.database.lockedLabel": "தரவுத்தளம் பூட்டப்பட்டுள்ளது",

@@ -1460,6 +1460,7 @@
   "tools.database.openPagesFullDescription": "Atidaryti puslapius visame puslapyje.",
   "tools.database.openInCenterPeek": "Atidaryti centriniame skydelyje",
   "tools.database.openAsPage": "Atidaryti kaip puslapį",
+  "tools.database.viewDatabase": "Peržiūrėti duomenų bazę",
   "tools.database.openPagesDefaultFor": "Numatytoji ({layout})",
   "tools.database.toolbarLabel": "Rodinio įrankiai",
   "tools.database.lockedLabel": "Duomenų bazė užrakinta",

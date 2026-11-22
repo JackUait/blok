@@ -1445,6 +1445,7 @@
   "tools.database.openPagesFullDescription": "Otvaraj stranice preko cijelog ekrana.",
   "tools.database.openInCenterPeek": "Otvori u centralnom prozoru",
   "tools.database.openAsPage": "Otvori kao stranicu",
+  "tools.database.viewDatabase": "Prikaži bazu podataka",
   "tools.database.openPagesDefaultFor": "Podrazumijevano za {layout}",
   "tools.database.toolbarLabel": "Alati prikaza",
   "tools.database.lockedLabel": "Baza podataka je zaključana",

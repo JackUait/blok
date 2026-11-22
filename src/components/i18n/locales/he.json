@@ -1445,6 +1445,7 @@
   "tools.database.openPagesFullDescription": "פתח דפים בדף מלא.",
   "tools.database.openInCenterPeek": "פתח בחלונית מרכזית",
   "tools.database.openAsPage": "פתח כדף",
+  "tools.database.viewDatabase": "הצג מסד נתונים",
   "tools.database.openPagesDefaultFor": "ברירת מחדל עבור {layout}",
   "tools.database.toolbarLabel": "כלי תצוגה",
   "tools.database.lockedLabel": "מסד הנתונים נעול",

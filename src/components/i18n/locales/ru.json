@@ -1460,6 +1460,7 @@
   "tools.database.openPagesFullDescription": "Открывать страницы во весь экран.",
   "tools.database.openInCenterPeek": "Открыть в окне по центру",
   "tools.database.openAsPage": "Открыть как страницу",
+  "tools.database.viewDatabase": "Открыть базу данных",
   "tools.database.openPagesDefaultFor": "По умолчанию для вида «{layout}»",
   "tools.database.toolbarLabel": "Инструменты представления",
   "tools.database.lockedLabel": "База данных заблокирована",

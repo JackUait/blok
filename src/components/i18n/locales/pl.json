@@ -1460,6 +1460,7 @@
   "tools.database.openPagesFullDescription": "Otwieraj strony na pełnej stronie.",
   "tools.database.openInCenterPeek": "Otwórz w oknie na środku",
   "tools.database.openAsPage": "Otwórz jako stronę",
+  "tools.database.viewDatabase": "Wyświetl bazę danych",
   "tools.database.openPagesDefaultFor": "Domyślnie dla widoku: {layout}",
   "tools.database.toolbarLabel": "Narzędzia widoku",
   "tools.database.lockedLabel": "Baza danych jest zablokowana",

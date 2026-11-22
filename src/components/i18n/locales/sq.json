@@ -1430,6 +1430,7 @@
   "tools.database.openPagesFullDescription": "Hap faqet në faqe të plotë.",
   "tools.database.openInCenterPeek": "Hap në panelin qendror",
   "tools.database.openAsPage": "Hape si faqe",
+  "tools.database.viewDatabase": "Shiko bazën e të dhënave",
   "tools.database.openPagesDefaultFor": "Parazgjedhur për {layout}",
   "tools.database.toolbarLabel": "Mjetet e pamjes",
   "tools.database.lockedLabel": "Baza e të dhënave është e kyçur",

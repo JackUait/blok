@@ -763,9 +763,9 @@ export class DatabasePropertyMenu {
     }];
   }
 
-  /** Puts the cursor on row `name` of the open submenu, else of the menu. */
+  /** Puts the cursor on row `name` of the open submenu, else of the menu, until the pointer takes a row. */
   startCursor(name: string): void {
-    this.popover?.focusItemByName(name);
+    this.popover?.startCursorOn(name);
   }
 
   close(): void {

@@ -1216,6 +1216,38 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * Puts the cursor on the row named `name`, as focusItemByName does, until the
+   * pointer takes another row or leaves the menu; then no row keeps it. An arrow
+   * key moves it on as usual.
+   * @param name - the row's `name`
+   * @returns false when no shown row has that name
+   */
+  public startCursorOn(name: string): boolean {
+    if (this.nestedPopover?.startCursorOn(name) === true) {
+      return true;
+    }
+    const start = this.flippableElements.find((item) => item.closest(`[${DATA_ATTR.itemName}]`)?.getAttribute(DATA_ATTR.itemName) === name);
+
+    if (start === undefined || !this.focusItemByName(name)) {
+      return false;
+    }
+    const stop = this.onCurrentItemChange((current) => {
+      if (current?.source === 'keyboard') {
+        stop();
+
+        return;
+      }
+      if (current?.element === start) {
+        return;
+      }
+      stop();
+      this.flipper?.focusItem(-1);
+    });
+
+    return true;
+  }
+
+  /**
    * Arms the synthesized-hover suppression: records the pointer position
    * at the moment `show()` was called and schedules a safety rAF that
    * clears the flag even if no mouseover ever arrives. Idempotent —

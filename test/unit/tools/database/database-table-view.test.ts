@@ -2844,15 +2844,20 @@ describe('DatabaseTableView', () => {
         expect(lit()[0]).toContain('tools.database.calcCount');
       });
 
-      // As the zoom menu: the fill follows the pointer, so one row is filled at a time.
-      it('after a keyboard open, the cursor follows the pointer, one row at a time', () => {
+      // User decision 2026-11-22: no tint stays on a row once the pointer takes over.
+      it('after a keyboard open, the start row lets go once the pointer takes a row, and nothing stays after a leave', () => {
         useKeyboard();
         openFooter([{ id: 'p-amount', fn: 'sum' }], 'p-amount');
 
-        row('tools.database.calcNone')?.dispatchEvent(new PointerEvent('pointermove', { clientX: 10, clientY: 10, bubbles: true }));
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 5, bubbles: true }));
+        row('tools.database.calcNone')?.dispatchEvent(new MouseEvent('mouseover', { clientX: 10, clientY: 10, bubbles: true }));
 
-        expect(lit()).toHaveLength(1);
-        expect(lit()[0]).toContain('tools.database.calcNone');
+        expect(lit()).toEqual([]);
+
+        document.querySelector<HTMLElement>('[data-blok-popover-opened="true"] [data-blok-popover-container]')
+          ?.dispatchEvent(new MouseEvent('mouseleave', { clientX: 900, clientY: 900 }));
+
+        expect(lit()).toEqual([]);
       });
     });
 
@@ -2885,6 +2890,18 @@ describe('DatabaseTableView', () => {
         await openCalculate();
 
         expect(document.querySelector('[data-blok-nested] [data-blok-popover-item]')).not.toBeNull();
+        expect(cursor()).toEqual([]);
+      });
+
+      it('after a keyboard open, the start row lets go once the pointer takes a row', async () => {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+        await openCalculate();
+        const none = [...document.querySelectorAll<HTMLElement>('[data-blok-nested] [data-blok-popover-item]')]
+          .find((el) => el.textContent?.includes('tools.database.calcNone'));
+
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 5, bubbles: true }));
+        none?.dispatchEvent(new MouseEvent('mouseover', { clientX: 10, clientY: 10, bubbles: true }));
+
         expect(cursor()).toEqual([]);
       });
     });

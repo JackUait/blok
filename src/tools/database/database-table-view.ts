@@ -2396,7 +2396,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
    * The view-level rows of a column header menu. The property menu shows
    * these after its own rows; until it exists the tool opens them alone.
    */
-  headerItems(propertyId: string, anchor: HTMLElement, startCursor = (name: string): void => { this.menu?.focusItemByName(name); }): PopoverItemParams[] {
+  headerItems(propertyId: string, anchor: HTMLElement, startCursor = (name: string): void => { this.menu?.startCursorOn(name); }): PopoverItemParams[] {
     const index = this.columns.findIndex((c) => c.property.id === propertyId);
     const column = this.columns[index];
     const handlers = this.handlers;

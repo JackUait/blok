@@ -4,7 +4,6 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_CLOSE_DELAY_MS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { isKeyboardModality } from '../../components/utils/input-modality';
-import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import {
   IconArrowDiagonal,
@@ -254,27 +253,11 @@ export interface OpenMenuOptions {
   /** A card menu that does not fit below opens above, its bottom this far over the anchor's top, when it fits there. */
   coverFlipOffset?: number;
   /**
-   * The row (item name) the cursor starts on when the menu opens from the keyboard.
-   * A mouse open starts on no row.
+   * The row (item name) the cursor starts on when the menu opens from the keyboard,
+   * until the pointer takes a row. A mouse open starts on no row.
    */
   highlight?: string;
 }
-
-/**
- * Puts the cursor on row `name`. The fill then follows the pointer, so one row is filled at a time.
- * pointermove, not mouseover: a menu opening under a resting pointer keeps the start row.
- */
-export const startCursorOn = (popover: PopoverDesktop, name: string): void => {
-  popover.focusItemByName(name);
-  popover.getElement().addEventListener('pointermove', (event) => {
-    const row = event.target instanceof Element ? event.target.closest(`[${DATA_ATTR.itemName}]`) : null;
-    const hovered = row?.getAttribute(DATA_ATTR.itemName);
-
-    if (row !== null && row !== undefined && hovered !== null && hovered !== undefined && row.getAttribute(DATA_ATTR.focused) !== 'true') {
-      popover.focusItemByName(hovered);
-    }
-  });
-};
 
 const MENU_CLASS = {
   header: DATABASE_HEADER_MENU_CLASS,
@@ -372,7 +355,7 @@ export const openMenu = (
   popover.show();
   // A real cursor, so the next arrow moves on from this row. Keyboard opens only: the focus law.
   if (options.highlight !== undefined && isKeyboardModality()) {
-    startCursorOn(popover, options.highlight);
+    popover.startCursorOn(options.highlight);
   }
 
   return popover;

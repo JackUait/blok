@@ -890,10 +890,18 @@ test.describe('row page cover', () => {
 
     expect(pill.height).toBeCloseTo(25.2, 0);
     // notion-motion.md Round 88 §1 #6: 180 wide with the text centred.
-    expect(pill.width).toBeCloseTo(180, 1);
+    // 180 is a floor, so it is checked with a short text: CI's Linux font runs the English text past it.
     await expect(hint).toHaveCSS('text-align', 'center');
-    // A longer locale string widens the pill and is never cut.
     const pillEl = cover(page).locator('[data-blok-database-drawer-cover-hint]');
+    const short = await pillEl.evaluate((el) => {
+      el.replaceChildren('Drag');
+
+      return el.getBoundingClientRect().width;
+    });
+
+    expect(short).toBeCloseTo(180, 1);
+    expect(pill.width).toBeGreaterThanOrEqual(short);
+    // A longer locale string widens the pill and is never cut.
     const long = await pillEl.evaluate((el) => {
       el.replaceChildren('Перетащите изображение, чтобы переместить');
 

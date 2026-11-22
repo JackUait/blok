@@ -439,13 +439,32 @@ describe('PopoverRegistry', () => {
       trigger.remove();
     });
 
-    it('keeps a mouse-opened popover\'s trigger free of a focus ring after Escape', () => {
-      const { popover, trigger } = createMockPopover();
-
+    const escapeAfter = (popover: PopoverAbstract, trigger: HTMLElement, openKey?: string): void => {
       document.body.appendChild(trigger);
       document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      if (openKey !== undefined) {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: openKey }));
+      }
       registry.register(popover, trigger);
       document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
+    };
+
+    it('by default, Escape from a mouse-opened popover leaves keyboard modality on its trigger', () => {
+      const { popover, trigger } = createMockPopover();
+
+      escapeAfter(popover, trigger);
+
+      expect(trigger).toHaveFocus();
+      expect(document.documentElement).toHaveAttribute('data-blok-modality', 'keyboard');
+
+      trigger.remove();
+    });
+
+    it('with escapeRestoresPointerModality, Escape from a mouse-opened popover gives the trigger focus without a ring', () => {
+      const { popover, trigger } = createMockPopover();
+
+      popover.escapeRestoresPointerModality = true;
+      escapeAfter(popover, trigger);
 
       expect(trigger).toHaveFocus();
       expect(document.documentElement).toHaveAttribute('data-blok-modality', 'pointer');
@@ -453,14 +472,11 @@ describe('PopoverRegistry', () => {
       trigger.remove();
     });
 
-    it('keeps the focus ring on a keyboard-opened popover\'s trigger after Escape', () => {
+    it('with escapeRestoresPointerModality, Escape from a keyboard-opened popover keeps the ring', () => {
       const { popover, trigger } = createMockPopover();
 
-      document.body.appendChild(trigger);
-      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-      document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
-      registry.register(popover, trigger);
-      document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
+      popover.escapeRestoresPointerModality = true;
+      escapeAfter(popover, trigger, 'Enter');
 
       expect(trigger).toHaveFocus();
       expect(document.documentElement).toHaveAttribute('data-blok-modality', 'keyboard');

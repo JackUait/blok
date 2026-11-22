@@ -317,6 +317,12 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   public swallowsOutsideClick = false;
 
+  /**
+   * Opt-in: when the popover was opened from the mouse, Escape gives its trigger focus
+   * back without a focus ring. The Escape press itself would otherwise turn the ring on.
+   */
+  public escapeRestoresPointerModality = false;
+
   /** Opt-in, with swallowsOutsideClick: a middle click away keeps the popover open and reaches nothing under it. */
   public holdsOnMiddleClick = false;
 

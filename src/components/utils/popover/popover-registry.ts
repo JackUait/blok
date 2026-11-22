@@ -10,7 +10,7 @@ import type { PopoverAbstract } from './popover-abstract';
 interface PopoverRegistryEntry {
   popover: PopoverAbstract;
   triggerElement: HTMLElement;
-  /** The popover opened from the mouse: Escape gives focus back without a ring. */
+  /** Read by {@link PopoverAbstract.escapeRestoresPointerModality}. */
   openedByPointer: boolean;
 }
 
@@ -231,8 +231,7 @@ export class PopoverRegistry {
      * in the document — a stale trigger would throw or steal focus.
      */
     if (triggerElement.isConnected) {
-      // The Escape itself set keyboard modality, which would paint a ring on a mouse flow.
-      if (openedByPointer) {
+      if (openedByPointer && topmost.popover.escapeRestoresPointerModality) {
         recordActionKey();
       }
       triggerElement.focus();

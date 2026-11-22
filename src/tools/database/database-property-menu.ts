@@ -1735,14 +1735,15 @@ export class DatabasePropertyMenu {
               })),
             },
           },
-          this.inputItem('divideBy', String(numberDivideBy(number)), 'tools.database.divideBy', (text) => {
+          // notion-motion.md R115 §1 #5: a Percent bar has no Divide by row. A Percent ring is unmeasured.
+          ...(showAs === 'bar' && number.format === 'percent' ? [] : [this.inputItem('divideBy', String(numberDivideBy(number)), 'tools.database.divideBy', (text) => {
             const divideBy = Number(text);
             const next: NumberDisplay = text === '' || !Number.isFinite(divideBy) || divideBy <= 0 ? without(latest.number, 'divideBy') : { ...latest.number, divideBy };
 
             if (next.divideBy === latest.number.divideBy) return;
             latest.number = next;
             this.options.onUpdate(property.id, { number: next });
-          }, true),
+          }, true)]),
           this.switchItem('showNumber', 'tools.database.showNumber', number.showNumber !== false, (on) => {
             latest.number = on ? without(latest.number, 'showNumber') : { ...latest.number, showNumber: false };
             this.options.onUpdate(property.id, { number: latest.number });

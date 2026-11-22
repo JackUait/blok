@@ -1210,9 +1210,19 @@ describe('DatabasePropertyMenu', () => {
 
       expect(plain?.value).toBe('100');
       expect(plain?.parentElement?.getAttribute('data-blok-field')).toBe('text');
-      // A percent bar divides by 1 (number-format.ts numberFill).
-      expect(field({ showAs: 'bar', format: 'percent' })?.value).toBe('1');
       expect(field({ showAs: 'bar', divideBy: 50 })?.value).toBe('50');
+    });
+
+    // notion-motion.md R115 §1 #5: a Percent bar has no Divide by row; Number brings it back.
+    it('a Percent bar has no Divide by row, and Number format Number brings it back', () => {
+      const { menu } = headerMenu(prop('number', { number: { showAs: 'bar' } }));
+
+      pick('numberFormat', 'format-percent');
+      expect(editNames()).not.toContain('divideBy');
+      expect(editNames()).toEqual(expect.arrayContaining(['color', 'showNumber']));
+      pick('numberFormat', 'format-number');
+      expect(editNames()).toContain('divideBy');
+      menu.destroy();
     });
 
     // Divide by saves on blur without a redraw, so a later pick must not write the old value back.

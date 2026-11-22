@@ -102,6 +102,8 @@
   --blok-database-column-default-add-hover-bg: var(--blok-database-card-bg-hover);
   --blok-database-column-gray-add-hover-bg: var(--blok-database-column-gray-card-hover-bg, var(--blok-database-card-bg-hover));
   --blok-database-column-red-add-hover-bg: var(--blok-database-column-red-card-hover-bg);
+  /* notion-motion.md Round 95 §3: green read live (during a card drag). Light only: dark resets it. */
+  --blok-database-column-green-add-hover-bg: rgba(3, 75, 27, 0.035);
   --blok-database-column-brown-ring: rgba(139, 46, 0, 0.086);
   /* research/07:134: a hovered card is translucent, so the column tint shows through. */
   --blok-database-card-bg-hover: rgba(54, 29, 2, 0.031);
@@ -324,6 +326,8 @@
   --blok-database-gallery-preview-border: rgba(42, 28, 0, 0.07);
   /* notion-motion.md Round 75 §3: the "+ New page" tile ring; dark keeps it where the cover line has none. */
   --blok-database-gallery-new-ring: var(--blok-database-gallery-preview-border);
+  /* notion-motion.md Round 24 (motion-r24-gal-newhover.json): the tile hovers darker than a card. Light only: dark resets it. */
+  --blok-database-gallery-new-hover-bg: rgba(33, 27, 23, 0.051);
   --blok-database-gallery-preview-text: var(--blok-database-ink-secondary);
   --blok-database-gallery-title-text: rgb(44, 44, 43);
   --blok-database-gallery-muted-text: var(--blok-database-ink-tertiary);
@@ -460,6 +464,10 @@
   --blok-database-card-actions-shadow: var(--blok-database-table-open-shadow);
   --blok-database-card-actions-icon: rgb(125, 122, 117);
   --blok-database-card-menu-hover-bg: var(--blok-database-hover-bg);
+  /* notion-motion.md Round 51 C (r51-n-card-menu-open.raw): the ⋯ press fill. Light only: dark resets it. */
+  --blok-database-card-menu-press-bg: rgb(239, 239, 238);
+  /* notion-motion.md Round 59 §3: the side peek's Page info border. Light only: dark resets it. */
+  --blok-database-peek-details-border: rgb(240, 239, 237);
   /* Side peek property label (research/08:329). */
   --blok-database-peek-label: var(--blok-database-ink-secondary);
   /* The label's type icon and its hover handle: Notion's ink, 3.39:1 on white, 3.07:1 on the hover fill. */
@@ -757,6 +765,11 @@
     --blok-database-gallery-preview-bg: rgba(252, 252, 252, 0.03);
     --blok-database-gallery-preview-border: transparent;
     --blok-database-gallery-new-ring: rgba(255, 255, 235, 0.1);
+    /* Dark for these four was not read: keep the shared values. */
+    --blok-database-gallery-new-hover-bg: var(--blok-database-gallery-card-hover-bg);
+    --blok-database-column-green-add-hover-bg: var(--blok-database-add-hover-bg);
+    --blok-database-card-menu-press-bg: var(--blok-database-card-menu-hover-bg);
+    --blok-database-peek-details-border: var(--blok-database-drawer-border);
     --blok-database-gallery-preview-text: var(--blok-database-ink-secondary);
     --blok-database-gallery-title-text: rgb(240, 239, 237);
     --blok-database-gallery-muted-text: var(--blok-database-ink-tertiary);
@@ -1151,6 +1164,11 @@
   --blok-database-gallery-preview-bg: rgba(252, 252, 252, 0.03);
   --blok-database-gallery-preview-border: transparent;
   --blok-database-gallery-new-ring: rgba(255, 255, 235, 0.1);
+  /* Dark for these four was not read: keep the shared values. */
+  --blok-database-gallery-new-hover-bg: var(--blok-database-gallery-card-hover-bg);
+  --blok-database-column-green-add-hover-bg: var(--blok-database-add-hover-bg);
+  --blok-database-card-menu-press-bg: var(--blok-database-card-menu-hover-bg);
+  --blok-database-peek-details-border: var(--blok-database-drawer-border);
   --blok-database-gallery-preview-text: var(--blok-database-ink-secondary);
   --blok-database-gallery-title-text: rgb(240, 239, 237);
   --blok-database-gallery-muted-text: var(--blok-database-ink-tertiary);
@@ -1528,6 +1546,11 @@
 [data-blok-database-edit-card]:hover,
 [data-blok-database-card-menu]:hover {
   background: var(--blok-database-card-menu-hover-bg);
+}
+
+/* Board only: the gallery ⋯ press was not read. */
+[data-blok-database-card] [data-blok-database-card-menu]:active {
+  background: var(--blok-database-card-menu-press-bg);
 }
 
 /* Notion's board and gallery card glyphs are 16px (feel findings B08, notion-motion.md Round 60 §5). */
@@ -6640,7 +6663,7 @@ button[data-blok-database-layout-pin-name]:focus-visible {
     inline-size: 280px;
     margin: 0;
     overflow-y: auto;
-    border-inline-start: 1px solid var(--blok-database-drawer-border);
+    border-inline-start: 1px solid var(--blok-database-peek-details-border);
     border-radius: 0;
     background-color: var(--blok-database-peek-bg);
   }
@@ -16485,9 +16508,12 @@ button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-fie
   transition: background-color 0.1s ease-out, opacity 0.2s ease;
 }
 
-[data-blok-database-gallery-card]:hover,
-[data-blok-database-gallery-new]:hover {
+[data-blok-database-gallery-card]:hover {
   background-color: var(--blok-database-gallery-card-hover-bg);
+}
+
+[data-blok-database-gallery-new]:hover {
+  background-color: var(--blok-database-gallery-new-hover-bg);
 }
 
 [data-blok-database-gallery-card]:active {

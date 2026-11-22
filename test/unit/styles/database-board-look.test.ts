@@ -148,12 +148,34 @@ describe('board column, card and header look (research/08)', () => {
     expect(body).toContain('font-weight: 500');
   });
 
-  // research/36 §1.1, §11: hovered, "+ New page" takes the hovered card's fill. Measured for default, gray and red only.
+  // research/36 §1.1, §11: hovered, "+ New page" takes the hovered card's fill. Measured for default, gray and red.
   it('fills a hovered "+ New page" like a hovered card', () => {
     expect(ruleBody(database, '[data-blok-database-add-card]:hover')).toContain('background-color: var(--_blok-group-add-hover, var(--blok-database-card-bg-hover))');
     expect(tokenValues('--blok-database-column-default-add-hover-bg')).toEqual(['var(--blok-database-card-bg-hover)']);
     expect(tokenValues('--blok-database-column-gray-add-hover-bg')).toEqual(['var(--blok-database-column-gray-card-hover-bg, var(--blok-database-card-bg-hover))']);
     expect(tokenValues('--blok-database-column-red-add-hover-bg')).toEqual(['var(--blok-database-column-red-card-hover-bg)']);
+  });
+
+  // notion-motion.md Round 95 §3 "Card drag into another column": a green column's "New page" hover is rgb(3,75,27)/0.035.
+  // Dark was not read, so both dark blocks keep the neutral add hover.
+  it('tints a hovered "+ New page" in a green column with green, light only', () => {
+    expect(tokenValues('--blok-database-column-green-add-hover-bg')).toEqual([
+      'rgba(3, 75, 27, 0.035)',
+      'var(--blok-database-add-hover-bg)',
+      'var(--blok-database-add-hover-bg)',
+    ]);
+  });
+
+  // notion-motion.md Round 51 C (r51-n-card-menu-open.raw): pressing the card ⋯ fills it rgb(239,239,238), 20ms ease-in.
+  // Dark was not read, so it keeps the hover fill there.
+  it('fills a pressed card ⋯ with the measured press gray', () => {
+    expect(ruleBody(database, '[data-blok-database-card] [data-blok-database-card-menu]:active'))
+      .toContain('background: var(--blok-database-card-menu-press-bg)');
+    expect(tokenValues('--blok-database-card-menu-press-bg')).toEqual([
+      'rgb(239, 239, 238)',
+      'var(--blok-database-card-menu-hover-bg)',
+      'var(--blok-database-card-menu-hover-bg)',
+    ]);
   });
 
   // findings-board B19: the text is 15px/18px. notion-motion.md, Round 8c: the plus ink is 10.5 wide, and the slot must not squash it.

@@ -104,6 +104,20 @@ describe('database row page layout css', () => {
     expect(wide).toContain('[data-blok-database-drawer][data-peek-mode="side"][data-details-open] [data-blok-database-drawer-content] { padding-inline-end: var(--_blok-peek-details-inset); }');
   });
 
+  // notion-motion.md Round 59 §3 (r59-n-cov-panel.raw): the side peek's Page info panel has a 1px rgb(240,239,237) left border.
+  // Only the side peek was read, and dark was not, so dark keeps the drawer border.
+  it('draws the side peek details border in the measured light gray', () => {
+    const wide = database.match(/@media \(min-width: 844px\) \{([\s\S]*?\}) \}/)?.[1] ?? '';
+    const panel = wide.match(/\[data-blok-database-drawer\]\[data-peek-mode="side"\] \[data-blok-database-drawer-details\] \{([^}]*)\}/)?.[1] ?? '';
+
+    expect(panel).toContain('border-inline-start: 1px solid var(--blok-database-peek-details-border)');
+    expect([...database.matchAll(/--blok-database-peek-details-border: ([^;]+);/g)].map((m) => m[1].trim())).toEqual([
+      'rgb(240, 239, 237)',
+      'var(--blok-database-drawer-border)',
+      'var(--blok-database-drawer-border)',
+    ]);
+  });
+
   // research/22 §10: a 12px col-resize handle on the inner edge; a ring only after keyboard use.
   it('draws the side peek resize handle on its inner edge', () => {
     const handle = ruleBody('[data-blok-database-peek-resize]');

@@ -51,6 +51,18 @@ describe('database gallery and calendar styles', () => {
     expect(colors).not.toContain(`${token}:`);
   });
 
+  // notion-motion.md Round 24 Gallery (motion-r24-gal-newhover.json): the "+ New page" tile hovers to
+  // oklab(0.2278 0.0068 0.0100 / 0.051) = rgba(33,27,23,0.051), not the card's 0.04. Dark was not read.
+  it('fills a hovered "+ New page" tile with its own measured hover, not the card hover', () => {
+    expect(ruleBody('[data-blok-database-gallery-new]:hover')).toContain('background-color: var(--blok-database-gallery-new-hover-bg)');
+    expect(ruleBody('[data-blok-database-gallery-card]:hover')).toContain('background-color: var(--blok-database-gallery-card-hover-bg)');
+    expect(Array.from(css.matchAll(/--blok-database-gallery-new-hover-bg:\s*([^;]+);/g), (match) => match[1].trim())).toEqual([
+      'rgba(33, 27, 23, 0.051)',
+      'var(--blok-database-gallery-card-hover-bg)',
+      'var(--blok-database-gallery-card-hover-bg)',
+    ]);
+  });
+
   it('uses the measured gallery grid gap and title type', () => {
     expect(ruleBody('[data-blok-database-gallery-grid]')).toContain('gap: var(--blok-space-4)');
     expect(ruleBody('[data-blok-database-gallery-title]')).toMatch(/font-size:\s*15px/);

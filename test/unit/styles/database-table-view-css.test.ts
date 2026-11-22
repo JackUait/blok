@@ -255,8 +255,14 @@ describe('database table view styles', () => {
     expect(inner).toContain('z-index: -1');
     expect(inner).toContain('border-radius: var(--blok-radius-control-sm)');
     expect(inner).toContain('transition: background-color 20ms ease-in');
-    expect(exactRule('[data-blok-database-table-open]:not([data-compact]):hover::before')).toContain('background-color: var(--blok-database-table-header-hover-bg)');
+    expect(exactRule('[data-blok-database-table-open]:not([data-compact]):hover::before')).toContain('background-color: var(--blok-database-table-open-hover-bg)');
     expect(exactRule('[data-blok-database-table-open]:not([data-compact]):hover')).toBe('');
+  });
+
+  // notion-motion.md Round 105 §1 #3 (r105-n-opill-dark-hover.png): dark hover paints the inner box 41; the light fill is unchanged.
+  it('paints the dark OPEN pill hover 41, not the menu tint over its 37 box', () => {
+    expect(css.match(/--blok-database-table-open-hover-bg: rgb\(41, 41, 41\);/g)).toHaveLength(2);
+    expect(css.match(/--blok-database-table-open-hover-bg: var\(--blok-database-table-header-hover-bg\);/g)).toHaveLength(1);
   });
 
   it('draws the OPEN and CLOSE glyph at 18px, over its 15.25px slot', () => {

@@ -10913,7 +10913,7 @@ export class DatabaseTool implements BlockTool {
       }
       // A rename redraws the bands, so the pill is found again by its band.
       this.element?.querySelector<HTMLElement>(`[data-blok-database-board-lane][data-sub-group="${CSS.escape(key)}"] [data-blok-database-board-lane-label][role="button"]`)?.focus();
-    });
+    }, 'tools.database.renameGroup');
   }
 
   /** The rows a band shows: every shown column's rows in that sub-group. */
@@ -11200,8 +11200,15 @@ export class DatabaseTool implements BlockTool {
    * `propertyId` is the grouped property: a Status option's popup is 240 wide, a Select or Multi-select one's 300.
    * `done` gets the trimmed name on Done or Enter, and null on any other close
    * (Round 100 §1 #1: Notion drops a typed name on a click outside).
+   * `nameKey` names the field for screen readers: a band pill renames a row of the board, not a column.
    */
-  private openGroupRename(pill: HTMLElement, label: string, propertyId: string | undefined, done: (label: string | null) => void): void {
+  private openGroupRename(
+    pill: HTMLElement,
+    label: string,
+    propertyId: string | undefined,
+    done: (label: string | null) => void,
+    nameKey = 'tools.database.renameColumn'
+  ): void {
     const result: { label: string | null } = { label: null };
     const field = this.groupNameField(label, (value) => {
       result.label = value === '' ? null : value;
@@ -11213,7 +11220,7 @@ export class DatabaseTool implements BlockTool {
     // A band pill's coloured pill is inside its label; a column pill is coloured itself.
     const coloured = (pill.querySelector(':scope > [data-blok-database-option-pill]') ?? pill).getBoundingClientRect();
 
-    field.input.setAttribute('aria-label', this.api.i18n.t('tools.database.renameColumn'));
+    field.input.setAttribute('aria-label', this.api.i18n.t(nameKey));
     field.input.placeholder = this.api.i18n.t('tools.database.renameGroup');
     this.showGroupPopover(pill, [{ type: PopoverItemType.Html, element: field.wrap, name: 'rename-group' }], pill, {
       class: `${DATABASE_MENU_CLASS} blok-database-new-group-menu`,

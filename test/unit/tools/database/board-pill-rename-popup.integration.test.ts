@@ -359,6 +359,22 @@ describe('board: rename popup by property type, and on a band pill', () => {
     expect(await optionLabels('sel')).toEqual(['Crimson']);
   });
 
+  // A band is a row of the board, not a column, so its field is not named "Rename column" for screen readers.
+  it('names the field "Rename group" on a band pill and "Rename column" on a column pill', async () => {
+    await mount({ groupBy: 'st', subGroupBy: 'sel' });
+    bandPill()?.click();
+    await quiet();
+
+    expect(field()?.getAttribute('aria-label')).toBe('Rename group');
+
+    await key(field() ?? document.body, 'Escape');
+    await vi.waitFor(() => expect(field()).toBeNull());
+    pill()?.click();
+    await quiet();
+
+    expect(field()?.getAttribute('aria-label')).toBe('Rename column');
+  });
+
   it('Space on a band pill opens the popup', async () => {
     await mount({ groupBy: 'st', subGroupBy: 'sel' });
     bandPill()?.focus();

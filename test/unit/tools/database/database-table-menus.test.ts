@@ -65,14 +65,16 @@ describe('table view menus', () => {
     expect(constructed[0]?.viewportMargin).toBe(12);
   });
 
-  // notion-motion.md Round 85c §1: Escape removes the row handle menu at once; every other menu's Escape fades.
-  it('closes the row handle menus at once on Escape, and no other menu', () => {
+  // notion-motion.md Round 85c §1 (Escape), Round 105 §1 #2 (a click away, an item click): the row handle menu
+  // goes at once on every close; every other menu fades.
+  it('closes the row handle menus at once on every close, and no other menu', () => {
     const anchor = (): HTMLElement => document.createElement('button');
 
-    expect(openMenu(anchor(), [], { kind: 'row' }).escapeClosesAtOnce).toBe(true);
-    expect(openMenu(anchor(), [], { kind: 'handle' }).escapeClosesAtOnce).toBe(true);
-    expect(openMenu(anchor(), [], { kind: 'card' }).escapeClosesAtOnce).not.toBe(true);
-    expect(openMenu(anchor(), [], { kind: 'header' }).escapeClosesAtOnce).not.toBe(true);
+    expect(openMenu(anchor(), [], { kind: 'row' }).closesAtOnce).toBe(true);
+    expect(openMenu(anchor(), [], { kind: 'handle' }).closesAtOnce).toBe(true);
+    expect(openMenu(anchor(), [], { kind: 'card' }).closesAtOnce).not.toBe(true);
+    expect(openMenu(anchor(), [], { kind: 'header' }).closesAtOnce).not.toBe(true);
+    expect(openMenu(anchor(), []).closesAtOnce).not.toBe(true);
     expect(openMenu(anchor(), []).escapeClosesAtOnce).not.toBe(true);
   });
 

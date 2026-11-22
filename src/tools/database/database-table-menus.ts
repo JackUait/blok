@@ -297,9 +297,9 @@ export const openMenu = (
   if (options.kind === 'calc' || options.kind === 'row' || options.kind === 'handle') {
     popover.escapeClosesSubmenuFirst = true;
   }
-  // notion-motion.md Round 85c §1: Escape removes the row handle menu at once; other closes still fade.
+  // notion-motion.md Round 85c §1, Round 105 §1 #2: Escape, a click away and an item click remove the row handle menu at once.
   if (options.kind === 'row' || options.kind === 'handle') {
-    popover.escapeClosesAtOnce = true;
+    popover.closesAtOnce = true;
   }
   popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
   popover.alignEnd = options.alignEnd === true;

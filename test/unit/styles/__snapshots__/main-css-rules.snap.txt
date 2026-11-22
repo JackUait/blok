@@ -17684,8 +17684,8 @@ button[data-blok-database-table-group-count]:hover {
 }
 
 [data-blok-database-panel-page="picker"] > [data-blok-database-picker-list="sort"] {
-  padding-block-end: var(--blok-space-1);
-  margin-block-end: calc(-1 * var(--blok-space-1));
+  flex: none;
+  overflow-y: visible;
 }
 
 [data-blok-database-panel-page="picker"] > [data-blok-database-panel-separator] {

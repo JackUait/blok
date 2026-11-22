@@ -2038,6 +2038,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R290_BYTES = 258 + 419;
     // Lane r291: the dark « ink, rgb(125, 122, 117) (Round 109). Net database.css growth.
     const DATABASE_R291_BYTES = 267;
+    // Lane r292: "Edit filters" hover fill, the title row ⋯ 4 after the title with several views, the sort picker
+    // scrolls as one surface; "Calculate" lost its fade (Round 110). Net database.css growth.
+    const DATABASE_R292_BYTES = 789;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2746,6 +2749,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R287_BYTES
       + DATABASE_R290_BYTES
       + DATABASE_R291_BYTES
+      + DATABASE_R292_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

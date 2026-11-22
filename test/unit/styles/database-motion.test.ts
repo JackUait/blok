@@ -405,6 +405,17 @@ describe('minimized database toolbar', () => {
     expect(body(database, `[data-blok-database-title-row] > ${TOOLBAR}[data-minimized]`)).toContain('flex-grow: 1');
   });
 
+  // notion-motion.md Round 108 §1 #3 (r108-n-expand-zone.raw): with a view bar, « shows from 16 left of the toolbar
+  // (x 1159 against 1175). A pseudo-element, so the tab list keeps its width and folds no sooner.
+  it('starts a minimized view bar\'s « hover zone 16 left of the toolbar', () => {
+    const zone = body(database, `[data-blok-database-view-bar] > ${TOOLBAR}[data-minimized]::before`);
+
+    expect(zone).toContain('position: absolute');
+    expect(zone).toContain('inset-inline-end: 100%');
+    expect(zone).toContain('width: var(--blok-space-4)');
+    expect(body(database, `[data-blok-database-view-bar] > ${TOOLBAR}[data-minimized]`)).toContain('position: relative');
+  });
+
   // notion-motion.md Round 104 §1 #2: in a view bar, once the pointer has left «, it shows only while the pointer is
   // on the toolbar. A keyboard focus on a control still shows it. A title row already shows it on hover only.
   it('hides a hover-only « while the pointer and the keyboard are off the toolbar', () => {

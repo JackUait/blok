@@ -953,7 +953,11 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     it('lets Escape select the row again once the cell selection moves', async () => {
       const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('table'));
       const grid = await escapeMovePicker(el);
+      const scroller = el.querySelector<HTMLElement>('[data-blok-database-table-scroller]');
 
+      if (scroller === null) throw new Error('no scroller');
+      // press() holds ⌘, so the step scrolls the table with scrollTo, which jsdom lacks.
+      scroller.scrollTo = vi.fn() as typeof scroller.scrollTo;
       press(grid, 'ArrowRight');
       press(grid, 'Escape');
 

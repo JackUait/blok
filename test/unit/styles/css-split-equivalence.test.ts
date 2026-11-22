@@ -2119,6 +2119,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R320_SEPARATOR_BYTES = 719;
     // Lane r320: the keyboard row's hover-like fill in database menus (R113 light audit #2). Measured growth.
     const DATABASE_R320_KEYBOARD_ROW_BYTES = 233;
+    // Lane r321: light glyph inks on database surfaces (audit-light items 3_ 4_ 6_ 8_ 11_ 12_ map add-pin). Measured growth.
+    const DATABASE_R321_BYTES = 1_092;
     // file.css: the object on a file card — pages, editor tab, filmstrip, record, folder, punch card (measured file.css growth).
     const FILE_CARD_OBJECT_BYTES = 27_626;
     // emoji-picker.css: the database icon pickers' keyboard highlight (measured emoji-picker.css growth).
@@ -2806,7 +2808,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R319_TOGGLE_BYTES
       + DATABASE_R319_LAYOUT_LINE_BYTES
       + DATABASE_R320_SEPARATOR_BYTES
-      + DATABASE_R320_KEYBOARD_ROW_BYTES;
+      + DATABASE_R320_KEYBOARD_ROW_BYTES
+      + DATABASE_R321_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

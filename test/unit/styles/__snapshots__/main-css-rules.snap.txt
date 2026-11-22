@@ -5019,6 +5019,10 @@ span[data-blok-slash-search] {
   --blok-database-peek-label: var(--blok-database-ink-secondary);
   --blok-database-peek-label-icon: rgb(142, 139, 134);
   --blok-database-peek-add-icon: rgb(142, 139, 134);
+  --blok-database-group-action-icon: rgb(142, 139, 134);
+  --blok-database-add-group-icon: rgb(173, 169, 163);
+  --blok-database-card-glyph: rgb(142, 139, 134);
+  --blok-database-pinned-unpin-icon: rgb(161, 158, 153);
   --blok-database-favorite-star: rgb(246, 192, 80);
   --blok-database-comment-badge-text: rgb(44, 44, 43);
   --blok-database-comment-badge-icon: rgb(142, 139, 134);
@@ -5350,6 +5354,10 @@ span[data-blok-slash-search] {
   --blok-database-peek-label: rgb(173, 169, 163);
   --blok-database-peek-label-icon: rgb(173, 169, 163);
   --blok-database-peek-add-icon: var(--blok-database-ink-tertiary);
+  --blok-database-group-action-icon: var(--blok-database-add-text);
+  --blok-database-add-group-icon: var(--blok-database-add-text);
+  --blok-database-card-glyph: var(--blok-database-card-actions-icon);
+  --blok-database-pinned-unpin-icon: var(--blok-database-table-muted-text);
   --blok-database-comment-badge-text: rgb(240, 239, 237);
   --blok-database-comment-badge-icon: rgb(173, 169, 163);
   --blok-database-select-head-bg: rgba(255, 255, 255, 0.03);
@@ -5684,6 +5692,10 @@ span[data-blok-slash-search] {
   --blok-database-peek-label: rgb(173, 169, 163);
   --blok-database-peek-label-icon: rgb(173, 169, 163);
   --blok-database-peek-add-icon: var(--blok-database-ink-tertiary);
+  --blok-database-group-action-icon: var(--blok-database-add-text);
+  --blok-database-add-group-icon: var(--blok-database-add-text);
+  --blok-database-card-glyph: var(--blok-database-card-actions-icon);
+  --blok-database-pinned-unpin-icon: var(--blok-database-table-muted-text);
   --blok-database-comment-badge-text: rgb(240, 239, 237);
   --blok-database-comment-badge-icon: rgb(173, 169, 163);
   --blok-database-select-head-bg: rgba(255, 255, 255, 0.03);
@@ -5942,7 +5954,7 @@ span[data-blok-slash-search] {
   inline-size: 18px;
   block-size: 22.5px;
   margin-inline: var(--blok-space-0-25) var(--blok-space-1-75);
-  color: var(--blok-database-card-actions-icon);
+  color: var(--blok-database-card-glyph);
 }
 
 [data-blok-database-card-edit-glyph] svg, [data-blok-database-card] > [data-blok-database-page-icon-placeholder] svg, [data-blok-database-gallery-card] > [data-blok-database-page-icon-placeholder] svg {
@@ -6003,6 +6015,7 @@ span[data-blok-slash-search] {
 [data-blok-database-add-column-icon] {
   display: flex;
   margin-inline-end: var(--blok-space-2);
+  color: var(--blok-database-add-group-icon);
 }
 
 [data-blok-database-add-column-icon] svg {
@@ -6140,7 +6153,7 @@ span[data-blok-slash-search] {
   width: 24px;
   height: 24px;
   padding: 0;
-  color: var(--blok-database-table-muted-text);
+  color: var(--blok-database-pinned-unpin-icon);
 }
 
 [data-blok-database-pinned-group-unpin] svg {
@@ -15392,7 +15405,7 @@ button[data-blok-database-table-calc] > [data-blok-database-table-calc-box]:hove
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-database-add-text);
+  color: var(--blok-database-group-action-icon);
   cursor: pointer;
 }
 

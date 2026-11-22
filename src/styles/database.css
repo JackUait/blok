@@ -466,6 +466,15 @@
   --blok-database-peek-label-icon: rgb(142, 139, 134);
   /* "Add a property" plus: Notion's rgb(173, 169, 163) is 2.34:1, so the type icon ink stands in. */
   --blok-database-peek-add-icon: rgb(142, 139, 134);
+  /* Light glyph inks (notion-motion.md). Icons are not on the AA text list; dark keeps its old ink. */
+  /* Group band ⋯ and + (L3102, L4154). */
+  --blok-database-group-action-icon: rgb(142, 139, 134);
+  /* "+ New group" plus (L2283). */
+  --blok-database-add-group-icon: rgb(173, 169, 163);
+  /* Card page glyph (L350, L4644). */
+  --blok-database-card-glyph: rgb(142, 139, 134);
+  /* "Unpin group" pin (L2365). */
+  --blok-database-pinned-unpin-icon: rgb(161, 158, 153);
   /* Favorited row page star (research/22 §14). Dark is unmeasured, so it has no dark value. */
   --blok-database-favorite-star: rgb(246, 192, 80);
   /* Comment badge count and icon (research/21 §1o). */
@@ -858,6 +867,10 @@
     --blok-database-peek-label: rgb(173, 169, 163);
     --blok-database-peek-label-icon: rgb(173, 169, 163);
     --blok-database-peek-add-icon: var(--blok-database-ink-tertiary);
+    --blok-database-group-action-icon: var(--blok-database-add-text);
+    --blok-database-add-group-icon: var(--blok-database-add-text);
+    --blok-database-card-glyph: var(--blok-database-card-actions-icon);
+    --blok-database-pinned-unpin-icon: var(--blok-database-table-muted-text);
     --blok-database-comment-badge-text: rgb(240, 239, 237);
     --blok-database-comment-badge-icon: rgb(173, 169, 163);
     --blok-database-select-head-bg: rgba(255, 255, 255, 0.03);
@@ -1246,6 +1259,10 @@
   --blok-database-peek-label: rgb(173, 169, 163);
   --blok-database-peek-label-icon: rgb(173, 169, 163);
   --blok-database-peek-add-icon: var(--blok-database-ink-tertiary);
+  --blok-database-group-action-icon: var(--blok-database-add-text);
+  --blok-database-add-group-icon: var(--blok-database-add-text);
+  --blok-database-card-glyph: var(--blok-database-card-actions-icon);
+  --blok-database-pinned-unpin-icon: var(--blok-database-table-muted-text);
   --blok-database-comment-badge-text: rgb(240, 239, 237);
   --blok-database-comment-badge-icon: rgb(173, 169, 163);
   --blok-database-select-head-bg: rgba(255, 255, 255, 0.03);
@@ -1574,7 +1591,7 @@
   block-size: 22.5px;
   /* notion-motion.md, Round 8c: the glyph at x 11 and the name field at x 36 of the card. */
   margin-inline: var(--blok-space-0-25) var(--blok-space-1-75);
-  color: var(--blok-database-card-actions-icon);
+  color: var(--blok-database-card-glyph);
 }
 
 [data-blok-database-card-edit-glyph] svg,
@@ -1644,6 +1661,7 @@
 [data-blok-database-add-column-icon] {
   display: flex;
   margin-inline-end: var(--blok-space-2);
+  color: var(--blok-database-add-group-icon);
 }
 
 [data-blok-database-add-column-icon] svg {
@@ -1797,7 +1815,7 @@
   width: 24px;
   height: 24px;
   padding: 0;
-  color: var(--blok-database-table-muted-text);
+  color: var(--blok-database-pinned-unpin-icon);
 }
 
 [data-blok-database-pinned-group-unpin] svg {
@@ -12481,7 +12499,7 @@ button[data-blok-database-table-calc] > [data-blok-database-table-calc-box]:hove
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-database-add-text);
+  color: var(--blok-database-group-action-icon);
   cursor: pointer;
 }
 

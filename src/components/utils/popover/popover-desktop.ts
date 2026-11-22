@@ -1125,22 +1125,33 @@ export class PopoverDesktop extends PopoverAbstract {
    * Keeps the menu open under a dialog one of its rows opened (research/30 B3).
    * Presses, focus and keys in the dialog leave it alone until the release,
    * which gives the cursor back to the named row.
+   * @param openedBy - the row that opened a panel over the menu: until the release a see-through
+   *   layer covers the menu, so its rows take no hover or clicks, and this row keeps its open tint
    * @returns the release; a no-op once the menu has closed
    */
-  public holdOpen(): (focusItemName?: string) => void {
+  public holdOpen(openedBy?: string): (focusItemName?: string) => void {
     const trigger = this.params.trigger;
     const hold = { on: true };
+    const opener = openedBy === undefined ? undefined : this.itemsDefault.find((item) => item.name === openedBy);
+    const cover = openedBy === undefined ? null : document.createElement('div');
 
     PopoverRegistry.instance.unregister(this);
     this.flipper?.deactivate();
     // The held surface sits outside the submenu too: the pointer leaving for it must not close the submenu.
     this.holds += 1;
     this.cancelNestedCloseIntent();
+    opener?.onChildrenOpen();
+    if (cover !== null) {
+      cover.style.cssText = 'position:absolute;inset:0;z-index:1';
+      this.nodes.popoverContainer.appendChild(cover);
+    }
 
     return (focusItemName) => {
       if (hold.on) {
         hold.on = false;
         this.holds -= 1;
+        opener?.onChildrenClose();
+        cover?.remove();
       }
       if (!this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpened)) {
         return;

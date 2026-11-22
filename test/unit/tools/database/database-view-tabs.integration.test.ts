@@ -248,6 +248,19 @@ describe('view tabs (feel/findings-toolbar)', () => {
         expect(tabMenuOpen()).toBe(true);
       });
 
+      // notion-motion.md Round 111 §1 #3: Source keeps its tint while its panel is open, and drops it after Escape.
+      it('marks the Source row open while its panel is up', async () => {
+        await openSource();
+
+        expect(menuItem('database-view-source')).toHaveAttribute('data-blok-popover-item-children-open', 'true');
+        expect(menuItem('database-view-source')).toHaveAttribute('aria-expanded', 'true');
+
+        document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        await quiet();
+
+        expect(menuItem('database-view-source')).not.toHaveAttribute('data-blok-popover-item-children-open');
+      });
+
       it('Escape closes the source panel only and puts focus back on the Source row', async () => {
         await openSource();
 

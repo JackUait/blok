@@ -274,6 +274,49 @@ test.describe('database New data source', () => {
     expect(views.views.find((view) => view.id === 'v0')?.dataSourceId).toBeUndefined();
   });
 
+  // notion-motion.md Round 111 §1 #3 (r111-n-source-open-rows.raw): a see-through layer covers the tab menu
+  // while Source is open, so its rows take no hover and no clicks, and Source keeps its tint.
+  test('the tab menu under the Source panel takes no hover or clicks, and Source keeps its tint', async ({ page }) => {
+    await mount(page, bound);
+    await page.locator('[data-blok-database-tab][data-view-id="vb"]').click({ button: 'right' });
+    const source = page.locator('[data-blok-item-name="database-view-source"]:visible');
+    const duplicate = page.locator('[data-blok-item-name="database-view-duplicate"]:visible');
+
+    await source.click();
+    await expect(page.getByTestId('database-source-search')).toBeFocused();
+    const box = await duplicate.boundingBox();
+
+    if (box === null) throw new Error('missing Duplicate view row');
+    const point = { x: box.x + box.width * 0.4, y: box.y + box.height / 2 };
+
+    await page.mouse.move(point.x, point.y - 20, { steps: 3 });
+    await page.mouse.move(point.x, point.y, { steps: 3 });
+
+    const read = await page.evaluate(({ x, y }) => {
+      const row = (name: string): HTMLElement | null => [...document.querySelectorAll<HTMLElement>(`[data-blok-item-name="${name}"]`)].find((el) => el.getBoundingClientRect().width > 0) ?? null;
+      const hit = document.elementFromPoint(x, y);
+
+      return {
+        hitsRow: row('database-view-duplicate')?.contains(hit) ?? false,
+        cursor: hit === null ? '' : getComputedStyle(hit).cursor,
+        duplicateBg: getComputedStyle(row('database-view-duplicate') ?? document.body).backgroundColor,
+        sourceBg: getComputedStyle(row('database-view-source') ?? document.body).backgroundColor,
+      };
+    }, point);
+
+    expect(read.hitsRow).toBe(false);
+    expect(read.cursor).not.toBe('pointer');
+    expect(read.duplicateBg).toBe('rgba(0, 0, 0, 0)');
+    expect(read.sourceBg).not.toBe('rgba(0, 0, 0, 0)');
+    await expect(page.getByTestId('database-source-search')).toBeFocused();
+
+    // A click there duplicates nothing.
+    await page.mouse.click(point.x, point.y);
+    const views = (await save(page)).find((block) => block.id === 'db-1')?.data as { views: unknown[] };
+
+    expect(views.views).toHaveLength(2);
+  });
+
   test.describe('the "New data source" panel', () => {
     const withOther: OutputBlockData[] = [
       ...initial,

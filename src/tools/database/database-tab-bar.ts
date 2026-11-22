@@ -707,7 +707,8 @@ export class DatabaseTabBar {
    */
   private openSourceFromMenu(viewId: string, anchor: HTMLElement, onSource: NonNullable<TabBarOptions['onViewSource']>): void {
     const popover = this.contextPopover;
-    const release = popover?.holdOpen();
+    // notion-motion.md Round 111 §1 #3: Notion covers the menu with a see-through layer while the panel is up.
+    const release = popover?.holdOpen('database-view-source');
 
     onSource(viewId, anchor, (escape) => {
       // A rebuild (the view switched) already closed this menu.

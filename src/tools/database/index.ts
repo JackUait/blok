@@ -49,7 +49,7 @@ import { safeHref } from '../../components/utils/sanitize-url';
 import { announce } from '../../components/utils/announcer';
 import { isKeyboardModality } from '../../components/utils/input-modality';
 import { bulkCloseClearsSelection, bulkEditableProperties, bulkStartValue, createSelectionBar, watchBulkCloseKey } from './database-selection-bar';
-import { CALC_MENU_MIN_WIDTH, CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, openMenu, rowMenuFooter, rowMenuItems, selectionActionItems, selectionMenuItems } from './database-table-menus';
+import { CALC_MENU_MIN_WIDTH, CALCULATION_LABEL_KEYS, calcHighlight, calcMenuAt, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, openMenu, rowMenuFooter, rowMenuItems, selectionActionItems, selectionMenuItems, startCursorOn } from './database-table-menus';
 import type { OpenMenuOptions, RowFavorite } from './database-table-menus';
 import { EmojiPicker, prefetchEmojiPickerData } from '../callout/emoji-picker';
 import { refreshCommentBadges } from './database-comment-badge';
@@ -7369,7 +7369,7 @@ export class DatabaseTool implements BlockTool {
     }, {
       capCounts: resolveCountCaps(viewConfig).has(propertyId),
       onCapCounts: (cap) => this.updateActiveView({ calculations: withCalculationCap(viewConfig, propertyId, cap) }),
-    }), { kind: 'calc', at: calcMenuAt(anchor) });
+    }), { kind: 'calc', at: calcMenuAt(anchor), highlight: calcHighlight(shown(property), current) });
   }
 
   /** "+ New": a row with the new bar's dates, plus what the view's filters and group ask for. */
@@ -10844,17 +10844,7 @@ export class DatabaseTool implements BlockTool {
     this.groupMenuPopover = popover;
     popover.show();
     if (layout.highlight !== undefined) {
-      popover.focusItemByName(layout.highlight);
-      // The fill follows the pointer, so one row is filled at a time. pointermove, not mouseover:
-      // a menu opening under a resting pointer keeps the first row.
-      popover.getElement().addEventListener('pointermove', (event) => {
-        const row = event.target instanceof Element ? event.target.closest(`[${DATA_ATTR.itemName}]`) : null;
-        const name = row?.getAttribute(DATA_ATTR.itemName);
-
-        if (row !== null && row !== undefined && name !== null && name !== undefined && row.getAttribute(DATA_ATTR.focused) !== 'true') {
-          popover.focusItemByName(name);
-        }
-      });
+      startCursorOn(popover, layout.highlight);
     }
   }
 

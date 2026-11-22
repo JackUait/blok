@@ -151,6 +151,8 @@ describe('DatabaseTableView', () => {
 
   afterEach(async () => {
     vi.restoreAllMocks();
+    // A menu left open keeps its arrow keys, and takes them before the next test's menu.
+    for (let i = 0; i < 20 && PopoverRegistry.instance.closeTopmost(); i++);
     document.body.innerHTML = '';
     // A drop leaves a one-tick click swallow on the document; let it lapse.
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -2771,7 +2773,8 @@ describe('DatabaseTableView', () => {
     // notion-motion.md Round 111 §1 #4: Notion tints the row holding the current calculation on open.
     // User decision 2026-11-22: only after a keyboard open (keyboard-only focus law); a mouse open tints nothing.
     describe('footer menu highlight', () => {
-      const lit = (): string[] => [...document.querySelectorAll<HTMLElement>('[data-blok-database-menu-lit]')].map((el) => el.textContent ?? '');
+      // The keyboard cursor, so the next arrow moves on from this row.
+      const lit = (): string[] => [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened] [data-blok-focused="true"]')].map((el) => el.textContent ?? '');
       const row = (key: string): HTMLElement | undefined =>
         [...document.querySelectorAll<HTMLElement>('[data-blok-popover-item]')].find((el) => el.textContent?.includes(key));
       const openFooter = (calculations: Array<{ id: string; fn: CalculationFn }>, propertyId: string): void => {
@@ -2831,19 +2834,25 @@ describe('DatabaseTableView', () => {
         expect(lit()[0]).toContain('tools.database.calcNone');
       });
 
-      it('after a keyboard open, the start tint goes once the pointer takes a row, and nothing stays after a leave', () => {
+      // notion-motion.md Round 115 §1 #4 (r115-n-tlfoot-calc-kbopen.raw): ArrowDown from None goes to Count.
+      it('after a keyboard open on None, ArrowDown moves the cursor to Count', () => {
+        useKeyboard();
+        openFooter([{ id: 'p-amount', fn: 'sum' }], 'p-notes');
+        document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'ArrowDown' }));
+
+        expect(lit()).toHaveLength(1);
+        expect(lit()[0]).toContain('tools.database.calcCount');
+      });
+
+      // As the zoom menu: the fill follows the pointer, so one row is filled at a time.
+      it('after a keyboard open, the cursor follows the pointer, one row at a time', () => {
         useKeyboard();
         openFooter([{ id: 'p-amount', fn: 'sum' }], 'p-amount');
 
-        document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 5, bubbles: true }));
-        row('tools.database.calcNone')?.dispatchEvent(new MouseEvent('mouseover', { clientX: 10, clientY: 10, bubbles: true }));
+        row('tools.database.calcNone')?.dispatchEvent(new PointerEvent('pointermove', { clientX: 10, clientY: 10, bubbles: true }));
 
-        expect(lit()).toEqual([]);
-
-        document.querySelector<HTMLElement>('[data-blok-popover-opened="true"] [data-blok-popover-container]')
-          ?.dispatchEvent(new MouseEvent('mouseleave', { clientX: 900, clientY: 900 }));
-
-        expect(lit()).toEqual([]);
+        expect(lit()).toHaveLength(1);
+        expect(lit()[0]).toContain('tools.database.calcNone');
       });
     });
 

@@ -1011,13 +1011,6 @@ describe('Edit property rows after Escape on their submenu (Round 113)', () => {
   });
 });
 
-// notion-motion.md Round 111 §1 #4: the kept row takes the hover fill, never a blue selected fill.
-describe('database menu kept highlight', () => {
-  it('tints the kept row with the hover fill', () => {
-    expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-database-menu-lit]", 'background-color')).toEqual(['var(--blok-database-hover-bg)']);
-  });
-});
-
 // notion-motion.md L322, L489, L9789: Notion's menu separators are 1px rgba(42,28,0,0.07) in every database menu.
 // Dark is unmeasured, so it keeps the shared line: popover-border (0.14 white) at 60%.
 describe('database menu separators', () => {

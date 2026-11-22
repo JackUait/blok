@@ -4,6 +4,7 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_CLOSE_DELAY_MS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { isKeyboardModality } from '../../components/utils/input-modality';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import {
   IconArrowDiagonal,
@@ -130,7 +131,7 @@ const calcGroupName = (fns: readonly CalculationFn[]): string => `database-calc-
 
 /**
  * The calculation menu row that holds `current`: None, or the group whose list has it.
- * notion-motion.md Round 111 §1 #4: the footer menu opens with this row tinted.
+ * notion-motion.md Round 111 §1 #4, Round 115 §1 #4: a keyboard-opened menu starts on this row.
  */
 export const calcHighlight = (property: Pick<PropertyDefinition, 'type'>, current: CalculationFn | undefined): string => {
   if (current === undefined) {
@@ -253,32 +254,25 @@ export interface OpenMenuOptions {
   /** A card menu that does not fit below opens above, its bottom this far over the anchor's top, when it fits there. */
   coverFlipOffset?: number;
   /**
-   * The row (item name) tinted when the menu opens from the keyboard. It goes once
-   * the pointer or the keyboard moves to a row; a mouse open tints nothing.
+   * The row (item name) the cursor starts on when the menu opens from the keyboard.
+   * A mouse open starts on no row.
    */
   highlight?: string;
 }
 
-/** Hover-tinted in database.css. */
-const LIT_ATTR = 'data-blok-database-menu-lit';
+/**
+ * Puts the cursor on row `name`. The fill then follows the pointer, so one row is filled at a time.
+ * pointermove, not mouseover: a menu opening under a resting pointer keeps the start row.
+ */
+export const startCursorOn = (popover: PopoverDesktop, name: string): void => {
+  popover.focusItemByName(name);
+  popover.getElement().addEventListener('pointermove', (event) => {
+    const row = event.target instanceof Element ? event.target.closest(`[${DATA_ATTR.itemName}]`) : null;
+    const hovered = row?.getAttribute(DATA_ATTR.itemName);
 
-/** Tints row `name` until the current row changes. Keyboard opens only: the focus law. */
-const startHighlight = (popover: PopoverDesktop, name: string): void => {
-  if (!isKeyboardModality()) {
-    return;
-  }
-  const lit = popover.getElement().querySelector<HTMLElement>(`[data-blok-item-name="${name}"]`);
-
-  if (lit === null) {
-    return;
-  }
-  lit.setAttribute(LIT_ATTR, '');
-  const stop = popover.onCurrentItemChange((current) => {
-    if (current?.element === lit) {
-      return;
+    if (row !== null && row !== undefined && hovered !== null && hovered !== undefined && row.getAttribute(DATA_ATTR.focused) !== 'true') {
+      popover.focusItemByName(hovered);
     }
-    lit.removeAttribute(LIT_ATTR);
-    stop();
   });
 };
 
@@ -376,8 +370,9 @@ export const openMenu = (
     queueMicrotask(() => popover.destroy());
   });
   popover.show();
-  if (options.highlight !== undefined) {
-    startHighlight(popover, options.highlight);
+  // A real cursor, so the next arrow moves on from this row. Keyboard opens only: the focus law.
+  if (options.highlight !== undefined && isKeyboardModality()) {
+    startCursorOn(popover, options.highlight);
   }
 
   return popover;

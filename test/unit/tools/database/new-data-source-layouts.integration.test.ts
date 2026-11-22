@@ -367,7 +367,10 @@ describe('New data source: every layout on a second source', () => {
       await quiet();
     };
 
-    afterEach(() => {
+    // A menu left open keeps its arrow keys and its cursor into the next test.
+    afterEach(async () => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      await quiet();
       document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
     });
 
@@ -391,6 +394,58 @@ describe('New data source: every layout on a second source', () => {
 
       document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
       await click(button);
+
+      expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+      expect(cursor()).toEqual([]);
+    });
+  });
+
+  // notion-motion.md Round 115 §1 #4 (r115-n-tlfoot-calc-kbopen.raw): a keyboard open starts on None; ArrowDown goes to Count.
+  // User decision 2026-11-22: a mouse open starts on no row.
+  describe('timeline footer Calculate start row', () => {
+    const footerCalc = async (): Promise<HTMLElement | null> => {
+      await make([{
+        id: 'db', type: 'database', content: [],
+        data: {
+          title: 'Plain',
+          schema: [...parentSchema, { id: 'when', name: 'When', type: 'date', position: 'a2' }],
+          views: [table('v1', 'a0', { type: 'timeline', timelineBy: 'when', showTimelineTable: true })],
+          activeViewId: 'v1',
+        },
+      }]);
+
+      return own('[data-blok-database-timeline]').querySelector<HTMLElement>('[data-blok-database-timeline-table-footer] button[data-blok-database-table-calc]');
+    };
+    const cursor = (): Array<string | null> => [...document.querySelectorAll('[data-blok-popover-opened] [data-blok-focused="true"]')]
+      .map((row) => row.closest('[data-blok-item-name]')?.getAttribute('data-blok-item-name') ?? null);
+
+    // A menu left open keeps its arrow keys and its cursor into the next test.
+    afterEach(async () => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      await quiet();
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
+    });
+
+    it('a keyboard open starts on None, and ArrowDown lands on Count', async () => {
+      const cell = await footerCalc();
+
+      cell?.focus();
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
+      await click(cell);
+
+      expect(cursor()).toEqual(['database-calc-none']);
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      await quiet();
+
+      expect(cursor()).toEqual(['database-calc-group-count']);
+    });
+
+    it('a mouse open starts on no row', async () => {
+      const cell = await footerCalc();
+
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      await click(cell);
 
       expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
       expect(cursor()).toEqual([]);

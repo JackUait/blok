@@ -501,15 +501,15 @@ describe('database table calculation footer', () => {
     expect(ruleBody('[data-blok-database-table-calc][data-type="number"]')).toBe('');
   });
 
-  // r9-calc-numhover.raw: "Calculate" is a 26px button; its label fades 0 to 1 over 200ms ease, only in the hovered cell.
-  it('shows "Calculate" in a 26px box, fading in 200ms only on its own cell', () => {
+  // r9-calc-numhover.raw: "Calculate" is a 26px button, shown only in the hovered cell.
+  // notion-motion.md Round 110 §1 #4 (r110-n-footer-calc-hover-light.raw): opacity 1 at the first frame, no fade.
+  it('shows "Calculate" in a 26px box at once, only on its own cell', () => {
     expect(ruleBody('[data-blok-database-table-calc][data-empty] > [data-blok-database-table-calc-box]')).toMatch(/height:\s*26px/);
-    expect(ruleBody('[data-blok-database-table-calc-placeholder]')).toMatch(/transition:\s*opacity 200ms ease/);
+    expect(ruleBody('[data-blok-database-table-calc-placeholder]')).not.toMatch(/transition/);
     expect(ruleBody('[data-blok-database-table-calc]:hover [data-blok-database-table-calc-placeholder]')).toMatch(/opacity:\s*1/);
     expect(ruleBody('[data-blok-database-table-footer]:hover [data-blok-database-table-calc-placeholder]')).toBe('');
     // r10-timeline-calc-hovercell.raw: the timeline footer reveals it per cell too, not on the whole row.
     expect(ruleBody('[data-blok-database-timeline-table-footer]:hover [data-blok-database-table-calc-placeholder]')).toBe('');
-    expect(tableCss).toMatch(/\[data-blok-database-table-calc-placeholder\][^{]*\{\s*transition: none/);
   });
 
   // Shot 66: the value ends 11px short of the column edge; the box's 6px plus the cell's 4px.

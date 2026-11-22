@@ -12231,7 +12231,7 @@ button[data-blok-database-table-calc] > [data-blok-database-table-calc-box]:hove
   font-weight: 500;
 }
 
-/* r9-calc-numhover.raw: "Calculate" is a 26px button, and its label fades in 200ms ease on its own cell only. */
+/* r9-calc-numhover.raw: "Calculate" is a 26px button, shown on its own cell only. Round 110 §1 #4: no fade. */
 [data-blok-database-table-calc][data-empty] > [data-blok-database-table-calc-box] {
   height: 26px;
 }
@@ -12239,7 +12239,6 @@ button[data-blok-database-table-calc] > [data-blok-database-table-calc-box]:hove
 [data-blok-database-table-calc-placeholder] {
   color: var(--blok-database-table-muted-text);
   opacity: 0;
-  transition: opacity 200ms ease;
 }
 
 [data-blok-database-table-calc]:hover [data-blok-database-table-calc-placeholder],
@@ -12758,7 +12757,6 @@ button[data-blok-database-table-group-count]:hover {
   [data-blok-database-table-drop-line],
   [data-blok-database-table-grid][data-column-dragging] [data-blok-database-table-column-header],
   [data-blok-database-table-calc-box],
-  [data-blok-database-table-calc-placeholder],
   [data-blok-database-table-column-header],
   [data-blok-database-table-open],
   [data-blok-database-table-open] > span[aria-hidden="true"],

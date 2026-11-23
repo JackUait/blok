@@ -999,15 +999,41 @@ describe('Edit property list after Escape on a submenu (Round 94)', () => {
   });
 });
 
-// notion-motion.md Round 113 §1 #1: Escape from Decimal places, Date format or Color puts focus on that row,
-// :focus-visible with a solid 2px outline. Change type (header menu) shows none, so it is left out.
-describe('Edit property rows after Escape on their submenu (Round 113)', () => {
-  const ROWS = ['decimals', 'dateFormat', 'color'];
+// notion-motion.md Round 115 "Notion's ring on a menu row": a database menu row with keyboard focus
+// (after Escape from its submenu or a keyboard pick in it) shows a 2px blue ring 2px outside the row.
+// Only while it also holds the cursor: an arrow key moves the cursor but leaves DOM focus behind.
+describe('database menu row with keyboard focus (Round 115)', () => {
+  const ROW = ":root:not([data-blok-modality=\"pointer\"]) [data-blok-popover][data-blok-popover-custom-class*='blok-database-'] [data-blok-popover-item][data-blok-focused='true']:focus-visible";
+  const LIGHT = ':where([data-blok-popover])';
 
-  it.each(ROWS)('paints the keyboard ring on the %s row', (name) => {
-    const row = `[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="${name}"]:focus-visible`;
+  it('paints the blue ring 2px outside the row, over a 2px gap', () => {
+    expect(declared(ROW, 'box-shadow')).toEqual(['0 0 0 2px var(--blok-database-menu-row-ring-gap), 0 0 0 4px var(--blok-focus-ring), 0 0 0 6px var(--blok-database-menu-row-ring-halo)']);
+  });
 
-    expect(declared(row, 'outline')).toEqual(['2px solid var(--blok-focus-ring)']);
+  it('hides the shared inset cursor outline under the ring', () => {
+    expect(declared(ROW, 'outline-color')).toEqual(['transparent']);
+  });
+
+  it('takes Notion\'s light gap and halo', () => {
+    expect(declared(LIGHT, '--blok-database-menu-row-ring-gap')).toEqual(['rgb(248, 248, 247)']);
+    expect(declared(LIGHT, '--blok-database-menu-row-ring-halo')).toEqual(['rgba(255, 255, 255, 0.25)']);
+  });
+
+  // The list scrolls with no side padding, so it would clip the ring's sides. It widens into the card's 4px padding
+  // while a row holds focus; the rows stay put.
+  it('lets the list show the ring\'s sides', () => {
+    const LIST = ":root:not([data-blok-modality=\"pointer\"]) [data-blok-popover][data-blok-popover-custom-class*='blok-database-'] [data-blok-popover-items]:not([data-blok-popover-custom-class~='blok-database-add-view-menu'] *):has(> [data-blok-popover-item][data-blok-focused='true']:focus-visible)";
+
+    expect(declared(LIST, 'margin-inline')).toEqual(['calc(-1 * var(--blok-space-1))']);
+    expect(declared(LIST, 'padding-inline')).toEqual(['var(--blok-space-1)']);
+  });
+
+  it('drops the R113 per-row outline the ring replaces', () => {
+    ['decimals', 'dateFormat', 'color'].forEach((name) => {
+      const row = `[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="${name}"]:focus-visible`;
+
+      expect(declared(row, 'outline')).toEqual([]);
+    });
   });
 });
 

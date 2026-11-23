@@ -4759,6 +4759,8 @@ span[data-blok-slash-search] {
   --blok-database-popover-hover: var(--blok-database-hover-bg);
   --blok-database-list-row-ring-gap: rgb(248, 248, 247);
   --blok-database-list-row-ring-halo: rgba(255, 255, 255, 0.25);
+  --blok-database-menu-row-ring-gap: rgb(248, 248, 247);
+  --blok-database-menu-row-ring-halo: rgba(255, 255, 255, 0.25);
   --blok-database-option-default-bg: rgba(42, 28, 0, 0.07);
   --blok-database-option-default-text: rgb(44, 44, 43);
   --blok-database-option-gray-bg: rgba(28, 19, 1, 0.11);
@@ -5192,6 +5194,8 @@ span[data-blok-slash-search] {
   --blok-database-table-open-button-shadow: inset 0 0 0 2px rgb(32, 32, 32), rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-popover-bg: rgb(37, 37, 37);
+  --blok-database-menu-row-ring-gap: var(--blok-database-popover-bg);
+  --blok-database-menu-row-ring-halo: var(--blok-database-popover-bg);
   --blok-database-popover-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
   --blok-database-table-cell-ring: rgba(255, 255, 255, 0.35);
   --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
@@ -5535,6 +5539,8 @@ span[data-blok-slash-search] {
   --blok-database-table-open-button-shadow: inset 0 0 0 2px rgb(32, 32, 32), rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-popover-bg: rgb(37, 37, 37);
+  --blok-database-menu-row-ring-gap: var(--blok-database-popover-bg);
+  --blok-database-menu-row-ring-halo: var(--blok-database-popover-bg);
   --blok-database-popover-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
   --blok-database-table-cell-ring: rgba(255, 255, 255, 0.35);
   --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
@@ -7906,8 +7912,14 @@ button[data-blok-database-board-lane-count]:hover {
   outline: none;
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="decimals"]:focus-visible, [data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="dateFormat"]:focus-visible, [data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="color"]:focus-visible {
-  outline: 2px solid var(--blok-focus-ring);
+:root:not([data-blok-modality="pointer"]) [data-blok-popover][data-blok-popover-custom-class*='blok-database-'] [data-blok-popover-item][data-blok-focused='true']:focus-visible {
+  outline-color: transparent;
+  box-shadow: 0 0 0 2px var(--blok-database-menu-row-ring-gap), 0 0 0 4px var(--blok-focus-ring), 0 0 0 6px var(--blok-database-menu-row-ring-halo);
+}
+
+:root:not([data-blok-modality="pointer"]) [data-blok-popover][data-blok-popover-custom-class*='blok-database-'] [data-blok-popover-items]:not([data-blok-popover-custom-class~='blok-database-add-view-menu'] *):has(> [data-blok-popover-item][data-blok-focused='true']:focus-visible) {
+  margin-inline: calc(-1 * var(--blok-space-1));
+  padding-inline: var(--blok-space-1);
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item-icon], [data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-item-icon], [data-blok-popover][data-blok-popover-custom-class~='blok-database-page-actions-menu'] [data-blok-popover-item-icon], [data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] [data-blok-popover-item-icon], [data-blok-popover][data-blok-popover-custom-class~='blok-database-lock-menu'] [data-blok-popover-item-icon], [data-blok-popover][data-blok-popover-custom-class~='blok-database-title-menu'] [data-blok-popover-item-icon] {

@@ -2101,6 +2101,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R303_BYTES = 297;
     // Lane r306: Round 113 §1 #1 the keyboard ring on the Decimal places, Date format and Color rows after Escape. Net database.css growth against origin/main.
     const DATABASE_R306_BYTES = 630;
+    // Lane r310: Round 113 §1 #8 the select token × hover fill, §1 #9 the space under the Bar options footer. Net database.css growth against origin/main.
+    const DATABASE_R310_BYTES = 551;
     // file.css: the object on a file card — pages, editor tab, filmstrip, record, folder, punch card (measured file.css growth).
     const FILE_CARD_OBJECT_BYTES = 27_626;
     // emoji-picker.css: the database icon pickers' keyboard highlight (measured emoji-picker.css growth).
@@ -2779,7 +2781,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + MARK_ROUNDED_FILL_BYTES
       + MARK_JOINED_EDGE_BYTES
       + DATABASE_R303_BYTES
-      + DATABASE_R306_BYTES;
+      + DATABASE_R306_BYTES
+      + DATABASE_R310_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

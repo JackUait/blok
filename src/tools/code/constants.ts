@@ -110,20 +110,26 @@ export const LANGUAGE_DOT_FALLBACK = 'var(--blok-gray-text)';
  * tab row controls, which a static view never renders.
  */
 export const WRAPPER_STYLES = ['group/code', '@container/code', ...CODE_WRAPPER_CLASSES].join(' ');
-/** The card's start corner is square because the tab sits on it. */
-export const CARD_STYLES = [...CODE_CARD_CLASSES, 'rounded-ss-none'].join(' ');
+/** No tab sits on the card any more, so no corner is ever squared off. */
+export const CARD_STYLES = [...CODE_CARD_CLASSES].join(' ');
 /** Below this block width the Copy button keeps only its icon, so the tab row never clips. */
 export const COPY_LABEL_STYLES = 'hidden @min-[26rem]/code:inline';
-export const TAB_ROW_STYLES = 'flex items-end gap-2 min-w-0';
 /**
- * A folder tab on the card's top edge. `-mb-px` lays its open bottom over the
- * card's top border, so tab and card read as one shape. Publishes the corner
- * radius for its controls: the block radius minus its 1px border and `pt-1`.
+ * Nothing stands over a code block at rest. The row follows the same three
+ * conditions as the controls inside it, the third keeping it while the
+ * language picker is open: the picker mounts on <body>, so opening it ends
+ * hover and focus-within at once.
+ */
+export const TAB_ROW_STYLES = 'flex items-center justify-end gap-0 min-w-0 px-2 pt-2 opacity-0 group-hover/code:opacity-100 group-focus-within/code:opacity-100 group-has-[[aria-expanded=true]]/code:opacity-100 transition-opacity';
+/**
+ * The language sits in the toolbar at the TOP RIGHT, a filet separating it
+ * from the actions — what the product does. (The help page still says "top
+ * left"; it is stale, and trusting it over the product cost a round.)
  */
 export const TAB_STYLES = [
-  'relative z-1 -mb-px flex min-w-0 max-w-[75%] items-center gap-0.5 px-1 pt-1 pb-0.75',
-  'border border-b-0 border-border-secondary bg-code-bg rounded-t-(--blok-radius-block) text-xs text-gray-text',
-  '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-block)-var(--blok-border-width-hairline)-var(--blok-space-1)))]',
+  'relative z-1 flex min-w-0 max-w-[75%] items-center gap-0.5 ps-2 pe-1.5 py-0.5',
+  'border-e border-border-secondary text-xs text-gray-text',
+  '[--blok-radius-inner:var(--blok-radius-control)]',
 ].join(' ');
 /**
  * An empty filename takes no room at rest; it shows while the block is hovered or focused.

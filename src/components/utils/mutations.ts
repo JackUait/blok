@@ -28,7 +28,8 @@ const isToolboxComboboxWrite = ({ type, attributeName, target }: MutationRecord)
  * Own technical mutations: data-blok-empty, data-blok-toggle-open, the Show
  * spotlight (utils/reveal-block.ts), the placeholder attributes
  * (utils/placeholder.ts; set on the editable host, which tools save by its
- * innerHTML) and the toolbox's combobox attributes.
+ * innerHTML), the joined-fill sides of a mark (utils/mark-joins.ts; the mark
+ * sanitizer drops them on save) and the toolbox's combobox attributes.
  */
 const isTechnicalMutation = (mutationRecord: MutationRecord): boolean => {
   if (mutationRecord.type === 'attributes' && (
@@ -36,6 +37,7 @@ const isTechnicalMutation = (mutationRecord: MutationRecord): boolean => {
     || mutationRecord.attributeName === 'data-blok-toggle-open'
     || mutationRecord.attributeName === DATA_ATTR.spotlight
     || mutationRecord.attributeName === DATA_ATTR.placeholderActive
+    || mutationRecord.attributeName === DATA_ATTR.markJoined
     || mutationRecord.attributeName === 'data-blok-placeholder-visible'
   )) {
     return true;

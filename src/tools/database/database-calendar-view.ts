@@ -116,6 +116,8 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
   /** Days in grid order, for arrow keys. */
   private shownDays: string[] = [];
   private columns = 7;
+  /** The one day cell in the Tab order. */
+  private stopDay: string | undefined;
 
   /** Each day the last month drew, and whether it was inside that month. */
   private readonly inkBefore = new Map<string, boolean>();
@@ -346,10 +348,18 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     }
     grid.appendChild(header);
 
+    const focusDay = this.options.focusDay;
+
+    this.stopDay = [focusDay, this.options.today].find((d) => d !== undefined && this.shownDays.includes(d))
+      ?? this.shownDays.find((d) => d.startsWith(month)) ?? this.shownDays[0];
     for (const week of weeks) {
       grid.appendChild(this.createWeek(week, month));
     }
     setEventTabStops(grid);
+    grid.addEventListener('keydown', this.onGridTab);
+    grid.addEventListener('focusin', this.onGridEnter);
+    grid.addEventListener('focusin', this.onDayFocus);
+    watchTab();
 
     return grid;
   }
@@ -371,9 +381,9 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       cell.setAttribute('data-blok-database-calendar-day', '');
       cell.setAttribute('data-day', dayIso);
       cell.setAttribute('role', 'gridcell');
-      // notion-motion.md Round 96 §1 #2, Round 97 §1 #3: Tab skips the days, and arrows never step in from an event.
-      // A day takes focus only from a pointer; arrows walk the days from there.
-      cell.tabIndex = -1;
+      // notion-motion.md Round 96 §1 #2, Round 97 §1 #3: Notion has no key path into the days.
+      // Blok keeps one day in the Tab order, after the events (onGridTab), so a keyboard can reach them.
+      cell.tabIndex = dayIso === this.stopDay ? 0 : -1;
       if (dayIso === this.options.today) {
         cell.setAttribute('data-today', '');
         cell.setAttribute('aria-current', 'date');
@@ -417,7 +427,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
         const add = document.createElement('button');
 
         add.type = 'button';
-        add.tabIndex = -1;
+        add.tabIndex = dayIso === this.stopDay ? 0 : -1;
         add.setAttribute('data-blok-database-calendar-add', '');
         add.setAttribute('aria-label', this.t('tools.database.calendarNewOnDay'));
         add.innerHTML = IconPlus;
@@ -667,7 +677,8 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     }
 
     // notion-motion.md Round 97 §1 #3: arrows on a focused event do nothing, and the page does not scroll.
-    if (onEvent) {
+    // Round 104 §1 #8: the same on the month buttons (read on Today and Next month).
+    if (onEvent || target?.closest('[data-blok-database-calendar-nav]') != null) {
       if (event.key.startsWith('Arrow')) event.preventDefault();
 
       return;
@@ -705,7 +716,78 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       return;
     }
 
+    this.moveStop(cell);
     cell.focus();
+  };
+
+  private moveStop(cell: HTMLElement): void {
+    this.stopDay = cell.getAttribute('data-day') ?? undefined;
+    this.root?.querySelectorAll<HTMLElement>('[data-blok-database-calendar-day], [data-blok-database-calendar-add]').forEach((el) => {
+      el.setAttribute('tabindex', el === cell || el.parentElement === cell ? '0' : '-1');
+    });
+  }
+
+  /** Every event, then the day stop and its "+". The day sits among the events in the DOM, so Tab is steered. */
+  private tabOrder(grid: HTMLElement): HTMLElement[] {
+    const stops = gridTabbables(grid);
+    const day = stops.filter((el) => el.matches('[data-blok-database-calendar-day], [data-blok-database-calendar-add]'));
+
+    return [...stops.filter((el) => !day.includes(el)), ...day];
+  }
+
+  /** Steps through tabOrder. The two ends stay native, so Tab enters and leaves the grid as usual. */
+  private readonly onGridTab = (event: KeyboardEvent): void => {
+    const grid = event.currentTarget;
+    const target = event.target;
+
+    if (event.key !== 'Tab' || event.metaKey || event.ctrlKey || event.altKey || !(grid instanceof HTMLElement) || !(target instanceof HTMLElement)) {
+      return;
+    }
+    const order = this.tabOrder(grid);
+    const index = order.indexOf(target);
+
+    if (index === -1) {
+      return;
+    }
+    const next = order[index + (event.shiftKey ? -1 : 1)];
+
+    if (next !== undefined) {
+      event.preventDefault();
+      next.focus();
+
+      return;
+    }
+    // From the DOM's first or last stop, the browser's own Tab leaves the grid.
+    const stops = gridTabbables(grid);
+
+    (event.shiftKey ? stops[0] : stops.at(-1))?.focus();
+  };
+
+  /** A day that gets focus any way, a mouse click too, takes the stop, as the arrow keys do. */
+  private readonly onDayFocus = (event: FocusEvent): void => {
+    if (event.target instanceof HTMLElement && event.target.matches('[data-blok-database-calendar-day]')) {
+      this.moveStop(event.target);
+    }
+  };
+
+  /** Tab into the grid lands on the first event, Shift+Tab into it on the last stop, whatever the DOM puts first. */
+  private readonly onGridEnter = (event: FocusEvent): void => {
+    const grid = event.currentTarget;
+    const from = event.relatedTarget;
+    const target = event.target;
+
+    // Coming back from the browser's own controls, focus has no relatedTarget.
+    if (!tabState.tabbing || !(grid instanceof HTMLElement) || !(target instanceof HTMLElement) || (from instanceof Node && grid.contains(from))) {
+      return;
+    }
+    const stops = gridTabbables(grid);
+    const order = this.tabOrder(grid);
+    const fromAfter = tabState.back;
+    const want = fromAfter ? order.at(-1) : order[0];
+
+    if (target === (fromAfter ? stops.at(-1) : stops[0]) && want !== undefined && want !== target) {
+      want.focus();
+    }
   };
 
   /** The day an arrow key goes to. Off the grid, the same step in calendar days. */
@@ -1124,6 +1206,29 @@ const weekendSkip = (day: string, direction: number): number => {
 
 const isBand = (value: unknown): value is { left: number; top: number; right: number; bottom: number } =>
   typeof value === 'object' && value !== null && 'left' in value && 'top' in value && 'right' in value && 'bottom' in value;
+
+/** True only while a Tab key moves focus, so focus put back by code (a closing menu) is never redirected. */
+const tabState = { tabbing: false, back: false, watched: false };
+
+const watchTab = (): void => {
+  if (tabState.watched) return;
+  tabState.watched = true;
+  // One listener for the page, never removed: the flag lives no longer than the key's own focus move.
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Tab') return;
+    tabState.tabbing = true;
+    tabState.back = event.shiftKey;
+    setTimeout(() => {
+      tabState.tabbing = false;
+    });
+  }, true);
+  // Bubbling, so it runs after the grid's own focusin: the flag covers only the focus move the key made.
+  document.addEventListener('focusin', () => {
+    tabState.tabbing = false;
+  });
+};
+
+const gridTabbables = (grid: HTMLElement): HTMLElement[] => [...grid.querySelectorAll<HTMLElement>('[tabindex="0"]')];
 
 /** One Tab stop per event: its first part, so an event that starts before the shown range still gets one. */
 const setEventTabStops = (root: HTMLElement): void => {

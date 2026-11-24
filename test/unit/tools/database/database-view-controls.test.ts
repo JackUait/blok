@@ -36,6 +36,15 @@ const click = (id: string): void => {
   el.click();
 };
 
+/** A mouse click: unlike Enter or Space on a focused button, its `detail` counts the presses. */
+const pointerClick = (id: string): void => {
+  const el = q(id);
+
+  if (el === null) throw new Error(`no ${id}`);
+  el.focus();
+  el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+};
+
 const setup = (options: {
   readOnly?: boolean;
   locked?: boolean;
@@ -204,8 +213,9 @@ describe('DatabaseViewControls', () => {
     it('sit between Sort and search, in Notion\'s order', () => {
       setup({ levers: levers() });
 
+      // » is there for the pointer only (database.css).
       expect(order()).toEqual([
-        'database-toolbar-filter', 'database-toolbar-sort', 'database-toolbar-automations', 'database-toolbar-autofill',
+        'database-toolbar-minimize', 'database-toolbar-filter', 'database-toolbar-sort', 'database-toolbar-automations', 'database-toolbar-autofill',
         'database-toolbar-search', 'database-toolbar-settings',
       ]);
       expect(q('database-toolbar-automations')?.getAttribute('aria-label')).toBe('tools.database.automationTitle');
@@ -252,7 +262,7 @@ describe('DatabaseViewControls', () => {
     controls.refresh();
 
     expect(shown()).toEqual([
-      'database-toolbar-filter', 'database-toolbar-sort', 'database-toolbar-automations', 'database-toolbar-search', 'database-toolbar-settings',
+      'database-toolbar-minimize', 'database-toolbar-filter', 'database-toolbar-sort', 'database-toolbar-automations', 'database-toolbar-search', 'database-toolbar-settings',
     ]);
   });
 
@@ -317,6 +327,41 @@ describe('DatabaseViewControls', () => {
       expect(filled()).toEqual([0]);
       rows()[1].dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
       expect(filled()).toEqual([1]);
+    });
+
+    // Keyboard-only focus law: a mouse open fills no row; the arrows still start at the ends.
+    describe('after a mouse open', () => {
+      const rows = (): Element[] => [...(q('database-sort-picker')?.querySelectorAll('[data-blok-database-picker-list] [data-blok-database-panel-row]') ?? [])];
+      const filled = (): number[] => rows().flatMap((row, index) => row.hasAttribute('data-active') ? [index] : []);
+      const key = (k: string): void => {
+        q('database-sort-picker-search')?.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+      };
+
+      beforeEach(() => {
+        setup();
+        document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+        click('database-toolbar-sort');
+      });
+
+      afterEach(() => {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+      });
+
+      it('the Sort picker fills no row, and Enter picks nothing', () => {
+        expect(filled()).toEqual([]);
+        key('Enter');
+        expect(q('database-sort-picker')).not.toBeNull();
+      });
+
+      it('ArrowDown fills the first row', () => {
+        key('ArrowDown');
+        expect(filled()).toEqual([0]);
+      });
+
+      it('ArrowUp fills the last row', () => {
+        key('ArrowUp');
+        expect(filled()).toEqual([rows().length - 1]);
+      });
     });
 
     it('draws Σ in the Sort picker', () => {
@@ -1046,6 +1091,156 @@ describe('DatabaseViewControls', () => {
 
     expect(q('database-toolbar-search')?.hidden).toBe(false);
     controls.destroy();
+  });
+
+  // notion-motion.md Round 99 §1 #8 (r99-n-search-open.raw): with search open beside the tabs, Notion folds the tabs.
+  describe('search open in the view bar', () => {
+    const inViewBar = (controls: DatabaseViewControls): { viewBar: HTMLElement; pill: HTMLElement } => {
+      const viewBar = document.createElement('div');
+      const tabBar = document.createElement('div');
+      const pill = document.createElement('div');
+
+      viewBar.setAttribute('data-blok-database-view-bar', '');
+      tabBar.setAttribute('data-blok-database-tab-bar', '');
+      pill.setAttribute('data-blok-database-tab-compact', '');
+      pill.tabIndex = 0;
+      tabBar.append(pill);
+      viewBar.append(tabBar, controls.toolbar);
+      document.body.prepend(viewBar);
+
+      return { viewBar, pill };
+    };
+    const openFullPage = (): (() => void) => () => undefined;
+
+    it('marks the toolbar while the search is open, so the tabs fold, and clears it on close', () => {
+      const { controls } = setup({ levers: { openFullPage } });
+
+      inViewBar(controls);
+      click('database-toolbar-search');
+
+      expect(controls.toolbar.hasAttribute('data-blok-database-searching')).toBe(true);
+      q('database-search-input')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(controls.toolbar.hasAttribute('data-blok-database-searching')).toBe(false);
+      controls.destroy();
+    });
+
+    // notion-motion.md Round 100 §1 #8 (r100-n-search-fold-motion.raw): the tabs swap ~170ms in, near the end of the field's grow.
+    it('marks the toolbar 170ms after the field starts to grow', () => {
+      vi.useFakeTimers();
+      try {
+        const { controls } = setup({ levers: { openFullPage } });
+
+        inViewBar(controls);
+        click('database-toolbar-search');
+        const input = q('database-search-input') as HTMLInputElement;
+
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        input.style.transitionDuration = '0.2s';
+        click('database-toolbar-search');
+
+        expect(controls.toolbar.hasAttribute('data-blok-database-searching')).toBe(false);
+        vi.advanceTimersByTime(169);
+        expect(controls.toolbar.hasAttribute('data-blok-database-searching')).toBe(false);
+        vi.advanceTimersByTime(1);
+        expect(controls.toolbar.hasAttribute('data-blok-database-searching')).toBe(true);
+        controls.destroy();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('drops a pending mark when the search closes first', () => {
+      vi.useFakeTimers();
+      try {
+        const { controls } = setup({ levers: { openFullPage } });
+
+        inViewBar(controls);
+        click('database-toolbar-search');
+        const input = q('database-search-input') as HTMLInputElement;
+
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        input.style.transitionDuration = '0.2s';
+        click('database-toolbar-search');
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        vi.advanceTimersByTime(300);
+
+        expect(controls.toolbar.hasAttribute('data-blok-database-searching')).toBe(false);
+        controls.destroy();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    // notion-motion.md Round 100 §1 #2 (r100-n-search-open-rest.raw): ⤢ stays at rest with search open; R99 missed it (an A, not a button).
+    it('keeps ⤢ while the search is open', () => {
+      const { controls } = setup({ levers: { openFullPage } });
+
+      inViewBar(controls);
+      click('database-toolbar-search');
+      const input = q('database-search-input') as HTMLInputElement;
+
+      input.value = 'a';
+      input.dispatchEvent(new Event('input'));
+      controls.refresh();
+
+      expect(q('database-toolbar-full-page')?.hidden).toBe(false);
+      controls.destroy();
+    });
+
+    // notion-motion.md Round 100 §1 #10 (r100-n-empty-search-tab.raw): Tab from the search lands on ⤢.
+    it('puts ⤢ next after the search field', () => {
+      const { controls } = setup({ levers: { openFullPage } });
+
+      inViewBar(controls);
+      click('database-toolbar-search');
+      const input = q('database-search-input') as HTMLInputElement;
+      const focusable = Array.from(controls.toolbar.querySelectorAll<HTMLElement>('button, input, a[tabindex="0"]'))
+        .filter((el) => !el.hidden && !(el instanceof HTMLButtonElement && el.disabled));
+      const next = focusable[focusable.indexOf(input) + 1];
+
+      expect(next).toBe(q('database-toolbar-full-page'));
+      controls.destroy();
+    });
+
+    // One view puts the toolbar in the title row: Notion's ⤢ there with search open is unread.
+    it('keeps ⤢ in a title row', () => {
+      const { controls } = setup({ levers: { openFullPage } });
+
+      click('database-toolbar-search');
+
+      expect(q('database-toolbar-full-page')?.hidden).toBe(false);
+      controls.destroy();
+    });
+
+    // notion-motion.md Round 100 §1 #5 (r100-n-fold-pill-open.raw): a press on the pill closes an empty search and the tabs unfold.
+    it('closes an empty search that hands the focus to the folded pill', () => {
+      const { controls } = setup({ levers: { openFullPage } });
+      const { pill } = inViewBar(controls);
+
+      click('database-toolbar-search');
+      pill.focus();
+
+      expect(q('database-search-input')).toBeNull();
+      expect(controls.toolbar.hasAttribute('data-blok-database-searching')).toBe(false);
+      controls.destroy();
+    });
+
+    it('keeps a search with a query open when the folded pill takes the focus', () => {
+      const { controls } = setup({ levers: { openFullPage } });
+      const { pill } = inViewBar(controls);
+
+      click('database-toolbar-search');
+      const input = q('database-search-input') as HTMLInputElement;
+
+      input.value = 'o';
+      input.dispatchEvent(new Event('input'));
+      pill.focus();
+
+      expect(input.isConnected).toBe(true);
+      expect(controls.toolbar.hasAttribute('data-blok-database-searching')).toBe(true);
+      controls.destroy();
+    });
   });
 
   // notion-motion.md:826: a brand-new title-only database shows no 🔍.
@@ -2725,6 +2920,19 @@ describe('DatabaseViewControls', () => {
       expect(q('database-sort-panel')).not.toBeNull();
       expect(q('database-sort-pill')?.hasAttribute('data-popover-open')).toBe(true);
     });
+
+    // notion-motion.md Round 114 §1 #11: after the pick Notion focuses the Sort button, not the new rule's handle.
+    it('focuses the Sort button after a pick, with the sort panel still open', () => {
+      setup({ schema: () => many });
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+      click('database-toolbar-sort');
+      click('database-pick-property-alpha');
+
+      expect(q('database-toolbar-sort')).toHaveFocus();
+      expect(q('database-sort-panel')).not.toBeNull();
+      expect(q('database-sort-pill')?.hasAttribute('data-popover-open')).toBe(true);
+    });
   });
   describe('search box (Notion: the magnifier stays, a clear ×)', () => {
     it('keeps the magnifier in front of the input', () => {
@@ -2774,7 +2982,7 @@ describe('DatabaseViewControls', () => {
     it('shows » left of the icons while the search is open, and » closes the search and minimizes the toolbar', () => {
       const { controls, host } = setup();
 
-      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+      expect(q('database-toolbar-minimize')?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('idle');
       click('database-toolbar-search');
       const minimize = q('database-toolbar-minimize');
 
@@ -2798,6 +3006,36 @@ describe('DatabaseViewControls', () => {
       setup({ levers: { savedView: () => form } });
 
       expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+    });
+
+    // notion-motion.md Round 101 §1 #2 (r101-n-minimize-hover-search-closed*.raw): with no sort or filter, Notion mounts » while the pointer is on the controls.
+    it('keeps » for the pointer with the search closed and no rule on the view', () => {
+      setup();
+      const minimize = q('database-toolbar-minimize');
+
+      expect(minimize?.hidden).toBe(false);
+      expect(minimize?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('idle');
+
+      click('database-toolbar-search');
+
+      expect(minimize?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('');
+    });
+
+    // notion-motion.md Round 100 §1 #7 (r100-n-minimize-hover-search-open*.raw): with only the search open, » shows while the pointer is on the controls.
+    // Round 102 §1 #1: a sort does not change that.
+    it('keeps » hover-only with the search open, with or without a sort', () => {
+      const { controls, saved } = setup();
+
+      click('database-toolbar-search');
+      const minimize = q('database-toolbar-minimize');
+
+      expect(minimize?.hidden).toBe(false);
+      expect(minimize?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('');
+
+      saved.view = { ...saved.view, sorts: [{ propertyId: 'title', direction: 'asc' }] };
+      controls.refresh();
+
+      expect(minimize?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('');
     });
 
     it('takes » away when a sorted view switches to a form', () => {
@@ -2855,6 +3093,27 @@ describe('DatabaseViewControls', () => {
       }
     });
 
+    // notion-motion.md Round 104 §1 #2 (r104-n-expand-sticky.raw): « stays at rest after », until the pointer
+    // enters it and leaves; from then on it shows only on hover. A new » starts that over.
+    it('makes « hover-only once the pointer has left it, until the next »', () => {
+      setup();
+      click('database-toolbar-minimize');
+      const expand = q('database-toolbar-expand');
+      const HOVER_ONLY = 'data-blok-database-expand-hover-only';
+
+      expect(expand?.hidden).toBe(false);
+      expect(expand?.hasAttribute(HOVER_ONLY)).toBe(false);
+
+      expand?.dispatchEvent(new PointerEvent('pointerenter'));
+      expect(expand?.hasAttribute(HOVER_ONLY)).toBe(false);
+      expand?.dispatchEvent(new PointerEvent('pointerleave'));
+      expect(expand?.hasAttribute(HOVER_ONLY)).toBe(true);
+
+      click('database-toolbar-expand');
+      click('database-toolbar-minimize');
+      expect(q('database-toolbar-expand')?.hasAttribute(HOVER_ONLY)).toBe(false);
+    });
+
     it('shows « with no » while minimized, even with the search open', () => {
       const { controls, saved } = setup();
 
@@ -2867,15 +3126,60 @@ describe('DatabaseViewControls', () => {
     });
 
     // A blur on an empty query closes the search, so the press must not take the focus first.
-    it('keeps the focus in the field on press, and gives it to settings, which stays, after', () => {
+    it('keeps the focus in the field on press', () => {
       setup();
       click('database-toolbar-search');
       const press = new MouseEvent('pointerdown', { bubbles: true, cancelable: true });
 
       q('database-toolbar-minimize')?.dispatchEvent(press);
       expect(press.defaultPrevented).toBe(true);
+    });
 
+    // notion-motion.md Round 102 §1 #8, Round 87 §1 #11: a click on » or « leaves the focus on the page.
+    it('leaves the focus on the page after a mouse click on » and on «', () => {
+      const { saved, host } = setup();
+
+      vi.mocked(host.updateView).mockImplementation((changes) => {
+        saved.view = { ...saved.view, ...changes };
+      });
+      pointerClick('database-toolbar-minimize');
+      expect(document.body).toHaveFocus();
+
+      pointerClick('database-toolbar-expand');
+      expect(document.body).toHaveFocus();
+    });
+
+    it('leaves the focus on the page after a mouse click on » with the search open', () => {
+      setup();
+      click('database-toolbar-search');
+      q('database-search-input')?.setAttribute('style', 'transition-duration: 0.2s');
+      q('database-toolbar-minimize')?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+
+      expect(document.body).toHaveFocus();
+    });
+
+    // Enter or Space keeps the keyboard user's place: the focus moves to the button that undoes it.
+    it('moves the focus from » to « and back for Enter or Space', () => {
+      const { saved, host } = setup();
+
+      vi.mocked(host.updateView).mockImplementation((changes) => {
+        saved.view = { ...saved.view, ...changes };
+      });
       click('database-toolbar-minimize');
+      expect(q('database-toolbar-expand')).toHaveFocus();
+
+      click('database-toolbar-expand');
+      expect(q('database-toolbar-minimize')).toHaveFocus();
+    });
+
+    it('gives the focus to settings for Enter on « when » cannot show', () => {
+      const { controls, saved } = setup({ schema: () => [{ id: 'title', name: 'Name', type: 'title', position: 'a0' }] });
+
+      saved.view = { ...saved.view, toolbarMinimized: true };
+      controls.refresh();
+      click('database-toolbar-expand');
+
+      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
       expect(q('database-toolbar-settings')).toHaveFocus();
     });
 
@@ -3004,14 +3308,6 @@ describe('DatabaseViewControls', () => {
       expect(q('database-search-input')).toBeNull();
       expect(q('database-toolbar-search')).toHaveFocus();
     });
-
-    it('leaves the focus alone when a pick closes the picker', () => {
-      setup();
-      click('database-toolbar-sort');
-      click('database-pick-property-num');
-
-      expect(q('database-toolbar-sort')).not.toHaveFocus();
-    });
   });
 
   describe('search match highlight (Notion: matched text tinted, the DOM untouched)', () => {
@@ -3091,14 +3387,38 @@ describe('DatabaseViewControls', () => {
       return env;
     };
 
-    // Shots 20, 22 and 23 show » with a sort; 15, 17 (a filter only) and 41 (no rule) do not.
-    it('shows no » for a bar of filters alone', () => {
+    // notion-motion.md Round 102 §1 #2 (r102-n-minimize-filter-only*.raw): » shows on hover for a bar of filters alone.
+    // It keeps its room, so the tab fold leaves space for it, as before it went hover-only.
+    it('keeps a hover-only » for a bar of filters alone', () => {
       withFilter();
+      const minimize = q('database-toolbar-minimize');
 
-      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+      expect(minimize?.hidden).toBe(false);
+      expect(minimize?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('bar');
     });
 
-    it('shows » left of Filter while the bar shows a sort, and » hides the bar', () => {
+    // notion-motion.md Round 102 §1 #1 (r102-n-minimize-sort-only.raw, -both.raw): with a sort » is hover-only too.
+    it('keeps » hover-only while the bar shows a sort', () => {
+      const { controls, saved } = withFilter();
+
+      saved.view = { ...saved.view, sorts: [{ id: 's1', propertyId: 'num', direction: 'asc' }] };
+      controls.refresh();
+
+      expect(q('database-toolbar-minimize')?.getAttribute('data-blok-database-toolbar-hover-only')).toBe('bar');
+    });
+
+    it('keeps » for a sort on a database with only a title', () => {
+      const { controls, saved } = setup({ schema: () => [{ id: 'title', name: 'Name', type: 'title', position: 'a0' }] });
+
+      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+      saved.view = { ...saved.view, sorts: [{ id: 's1', propertyId: 'title', direction: 'asc' }] };
+      controls.refresh();
+
+      expect(q('database-toolbar-minimize')?.hidden).toBe(false);
+    });
+
+    // notion-motion.md Round 102 §1 #4 (r102-n-after-minimize-filter.raw, -sort.raw): » folds the controls, not the chip bar.
+    it('shows » left of Filter while the bar shows a sort, and » keeps the bar', () => {
       const { controls, saved } = withFilter();
 
       saved.view = { ...saved.view, sorts: [{ id: 's1', propertyId: 'num', direction: 'asc' }] };
@@ -3115,7 +3435,8 @@ describe('DatabaseViewControls', () => {
 
       click('database-toolbar-minimize');
 
-      expect(controls.filterBar.hidden).toBe(true);
+      expect(controls.filterBar.hidden).toBe(false);
+      expect(q('database-sort-pill')).not.toBeNull();
       expect(q('database-toolbar-minimize')?.hidden).toBe(true);
     });
 

@@ -5,6 +5,7 @@ import { SCHEMA, buildTool as buildHarnessTool, fakeRow, makeDoc, tableData } fr
 import type { Doc } from './tier3-harness';
 import { hover, shownHint } from './hint-harness';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
+import { PopoverAbstract } from '../../../../src/components/utils/popover/popover-abstract';
 
 vi.mock('../../../../src/blok', () => ({
   Blok: class MockBlok {
@@ -104,6 +105,32 @@ const itemByTitle = (title: string): HTMLElement => {
 
 const menuItem = (name: string): HTMLElement | null =>
   document.querySelector<HTMLElement>(`[data-blok-popover-item][data-blok-item-name="${name}"]`);
+
+/**
+ * Runs `act` with a stub Popover API and a running transition on every element,
+ * so a close that keeps its motion leaves the menu closing. Returns one entry per hide().
+ */
+const closingAfter = (act: () => void): boolean[] => {
+  const closing: boolean[] = [];
+  const hide = PopoverAbstract.prototype.hide;
+  const pending = { finished: new Promise<Animation>(() => undefined) } as unknown as Animation;
+
+  Object.defineProperty(HTMLElement.prototype, 'popover', { configurable: true, writable: true, value: null });
+  Object.defineProperty(HTMLElement.prototype, 'showPopover', { configurable: true, writable: true, value: vi.fn() });
+  Object.defineProperty(HTMLElement.prototype, 'hidePopover', { configurable: true, writable: true, value: vi.fn() });
+  Object.defineProperty(HTMLElement.prototype, 'getAnimations', { configurable: true, writable: true, value: () => [pending] });
+  vi.spyOn(PopoverAbstract.prototype, 'hide').mockImplementation(function (this: PopoverAbstract) {
+    hide.call(this);
+    closing.push(this.isClosing);
+  });
+  try {
+    act();
+  } finally {
+    ['popover', 'showPopover', 'hidePopover', 'getAnimations'].forEach((key) => Reflect.deleteProperty(HTMLElement.prototype, key));
+  }
+
+  return closing;
+};
 
 // research/08 shots-08/65-row-handle-menu.png: search, "Page", then three groups and the footer.
 const PAGE = [
@@ -264,6 +291,84 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
 
     tool.destroy();
     expect(card.hasAttribute('data-blok-database-card-picked')).toBe(false);
+  });
+
+  // notion-motion.md Round 108 §1 #6: a middle click away keeps the card right-click menu open.
+  it('keeps a board card\'s right-click menu open on a middle click away', () => {
+    const { el } = buildTool(oneRow(), {}, viewData('board'));
+    const away = document.createElement('div');
+
+    document.body.appendChild(away);
+    rowEl(el, 'board').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+    away.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 1 }));
+
+    expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+    away.remove();
+  });
+
+  // notion-motion.md Round 110 §1 #1: every item click empties the card's ••• menu by the first frame; nothing visible fades.
+  // The table's ⋮⋮ menu closed only because the table redraw destroys it; the board keeps its card menu.
+  it('Duplicate on a board card\'s ••• menu closes the menu at once', () => {
+    const doc = oneRow();
+    const { el } = buildTool(doc, {}, viewData('board'));
+    const closing = closingAfter(() => {
+      openMenu(el, 'board');
+      menuItem('database-row-duplicate')?.click();
+    });
+
+    expect(closing.length).toBeGreaterThan(0);
+    expect(closing.every((still) => !still)).toBe(true);
+    expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    expect(doc.api.blocks.insertAt).toHaveBeenCalled();
+  });
+
+  it('Duplicate on a board card\'s ••• menu leaves focus on that card\'s •••', () => {
+    const { el } = buildTool(oneRow(), {}, viewData('board'));
+
+    openMenu(el, 'board');
+    menuItem('database-row-duplicate')?.click();
+
+    expect(el.querySelector('[data-blok-database-card][data-row-id="a"] [data-blok-database-card-menu]')).toHaveFocus();
+  });
+
+  it('Duplicate on a board card\'s right-click menu closes it at once', () => {
+    const { el } = buildTool(oneRow(), {}, viewData('board'));
+    const closing = closingAfter(() => {
+      rowEl(el, 'board').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+      menuItem('database-row-duplicate')?.click();
+    });
+
+    expect(closing.length).toBeGreaterThan(0);
+    expect(closing.every((still) => !still)).toBe(true);
+    expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+  });
+
+  // notion-motion.md Round 109 §1 #2: a middle click away keeps a card's ••• menu open too.
+  it('keeps a board card\'s ••• menu open on a middle click away', () => {
+    const { el } = buildTool(oneRow(), {}, viewData('board'));
+    const away = document.createElement('div');
+
+    document.body.appendChild(away);
+    openMenu(el, 'board');
+    away.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 1 }));
+
+    expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+    away.remove();
+  });
+
+  // notion-motion.md Round 109 §1 #3: a middle click on a cell keeps the table ⋮⋮ menu open, and the cell takes no focus.
+  it('keeps a table row\'s ⋮⋮ menu open on a middle click on a cell', () => {
+    const { el } = buildTool(oneRow(), {}, viewData('table'));
+
+    openMenu(el, 'table');
+    const cell = el.querySelector<HTMLElement>('[data-row-id="a"] [data-blok-database-table-cell]');
+
+    if (cell === null) throw new Error('no cell');
+    cell.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 1 }));
+    cell.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 1 }));
+
+    expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+    expect(cell.contains(document.activeElement)).toBe(false);
   });
 
   // notion-motion.md Round 58 §6: a board card's menu opens at the pointer x, not the card's left.
@@ -589,6 +694,40 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
     });
 
+    // notion-motion.md Round 103 §1 #5: Escape removes the right-click row menu at once, as it does the ⋮⋮ menu.
+    it('Escape closes the right-click row menu at once, with no fade', () => {
+      const { el } = buildTool(focusRow(), {}, tableData(FOCUS_SCHEMA, { type: 'table' }));
+      const atOnce: boolean[] = [];
+      const hideOnEscape = PopoverAbstract.prototype.hideOnEscape;
+
+      vi.spyOn(PopoverAbstract.prototype, 'hideOnEscape').mockImplementation(function (this: PopoverAbstract) {
+        atOnce.push(this.closesAtOnce);
+        hideOnEscape.call(this);
+      });
+      rightClickNotes(el);
+      (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(atOnce).toEqual([true]);
+    });
+
+    // notion-motion.md Round 104 §1 #1: a click on an item or away from the menu removes it at once too.
+    it('every close of the right-click row menu is instant, an item click included', () => {
+      const { el } = buildTool(focusRow(), {}, tableData(FOCUS_SCHEMA, { type: 'table' }));
+      const atOnce: boolean[] = [];
+      const hide = PopoverAbstract.prototype.hide;
+
+      vi.spyOn(PopoverAbstract.prototype, 'hide').mockImplementation(function (this: PopoverAbstract) {
+        atOnce.push(this.closesAtOnce);
+        hide.call(this);
+      });
+      rightClickNotes(el);
+      itemByTitle('tools.database.tableDuplicate').click();
+
+      expect(atOnce.length).toBeGreaterThan(0);
+      expect(atOnce.every(Boolean)).toBe(true);
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    });
+
     it('Escape on the row menu keeps the row selected and focuses the right-clicked cell', async () => {
       const { el } = buildTool(focusRow(), {}, tableData(FOCUS_SCHEMA, { type: 'table' }));
 
@@ -633,6 +772,18 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     itemByTitle(title).click();
 
     expect(document.querySelector('[data-blok-testid="database-view-settings"] [data-blok-database-panel-header]')?.textContent).toContain(title);
+  });
+
+  it('Move to Trash on a card closes its ••• menu at once', () => {
+    const { el } = buildTool(oneRow(), {}, viewData('board'));
+    const closing = closingAfter(() => {
+      openMenu(el, 'board');
+      menuItem('database-row-delete')?.click();
+    });
+
+    expect(closing.length).toBeGreaterThan(0);
+    expect(closing.every((still) => !still)).toBe(true);
+    expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
   });
 
   it('Move to Trash on a card removes the row', () => {
@@ -680,6 +831,18 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
 
     afterEach(() => {
       document.querySelectorAll('[data-blok-database-move-picker]').forEach((picker) => picker.remove());
+    });
+
+    // Round 110 §1 #1: every item click on a card's ••• menu closes it at once.
+    it('••• › Move to closes the board card menu at once, with no fade', () => {
+      const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('board'));
+      const closing = closingAfter(() => {
+        openMenu(el, 'board');
+        menuItem('database-row-move-to')?.click();
+      });
+
+      expect(closing.length).toBeGreaterThan(0);
+      expect(closing.every((still) => !still)).toBe(true);
     });
 
     it('a picked board card lists the other databases on ⌘⇧P', async () => {
@@ -790,7 +953,11 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     it('lets Escape select the row again once the cell selection moves', async () => {
       const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('table'));
       const grid = await escapeMovePicker(el);
+      const scroller = el.querySelector<HTMLElement>('[data-blok-database-table-scroller]');
 
+      if (scroller === null) throw new Error('no scroller');
+      // press() holds ⌘, so the step scrolls the table with scrollTo, which jsdom lacks.
+      scroller.scrollTo = vi.fn() as typeof scroller.scrollTo;
       press(grid, 'ArrowRight');
       press(grid, 'Escape');
 

@@ -66,8 +66,8 @@ export interface DatabasePanelOptions {
   ignoresHistoryKeys?: boolean;
   /** Opening leaves focus on this control outside the panel, which does not close it (notion-motion.md Round 83 §5). */
   focusHost?: HTMLElement;
-  /** `escape` is true when Escape closed the first page. */
-  onClose?: (escape: boolean) => void;
+  /** `escape` is true when Escape closed the first page; `away` when a press or focus outside closed it. */
+  onClose?: (escape: boolean, away?: boolean) => void;
 }
 
 /** A full-page database docks as a side panel under its toolbar row (research/35 §2.3); any other as a floating card. */
@@ -156,7 +156,7 @@ export class DatabasePanel {
       ...(options.focusHost !== undefined ? { focusHost: options.focusHost } : {}),
       ...(options.surfaceClass !== undefined ? { surfaceClass: options.surfaceClass } : {}),
       onEscape: () => this.back(true),
-      onDismiss: () => this.finish(),
+      onDismiss: () => this.finish(false, true),
     });
   }
 
@@ -252,13 +252,13 @@ export class DatabasePanel {
     this.finish(escape);
   }
 
-  private finish(escape = false): void {
+  private finish(escape = false, away = false): void {
     if (this.closed) return;
     this.closed = true;
     hostedPanels.delete(this);
     window.removeEventListener('keydown', this.holdHistoryKeyOnHost, true);
     this.owned.forEach((child) => child.close());
-    this.options.onClose?.(escape);
+    this.options.onClose?.(escape, away);
   }
 
   private render(): void {

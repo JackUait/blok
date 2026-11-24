@@ -1,6 +1,7 @@
 import { IconArrowDiagonal, IconBolt, IconCalendar, IconCheck, IconChevronDown, IconChevronRight, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconEyeSlash, IconFilter, IconGallery, IconLink, IconListBulleted, IconLock, IconPaintRoller, IconPin, IconPinFilled, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
 import { onHover } from '../../components/utils/tooltip';
+import { isKeyboardModality } from '../../components/utils/input-modality';
 import {
   DatabasePanel,
   panelCloseButton,
@@ -276,6 +277,7 @@ export interface ViewSettingsAction {
 interface LayoutItem {
   name: string;
   title: string;
+  description?: string;
   active: boolean;
   activate?: () => void;
   children?: LayoutItem[];
@@ -286,6 +288,7 @@ const readLayoutItems = (items: PopoverItemParams[]): LayoutItem[] => items.flat
   const record = item as {
     name?: string;
     title?: string;
+    description?: string;
     isActive?: boolean | (() => boolean);
     onActivate?: (self: PopoverItemParams) => void;
     children?: { items?: PopoverItemParams[] };
@@ -299,6 +302,7 @@ const readLayoutItems = (items: PopoverItemParams[]): LayoutItem[] => items.flat
   return [{
     name: record.name,
     title: record.title,
+    ...(record.description !== undefined ? { description: record.description } : {}),
     active: typeof record.isActive === 'function' ? record.isActive() : record.isActive === true,
     ...(onActivate !== undefined ? { activate: () => onActivate(item) } : {}),
     ...(record.children?.items !== undefined ? { children: readLayoutItems(record.children.items) } : {}),
@@ -393,8 +397,8 @@ export class ViewSettingsPages {
   /** notion-motion.md Round 32 §3: a database with its own rows lists "Show data source titles" first. */
   private ownSourceTitle(): HTMLButtonElement[] {
     const titles = this.ctx.dataSourceTitles;
-    // Round 97 (notes): a linked block's label reads "title" with one view, "titles" with several.
-    const singular = this.ctx.linked?.() === true && (titles?.views?.() ?? 1) < 2;
+    // Round 97 (notes), Round 98 §1 #4: linked or source, the label reads "title" with one view, "titles" with several.
+    const singular = (titles?.views?.() ?? 1) < 2;
 
     return titles === undefined ? [] : [panelSwitch({
       label: this.t(singular ? 'settingsShowDataSourceTitle' : 'showDataSourceTitles'),
@@ -516,7 +520,11 @@ export class ViewSettingsPages {
             icon: IconPaintRoller,
             ...countValue(view.colorRules?.length ?? 0),
             opensPage: true,
-            onClick: () => panel.push(this.colors()),
+            onClick: (event) => {
+              panel.push(this.colors());
+              // notion-motion.md Round 95 §1 #7: a click on the empty page leaves the focus on the page; Enter keeps it in.
+              if (event.detail > 0 && (view.colorRules?.length ?? 0) === 0 && document.activeElement instanceof HTMLElement) document.activeElement.blur();
+            },
           }));
         }
         const sources = this.ctx.dataSources;
@@ -1478,6 +1486,10 @@ export class ViewSettingsPages {
         });
       }
 
+      if (item.name === 'calendar-show-as') return this.layoutMenuRow(panel, item);
+      // notion-motion.md Round 113 §1 #6, Round 114 §1 #4: Card preview and Card size open the same menu, above the row when it has no room under it.
+      if (item.name.endsWith('-card-preview') || item.name.endsWith('-card-size')) return this.layoutMenuRow(panel, item, true);
+
       return panelRow({
         label: item.title,
         testId: `database-${item.name}`,
@@ -1487,6 +1499,81 @@ export class ViewSettingsPages {
         onClick: () => panel.push(this.layoutChoices(item.name, item.title)),
       });
     })];
+  }
+
+  /**
+   * notion-motion.md Round 14 (r14-cal-showas.png), Round 87 §2 (r87-n-calas-open-mo.raw): "Show calendar as"
+   * opens a 250 menu under the row, end edges aligned, and its › turns down while it is open.
+   */
+  private layoutMenuRow(panel: DatabasePanel, item: LayoutItem, flip = false): HTMLElement {
+    const opener = panelRow({
+      label: item.title,
+      testId: `database-${item.name}`,
+      value: activeLayoutChild(item.children ?? [])?.title ?? '',
+      opensPage: true,
+      disabled: !this.shared,
+      onClick: () => {
+        opener.setAttribute('aria-expanded', 'true');
+        const menu = openFlyout(opener, panel, `database-${item.name}-menu`, LAYOUT_MENU_WIDTH, (pick) => {
+          const rows = (item.children ?? []).map((child) => {
+            const write = (): void => {
+              child.activate?.();
+              panel.refresh();
+            };
+
+            if (child.children !== undefined) {
+              // A group row (Card preview › Page properties) opens its own list beside it, centred on it
+              // (notion-motion.md Round 114 §4: r114-n-cardpreview-pageprops.raw, left of the menu with no room on its right).
+              const group = panelRow({
+                label: child.title,
+                testId: `database-${child.name}`,
+                opensPage: true,
+                onClick: () => openFlyout(group, menu, `database-${child.name}-menu`, LAYOUT_MENU_WIDTH, (pickInner) => (child.children ?? []).map((inner) => panelRow({
+                  label: inner.title,
+                  testId: `database-${inner.name}`,
+                  checked: inner.active,
+                  onClick: () => pickInner(() => pick(() => {
+                    inner.activate?.();
+                    panel.refresh();
+                  })),
+                })), { aside: { side: 'right', gap: 0, flip: true } }),
+              });
+
+              return group;
+            }
+
+            return panelRow({
+              label: child.title,
+              testId: `database-${child.name}`,
+              ...(child.description !== undefined ? { description: child.description } : {}),
+              checked: child.active,
+              onClick: () => pick(write),
+            });
+          });
+
+          // notion-motion.md Round 105 §1 #4: the first row opens filled (a keyboard open only: focus law); the one fill follows the pointer and the focus.
+          const keyboard = isKeyboardModality();
+
+          rows.forEach((row, index) => {
+            const light = (): void => rows.forEach((other) => other.toggleAttribute('data-active', other === row));
+
+            row.toggleAttribute('data-active', keyboard && index === 0);
+            row.addEventListener('mousemove', light);
+            // Opening focuses the first row; after a mouse open that focus must not fill it.
+            row.addEventListener('focus', () => {
+              if (isKeyboardModality()) light();
+            });
+          });
+
+          return rows;
+        }, { alignEnd: true, ...(flip ? { flip: true } : {}), onClose: () => opener.setAttribute('aria-expanded', 'false') });
+      },
+    });
+
+    opener.setAttribute('aria-haspopup', 'menu');
+    opener.setAttribute('aria-expanded', 'false');
+
+    return opener;
   }
 
   private layoutChoices(name: string, title: string): PanelPage {
@@ -3325,6 +3412,7 @@ export class ViewSettingsPages {
     // r20-cc-is.raw: a 240×34 button holds the 232×30 field. The flyout opens under it, or above when it does not fit (r21-cc-date-val.raw).
     const button = document.createElement('button');
     const field = document.createElement('span');
+    const label = marked(document.createElement('span'), 'data-blok-database-color-rule-text');
     const text = filterValueText(rule, property, (key, vars) => this.ctx.i18n.t(key, vars), (person) => this.personName(person), (row) => this.ctx.relatedRows?.(property).find((r) => r.id === row)?.title, editorLocale(this.ctx.i18n));
     const scoped: ViewSettingsContext = { ...this.ctx, thisPageDatabase: () => null };
 
@@ -3336,13 +3424,22 @@ export class ViewSettingsPages {
     field.setAttribute('data-blok-database-color-rule-field', '');
     // r20-cc-is.raw, notion-motion.md Round 21 §1: the measured picker types read "Select..." while empty.
     // Other types are unmeasured and keep "Value".
-    field.textContent = text !== '' ? text : this.t(SELECT_PLACEHOLDER_TYPES.includes(property.type) ? 'colorValuePlaceholder' : 'filterValue');
+    label.textContent = text !== '' ? text : this.t(SELECT_PLACEHOLDER_TYPES.includes(property.type) ? 'colorValuePlaceholder' : 'filterValue');
     // r20-cc-red.png, r21-cc-st-picked.png: Select and Status picks show as option tokens.
     if (property.type === 'select' || property.type === 'status') {
       const picked: unknown[] = Array.isArray(rule.value) ? rule.value : [];
       const tokens = (property.config?.options ?? []).filter((option) => picked.includes(option.id)).map((option) => createOptionPill(option));
 
-      if (tokens.length > 0) field.replaceChildren(...tokens);
+      if (tokens.length > 0) label.replaceChildren(...tokens);
+    }
+    field.append(label);
+    // r20-cc-is-parts.raw, r104-n-cc-5types-light.raw: the field ends in a 16x16 ⌄. Other types are unread.
+    if (CHEVRON_VALUE_TYPES.includes(property.type)) {
+      const chevron = marked(document.createElement('span'), 'data-blok-database-color-rule-chevron');
+
+      chevron.setAttribute('aria-hidden', 'true');
+      chevron.innerHTML = IconChevronDown;
+      field.append(chevron);
     }
     button.append(field);
     button.addEventListener('click', () => openRuleValueFlyout(button, panel, scoped, read, save, COLOR_VALUE_FLYOUT_WIDTH, COLOR_VALUE_FLYOUT_GAP, true));
@@ -3484,7 +3581,7 @@ export class ViewSettingsPages {
 
         // notion-motion.md Round 20 §4: the intro text shows only while there is no rule.
         return [
-          ...(cards.length === 0 ? [panelText(this.t('colorBlurb'))] : []),
+          ...(cards.length === 0 ? [marked(panelText(this.t('colorBlurb')), 'data-blok-database-color-blurb')] : []),
           // notion-motion.md Round 20 §4: the list order is each cell's priority; a ⠿ handle reorders it.
           // A locked view cannot reorder: the cards stand in a plain list.
           ...(cards.length > 0 && disabled ? [plainColorRules(cards.map((card) => card.element))] : []),
@@ -3602,6 +3699,12 @@ const COMPARE_SYMBOLS: Partial<Record<string, string>> = {
 
 /** notion-motion.md Round 20 §4, Round 21 §1, Round 22 §3: the colour rule value types measured reading "Select...". */
 const SELECT_PLACEHOLDER_TYPES: readonly PropertyType[] = [
+  'select', 'status', 'multiSelect', 'date', 'checkbox', 'person',
+  'relation', 'createdBy', 'createdTime', 'lastEditedBy', 'lastEditedTime',
+];
+
+/** notion-motion.md Round 21 §1, Round 104 §1 #4: the colour rule value types read with a ⌄ at the field's end. */
+const CHEVRON_VALUE_TYPES: readonly PropertyType[] = [
   'select', 'status', 'multiSelect', 'date', 'checkbox', 'person',
   'relation', 'createdBy', 'createdTime', 'lastEditedBy', 'lastEditedTime',
 ];
@@ -3724,7 +3827,7 @@ export const openViewSettings = (
   anchor: HTMLElement,
   ctx: ViewSettingsContext,
   start: ViewSettingsStart = 'root',
-  onClose?: (escape: boolean) => void
+  onClose?: (escape: boolean, away?: boolean) => void
 ): DatabasePanel => {
   const pages = new ViewSettingsPages(ctx);
   const root = {
@@ -3784,6 +3887,19 @@ export const openFilterList = (anchor: HTMLElement, ctx: ViewSettingsContext, te
 
 /** notion-motion.md Round 38 §4 (r38-manage-sources.raw): the data source ⋯ menu. */
 const MANAGE_SOURCE_MENU_WIDTH = 200;
+/** notion-motion.md Round 87 §2: the Show calendar as menu is 250 wide. */
+const LAYOUT_MENU_WIDTH = 250;
+
+/** The checked choice, looking inside groups too (a Card preview property sits under Page properties). */
+const activeLayoutChild = (items: LayoutItem[]): LayoutItem | undefined => {
+  for (const child of items) {
+    const found = child.active ? child : activeLayoutChild(child.children ?? []);
+
+    if (found !== undefined) return found;
+  }
+
+  return undefined;
+};
 /** notion-motion.md Round 19 §1 (r19-adv-rulemore.raw, r19-adv-groupmore.raw): the rule and group ⋯ menus. */
 const RULE_MORE_WIDTH = 150.8;
 /** notion-motion.md Round 19 §1 (r19-adv-andor.raw). */

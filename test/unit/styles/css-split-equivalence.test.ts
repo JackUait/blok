@@ -1983,6 +1983,64 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R264_BYTES = 161;
     // Lane r265: Round 98 §1 #1 the column pill rename popup shares the "+ New group" field rules. Net database.css growth against origin/main.
     const DATABASE_R265_BYTES = 82;
+    // Lane r266: Round 98 §1 #5 the page title over a full-page database (page-title.css, +434), less §1 #3's
+    // several-view selection bar folded into the shared title-row rule (database.css, -206). Net growth against origin/main.
+    const DATABASE_R266_BYTES = 228;
+    // Lane r269: Round 99 §1 #6 the full-page description right under the title, tabs 16 under it (database.css),
+    // and #9 the title text in line with the tabs (page-title.css). Net growth against origin/main.
+    const DATABASE_R269_BYTES = 687;
+    // Lane r268: Round 99 §1 #5 the tab-row selection bar starts 8px (10px on a full page) left of the tabs,
+    // less §1 #1's dropped in-pill rename field rules. Net database.css growth against origin/main.
+    const DATABASE_R268_BYTES = 363;
+    // Lane r270: every database gutter takes a lead or trail share of the room beside the column,
+    // and a full-page database sets them from contentAlign, like its page title.
+    const DATABASE_R270_BYTES = 2068;
+    // Lane r273: » for the search alone shows only on hover over the view bar's controls.
+    // +283: the search × lies over the field's end, so a query adds no width.
+    // +259: the ×'s 28px as a token (css-vars-extraction R2).
+    const DATABASE_R273_BYTES = 545 + 283 + 259;
+    // Lane r274: » for the pointer on a view with no rule, out of the layout and off tabs that reach the toolbar.
+    // +503: the search × is 24 and round with a 20px icon, and the field sits flush on its neighbours.
+    // +190: the database name in Delete property's title is 700.
+    const DATABASE_R274_BYTES = 1321 + 503 + 190;
+    // Lane r275: » shows only on hover with any rule and in a title row, with no fade; « stays in a view bar;
+    // the toolbar fills its 40px row. +435: a hidden » stays focusable, so Shift+Tab reaches it.
+    // +279: with a chip bar » keeps its room, so the tab fold leaves space for it.
+    const DATABASE_R275_BYTES = 388 + 435 + 279;
+    // Lane r276: "No date (N)" sits flush on its neighbours.
+    // +459: the filtered-empty "New page" takes Notion's 8 inset, 6 gap and a box round the plus ink.
+    // +382: the AI Autofill rows sit 30 apart, and the "Basic" tag is 11/500.
+    const DATABASE_R276_BYTES = 83 + 459 + 382;
+    // Lane r279: the empty Conditional color page's intro text is 258 wide, in line with its button.
+    // +556: a colour rule's "Select..." field ends in a 16px chevron.
+    const DATABASE_R279_BYTES = 248 + 556;
+    // Lane r280: the date picker's month arrows and row-end chevrons and Edit property's › draw Notion's ink sizes.
+    const DATABASE_R280_BYTES = 1479;
+    // Lane r278: Add option's plus fills a 12.8 slot with its label 10 after; the reposition pill is at least 180;
+    // the backlinks glyph takes 8.7 of its button.
+    const DATABASE_R278_BYTES = 366 + 257 + 250;
+    // Lane r281: the row menu's "Page" label takes Notion's dark ink; +31: » with the search open is hover-only in a title row.
+    const DATABASE_R281_BYTES = 524 + 31;
+    // Lane r282: the Show calendar as row's › turns while its menu is open (Round 87 §2),
+    // and a one-day timeline bar's hover fill is never under 12 (Round 92 §4). Net database.css growth against origin/main.
+    const DATABASE_R282_BYTES = 983;
+    // Lane r283: a colour rule's ⌄ level with "Select..." and 8 in; 16 under the Conditional color intro text;
+    // +334: « is hover-only in a view bar once the pointer has left it.
+    const DATABASE_R283_BYTES = 283 + 334;
+    // Lane r284: the dark OPEN pill hover token, the timeline toolbar rising 4 with no title row, the Layout page's 12 and 8 (Round 105).
+    // Net database.css growth against origin/main.
+    const DATABASE_R284_BYTES = 569;
+    // Lane r287: « shows over the title row's controls strip only; no note padding under the Conditional color intro;
+    // the filter picker's list ends 4 under its last row over a divider 12 in (Round 107). Net database.css growth.
+    const DATABASE_R287_BYTES = 803;
+    // Lane r290: a minimized view bar's « zone starts 16 left of the toolbar (Round 108). Net database.css growth.
+    // +419: the sort picker's last row ends 4 over the surface's bottom.
+    const DATABASE_R290_BYTES = 258 + 419;
+    // Lane r291: the dark « ink, rgb(125, 122, 117) (Round 109). Net database.css growth.
+    const DATABASE_R291_BYTES = 267;
+    // Lane r292: "Edit filters" hover fill, the title row ⋯ 4 after the title with several views, the sort picker
+    // scrolls as one surface; "Calculate" lost its fade (Round 110). Net database.css growth.
+    const DATABASE_R292_BYTES = 1123;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2037,6 +2095,40 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const FIELD_FOCUS_RING_BYTES = 1_297;
     // preflight.css: a mark's rounded fill that reaches past the letters and rounds each wrapped line (measured preflight.css growth).
     const MARK_ROUNDED_FILL_BYTES = 376;
+    // preflight.css: the square shared edge of two mark fills that touch (measured preflight.css growth).
+    const MARK_JOINED_EDGE_BYTES = 548;
+    // Lane r303: the Divide by field box in the Bar options (R112 §1 #3). Measured growth.
+    const DATABASE_R303_BYTES = 297;
+    // Lane r306: Round 113 §1 #1 the keyboard ring on the Decimal places, Date format and Color rows after Escape. Net database.css growth against origin/main.
+    const DATABASE_R306_BYTES = 630;
+    // Lane r310: Round 113 §1 #8 the select token × hover fill, §1 #9 the space under the Bar options footer. Net database.css growth against origin/main.
+    const DATABASE_R310_BYTES = 551;
+    // Lane r307: "Clear search" hover fill (R113 §1 #4). Measured growth.
+    const DATABASE_R307_BYTES = 201;
+    // Lane r308: the End date range fields side by side (R113 §1 #7). Measured growth.
+    const DATABASE_R308_BYTES = 360;
+    // Lane r318: the + and ⋮⋮ left of a timeline panel row (R114 §1 #7). Measured growth.
+    const DATABASE_R318_BYTES = 942;
+    // Lane r319: the sort rule handle's light ink (R114 §1 #8). Measured growth.
+    const DATABASE_R319_HANDLE_BYTES = 111;
+    // Lane r319: the closed timeline »'s icon ink (R114 §1 #9). Measured growth.
+    const DATABASE_R319_TOGGLE_BYTES = 505;
+    // Lane r319: the Layout page's card-row line, 8px each side (R114 §1 #10). Measured growth.
+    const DATABASE_R319_LAYOUT_LINE_BYTES = 220;
+    // Lane r320: Notion's separator line in database menus (R113 light audit #1). Measured growth.
+    const DATABASE_R320_SEPARATOR_BYTES = 719;
+    // Lane r320: the keyboard row's hover-like fill in database menus (R113 light audit #2). Measured growth.
+    const DATABASE_R320_KEYBOARD_ROW_BYTES = 233;
+    // Lane r321: light glyph inks on database surfaces (audit-light items 3_ 4_ 6_ 8_ 11_ 12_ map add-pin). Measured growth.
+    const DATABASE_R321_BYTES = 1_487;
+    // Lane r322: measured light hovers (green New page, gallery tile, card ⋯ press, side peek details border). Measured growth.
+    const DATABASE_R322_BYTES = 1728;
+    // Lane r325: Number format's .96 top-right scale, and the Number format and Date format › turn. Measured growth.
+    const DATABASE_R325_BYTES = 2147;
+    // Lane r329: the filter token × at 18px with a hover fill (R115 §1 #6). Measured growth.
+    const DATABASE_R329_BYTES = 401;
+    // Lane r330: Round 115 the ring 2px outside a focused database menu row, and its list room. Net database.css growth against origin/main.
+    const DATABASE_R330_BYTES = 1285;
     // file.css: the object on a file card — pages, editor tab, filmstrip, record, folder, punch card (measured file.css growth).
     const FILE_CARD_OBJECT_BYTES = 27_626;
     // emoji-picker.css: the database icon pickers' keyboard highlight (measured emoji-picker.css growth).
@@ -2670,6 +2762,26 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R257_BYTES
       + DATABASE_R264_BYTES
       + DATABASE_R265_BYTES
+      + DATABASE_R266_BYTES
+      + DATABASE_R269_BYTES
+      + DATABASE_R268_BYTES
+      + DATABASE_R270_BYTES
+      + DATABASE_R273_BYTES
+      + DATABASE_R274_BYTES
+      + DATABASE_R274_BYTES
+      + DATABASE_R275_BYTES
+      + DATABASE_R276_BYTES
+      + DATABASE_R279_BYTES
+      + DATABASE_R280_BYTES
+      + DATABASE_R278_BYTES
+      + DATABASE_R281_BYTES
+      + DATABASE_R282_BYTES
+      + DATABASE_R283_BYTES
+      + DATABASE_R284_BYTES
+      + DATABASE_R287_BYTES
+      + DATABASE_R290_BYTES
+      + DATABASE_R291_BYTES
+      + DATABASE_R292_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES
@@ -2692,7 +2804,24 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + BLOCK_MENU_QUIET_BYTES
       + LINK_PICKER_SHELF_BYTES
       + FIELD_FOCUS_RING_BYTES
-      + MARK_ROUNDED_FILL_BYTES;
+      + MARK_ROUNDED_FILL_BYTES
+      + MARK_JOINED_EDGE_BYTES
+      + DATABASE_R303_BYTES
+      + DATABASE_R306_BYTES
+      + DATABASE_R310_BYTES
+      + DATABASE_R307_BYTES
+      + DATABASE_R308_BYTES
+      + DATABASE_R318_BYTES
+      + DATABASE_R319_HANDLE_BYTES
+      + DATABASE_R319_TOGGLE_BYTES
+      + DATABASE_R319_LAYOUT_LINE_BYTES
+      + DATABASE_R320_SEPARATOR_BYTES
+      + DATABASE_R320_KEYBOARD_ROW_BYTES
+      + DATABASE_R321_BYTES
+      + DATABASE_R322_BYTES
+      + DATABASE_R325_BYTES
+      + DATABASE_R329_BYTES
+      + DATABASE_R330_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

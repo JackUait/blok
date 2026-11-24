@@ -118,6 +118,82 @@ describe('DatabaseDropLine', () => {
     expect(line()).toBeNull();
   });
 
+  // notion-live/motion-r14-listdrag.json, motion-carddrag.json: the layer that fades 0→1, 200ms ease, at pickup has its
+  // origin at the line's centre (346px 2px for the 692×4 list line, 130px 2px for the 260×4 card line).
+  describe('with a slot', () => {
+    const lines = (): HTMLElement[] => [...document.body.querySelectorAll<HTMLElement>('[data-blok-database-drop-line]')];
+
+    it('fades a new line in from 0, with the 0 resolved before it goes to full', () => {
+      const seen: string[] = [];
+      const real = window.getComputedStyle.bind(window);
+
+      vi.spyOn(window, 'getComputedStyle').mockImplementation((el, pseudo) => {
+        if (el instanceof HTMLElement && el.hasAttribute('data-blok-database-drop-line')) {
+          seen.push(el.style.opacity);
+        }
+
+        return real(el, pseudo);
+      });
+
+      new DatabaseDropLine().showHorizontal({ left: 10, centerY: 100, width: 260, slot: 'a' });
+
+      expect(seen).toContain('0');
+      expect(line()?.style.opacity).toBe('');
+    });
+
+    it('moves the line in place while the slot stays the same', () => {
+      const drop = new DatabaseDropLine();
+
+      drop.showHorizontal({ left: 10, centerY: 100, width: 260, slot: 'a' });
+      drop.showHorizontal({ left: 10, centerY: 90, width: 260, slot: 'a' });
+
+      expect(lines()).toHaveLength(1);
+      expect(line()?.style.top).toBe('88px');
+    });
+
+    // motion-r14-listdrag.json 2327/2334, motion-carddrag.json 4456/4464, motion-rowdrag.json 4536/4546: the old line
+    // fades 1→0 where it was while a new one fades 0→1 at the new slot.
+    it('crossfades to a new line when the slot changes', () => {
+      const drop = new DatabaseDropLine();
+
+      drop.showHorizontal({ left: 10, centerY: 100, width: 260, slot: 'a' });
+      drop.showHorizontal({ left: 10, centerY: 200, width: 260, slot: 'b' });
+
+      const [old, next] = lines();
+
+      expect(lines()).toHaveLength(2);
+      expect(old.style.top).toBe('98px');
+      expect(old.style.opacity).toBe('0');
+      expect(next.style.top).toBe('198px');
+      expect(next.style.opacity).toBe('');
+
+      vi.advanceTimersByTime(DROP_LINE_FADE_MS);
+
+      expect(lines()).toEqual([next]);
+    });
+
+    it('moves one line without a fade under reduced motion', () => {
+      reduceMotion(true);
+      const drop = new DatabaseDropLine();
+
+      drop.showHorizontal({ left: 10, centerY: 100, width: 260, slot: 'a' });
+      drop.showHorizontal({ left: 10, centerY: 200, width: 260, slot: 'b' });
+
+      expect(lines()).toHaveLength(1);
+      expect(line()?.style.top).toBe('198px');
+    });
+
+    it('leaves no line behind on destroy mid-crossfade', () => {
+      const drop = new DatabaseDropLine();
+
+      drop.showHorizontal({ left: 10, centerY: 100, width: 260, slot: 'a' });
+      drop.showHorizontal({ left: 10, centerY: 200, width: 260, slot: 'b' });
+      drop.destroy();
+
+      expect(lines()).toHaveLength(0);
+    });
+  });
+
   it('removes every line at once on destroy', () => {
     const drop = new DatabaseDropLine();
 

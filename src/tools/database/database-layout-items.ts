@@ -23,10 +23,11 @@ type T = Pick<I18n, 't'>;
  * (Phase 3) mounts these; nothing here opens a menu.
  */
 
-const choice = (name: string, title: string, isActive: boolean, onActivate: () => void): PopoverItemParams => ({
+const choice = (name: string, title: string, isActive: boolean, onActivate: () => void, description?: string): PopoverItemParams => ({
   type: PopoverItemType.Default,
   name,
   title,
+  ...(description !== undefined ? { description } : {}),
   isActive,
   onActivate,
 });
@@ -37,11 +38,6 @@ const CARD_SIZES: Array<[CardSize, string]> = [
   ['large', 'tools.database.galleryCardSizeLarge'],
 ];
 
-const PREVIEWS: Array<[CardPreview, string]> = [
-  ['none', 'tools.database.galleryCardPreviewNone'],
-  ['cover', 'tools.database.galleryCardPreviewCover'],
-  ['content', 'tools.database.galleryCardPreviewContent'],
-];
 
 const cardLayoutItems = (
   view: DatabaseViewConfig,
@@ -64,18 +60,31 @@ const cardLayoutItems = (
       items: CARD_SIZES.map(([value, key]) => choice(`${prefix}-card-size-${value}`, i18n.t(key), size === value, () => update({ cardSize: value }))),
     },
   };
+  const pick = (value: 'none' | 'cover' | 'content', key: string, description?: string): PopoverItemParams =>
+    choice(`${prefix}-card-preview-${value}`, i18n.t(key), previewKey === value, () => update({ cardPreview: value }), description);
   const previewRow: PopoverItemParams = {
     type: PopoverItemType.Default,
     name: `${prefix}-card-preview`,
     title: i18n.t('tools.database.galleryCardPreview'),
+    // notion-motion.md Round 112 §1 #6, Round 113 §1 #6: None, Page cover, Page properties ›, Page content with its hint line.
     children: {
       items: [
-        ...PREVIEWS.map(([value, key]) => choice(`${prefix}-card-preview-${value}`, i18n.t(key), previewKey === value, () => update({ cardPreview: value }))),
-        ...imageProperties.map((p) => {
-          const value: CardPreview = `property:${p.id}`;
+        pick('none', 'tools.database.galleryCardPreviewNone'),
+        pick('cover', 'tools.database.galleryCardPreviewCover'),
+        // Notion's group also offers "New file & media property"; without it an empty group would open an empty list.
+        ...(imageProperties.length === 0 ? [] : [{
+          type: PopoverItemType.Default,
+          name: `${prefix}-card-preview-properties`,
+          title: i18n.t('tools.database.galleryCardPreviewProperties'),
+          children: {
+            items: imageProperties.map((p) => {
+              const value: CardPreview = `property:${p.id}`;
 
-          return choice(`${prefix}-card-preview-${p.id}`, p.name, previewKey === value, () => update({ cardPreview: value }));
-        }),
+              return choice(`${prefix}-card-preview-${p.id}`, p.name, previewKey === value, () => update({ cardPreview: value }));
+            }),
+          },
+        } satisfies PopoverItemParams]),
+        pick('content', 'tools.database.galleryCardPreviewContent', i18n.t('tools.database.galleryCardPreviewContentDescription')),
       ],
     },
   };

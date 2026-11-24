@@ -332,9 +332,10 @@ describe('cell editor CSS', () => {
   describe('Edit property option row menu', () => {
     const MENU = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-option-menu']";
 
-    it('grows from its top-right corner, top-left in right-to-left', () => {
-      expect(declared(`${MENU} [data-blok-popover-container]`, 'transform-origin')).toEqual(['top right']);
-      expect(declared(`${MENU}[data-blok-popover-open-left='true'] [data-blok-popover-container]`, 'transform-origin')).toEqual(['top left']);
+    // notion-motion.md Round 105 §1 #1: open-left now names the side it grows towards, so core's corners apply.
+    it('grows from the corner core picks for the side it grows towards', () => {
+      expect(declared(`${MENU}[data-blok-popover-open-left='true'] [data-blok-popover-container]`, 'transform-origin')).toEqual([]);
+      expect(declared(`${MENU} [data-blok-popover-container]`, 'transform-origin')).toEqual([]);
     });
 
     it('draws Group and the group picks as menu rows, 28 tall', () => {
@@ -775,13 +776,17 @@ describe('cell editor CSS', () => {
       expect(declared(`${FLYOUT} [data-blok-popover-item-value]`, 'padding-inline-start')).toEqual(['var(--blok-space-4)']);
     });
 
-    it('draws a 16 chevron 6 after the value, flush with the row end', () => {
+    // Round 88 §1 #9: Notion's › ink is 5.6x10 in the 16 box; the Keyline chevron draws 5.7x9.9 at 24, centred over it.
+    it('draws a 16 chevron box 6 after the value, flush with the row end, with the glyph at 24', () => {
       const CHEVRON = `${FLYOUT} [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right]`;
 
-      expect(declared(CHEVRON, 'width')).toEqual(['16px']);
+      expect(declared(CHEVRON, 'width')).toEqual(['var(--blok-database-chevron-box)']);
+      expect(declared(CHEVRON, '--blok-database-chevron-box')).toEqual(['16px']);
+      expect(declared(CHEVRON, '--blok-database-chevron-size')).toEqual(['24px']);
       expect(declared(CHEVRON, 'margin-inline')).toEqual(['var(--blok-space-1-5) 0']);
-      expect(declared(`${CHEVRON} svg`, 'width')).toEqual(['16px']);
-      expect(declared(`${CHEVRON} svg`, 'height')).toEqual(['16px']);
+      expect(declared(`${CHEVRON} svg`, 'width')).toEqual(['var(--blok-database-chevron-size)']);
+      expect(declared(`${CHEVRON} svg`, 'height')).toEqual(['var(--blok-database-chevron-size)']);
+      expect(declared(`${CHEVRON} svg`, 'margin')).toEqual(['calc((var(--blok-database-chevron-box) - var(--blok-database-chevron-size)) / 2)']);
     });
   });
 
@@ -830,6 +835,21 @@ describe('cell editor CSS', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] > [data-blok-popover-container]", 'transform-origin')).toEqual(['center']);
   });
 
+  // Table full screen sets `role` on its host. Chrome then restyles every descendant that
+  // could match a rule's subject under a `[role…]` ancestor; every block carries a test id.
+  it('keys no rule under a role ancestor on a test id or a bare `*`', () => {
+    const selectors = [...database.matchAll(/([^{}@;]+?)\s*\{/g)]
+      .flatMap((rule) => rule[1].split(/,(?![^(]*\))/).map((part) => part.trim()));
+    const broad = selectors.filter((selector) => {
+      const role = selector.search(/\[role[\]=~]/);
+      const subject = selector.slice(role).match(/\]\s*[ >+~]\s*(.*)$/)?.[1] ?? '';
+
+      return role >= 0 && /^(\*|\[data-blok-testid[^\]]*\]|[^[]*:is\([^)]*data-blok-testid[^)]*\))$/.test(subject.split(/\s*[ >+~]\s*(?![^(]*\))/).at(-1) ?? '');
+    });
+
+    expect(broad).toEqual([]);
+  });
+
   // notion-motion.md Round 62 §1: search box 306x28 at +12,+12; result rows 322x28 at +4, radius 6, icon 18 at +13, title 14/16.8 at +40.
   describe('Move to picker', () => {
     const MOVE = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']";
@@ -843,7 +863,7 @@ describe('cell editor CSS', () => {
       expect(declared(`${MOVE} [role='option']`, 'min-height')).toEqual(['28px']);
       expect(declared(`${MOVE} [role='option']`, 'padding')).toEqual(['var(--blok-space-1-25) var(--blok-space-2) var(--blok-space-1-25) var(--blok-space-2-25)']);
       expect(declared(`${MOVE} [role='option']`, 'gap')).toEqual(['var(--blok-space-2-25)']);
-      expect(declared(`${MOVE} [role='option'] > div > :is([data-blok-page-picker-line], [data-blok-testid='page-picker-option-path'])`, 'line-height')).toEqual(['16.8px']);
+      expect(declared(`${MOVE} [role='option'] > div > :is([data-blok-page-picker-line], [data-blok-page-picker-path])`, 'line-height')).toEqual(['16.8px']);
       expect(declared(`${MOVE} [data-blok-testid='page-picker-option-icon']`, 'width')).toEqual(['18px']);
       expect(declared(`${MOVE} [data-blok-testid='page-picker-option-icon']`, 'height')).toEqual(['18px']);
     });
@@ -871,7 +891,7 @@ describe('cell editor CSS', () => {
         expect(declared(TREE_ROW, 'padding-block')).toEqual(['0']);
         expect(declared(TREE_ROW, 'gap')).toEqual(['0']);
         expect(declared(TREE_ROW, 'align-items')).toEqual(['center']);
-        expect(declared(`${TREE_ROW} > div > :is([data-blok-page-picker-line], [data-blok-testid='page-picker-option-path'])`, 'line-height')).toEqual(['21px']);
+        expect(declared(`${TREE_ROW} > div > :is([data-blok-page-picker-line], [data-blok-page-picker-path])`, 'line-height')).toEqual(['21px']);
       });
 
       it('puts the 20 chevron, then the 16 icon 3px after it, then the title 7px after that', () => {
@@ -882,9 +902,9 @@ describe('cell editor CSS', () => {
         expect(declared(CHEVRON, 'color')).toEqual(['var(--blok-database-table-header-icon)']);
         // notion-motion.md Round 65 §3: IconChevronRight at 20 paints Notion's 4.5 x 8 open chevron.
         expect(declared(`${CHEVRON} svg`, 'width')).toEqual(['20px']);
-        expect(declared(`${TREE_ROW} [data-blok-testid='page-picker-option-icon']`, 'width')).toEqual(['16px']);
-        expect(declared(`${TREE_ROW} [data-blok-testid='page-picker-option-icon']`, 'height')).toEqual(['16px']);
-        expect(declared(`${TREE_ROW} [data-blok-testid='page-picker-option-icon']`, 'margin-inline-end')).toEqual(['var(--blok-space-1-75)']);
+        expect(declared(`${TREE_ROW} [data-blok-page-picker-icon]`, 'width')).toEqual(['16px']);
+        expect(declared(`${TREE_ROW} [data-blok-page-picker-icon]`, 'height')).toEqual(['16px']);
+        expect(declared(`${TREE_ROW} [data-blok-page-picker-icon]`, 'margin-inline-end')).toEqual(['var(--blok-space-1-75)']);
       });
 
       // page-picker.ts plays the 0.2s turn on `rotate` (Round 65 §3), so no transition is declared.
@@ -1235,6 +1255,18 @@ describe('cell editor CSS', () => {
   });
   // notion-motion.md Round 26 "Option ⋯ menu", Round 55 §4: 220×418.9. Name field 196×28 at +12/+12, Delete at +52,
   // a rule and "Colors", Default at +125.9, colour rows 212×28 at +4 with pitch 29, and 4 under the last row.
+  // notion-motion.md Round 113 §1 #8 (r113-n-multiselect-token-remove.raw): the token × fills
+  // rgba(33,27,23,0.051) on hover, background-color 100ms ease-in-out. Dark is unmeasured: the hover token.
+  describe('token ×', () => {
+    const REMOVE = '[data-blok-database-cell-editor] [data-blok-database-select-chip-remove]';
+
+    it('fills on hover as Notion', () => {
+      expect(declared(`${REMOVE}:hover`, 'background-color')).toEqual(['var(--blok-database-hover-bg)']);
+      expect(declared(REMOVE, 'transition')).toEqual(['background-color 100ms ease-in-out']);
+      expect(database).toContain('--blok-database-hover-bg: rgba(33, 27, 23, 0.051);');
+    });
+  });
+
   describe('option ⋯ menu', () => {
     const MENU = "[data-blok-popover-custom-class~='blok-database-option-menu']";
 
@@ -1258,5 +1290,36 @@ describe('cell editor CSS', () => {
     it('draws "Colors" at weight 500', () => {
       expect(declared(`${MENU} [data-blok-database-option-colors-heading]`, 'font-weight')).toEqual(['500']);
     });
+  });
+});
+
+// notion-motion.md Round 88 §1 #9 and Round 83 l.8793: Notion's month arrows draw ink ~6.2x10.8 in 20 buttons, and
+// the picker rows end in a 14 box at +218. A Keyline chevron is drawn larger than its box, so the ink grows and the box stays.
+describe('date picker chevrons (Round 88)', () => {
+  const ARROWS = '[data-blok-database-date-editor] :is([data-blok-database-date-prev], [data-blok-database-date-next])';
+  const SIZE = '--blok-database-chevron-size';
+
+  it('draws the month arrows at 26 in their 20 buttons, ink 6.2x10.7', () => {
+    expect(declared(ARROWS, '--blok-database-chevron-box')).toEqual(['20px']);
+    expect(declared(ARROWS, SIZE)).toEqual(['26px']);
+  });
+
+  it('ends a picker row in a 14 box with the chevron at 21, ink 5x8.7', () => {
+    expect(declared('[data-blok-database-date-remind-chevron]', 'width')).toEqual(['var(--blok-database-chevron-box)']);
+    expect(declared('[data-blok-database-date-remind-chevron]', '--blok-database-chevron-box')).toEqual(['14px']);
+    expect(declared('[data-blok-database-date-remind-chevron]', SIZE)).toEqual(['21px']);
+  });
+
+  it('keeps the checkmark at 16', () => {
+    expect(declared('[data-blok-database-date-remind-check] > svg', 'width')).toEqual(['16px']);
+    expect(declared('[data-blok-database-date-remind-chevron] > svg', 'width')).toEqual(['var(--blok-database-chevron-size)']);
+  });
+
+  it('centres each glyph over its box', () => {
+    for (const svg of [`${ARROWS} > svg`, '[data-blok-database-date-remind-chevron] > svg']) {
+      expect(declared(svg, 'height')).toEqual(['var(--blok-database-chevron-size)']);
+      expect(declared(svg, 'margin')).toEqual(['calc((var(--blok-database-chevron-box) - var(--blok-database-chevron-size)) / 2)']);
+      expect(declared(svg, 'flex-shrink')).toEqual(['0']);
+    }
   });
 });

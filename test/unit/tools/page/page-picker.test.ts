@@ -407,6 +407,8 @@ describe('PagePicker', () => {
     const path = options[0]?.querySelector('[data-blok-testid="page-picker-option-path"]');
 
     expect(path?.textContent).toBe('Общее КЦ / Меню');
+    // The Move to picker's CSS keys on these, not on the test ids.
+    expect(path?.hasAttribute('data-blok-page-picker-path')).toBe(true);
     expect(options[0]?.textContent).toBe('НапиткиОбщее КЦ / Меню');
     expect(options[1]?.querySelector('[data-blok-testid="page-picker-option-path"]')).toBeNull();
   });
@@ -773,6 +775,7 @@ describe('PagePicker sections', () => {
     const icons = options().map((option) => option.querySelector<HTMLElement>('[data-blok-testid="page-picker-option-icon"]'));
 
     expect(icons.every((icon) => icon?.getAttribute('aria-hidden') === 'true')).toBe(true);
+    expect(icons.every((icon) => icon?.hasAttribute('data-blok-page-picker-icon'))).toBe(true);
     expect(icons[0]?.textContent).toBe('🗺️');
     expect(icons[1]?.querySelector('img')?.getAttribute('src')).toBe('https://example.com/a.png');
     expect(icons[2]?.querySelector('svg')).not.toBeNull();

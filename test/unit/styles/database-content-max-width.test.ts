@@ -17,9 +17,9 @@ import { describe, expect, it } from 'vitest';
 
 const DATABASE_CSS = readFileSync(join(process.cwd(), 'src/styles/database.css'), 'utf8');
 
-/** Every `calc((100% - <cap>) / 2)` centring expression in the file. */
+/** Every `calc((100% - <cap>) * var(--_blok-database-lead|trail, 0.5))` gutter in the file. */
 const centringCaps = (): string[] =>
-  Array.from(DATABASE_CSS.matchAll(/calc\(\(100% - (.+?)\) \/ 2\)/g)).map(match => match[1] ?? '');
+  Array.from(DATABASE_CSS.matchAll(/calc\(\(100(?:%|cqi) - (.+?)\) \* var\(--_blok-database-(?:lead|trail), 0\.5\)/g)).map(match => match[1] ?? '');
 
 describe('database.css content max-width', () => {
   it('has centring expressions to check', () => {
@@ -32,6 +32,12 @@ describe('database.css content max-width', () => {
     }
   });
 
+  // A full-page database sets the factors from contentAlign. A gutter that halves the room
+  // itself stays centred there while the page title moves.
+  it('sizes every gutter with the lead or trail factor, never a fixed half', () => {
+    expect(DATABASE_CSS).not.toMatch(/\(100(?:%|cqi) - var\(--blok-content-max-width, var\(--max-width-content\)\)\) \/ 2/);
+  });
+
   it('never reads the private token without the public token in front of it', () => {
     const bareUsages = Array.from(DATABASE_CSS.matchAll(/var\(--max-width-content\)/g));
     const chainedUsages = Array.from(
@@ -39,5 +45,24 @@ describe('database.css content max-width', () => {
     );
 
     expect(bareUsages).toHaveLength(chainedUsages.length);
+  });
+
+  // notion-motion.md Round 99 #9: a full-page database's tabs start at its page title's text,
+  // and the title follows contentAlign (page-title.css).
+  it.each([
+    ['left', '0', '1'],
+    ['right', '1', '0'],
+  ])('puts a full-page database on the title column when contentAlign is %s', (align, lead, trail) => {
+    const body = DATABASE_CSS.match(new RegExp(`\\[data-blok-content-align="${align}"\\] \\[data-blok-database-page\\] \\{([^}]*)\\}`))?.[1] ?? '';
+
+    expect(body).toContain(`--_blok-database-lead: ${lead}`);
+    expect(body).toContain(`--_blok-database-trail: ${trail}`);
+  });
+
+  it('keeps an inline database inside a full-page one centred', () => {
+    const body = DATABASE_CSS.match(/\[data-blok-database-page\] \[data-blok-database-wrapper\]:not\(\[data-blok-database-page\]\) \{([^}]*)\}/)?.[1] ?? '';
+
+    expect(body).toContain('--_blok-database-lead: 0.5');
+    expect(body).toContain('--_blok-database-trail: 0.5');
   });
 });

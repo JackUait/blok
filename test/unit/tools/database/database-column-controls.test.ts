@@ -1,14 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseColumnControls } from '../../../../src/tools/database/database-column-controls';
-import { simulateInput, simulateKeydown } from '../../../helpers/simulate';
-import type { I18n } from '../../../../types';
 
-const createMockI18n = (): I18n => ({
-  t: vi.fn((key: string) => key),
-  has: vi.fn(() => true),
-  getEnglishTranslation: vi.fn(() => ''),
-  getLocale: vi.fn(() => 'en'),
-});
+type OpenRename = (pill: HTMLElement, label: string, done: (label: string | null) => void) => void;
 
 const makePillHeaderEl = (title = 'BACKLOG'): HTMLElement => {
   const header = document.createElement('div');
@@ -19,216 +12,154 @@ const makePillHeaderEl = (title = 'BACKLOG'): HTMLElement => {
   titleEl.textContent = title;
   pill.appendChild(titleEl);
   header.appendChild(pill);
+  document.body.appendChild(header);
   return header;
 };
 
+const pillOf = (header: HTMLElement): HTMLElement => {
+  const pill = header.querySelector<HTMLElement>('[data-blok-database-column-pill]');
+
+  if (pill === null) throw new Error('no pill');
+
+  return pill;
+};
+
+const titleOf = (header: HTMLElement): HTMLElement => {
+  const title = header.querySelector<HTMLElement>('[data-blok-database-column-title]');
+
+  if (title === null) throw new Error('no title');
+
+  return title;
+};
+
 describe('DatabaseColumnControls', () => {
-  let i18n: I18n;
   let onRename: ReturnType<typeof vi.fn<(optionId: string, label: string) => void>>;
-  let onRenameInput: ReturnType<typeof vi.fn<(optionId: string, label: string) => void>>;
   let onRenameCommit: ReturnType<typeof vi.fn<(optionId: string, label: string) => void>>;
+  let openRename: ReturnType<typeof vi.fn<OpenRename>>;
   let controls: DatabaseColumnControls;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    i18n = createMockI18n();
     onRename = vi.fn<(optionId: string, label: string) => void>();
-    onRenameInput = vi.fn<(optionId: string, label: string) => void>();
     onRenameCommit = vi.fn<(optionId: string, label: string) => void>();
-    controls = new DatabaseColumnControls({ i18n, onRename, onRenameInput, onRenameCommit });
+    openRename = vi.fn<OpenRename>();
+    controls = new DatabaseColumnControls({ onRename, onRenameCommit, openRename });
   });
 
   afterEach(() => {
+    document.body.replaceChildren();
     vi.restoreAllMocks();
   });
 
   describe('makePillTitleEditable', () => {
-    it('clicking the title element swaps it for an input', () => {
+    // notion-motion.md Round 99 §1 #1: a click opens the same popup as Enter, not an inline field.
+    it('a click on the pill opens the rename popup, and no inline field appears', () => {
       const headerEl = makePillHeaderEl('BACKLOG');
+
       controls.makePillTitleEditable(headerEl, 'opt-1');
+      titleOf(headerEl).click();
 
-      const titleEl = headerEl.querySelector('[data-blok-database-column-title]') as HTMLElement;
-      titleEl.click();
+      expect(openRename).toHaveBeenCalledTimes(1);
+      expect(openRename).toHaveBeenLastCalledWith(pillOf(headerEl), 'BACKLOG', expect.any(Function));
+      expect(headerEl.querySelector('input')).toBeNull();
 
-      expect(headerEl.querySelector('[data-blok-database-column-title-input]')).not.toBeNull();
-      expect(headerEl.querySelector('[data-blok-database-column-title]')).toBeNull();
+      pillOf(headerEl).click();
+
+      expect(openRename).toHaveBeenCalledTimes(2);
     });
 
-    // notion-motion.md Round 97 §1 #1: the header pill is a Tab stop.
-    it('makes the pill a button that Enter and Space rename', () => {
+    it('a click keeps away from the header, so no column drag starts', () => {
       const headerEl = makePillHeaderEl('BACKLOG');
-      const pill = headerEl.querySelector<HTMLElement>('[data-blok-database-column-pill]');
+      const onHeaderClick = vi.fn<() => void>();
 
-      document.body.appendChild(headerEl);
+      headerEl.addEventListener('click', onHeaderClick);
+      controls.makePillTitleEditable(headerEl, 'opt-1');
+      titleOf(headerEl).click();
+
+      expect(onHeaderClick).not.toHaveBeenCalled();
+    });
+
+    it('a second call on the same header still opens one popup per click', () => {
+      const headerEl = makePillHeaderEl('BACKLOG');
+
+      controls.makePillTitleEditable(headerEl, 'opt-1');
+      controls.makePillTitleEditable(headerEl, 'opt-1');
+      pillOf(headerEl).click();
+      pillOf(headerEl).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+      expect(openRename).toHaveBeenCalledTimes(2);
+    });
+
+    it('leaves a header with no pill alone', () => {
+      const headerEl = document.createElement('div');
+
+      expect(() => controls.makePillTitleEditable(headerEl, 'opt-1')).not.toThrow();
+    });
+
+    // notion-motion.md Round 97 §1 #1, Round 98 §1 #1: the pill is a Tab stop, and Enter and Space open the popup.
+    it('makes the pill a button that Enter and Space open the popup from', () => {
+      const headerEl = makePillHeaderEl('BACKLOG');
+      const pill = pillOf(headerEl);
+
       controls.makePillTitleEditable(headerEl, 'opt-1');
 
-      expect(pill?.tabIndex).toBe(0);
-      expect(pill?.getAttribute('role')).toBe('button');
+      expect(pill.tabIndex).toBe(0);
+      expect(pill.getAttribute('role')).toBe('button');
 
       for (const key of ['Enter', ' ']) {
         const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
 
-        pill?.dispatchEvent(event);
+        pill.dispatchEvent(event);
         expect(event.defaultPrevented).toBe(true);
-        expect(headerEl.querySelector('[data-blok-database-column-title-input]')).not.toBeNull();
-        simulateKeydown(headerEl.querySelector('[data-blok-database-column-title-input]') as HTMLElement, 'Escape');
-        expect(headerEl.querySelector('[data-blok-database-column-title-input]')).toBeNull();
-        expect(pill).toHaveFocus();
+        expect(openRename).toHaveBeenLastCalledWith(pill, 'BACKLOG', expect.any(Function));
       }
-      headerEl.remove();
     });
 
-    // notion-motion.md Round 98 §1 #1: Enter and Space open the rename popup under the pill, not an inline field.
-    it('opens the rename popup from Enter and Space, and the pill takes focus back when it closes', () => {
-      const openRename = vi.fn<(pill: HTMLElement, label: string, done: (label: string | null) => void) => void>();
-      const popupControls = new DatabaseColumnControls({ i18n, onRename, onRenameCommit, openRename });
+    it('the pill takes focus back when the popup closes, with or without a new name', () => {
       const headerEl = makePillHeaderEl('BACKLOG');
-      const pill = headerEl.querySelector<HTMLElement>('[data-blok-database-column-pill]');
+      const pill = pillOf(headerEl);
       const elsewhere = document.createElement('input');
 
-      document.body.append(headerEl, elsewhere);
-      popupControls.makePillTitleEditable(headerEl, 'opt-1');
+      document.body.append(elsewhere);
+      controls.makePillTitleEditable(headerEl, 'opt-1');
 
-      for (const key of ['Enter', ' ']) {
-        const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      pill.click();
+      elsewhere.focus();
+      openRename.mock.lastCall?.[2](null);
 
-        pill?.dispatchEvent(event);
-        expect(event.defaultPrevented).toBe(true);
-        expect(headerEl.querySelector('[data-blok-database-column-title-input]')).toBeNull();
-        expect(openRename).toHaveBeenLastCalledWith(pill, 'BACKLOG', expect.any(Function));
-        elsewhere.focus();
-        openRename.mock.lastCall?.[2](null);
-        expect(pill).toHaveFocus();
-      }
+      expect(pill).toHaveFocus();
       expect(onRename).not.toHaveBeenCalled();
 
-      pill?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      pill.click();
       elsewhere.focus();
       openRename.mock.lastCall?.[2]('DOING');
 
-      expect(headerEl.querySelector('[data-blok-database-column-title]')?.textContent).toBe('DOING');
+      expect(titleOf(headerEl).textContent).toBe('DOING');
       expect(onRenameCommit).toHaveBeenCalledWith('opt-1', 'DOING');
       expect(onRename).toHaveBeenCalledWith('opt-1', 'DOING');
       expect(pill).toHaveFocus();
-      headerEl.remove();
-      elsewhere.remove();
     });
 
-    it('leaves focus where a Tab took it when the rename ends on blur', () => {
+    it('the same name renames nothing', () => {
       const headerEl = makePillHeaderEl('BACKLOG');
-      const pill = headerEl.querySelector<HTMLElement>('[data-blok-database-column-pill]');
-      const next = document.createElement('button');
 
-      document.body.append(headerEl, next);
       controls.makePillTitleEditable(headerEl, 'opt-1');
-      pill?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
-      next.focus();
+      pillOf(headerEl).click();
+      openRename.mock.lastCall?.[2]('BACKLOG');
 
-      expect(headerEl.querySelector('[data-blok-database-column-title-input]')).toBeNull();
-      expect(next).toHaveFocus();
-      headerEl.remove();
-      next.remove();
-    });
-
-    it('input is pre-filled with the current title', () => {
-      const headerEl = makePillHeaderEl('IN PROGRESS');
-      controls.makePillTitleEditable(headerEl, 'opt-1');
-
-      const titleEl = headerEl.querySelector('[data-blok-database-column-title]') as HTMLElement;
-      titleEl.click();
-
-      const input = headerEl.querySelector<HTMLInputElement>('[data-blok-database-column-title-input]');
-      expect(input?.value).toBe('IN PROGRESS');
-    });
-
-    it('fires onRenameInput on every input event', () => {
-      const headerEl = makePillHeaderEl('BACKLOG');
-      controls.makePillTitleEditable(headerEl, 'opt-1');
-
-      const titleEl = headerEl.querySelector('[data-blok-database-column-title]') as HTMLElement;
-      titleEl.click();
-
-      const input = headerEl.querySelector<HTMLInputElement>('[data-blok-database-column-title-input]')!;
-      input.value = 'BACKLOG UPDATED';
-      simulateInput(input);
-
-      expect(onRenameInput).toHaveBeenCalledWith('opt-1', 'BACKLOG UPDATED');
-    });
-
-    it('fires onRenameCommit and restores title div on blur', () => {
-      const headerEl = makePillHeaderEl('BACKLOG');
-      controls.makePillTitleEditable(headerEl, 'opt-1');
-
-      const titleEl = headerEl.querySelector('[data-blok-database-column-title]') as HTMLElement;
-      titleEl.click();
-
-      const input = headerEl.querySelector<HTMLInputElement>('[data-blok-database-column-title-input]')!;
-      input.value = 'RELEASED';
-      input.dispatchEvent(new Event('blur'));
-
-      expect(onRenameCommit).toHaveBeenCalledWith('opt-1', 'RELEASED');
-      expect(headerEl.querySelector('[data-blok-database-column-title]')).not.toBeNull();
-      expect(headerEl.querySelector('[data-blok-database-column-title-input]')).toBeNull();
-      expect(headerEl.querySelector('[data-blok-database-column-title]')?.textContent).toBe('RELEASED');
-    });
-
-    it('fires onRenameCommit and restores on Enter key', () => {
-      const headerEl = makePillHeaderEl('BACKLOG');
-      controls.makePillTitleEditable(headerEl, 'opt-1');
-
-      const titleEl = headerEl.querySelector('[data-blok-database-column-title]') as HTMLElement;
-      titleEl.click();
-
-      const input = headerEl.querySelector<HTMLInputElement>('[data-blok-database-column-title-input]')!;
-      input.value = 'NEW NAME';
-      simulateKeydown(input, 'Enter');
-
-      expect(onRenameCommit).toHaveBeenCalledWith('opt-1', 'NEW NAME');
-    });
-
-    it('restores original title on Escape without calling onRenameCommit', () => {
-      const headerEl = makePillHeaderEl('BACKLOG');
-      controls.makePillTitleEditable(headerEl, 'opt-1');
-
-      const titleEl = headerEl.querySelector('[data-blok-database-column-title]') as HTMLElement;
-      titleEl.click();
-
-      const input = headerEl.querySelector<HTMLInputElement>('[data-blok-database-column-title-input]')!;
-      input.value = 'OOPS';
-      simulateKeydown(input, 'Escape');
-
+      expect(onRename).not.toHaveBeenCalled();
       expect(onRenameCommit).not.toHaveBeenCalled();
-      expect(headerEl.querySelector('[data-blok-database-column-title]')?.textContent).toBe('BACKLOG');
     });
 
-    it('falls back to original title if input is empty on commit', () => {
+    it('works without a commit callback', () => {
       const headerEl = makePillHeaderEl('BACKLOG');
-      controls.makePillTitleEditable(headerEl, 'opt-1');
+      const bare = new DatabaseColumnControls({ onRename, openRename });
 
-      const titleEl = headerEl.querySelector('[data-blok-database-column-title]') as HTMLElement;
-      titleEl.click();
+      bare.makePillTitleEditable(headerEl, 'opt-1');
+      pillOf(headerEl).click();
+      openRename.mock.lastCall?.[2]('DOING');
 
-      const input = headerEl.querySelector<HTMLInputElement>('[data-blok-database-column-title-input]')!;
-      input.value = '';
-      input.dispatchEvent(new Event('blur'));
-
-      // When input is empty, falls back to original — no change, so onRenameCommit is NOT called
-      expect(onRenameCommit).not.toHaveBeenCalled();
-      expect(headerEl.querySelector('[data-blok-database-column-title]')?.textContent).toBe('BACKLOG');
-    });
-
-    it('does not fire onRenameCommit when title has not changed on blur', () => {
-      const headerEl = makePillHeaderEl('BACKLOG');
-      controls.makePillTitleEditable(headerEl, 'opt-1');
-
-      const titleEl = headerEl.querySelector('[data-blok-database-column-title]') as HTMLElement;
-      titleEl.click();
-
-      const input = headerEl.querySelector<HTMLInputElement>('[data-blok-database-column-title-input]')!;
-      // value unchanged (still 'BACKLOG')
-      input.dispatchEvent(new Event('blur'));
-
-      expect(onRenameCommit).not.toHaveBeenCalled();
+      expect(onRename).toHaveBeenCalledWith('opt-1', 'DOING');
     });
   });
 });

@@ -108,3 +108,75 @@ describe('PopoverDesktop.focusItemByName', () => {
     expect(focused()).toEqual(['rename']);
   });
 });
+
+/** A keyboard open's start row: the cursor stays for the keys and lets go once the pointer takes a row. */
+describe('PopoverDesktop.startCursorOn', () => {
+  const popovers: PopoverDesktop[] = [];
+  const open = (): PopoverDesktop => {
+    const trigger = document.createElement('button');
+
+    // The popover ignores hovers until the pointer moves from where it rested at open.
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 1, clientY: 1, bubbles: true }));
+    document.body.append(trigger);
+    const popover = new PopoverDesktop({
+      trigger,
+      autoFocusFirstItem: false,
+      items: ['one', 'two', 'three'].map((name) => ({ title: name, name, onActivate: vi.fn() })),
+    });
+
+    popovers.push(popover);
+    document.body.appendChild(popover.getElement());
+    popover.show();
+
+    return popover;
+  };
+  const hover = (name: string): void => {
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 5, bubbles: true }));
+    itemEl(name)?.dispatchEvent(new MouseEvent('mouseover', { clientX: 10, clientY: 10, bubbles: true }));
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    popovers.splice(0).forEach((popover) => popover.destroy());
+    PopoverRegistry.resetForTests();
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  it('drops the cursor once the pointer takes another row', () => {
+    const popover = open();
+
+    expect(popover.startCursorOn('two')).toBe(true);
+    expect(focused()).toEqual(['two']);
+
+    hover('three');
+
+    expect(focused()).toEqual([]);
+  });
+
+  it('keeps the cursor while the pointer rests on the start row', () => {
+    const popover = open();
+
+    popover.startCursorOn('two');
+    hover('two');
+
+    expect(focused()).toEqual(['two']);
+  });
+
+  it('leaves the cursor to the keys once an arrow moves it', () => {
+    const popover = open();
+
+    popover.startCursorOn('one');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    hover('three');
+
+    expect(focused()).toEqual(['two']);
+  });
+
+  it('returns false for a row the menu does not show', () => {
+    expect(open().startCursorOn('missing')).toBe(false);
+  });
+});

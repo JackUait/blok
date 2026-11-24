@@ -40,7 +40,7 @@ const view = (type: string, extra: Record<string, unknown> = {}): Record<string,
 let editor: TestEditor | undefined;
 let holder: HTMLDivElement | undefined;
 
-const mount = async (views: unknown[], locked = false): Promise<void> => {
+const mount = async (views: unknown[], locked = false, extra: Record<string, unknown> = {}): Promise<void> => {
   holder = document.createElement('div');
   document.body.appendChild(holder);
   editor = new Blok({
@@ -50,7 +50,7 @@ const mount = async (views: unknown[], locked = false): Promise<void> => {
     data: {
       id: 'doc',
       blocks: [
-        { id: 'db', type: 'database', content: ['r1'], data: { title: 'Tasks', schema: schema(locked), views, activeViewId: 'v1' } },
+        { id: 'db', type: 'database', content: ['r1'], data: { title: 'Tasks', schema: schema(locked), views, activeViewId: 'v1', ...extra } },
         { id: 'r1', type: 'database-row', parent: 'db', data: { position: 'a0', properties: { t: 'Alpha', st: 's1', d: '2026-11-18', n: 1 } } },
       ],
     },
@@ -119,4 +119,44 @@ describe('Enter on a focused database control', () => {
     expect(editor?.blocks.getBlocksCount()).toBe(before);
     expect(editor?.blocks.getBlockByIndex(0)?.name).toBe('database');
   });
+});
+
+/** notion-motion.md Round 103 §1 #1: with one view, Tab from the title row's "+" moves on to Filter. */
+describe('Tab on a focused title-row button', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    editor?.destroy();
+    editor = undefined;
+    holder?.remove();
+    holder = undefined;
+    vi.restoreAllMocks();
+  });
+
+  const titleRowButtons = [
+    { name: 'the "+" add-view button', selector: '[data-blok-database-title-row] > [data-blok-database-add-view]' },
+    { name: 'the more button', selector: '[data-blok-database-title-row] > [data-blok-database-title-more]' },
+    { name: 'the icon button', selector: '[data-blok-database-title-row] > [data-blok-database-icon]' },
+  ];
+
+  it.each(titleRowButtons.flatMap(entry => [false, true].map(shiftKey => ({ ...entry, shiftKey }))))(
+    'leaves Tab (shift $shiftKey) on $name to the browser',
+    async ({ selector, shiftKey }) => {
+      await mount([view('table')], false, { icon: { glyph: 'check', color: 'green' } });
+      const control = holder?.querySelector<HTMLElement>(selector);
+
+      expect(control).toBeInstanceOf(HTMLElement);
+      if (!(control instanceof HTMLElement)) return;
+      control.focus();
+      const event = new KeyboardEvent('keydown', { key: 'Tab', code: 'Tab', shiftKey, bubbles: true, cancelable: true });
+
+      control.dispatchEvent(event);
+      await quiet();
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(editor?.blocks.getBlocksCount()).toBe(2);
+    }
+  );
 });

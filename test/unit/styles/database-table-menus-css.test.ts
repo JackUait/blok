@@ -160,6 +160,17 @@ describe('add property menu (T12)', () => {
     expect(declared('[data-blok-database-property-type-heading]', 'font-size')).toEqual(['12px']);
   });
 
+  // notion-motion.md Round 102 §2 Row 44 (r102-n-row44-picker.raw, r44-tp-add-head.raw): the AI rows are 28 tall at a 30 pitch,
+  // and the "Basic" tag is 11/500 on a 14.3 line with 2px 4px padding (36.9x18.3). Its ink stays Blok's AA gray.
+  it('spaces the AI Autofill rows 30 apart and sets the Basic tag 11/500', () => {
+    expect(declared('[data-blok-database-property-autofill-option] + [data-blok-database-property-autofill-option]', 'margin-block-start'))
+      .toEqual(['var(--blok-space-0-5)']);
+    expect(declared('[data-blok-database-property-autofill-tag]', 'font-size')).toEqual(['11px']);
+    expect(declared('[data-blok-database-property-autofill-tag]', 'font-weight')).toEqual(['500']);
+    expect(declared('[data-blok-database-property-autofill-tag]', 'line-height')).toEqual(['1.3']);
+    expect(declared('[data-blok-database-property-autofill-tag]', 'padding')).toEqual(['var(--blok-space-0-5) var(--blok-space-1)']);
+  });
+
   // research/08 line 203, 267: the table header "+" menu is 400 wide, a two-column grid of 32px items.
   it('draws the header "+" grid 400 wide in two columns of 32px items', () => {
     const GRID = "[data-blok-database-property-type-layout='grid']";
@@ -167,6 +178,12 @@ describe('add property menu (T12)', () => {
     expect(declared(GRID, 'width')).toEqual(['400px']);
     expect(declared(`${GRID} [data-blok-database-property-type-grid]`, 'grid-template-columns')).toEqual(['repeat(2, minmax(0, 1fr))']);
     expect(declared(`${GRID} [data-blok-database-property-type-option]`, 'min-height')).toEqual(['32px']);
+  });
+
+  // notion-motion.md Round 86 §1 #10: Insert left/right opens the same 389x362.5 dialog as the "+", whose painted
+  // card is 400x358.5 at a 717 window (Round 34 §6, r34-typemenu-plus-midscreen.png), so both grids show half the window.
+  it('caps every type grid at half the window, Insert left/right too', () => {
+    expect(declared("[data-blok-database-property-type-layout='grid']", 'max-height')).toEqual(['50dvh']);
   });
 
   // notion-spec-2 §25.6 (editprop-select.txt): the line under Sort is 4px below it, at box x + 12, 276 wide; the first option 42 below it.
@@ -180,8 +197,8 @@ describe('add property menu (T12)', () => {
     expect(declared("[data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-grid]", 'row-gap')).toEqual(['var(--blok-space-0-5)']);
   });
 
-  // notion-spec-2 §19.11: the header "+" name box is a white 378x28 box over the "+"; the grid shows half the window and fades its last 34px.
-  it('draws the header "+" name box in the header cell and caps the grid at half the window', () => {
+  // notion-spec-2 §19.11: the header "+" name box is a white 378x28 box over the "+"; its last 34px fade.
+  it('draws the header "+" name box in the header cell and fades the grid', () => {
     const OVER = '[data-blok-database-property-type-name-over-anchor]';
 
     expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'position')).toEqual(['absolute']);
@@ -189,7 +206,7 @@ describe('add property menu (T12)', () => {
     expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'height')).toEqual(['28px']);
     expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'border-radius')).toEqual(['var(--blok-radius-control)']);
     expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'box-shadow')).toEqual(['none']);
-    expect(declared(OVER, 'max-height')).toEqual(['50dvh']);
+    expect(declared(OVER, 'max-height')).toEqual([]);
     expect(declared(`${OVER} [data-blok-database-property-type-body]`, 'mask-image')).toEqual(['linear-gradient(black 0%, black calc(100% - 34px), transparent 100%)']);
   });
 
@@ -398,7 +415,10 @@ describe('row page property menu (research parity row 9)', () => {
     const note = (menu: string): string => `${menu} [data-blok-database-property-menu-note]`;
 
     expect(declared(note(ROW_PAGE), 'padding')).toEqual(['var(--blok-space-3) calc(var(--blok-space-5) + var(--blok-space-0-5)) 0']);
-    expect(declared(note(SUB), 'padding')).toEqual(['var(--blok-space-3) calc(var(--blok-space-3) + var(--blok-space-0-5)) 0']);
+    // notion-motion.md Round 113 §1 #9: Notion's 12 above is a margin, and 6 + 4 + 4 sit under the text.
+    // Box 264 wide at the text's x; the menu's own 4 is the last of the three.
+    expect(declared(note(SUB), 'margin')).toEqual(['var(--blok-space-3) var(--blok-space-3-5) var(--blok-space-1)']);
+    expect(declared(note(SUB), 'padding')).toEqual(['0 0 var(--blok-space-1-5)']);
     expect(declared(note(ROW_PAGE), 'line-height')).toEqual(['18px']);
     expect(declared(note(SUB), 'line-height')).toEqual(['18px']);
   });
@@ -426,6 +446,9 @@ describe('row page property menu (research parity row 9)', () => {
       expect(declared(divide, 'contain')).toEqual(['inline-size']);
       expect(declared(`${divide} > [data-blok-database-property-menu-field]`, 'padding')).toEqual(['0 var(--blok-space-4)']);
       expect(declared(`${divide} > [data-blok-database-property-menu-field]`, 'gap')).toEqual(['var(--blok-space-4)']);
+      // R112 (notion-motion.md §1 #3): Notion's Divide by value sits in a 110px box at the row's end.
+      expect(declared(`${divide} [data-blok-field]`, 'inline-size')).toEqual(['110px']);
+      expect(declared(`${divide} [data-blok-field]`, 'margin-inline-start')).toEqual(['auto']);
     }
     expect(database).toContain('--blok-database-gauge-box-bg: rgba(84, 72, 49, 0.04);');
   });
@@ -663,6 +686,18 @@ describe('filtered-empty table', () => {
     expect(declared(EMPTY, 'inset-inline-start')).toEqual(['0']);
     expect(declared(EMPTY, 'width')).toEqual(['100cqi']);
     expect(declared(EMPTY, 'justify-content')).toEqual(['center']);
+  });
+
+  // notion-motion.md Round 102 §2 Row 68 (r102-n-row68-empty.raw, r86-n-noresults.png): "New page" is 100.38 wide, pads 8 with
+  // a 6 gap, and its plus ink (10.5 wide) sits 9 in from the outer edge. Blok's 16px plus draws 10.6 of ink, so its box hugs that.
+  it('draws "New page" as Notion does: 8 in, the box round the plus ink, 6 to the text', () => {
+    const NEW = `${EMPTY} [data-blok-database-table-add-row]`;
+
+    expect(declared(NEW, 'gap').at(-1)).toBe('var(--blok-space-1-5)');
+    expect(declared(NEW, 'padding-inline-start')).toEqual([]);
+    expect(declared(`${NEW} > span`, 'width')).toEqual(['10.6px']);
+    expect(declared(`${NEW} > span`, 'justify-content')).toEqual(['center']);
+    expect(declared(`${NEW} svg`, 'flex')).toEqual(['none']);
   });
 });
 
@@ -961,5 +996,77 @@ describe('Edit property list after Escape on a submenu (Round 94)', () => {
 
   it('paints no ring round the focused list while a row holds the cursor', () => {
     expect(declared(LIST, 'outline')).toEqual(['none']);
+  });
+});
+
+// notion-motion.md Round 115 "Notion's ring on a menu row": a database menu row with keyboard focus
+// (after Escape from its submenu or a keyboard pick in it) shows a 2px blue ring 2px outside the row.
+// Only while it also holds the cursor: an arrow key moves the cursor but leaves DOM focus behind.
+describe('database menu row with keyboard focus (Round 115)', () => {
+  const ROW = ":root:not([data-blok-modality=\"pointer\"]) [data-blok-popover][data-blok-popover-custom-class*='blok-database-'] [data-blok-popover-item][data-blok-focused='true']:focus-visible";
+  const LIGHT = ':where([data-blok-popover])';
+
+  it('paints the blue ring 2px outside the row, over a 2px gap', () => {
+    expect(declared(ROW, 'box-shadow')).toEqual(['0 0 0 2px var(--blok-database-menu-row-ring-gap), 0 0 0 4px var(--blok-focus-ring), 0 0 0 6px var(--blok-database-menu-row-ring-halo)']);
+  });
+
+  it('hides the shared inset cursor outline under the ring', () => {
+    expect(declared(ROW, 'outline-color')).toEqual(['transparent']);
+  });
+
+  it('takes Notion\'s light gap and halo', () => {
+    expect(declared(LIGHT, '--blok-database-menu-row-ring-gap')).toEqual(['rgb(248, 248, 247)']);
+    expect(declared(LIGHT, '--blok-database-menu-row-ring-halo')).toEqual(['rgba(255, 255, 255, 0.25)']);
+  });
+
+  // The list scrolls with no side padding, so it would clip the ring's sides. It widens into the card's 4px padding
+  // while a row holds focus; the rows stay put.
+  it('lets the list show the ring\'s sides', () => {
+    const LIST = ":root:not([data-blok-modality=\"pointer\"]) [data-blok-popover][data-blok-popover-custom-class*='blok-database-'] [data-blok-popover-items]:not([data-blok-popover-custom-class~='blok-database-add-view-menu'] *):has(> [data-blok-popover-item][data-blok-focused='true']:focus-visible)";
+
+    expect(declared(LIST, 'margin-inline')).toEqual(['calc(-1 * var(--blok-space-1))']);
+    expect(declared(LIST, 'padding-inline')).toEqual(['var(--blok-space-1)']);
+  });
+
+  it('drops the R113 per-row outline the ring replaces', () => {
+    ['decimals', 'dateFormat', 'color'].forEach((name) => {
+      const row = `[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] [data-blok-item-name="${name}"]:focus-visible`;
+
+      expect(declared(row, 'outline')).toEqual([]);
+    });
+  });
+});
+
+// notion-motion.md L322, L489, L9789: Notion's menu separators are 1px rgba(42,28,0,0.07) in every database menu.
+// Dark is unmeasured, so it keeps the shared line: popover-border (0.14 white) at 60%.
+describe('database menu separators', () => {
+  const LINE = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item-separator-line]";
+  const token = (): string[] => [...database.matchAll(/--blok-database-menu-separator: ([^;]+);/g)].map((m) => m[1]);
+
+  it('draws the line in Notion\'s rule colour', () => {
+    expect(declared(LINE, 'background-color')).toEqual(['var(--blok-database-menu-separator)']);
+    expect(token()[0]).toBe('rgba(42, 28, 0, 0.07)');
+  });
+
+  it('keeps the shared line under both dark switches', () => {
+    expect(token().slice(1)).toEqual([
+      'color-mix(in oklab, rgba(255, 255, 255, 0.14) 60%, transparent)',
+      'color-mix(in oklab, rgba(255, 255, 255, 0.14) 60%, transparent)',
+    ]);
+    expect(colors).toContain('--blok-popover-border: rgba(255, 255, 255, 0.14)');
+  });
+});
+
+// notion-motion.md L1218, L3523: the keyboard row takes the hover fill, 0.051. Dark: 0.055 (L8617, L10747).
+describe('database menu keyboard row', () => {
+  const MENU = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu']";
+
+  it('fills the keyboard row like the hover row, light', () => {
+    expect(declared(MENU, '--blok-item-focus-bg')).toEqual(['rgba(33, 27, 23, 0.051)']);
+  });
+
+  it('fills it with Notion\'s dark hover, under both dark switches', () => {
+    expect(declared(`:root:not([data-blok-theme="light"]) ${MENU}`, '--blok-item-focus-bg')).toEqual(['rgba(255, 255, 255, 0.055)']);
+    expect(declared(`[data-blok-theme="dark"] ${MENU}`, '--blok-item-focus-bg')).toEqual(['rgba(255, 255, 255, 0.055)']);
   });
 });

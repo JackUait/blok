@@ -194,6 +194,9 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   private nestedKeyboard: KeyboardEngagement | null = null;
 
+  /** True when a hover opened the submenu: then Escape does not move focus to its row. */
+  private nestedOpenedByHover = false;
+
   /**
    * Last hovered item inside popover.
    * Is used to determine if cursor is moving inside one item or already moved away to another one.
@@ -278,7 +281,13 @@ export class PopoverDesktop extends PopoverAbstract {
   private static readonly NESTED_CLOSE_INTENT_DELAY_MS = 300;
 
   /**
-   * Pending pointer close-intent timer (see {@link NESTED_CLOSE_INTENT_DELAY_MS}).
+   * How long an open submenu stands after the pointer leaves its trigger. A
+   * root menu may set its own before a submenu opens; its submenus inherit it.
+   */
+  public nestedCloseDelay = PopoverDesktop.NESTED_CLOSE_INTENT_DELAY_MS;
+
+  /**
+   * Pending pointer close-intent timer (see {@link nestedCloseDelay}).
    * Null when no close is pending.
    */
   private nestedCloseIntentTimer: number | null = null;
@@ -1105,9 +1114,15 @@ export class PopoverDesktop extends PopoverAbstract {
 
     // A list's search field holds DOM focus; removing it would drop focus to <body>.
     const hadFocus = this.nestedPopover.getElement().contains(document.activeElement);
+    // Read before the destroy: it clears the trigger.
+    const row = this.nestedPopoverTriggerItem?.childrenEscapeFocusesRow === true && !this.nestedOpenedByHover ? this.nestedPopoverTriggerItem.getElement() : null;
 
     this.destroyNestedPopoverIfExists(true);
-    if (hadFocus && this.search !== undefined) {
+    if (row?.isConnected === true) {
+      // Rows have no tabindex of their own; without one focus() does nothing.
+      row.setAttribute('tabindex', '-1');
+      row.focus({ preventScroll: true });
+    } else if (hadFocus && this.search !== undefined) {
       this.search.focus();
     } else if (hadFocus) {
       this.nodes.items?.focus({ preventScroll: true });
@@ -1125,22 +1140,33 @@ export class PopoverDesktop extends PopoverAbstract {
    * Keeps the menu open under a dialog one of its rows opened (research/30 B3).
    * Presses, focus and keys in the dialog leave it alone until the release,
    * which gives the cursor back to the named row.
+   * @param openedBy - the row that opened a panel over the menu: until the release a see-through
+   *   layer covers the menu, so its rows take no hover or clicks, and this row keeps its open tint
    * @returns the release; a no-op once the menu has closed
    */
-  public holdOpen(): (focusItemName?: string) => void {
+  public holdOpen(openedBy?: string): (focusItemName?: string) => void {
     const trigger = this.params.trigger;
     const hold = { on: true };
+    const opener = openedBy === undefined ? undefined : this.itemsDefault.find((item) => item.name === openedBy);
+    const cover = openedBy === undefined ? null : document.createElement('div');
 
     PopoverRegistry.instance.unregister(this);
     this.flipper?.deactivate();
     // The held surface sits outside the submenu too: the pointer leaving for it must not close the submenu.
     this.holds += 1;
     this.cancelNestedCloseIntent();
+    opener?.onChildrenOpen();
+    if (cover !== null) {
+      cover.style.cssText = 'position:absolute;inset:0;z-index:1';
+      this.nodes.popoverContainer.appendChild(cover);
+    }
 
     return (focusItemName) => {
       if (hold.on) {
         hold.on = false;
         this.holds -= 1;
+        opener?.onChildrenClose();
+        cover?.remove();
       }
       if (!this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpened)) {
         return;
@@ -1185,6 +1211,38 @@ export class PopoverDesktop extends PopoverAbstract {
       return false;
     }
     this.flipper.focusItem(index, { skipNextTab: false });
+
+    return true;
+  }
+
+  /**
+   * Puts the cursor on the row named `name`, as focusItemByName does, until the
+   * pointer takes another row or leaves the menu; then no row keeps it. An arrow
+   * key moves it on as usual.
+   * @param name - the row's `name`
+   * @returns false when no shown row has that name
+   */
+  public startCursorOn(name: string): boolean {
+    if (this.nestedPopover?.startCursorOn(name) === true) {
+      return true;
+    }
+    const start = this.flippableElements.find((item) => item.closest(`[${DATA_ATTR.itemName}]`)?.getAttribute(DATA_ATTR.itemName) === name);
+
+    if (start === undefined || !this.focusItemByName(name)) {
+      return false;
+    }
+    const stop = this.onCurrentItemChange((current) => {
+      if (current?.source === 'keyboard') {
+        stop();
+
+        return;
+      }
+      if (current?.element === start) {
+        return;
+      }
+      stop();
+      this.flipper?.focusItem(-1);
+    });
 
     return true;
   }
@@ -1317,6 +1375,11 @@ export class PopoverDesktop extends PopoverAbstract {
     this.cancelNestedCloseIntent();
 
     if (this.nestedPopover !== null && this.nestedPopover !== undefined) {
+      // A click on the row a hover already opened counts as a click open.
+      if (this.nestedPopoverTriggerItem === item) {
+        this.nestedOpenedByHover = false;
+      }
+
       return;
     }
 
@@ -1535,7 +1598,7 @@ export class PopoverDesktop extends PopoverAbstract {
       }
 
       this.destroyNestedPopoverIfExists(false);
-    }, PopoverDesktop.NESTED_CLOSE_INTENT_DELAY_MS);
+    }, this.nestedCloseDelay);
   }
 
   /**
@@ -1572,6 +1635,7 @@ export class PopoverDesktop extends PopoverAbstract {
     this.destroyNestedPopoverIfExists(false);
 
     this.nestedPopoverTriggerItem = item;
+    this.nestedOpenedByHover = true;
     // The hover is the gesture that opened it: open hooks must see pointer modality.
     recordPointerGesture();
     this.showNestedPopoverForItem(item);
@@ -1669,6 +1733,7 @@ export class PopoverDesktop extends PopoverAbstract {
     this.nestedPopoverTriggerItem?.onChildrenClose();
     // Reset trigger item so clicking the same item again will open the nested popover
     this.nestedPopoverTriggerItem = null;
+    this.nestedOpenedByHover = false;
   }
 
   /**
@@ -1721,6 +1786,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
     this.nestedPopover.arrowLeftClosesSubmenu = this.arrowLeftClosesSubmenu;
     this.nestedPopover.nestedOpenDelay = this.nestedOpenDelay;
+    this.nestedPopover.nestedCloseDelay = this.nestedCloseDelay;
     item.onChildrenOpen();
 
     /**
@@ -1883,6 +1949,14 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   private dropdownButtonRect(item: PopoverItem): { left: number; right: number; top: number; bottom: number } | undefined {
     const row = item.getElement();
+    const drawn = item.childrenFromButton
+      ? row?.querySelector(`[${DATA_ATTR.popoverItemDropdownButton}]`)?.getBoundingClientRect()
+      : undefined;
+
+    // Notion's list starts 3px outside its button (R112: 875 vs 878). The value may carry padding the button already holds.
+    if (drawn !== undefined && drawn.width > 0) {
+      return { left: drawn.left - 3, right: drawn.right + 3, top: drawn.top, bottom: drawn.bottom };
+    }
     const valueEl = row?.querySelector(`[${DATA_ATTR.popoverItemValue}]`);
     const chevron = row?.querySelector(`[${DATA_ATTR.popoverItemIconChevronRight}]`)?.getBoundingClientRect();
     const rowRect = row?.getBoundingClientRect();

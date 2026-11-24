@@ -24,6 +24,7 @@ import type { BlockTuneAdapter } from '../tools/tune';
 import { generateBlockId, isFunction, log } from '../utils';
 import { syncAnnotationFocus } from '../utils/annotation-focus';
 import { isSameBlockData } from '../utils/blocks';
+import { joinTouchingMarks } from '../utils/mark-joins';
 import { EventsDispatcher } from '../utils/events';
 import { hasContentMatching, isContentEmpty } from '../utils/own-element';
 
@@ -462,7 +463,10 @@ export class Block extends EventsDispatcher<BlockEvents> {
       () => this.isEmpty,
       this.inputManager,
       () => this.call(BlockToolAPI.UPDATED),
-      () => this.toggleInputsEmptyMark(),
+      () => {
+        this.toggleInputsEmptyMark();
+        this.joinTouchingMarks();
+      },
       data,
       tunesData
     );
@@ -488,6 +492,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     void this.ready.then(() => {
       this.hydrateInlineTools();
       this.syncContentDirection();
+      this.joinTouchingMarks();
     });
   }
 
@@ -1235,6 +1240,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
 
     this.inputManager.updateCurrentInput();
     this.toggleInputsEmptyMark();
+    this.joinTouchingMarks();
     this.syncContentDirection();
     this.call(BlockToolAPI.UPDATED);
     this.emit('didMutated', this);
@@ -1298,5 +1304,16 @@ export class Block extends EventsDispatcher<BlockEvents> {
    */
   private toggleInputsEmptyMark(): void {
     this.inputs.forEach(toggleEmptyMark);
+  }
+
+  /**
+   * Square the shared edge of background fills that touch.
+   */
+  private joinTouchingMarks(): void {
+    const { toolRenderedElement } = this.toolRenderer;
+
+    if (toolRenderedElement !== null) {
+      joinTouchingMarks(toolRenderedElement);
+    }
   }
 }

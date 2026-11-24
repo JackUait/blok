@@ -78,6 +78,11 @@ describe('database confirm dialog css', () => {
     expect(ruleBody(database, '[data-blok-database-confirm-dialog][data-bold-title] [data-blok-database-confirm-title]')).toContain('font-weight: 600');
   });
 
+  // notion-motion.md Round 101 §1 #7: the database name inside Delete property's title is 700. Set, not `bolder`: that gives 900 on a 600 title.
+  it('sets a name the title stresses at 700', () => {
+    expect(ruleBody(database, '[data-blok-database-confirm-title] strong')).toContain('font-weight: 700');
+  });
+
   // research/26 §5a reads 17px/22px on "Delete the last view…"; research/10 §5 reads 17px on Reset.
   it('grows the title to 17px/22px on a dialog marked large', () => {
     const body = ruleBody(database, '[data-blok-database-confirm-dialog][data-large-title] [data-blok-database-confirm-title]');

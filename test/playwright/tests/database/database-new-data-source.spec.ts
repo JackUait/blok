@@ -274,6 +274,80 @@ test.describe('database New data source', () => {
     expect(views.views.find((view) => view.id === 'v0')?.dataSourceId).toBeUndefined();
   });
 
+  // notion-motion.md Round 111 §1 #3 (r111-n-source-open-rows.raw): a see-through layer covers the tab menu
+  // while Source is open, so its rows take no hover and no clicks, and Source keeps its tint.
+  test('the tab menu under the Source panel takes no hover or clicks, and Source keeps its tint', async ({ page }) => {
+    await mount(page, bound);
+    await page.locator('[data-blok-database-tab][data-view-id="vb"]').click({ button: 'right' });
+    const source = page.locator('[data-blok-item-name="database-view-source"]:visible');
+    const duplicate = page.locator('[data-blok-item-name="database-view-duplicate"]:visible');
+
+    await source.click();
+    await expect(page.getByTestId('database-source-search')).toBeFocused();
+    const box = await duplicate.boundingBox();
+
+    if (box === null) throw new Error('missing Duplicate view row');
+    const point = { x: box.x + box.width * 0.4, y: box.y + box.height / 2 };
+
+    await page.mouse.move(point.x, point.y - 20, { steps: 3 });
+    await page.mouse.move(point.x, point.y, { steps: 3 });
+
+    const read = await page.evaluate(({ x, y }) => {
+      const row = (name: string): HTMLElement | null => [...document.querySelectorAll<HTMLElement>(`[data-blok-item-name="${name}"]`)].find((el) => el.getBoundingClientRect().width > 0) ?? null;
+      const hit = document.elementFromPoint(x, y);
+
+      return {
+        hitsRow: row('database-view-duplicate')?.contains(hit) ?? false,
+        cursor: hit === null ? '' : getComputedStyle(hit).cursor,
+        duplicateBg: getComputedStyle(row('database-view-duplicate') ?? document.body).backgroundColor,
+        sourceBg: getComputedStyle(row('database-view-source') ?? document.body).backgroundColor,
+      };
+    }, point);
+
+    expect(read.hitsRow).toBe(false);
+    expect(read.cursor).not.toBe('pointer');
+    expect(read.duplicateBg).toBe('rgba(0, 0, 0, 0)');
+    expect(read.sourceBg).not.toBe('rgba(0, 0, 0, 0)');
+    await expect(page.getByTestId('database-source-search')).toBeFocused();
+
+    // A click there duplicates nothing; notion-motion.md Round 114 §1 #1: it closes the panel only.
+    await page.mouse.click(point.x, point.y);
+    await expect(page.getByTestId('database-view-settings')).toHaveCount(0);
+    await expect(source).toBeVisible();
+    await expect(duplicate).toBeVisible();
+    const views = (await save(page)).find((block) => block.id === 'db-1')?.data as { views: unknown[] };
+
+    expect(views.views).toHaveLength(2);
+  });
+
+  // notion-motion.md Round 114 §1 #1 (r114-n-source-click-page.raw): a click on the page closes the Source panel only,
+  // and focus goes to the Source row with no ring or cursor.
+  test('a click on the page closes the Source panel only, with focus on the Source row and no ring', async ({ page }) => {
+    await mount(page, bound);
+    await page.locator('[data-blok-database-tab][data-view-id="vb"]').click({ button: 'right' });
+    const source = page.locator('[data-blok-item-name="database-view-source"]:visible');
+
+    await source.click();
+    // A keystroke first: it sets the browser's focus-visible flag, which a ring would need.
+    await page.keyboard.type('x');
+    await page.mouse.click(1000, 600);
+
+    await expect(page.getByTestId('database-view-settings')).toHaveCount(0);
+    await expect(source).toBeVisible();
+    const read = await source.evaluate((row) => {
+      const list = row.closest<HTMLElement>('[data-blok-popover-items]');
+
+      return {
+        focusInList: list !== null && list === document.activeElement,
+        cursor: row.getAttribute('data-blok-focused'),
+        rowOutline: getComputedStyle(row).outlineStyle,
+        listOutline: list === null ? '' : getComputedStyle(list).outlineStyle,
+      };
+    });
+
+    expect(read).toEqual({ focusInList: true, cursor: null, rowOutline: 'none', listOutline: 'none' });
+  });
+
   test.describe('the "New data source" panel', () => {
     const withOther: OutputBlockData[] = [
       ...initial,

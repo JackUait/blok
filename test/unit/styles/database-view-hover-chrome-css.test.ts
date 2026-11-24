@@ -747,4 +747,16 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(ruleBody('[data-blok-database-form-question-header]')).toContain('margin-block-end: var(--blok-space-3-5)');
     expect(ruleBody('[data-blok-database-form-question]')).toContain('gap: var(--blok-space-1)');
   });
+
+  // notion-motion.md Round 88 (r88-n-addopt-ink.raw): the plus takes 12.8 of the row with 12.8 of ink, label 10 after.
+  // Blok's plus inks 10.5 of a 16 box, so at 19.3 it inks 12.8 (measured) and its sides tuck in to a 12.8 slot.
+  it('sizes Add option\'s plus as Notion\'s 12.8 glyph with the label 10 after', () => {
+    const glyph = ruleBody('[data-blok-database-form-add-option] svg');
+
+    expect(ruleBody('[data-blok-database-form-add-option]')).toContain('gap: var(--blok-space-2-5)');
+    expect(glyph).toContain('inline-size: var(--blok-database-form-add-option-glyph)');
+    expect(glyph).toContain('block-size: var(--blok-database-form-add-option-glyph)');
+    expect(glyph).toContain('margin-inline: calc((12.8px - var(--blok-database-form-add-option-glyph)) / 2)');
+    expect(tokenValues('--blok-database-form-add-option-glyph')).toEqual(['19.3px']);
+  });
 });

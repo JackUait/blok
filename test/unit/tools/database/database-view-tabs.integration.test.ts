@@ -97,6 +97,41 @@ const tab = (viewId: string): HTMLElement => own(`[data-blok-database-tab][data-
 const menuItems = (): string[] => [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened="true"] [data-blok-popover-items] > [data-blok-item-name]')]
   .map((item) => item.getAttribute('data-blok-item-name') ?? '');
 
+/**
+ * notion-motion.md Round 114 §1 #5 (r114-n-editicon-open.raw, r112-n-titlemore-menu-1view.raw): the ⋯ menu's Edit icon
+ * row at 651.7,384 192×28 in a 1512×717 window gave a 408×390 picker at 543.7,319: centred under the row, and held
+ * 8 off the bottom rather than flipped above it.
+ */
+/** The emoji data loads cold in jsdom and can outlast the 5s default. */
+const PICKER_LOAD_TIMEOUT = 20000;
+
+const openIconPickerFromTitleMore = async (titleMore: HTMLElement): Promise<HTMLElement> => {
+  vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+  vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
+  // jsdom has no matchMedia; the picker reads the colour scheme on open.
+  vi.stubGlobal('matchMedia', () => ({ matches: false }));
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function getOffsetWidth(this: HTMLElement): number {
+    return this.hasAttribute('data-blok-emoji-picker') ? 408 : 0;
+  });
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function getOffsetHeight(this: HTMLElement): number {
+    return this.hasAttribute('data-blok-emoji-picker') ? Number.parseFloat(this.style.height) || 0 : 0;
+  });
+  titleMore.click();
+  await quiet();
+  const row = menuItem('database-title-edit-icon');
+
+  vi.spyOn(row, 'getBoundingClientRect').mockReturnValue(new DOMRect(651.7, 384, 192, 28));
+  row.click();
+  await quiet();
+  const picker = document.querySelector<HTMLElement>('[data-blok-emoji-picker]');
+
+  if (picker === null) throw new Error('no icon picker');
+  // The picker places itself once its emoji data has loaded.
+  await vi.waitFor(() => expect(picker.style.top).not.toBe(''), { timeout: 10000 });
+
+  return picker;
+};
+
 const menuItem = (name: string): HTMLElement => {
   const found = document.querySelector<HTMLElement>(`[data-blok-popover-opened="true"] [data-blok-item-name="${name}"]`);
 
@@ -125,6 +160,7 @@ describe('view tabs (feel/findings-toolbar)', () => {
     PopoverRegistry.resetForTests();
     document.body.innerHTML = '';
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe('V05: Add view opens the new view\'s settings', () => {
@@ -226,6 +262,67 @@ describe('view tabs (feel/findings-toolbar)', () => {
       await quiet();
 
       expect(settingsPanel()?.querySelector('[data-blok-testid="database-panel-close"]')).toHaveFocus();
+    });
+
+    // notion-motion.md Round 110 §1 #3 (r110-n-source-opens.raw): Source opens its panel over the tab menu, which stays open.
+    // Escape closes the panel only; focus goes back to the Source row.
+    describe('Source', () => {
+      const tabMenuOpen = (): boolean => document.querySelector('[data-blok-popover-opened="true"] [data-blok-item-name="database-view-source"]') !== null;
+      const openSource = async (): Promise<void> => {
+        await make(doc());
+        tab('v1').click();
+        await quiet();
+        menuItem('database-view-source').click();
+        await quiet();
+      };
+
+      it('opens the source panel and keeps the tab menu open under it', async () => {
+        await openSource();
+
+        expect(settingsPanel()).not.toBeNull();
+        expect(settingsPanel()?.querySelector('input')).toHaveFocus();
+        expect(tabMenuOpen()).toBe(true);
+      });
+
+      // notion-motion.md Round 111 §1 #3: Source keeps its tint while its panel is open, and drops it after Escape.
+      it('marks the Source row open while its panel is up', async () => {
+        await openSource();
+
+        expect(menuItem('database-view-source')).toHaveAttribute('data-blok-popover-item-children-open', 'true');
+        expect(menuItem('database-view-source')).toHaveAttribute('aria-expanded', 'true');
+
+        document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        await quiet();
+
+        expect(menuItem('database-view-source')).not.toHaveAttribute('data-blok-popover-item-children-open');
+      });
+
+      it('Escape closes the source panel only and puts focus back on the Source row', async () => {
+        await openSource();
+
+        document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        await quiet();
+
+        expect(settingsPanel()).toBeNull();
+        expect(tabMenuOpen()).toBe(true);
+        // Blok's menus hold DOM focus on the list and mark the row with the cursor.
+        expect(menuItem('database-view-source').closest('[data-blok-popover-items]')).toHaveFocus();
+        expect(menuItem('database-view-source').getAttribute('data-blok-focused')).toBe('true');
+      });
+
+      // notion-motion.md Round 114 §1 #1 (r114-n-source-click-{tabrow,page}.raw): a click away closes the panel only.
+      it('a click away closes the source panel only and puts focus on the Source row with no cursor', async () => {
+        await openSource();
+
+        document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+        await quiet();
+
+        expect(tabMenuOpen()).toBe(true);
+        expect(settingsPanel()).toBeNull();
+        expect(menuItem('database-view-source').closest('[data-blok-popover-items]')).toHaveFocus();
+        expect(menuItem('database-view-source')).not.toHaveAttribute('data-blok-focused');
+        expect(menuItem('database-view-source')).not.toHaveAttribute('data-blok-popover-item-children-open');
+      });
     });
 
     it('Copy link to view copies the link of the view it was opened on', async () => {
@@ -330,7 +427,9 @@ describe('view tabs (feel/findings-toolbar)', () => {
         return groups;
       }, [[]]);
 
-    it('sits after "+" and lists Notion\'s groups: view, title and layout, then Hide title', async () => {
+    // notion-motion.md Round 112 §1 #2 (r112-n-titlemore-menu-1view.raw): Copy link to view, Duplicate view |
+    // View database, Edit title, Edit icon, Edit layout | Hide title (Manage in Calendar is Notion's own app).
+    it('sits after "+" and lists Notion\'s groups: view, database and title, then Hide title', async () => {
       await make(doc([table('v1', 'a0')]));
 
       expect(titleMore()?.previousElementSibling?.hasAttribute('data-blok-database-add-view')).toBe(true);
@@ -339,9 +438,21 @@ describe('view tabs (feel/findings-toolbar)', () => {
 
       expect(menuGroups()).toEqual([
         ['database-title-copy-link', 'database-title-duplicate'],
-        ['database-title-edit', 'database-title-edit-layout'],
+        ['database-title-view-database', 'database-title-edit', 'database-title-edit-icon', 'database-title-edit-layout'],
         ['database-title-hide'],
       ]);
+    });
+
+    it('is the 200px title menu, as with two views', async () => {
+      await make(doc([table('v1', 'a0')]));
+
+      titleMore()?.click();
+      await quiet();
+      const popover = document.querySelector<HTMLElement>('[data-blok-popover-opened="true"]');
+
+      expect(popover?.getAttribute('data-blok-popover-custom-class')?.split(' ')).toEqual(expect.arrayContaining(['blok-database-header-menu', 'blok-database-title-menu']));
+      // jsdom measures 0, so --width is the 200px floor.
+      expect(popover?.style.getPropertyValue('--width')).toBe('200px');
     });
 
     it('Hide title hides the title and saves it; the "…" stays and offers Show title', async () => {
@@ -388,6 +499,29 @@ describe('view tabs (feel/findings-toolbar)', () => {
       expect(await viewIds(api)).toHaveLength(2);
     });
 
+    it('Edit icon opens the 390-tall picker centred under its row, held 8 off the bottom', async () => {
+      await make(doc([table('v1', 'a0')]));
+      const more = titleMore();
+
+      if (more === null) throw new Error('no title ⋯');
+      const picker = await openIconPickerFromTitleMore(more);
+
+      expect([picker.style.left, picker.style.top, picker.style.height]).toEqual(['543.7px', '319px', '390px']);
+    }, PICKER_LOAD_TIMEOUT);
+
+    // r114-n-editicon-esc.raw: Escape puts focus back on the ⋯ ("Collection actions"), not on the title.
+    it('Escape from its icon picker puts focus back on the ⋯', async () => {
+      await make(doc([table('v1', 'a0')]));
+      const more = titleMore();
+
+      if (more === null) throw new Error('no title ⋯');
+      await openIconPickerFromTitleMore(more);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await quiet();
+
+      expect(more).toHaveFocus();
+    }, PICKER_LOAD_TIMEOUT);
+
     it('Edit title puts the caret in the title', async () => {
       await make(doc([table('v1', 'a0')]));
 
@@ -399,13 +533,98 @@ describe('view tabs (feel/findings-toolbar)', () => {
       expect(own('[data-blok-database-title]')).toHaveFocus();
     });
 
-    it('is not drawn with two views, nor when read-only', async () => {
-      await make(doc());
+    it('is not drawn when read-only', async () => {
+      const api = await make(doc([table('v1', 'a0')]));
+
+      await api.readOnly.set(true);
+      await quiet();
 
       expect(titleMore()).toBeNull();
-      editor?.destroy();
-      editor = undefined;
-      const api = await make(doc([table('v1', 'a0')]));
+    });
+  });
+
+  // notion-motion.md Round 110 §1 #2 (r110-n-titlemore-2views.raw): with two views the title row's ⋯ shows on hover,
+  // 4 after the title. Blok keeps it in the row so Tab still reaches it (database.css shows it on hover and focus).
+  describe('the title row "…" with two views', () => {
+    const titleMore = (): HTMLElement | null => parentRoot().querySelector<HTMLElement>('[data-blok-database-title-row] [data-blok-database-title-more]');
+
+    it('sits right after the title and opens the title menu', async () => {
+      await make(doc());
+
+      expect(titleMore()?.previousElementSibling?.hasAttribute('data-blok-database-title')).toBe(true);
+      titleMore()?.click();
+      await quiet();
+
+      expect(menuItems()).toEqual(expect.arrayContaining(['database-title-edit']));
+    });
+
+    // notion-motion.md Round 111 §1 #2 (r111-n-titlemore-menu-2views.raw): View database, Edit title, Edit icon,
+    // Edit layout | Hide title (Manage in Calendar is Notion's own app). Copy link and Duplicate stay in the tab menu.
+    it('lists Notion\'s two-view groups', async () => {
+      await make(doc());
+
+      titleMore()?.click();
+      await quiet();
+
+      const groups = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened="true"] [data-blok-popover-items] > *')]
+        .reduce<string[][]>((all, item) => {
+          const name = item.getAttribute('data-blok-item-name');
+
+          if (name !== null) all[all.length - 1].push(name);
+          else if (item.getAttribute('data-blok-testid') === 'popover-item-separator') all.push([]);
+
+          return all;
+        }, [[]]);
+
+      expect(groups).toEqual([
+        ['database-title-view-database', 'database-title-edit', 'database-title-edit-icon', 'database-title-edit-layout'],
+        ['database-title-hide'],
+      ]);
+    });
+
+    // r111-n-titlemore-menu-2views.raw: 200 wide, 28px rows (the header menu look).
+    it('is the 200px menu with 28px rows', async () => {
+      await make(doc());
+
+      titleMore()?.click();
+      await quiet();
+      const popover = document.querySelector<HTMLElement>('[data-blok-popover-opened="true"]');
+
+      expect(popover?.getAttribute('data-blok-popover-custom-class')?.split(' ')).toEqual(expect.arrayContaining(['blok-database-header-menu', 'blok-database-title-menu']));
+      // jsdom measures 0, so --width is the 200px floor.
+      expect(popover?.style.getPropertyValue('--width')).toBe('200px');
+    });
+
+    it('View database opens the database as a full page', async () => {
+      await make(doc());
+
+      titleMore()?.click();
+      await quiet();
+      menuItem('database-title-view-database').click();
+      await quiet();
+
+      expect(parentRoot().closest('[data-blok-database-full-open-target]')).not.toBeNull();
+      // The full page names the database in the URL.
+      history.replaceState(null, '', '/');
+    });
+
+    // Notion was read with one view; with several the menu has no Copy link group, so the same rule is applied.
+    it('Edit icon opens the 390-tall picker centred under its row, and Escape returns to the ⋯', async () => {
+      await make(doc());
+      const more = titleMore();
+
+      if (more === null) throw new Error('no title ⋯');
+      const picker = await openIconPickerFromTitleMore(more);
+
+      expect([picker.style.left, picker.style.top, picker.style.height]).toEqual(['543.7px', '319px', '390px']);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await quiet();
+
+      expect(more).toHaveFocus();
+    }, PICKER_LOAD_TIMEOUT);
+
+    it('is not drawn when read-only', async () => {
+      const api = await make(doc());
 
       await api.readOnly.set(true);
       await quiet();

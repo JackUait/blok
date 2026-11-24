@@ -457,7 +457,7 @@ describe('DatabaseTool — view settings', () => {
     expect(tool.save(root).views[0].cardSize).toBe('large');
     expect(root.querySelector('[data-blok-database-gallery]')?.getAttribute('data-card-size')).toBe('large');
 
-    click('database-panel-back');
+    // Card size is a menu over the Layout page: the pick leaves the page in place.
     click('database-gallery-fit-image');
     expect(tool.save(root).views[0].fitImage).toBe(true);
 

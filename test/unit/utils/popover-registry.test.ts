@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { isEscapeConsumed, markEscapeConsumed } from '../../../src/components/utils/consumed-escape';
 import { registerLayer } from '../../../src/components/utils/dismissable-layer';
+import '../../../src/components/utils/input-modality';
 import { PopoverRegistry } from '../../../src/components/utils/popover/popover-registry';
 import type { PopoverAbstract } from '../../../src/components/utils/popover/popover-abstract';
 
@@ -438,6 +439,51 @@ describe('PopoverRegistry', () => {
       trigger.remove();
     });
 
+    const escapeAfter = (popover: PopoverAbstract, trigger: HTMLElement, openKey?: string): void => {
+      document.body.appendChild(trigger);
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      if (openKey !== undefined) {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: openKey }));
+      }
+      registry.register(popover, trigger);
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
+    };
+
+    it('by default, Escape from a mouse-opened popover leaves keyboard modality on its trigger', () => {
+      const { popover, trigger } = createMockPopover();
+
+      escapeAfter(popover, trigger);
+
+      expect(trigger).toHaveFocus();
+      expect(document.documentElement).toHaveAttribute('data-blok-modality', 'keyboard');
+
+      trigger.remove();
+    });
+
+    it('with escapeRestoresPointerModality, Escape from a mouse-opened popover gives the trigger focus without a ring', () => {
+      const { popover, trigger } = createMockPopover();
+
+      popover.escapeRestoresPointerModality = true;
+      escapeAfter(popover, trigger);
+
+      expect(trigger).toHaveFocus();
+      expect(document.documentElement).toHaveAttribute('data-blok-modality', 'pointer');
+
+      trigger.remove();
+    });
+
+    it('with escapeRestoresPointerModality, Escape from a keyboard-opened popover keeps the ring', () => {
+      const { popover, trigger } = createMockPopover();
+
+      popover.escapeRestoresPointerModality = true;
+      escapeAfter(popover, trigger, 'Enter');
+
+      expect(trigger).toHaveFocus();
+      expect(document.documentElement).toHaveAttribute('data-blok-modality', 'keyboard');
+
+      trigger.remove();
+    });
+
     it('does not throw when the trigger has been detached', () => {
       const { popover, trigger } = createMockPopover();
 
@@ -673,6 +719,267 @@ describe('PopoverRegistry', () => {
 
       expect(parent.popover.hide).not.toHaveBeenCalled();
       expect(registry.hasOpenPopovers()).toBe(true);
+    });
+  });
+  describe('swallowsOutsideClick (opt-in click-away backdrop)', () => {
+    /** A full press: pointerdown, mousedown, mouseup, click, each cancelable. */
+    const press = (element: HTMLElement): void => {
+      element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }));
+      element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+      element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 0 }));
+      element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+    };
+
+    const outsideTarget = (): { el: HTMLElement; seen: string[] } => {
+      const el = document.createElement('div');
+      const seen: string[] = [];
+
+      for (const type of ['pointerdown', 'mousedown', 'mouseup', 'click']) {
+        el.addEventListener(type, () => seen.push(type));
+      }
+      document.body.appendChild(el);
+
+      return { el, seen };
+    };
+
+    it('a click away closes a flagged popover and reaches nothing under it', () => {
+      const { popover, trigger, popoverEl } = createMockPopover();
+      const { el, seen } = outsideTarget();
+
+      document.body.appendChild(popoverEl);
+      popover.swallowsOutsideClick = true;
+      registry.register(popover, trigger);
+      press(el);
+
+      expect(seen).toEqual([]);
+      expect(popover.hide).toHaveBeenCalledOnce();
+      popoverEl.remove();
+      el.remove();
+    });
+
+    it('moves focus to the body', () => {
+      const { popover, trigger, popoverEl } = createMockPopover();
+      const { el } = outsideTarget();
+      const input = document.createElement('input');
+
+      document.body.appendChild(input);
+      input.focus();
+      document.body.appendChild(popoverEl);
+      popover.swallowsOutsideClick = true;
+      registry.register(popover, trigger);
+      press(el);
+
+      expect(document.body).toHaveFocus();
+      popoverEl.remove();
+      el.remove();
+      input.remove();
+    });
+
+    it('the next click acts again, even when the swallowed press made no click', () => {
+      const { popover, trigger, popoverEl } = createMockPopover();
+      const { el, seen } = outsideTarget();
+
+      // A real popover leaves the registry when it hides.
+      vi.mocked(popover.hide).mockImplementation(() => registry.unregister(popover));
+      document.body.appendChild(popoverEl);
+      popover.swallowsOutsideClick = true;
+      registry.register(popover, trigger);
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }));
+      press(el);
+
+      expect(seen).toEqual(['pointerdown', 'mousedown', 'mouseup', 'click']);
+      popoverEl.remove();
+      el.remove();
+    });
+
+    it('a click inside a flagged menu while its unflagged submenu is open still acts', () => {
+      const parent = createMockPopover();
+      const child = createMockPopover();
+      const item = document.createElement('div');
+      const seen: string[] = [];
+
+      item.addEventListener('click', () => seen.push('click'));
+      parent.popoverEl.appendChild(item);
+      parent.popoverEl.appendChild(child.popoverEl);
+      document.body.appendChild(parent.popoverEl);
+      parent.popover.swallowsOutsideClick = true;
+      registry.register(parent.popover, parent.trigger);
+      registry.register(child.popover, child.trigger);
+      press(item);
+
+      expect(seen).toEqual(['click']);
+      expect(parent.popover.hide).not.toHaveBeenCalled();
+      parent.popoverEl.remove();
+    });
+
+    it('a flagged popover no longer in the document lets the click through', () => {
+      const { popover, trigger } = createMockPopover();
+      const { el, seen } = outsideTarget();
+
+      popover.swallowsOutsideClick = true;
+      registry.register(popover, trigger);
+      press(el);
+
+      expect(seen).toEqual(['pointerdown', 'mousedown', 'mouseup', 'click']);
+      el.remove();
+    });
+
+    /** A right press, as Chrome fires it on macOS: contextmenu comes before mouseup. */
+    const rightPress = (element: HTMLElement): boolean => {
+      element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 2 }));
+      element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 2 }));
+      const notCancelled = element.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2 }));
+
+      element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 2 }));
+
+      return notCancelled;
+    };
+
+    const rightTarget = (): { el: HTMLElement; seen: string[] } => {
+      const target = outsideTarget();
+
+      target.el.addEventListener('contextmenu', () => target.seen.push('contextmenu'));
+
+      return target;
+    };
+
+    // notion-motion.md Round 108 §1 #2: a right-click away only closes the menu. Notion leaves the browser's own menu alone.
+    it('a right-click away closes a flagged popover, opens nothing under it, and keeps the browser menu', () => {
+      const { popover, trigger, popoverEl } = createMockPopover();
+      const { el, seen } = rightTarget();
+      const input = document.createElement('input');
+
+      document.body.appendChild(input);
+      input.focus();
+      document.body.appendChild(popoverEl);
+      popover.swallowsOutsideClick = true;
+      registry.register(popover, trigger);
+
+      expect(rightPress(el)).toBe(true);
+      expect(seen).toEqual([]);
+      expect(popover.hide).toHaveBeenCalledOnce();
+      expect(document.body).toHaveFocus();
+      popoverEl.remove();
+      el.remove();
+      input.remove();
+    });
+
+    it('the next right-click acts again', () => {
+      const { popover, trigger, popoverEl } = createMockPopover();
+      const { el, seen } = rightTarget();
+
+      vi.mocked(popover.hide).mockImplementation(() => registry.unregister(popover));
+      document.body.appendChild(popoverEl);
+      popover.swallowsOutsideClick = true;
+      registry.register(popover, trigger);
+      rightPress(el);
+      rightPress(el);
+
+      expect(seen).toEqual(['pointerdown', 'mousedown', 'contextmenu', 'mouseup']);
+      popoverEl.remove();
+      el.remove();
+    });
+
+    it('an unflagged popover lets a right-click away through (the default)', () => {
+      const { popover, trigger } = createMockPopover();
+      const { el, seen } = rightTarget();
+
+      registry.register(popover, trigger);
+      rightPress(el);
+
+      expect(seen).toEqual(['pointerdown', 'mousedown', 'contextmenu', 'mouseup']);
+      expect(popover.hide).toHaveBeenCalledOnce();
+      el.remove();
+    });
+
+    /** A middle press: pointerdown, mousedown, mouseup, auxclick. Returns whether auxclick kept its default. */
+    const middlePress = (element: HTMLElement): boolean => {
+      element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 1 }));
+      element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 1 }));
+      element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 1 }));
+
+      return element.dispatchEvent(new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 }));
+    };
+
+    // notion-motion.md Round 108 §1 #6: a middle click away keeps the card right-click menu open, and opens no tab.
+    it('a middle click away leaves a holding popover open and reaches nothing under it', () => {
+      const { popover, trigger, popoverEl } = createMockPopover();
+      const { el, seen } = outsideTarget();
+
+      el.addEventListener('auxclick', () => seen.push('auxclick'));
+      document.body.appendChild(popoverEl);
+      popover.swallowsOutsideClick = true;
+      popover.holdsOnMiddleClick = true;
+      registry.register(popover, trigger);
+
+      expect(middlePress(el)).toBe(false);
+      expect(seen).toEqual([]);
+      expect(popover.hide).not.toHaveBeenCalled();
+      popoverEl.remove();
+      el.remove();
+    });
+
+    it('a middle click away still closes a popover that does not hold (the default)', () => {
+      const { popover, trigger, popoverEl } = createMockPopover();
+      const { el } = outsideTarget();
+
+      document.body.appendChild(popoverEl);
+      popover.swallowsOutsideClick = true;
+      registry.register(popover, trigger);
+      middlePress(el);
+
+      expect(popover.hide).toHaveBeenCalledOnce();
+      popoverEl.remove();
+      el.remove();
+    });
+
+    // Mouse events a script fires come with no pointerdown, so only the click can end the swallow.
+    it('mouse events after the swallowed click reach their target, with no pointerdown between', () => {
+      const { popover, trigger, popoverEl } = createMockPopover();
+      const { el, seen } = outsideTarget();
+
+      el.addEventListener('auxclick', () => seen.push('auxclick'));
+      vi.mocked(popover.hide).mockImplementation(() => registry.unregister(popover));
+      document.body.appendChild(popoverEl);
+      popover.swallowsOutsideClick = true;
+      registry.register(popover, trigger);
+      press(el);
+      el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+      el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 0 }));
+
+      expect(seen).toEqual(['mousedown', 'mouseup']);
+      popoverEl.remove();
+      el.remove();
+    });
+
+    it('mouse events after a held middle click\'s auxclick reach their target, with no pointerdown between', () => {
+      const { popover, trigger, popoverEl } = createMockPopover();
+      const { el, seen } = outsideTarget();
+
+      el.addEventListener('auxclick', () => seen.push('auxclick'));
+      document.body.appendChild(popoverEl);
+      popover.swallowsOutsideClick = true;
+      popover.holdsOnMiddleClick = true;
+      registry.register(popover, trigger);
+      middlePress(el);
+      el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+      el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 0 }));
+
+      expect(seen).toEqual(['mousedown', 'mouseup']);
+      popoverEl.remove();
+      el.remove();
+    });
+
+    it('an unflagged popover lets the click away through (the default)', () => {
+      const { popover, trigger } = createMockPopover();
+      const { el, seen } = outsideTarget();
+
+      registry.register(popover, trigger);
+      press(el);
+
+      expect(seen).toEqual(['pointerdown', 'mousedown', 'mouseup', 'click']);
+      expect(popover.hide).toHaveBeenCalledOnce();
+      el.remove();
     });
   });
 });

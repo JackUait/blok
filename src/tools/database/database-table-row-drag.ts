@@ -1,7 +1,8 @@
 import type { AutoScroll } from '../../components/modules/drag/utils/AutoScroll';
 import { copyGhostContext, mountGhost } from './copy-ghost-radius';
 import { createDatabaseAutoScroll, rowAutoScrollSpeed } from './database-auto-scroll';
-import { DatabaseDropLine } from './database-drop-line';
+import { prefersReducedMotion } from '../../components/utils/reduced-motion';
+import { DatabaseDropLine, DROP_LINE_FADE_MS } from './database-drop-line';
 import type { TableState } from './database-table-grid';
 
 const THRESHOLD = 5;
@@ -39,6 +40,10 @@ export class DatabaseTableRowDrag {
   private press: { rowEl: HTMLElement; x: number; y: number; offsetX: number; offsetY: number } | null = null;
   private ghost: HTMLElement | null = null;
   private line: HTMLElement | null = null;
+  /** The row the line sits above, or null at the end. */
+  private lineSlot: HTMLElement | null = null;
+  /** Lines fading out after a slot change, each with the timer that removes it. */
+  private readonly leaving = new Map<HTMLElement, number>();
   private target: { before: HTMLElement | null; after: HTMLElement | null; groupKey: string } | null = null;
   private autoScroll: AutoScroll | null = null;
   private lastY = 0;
@@ -115,12 +120,7 @@ export class DatabaseTableRowDrag {
     mountGhost(rowEl, ghost);
     this.ghost = ghost;
 
-    const line = document.createElement('div');
-
-    line.setAttribute('data-blok-database-table-drop-line', '');
-    line.setAttribute('aria-hidden', 'true');
-    this.grid.appendChild(line);
-    this.line = line;
+    this.line = this.createLine();
     this.state.busy = true;
     rowEl.setAttribute('data-dragging', '');
     this.autoScroll = createDatabaseAutoScroll(this.grid, 'y', rowAutoScrollSpeed, () => this.track(this.lastY));
@@ -144,6 +144,7 @@ export class DatabaseTableRowDrag {
 
     this.target = { before, after, groupKey };
 
+    this.crossfade(before);
     const line = this.line;
 
     if (line === null) {
@@ -155,6 +156,36 @@ export class DatabaseTableRowDrag {
     // notion-motion.md Round 9: the line's top sits on the boundary, not centred on it.
     line.style.top = `${edge - gridRect.top}px`;
     line.setAttribute('data-visible', '');
+  }
+
+  private createLine(): HTMLElement {
+    const line = document.createElement('div');
+
+    line.setAttribute('data-blok-database-table-drop-line', '');
+    line.setAttribute('aria-hidden', 'true');
+    this.grid.appendChild(line);
+
+    return line;
+  }
+
+  /**
+   * notion-live/motion-rowdrag.json 4536/4546: when the line changes slot the old one fades 1→0 where it was
+   * and a new one fades 0→1 at the new slot.
+   */
+  private crossfade(slot: HTMLElement | null): void {
+    const old = this.line;
+    const changed = slot !== this.lineSlot;
+
+    this.lineSlot = slot;
+    if (old === null || !changed || !old.hasAttribute('data-visible') || prefersReducedMotion()) {
+      return;
+    }
+    old.removeAttribute('data-visible');
+    this.leaving.set(old, window.setTimeout(() => {
+      old.remove();
+      this.leaving.delete(old);
+    }, DROP_LINE_FADE_MS));
+    this.line = this.createLine();
   }
 
   private readonly handleUp = (): void => {
@@ -229,6 +260,12 @@ export class DatabaseTableRowDrag {
     this.press?.rowEl.removeAttribute('data-dragging');
     this.ghost?.remove();
     this.line?.remove();
+    this.leaving.forEach((timer, el) => {
+      window.clearTimeout(timer);
+      el.remove();
+    });
+    this.leaving.clear();
+    this.lineSlot = null;
     if (this.ghost !== null) {
       this.state.busy = false;
     }

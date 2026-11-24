@@ -61,6 +61,14 @@ describe('database date reminder css', () => {
     expect(rulesFor('[data-blok-database-date-fields]')).toContain('gap: var(--blok-space-2)');
   });
 
+  // notion-motion.md Round 113 §1 #7 (r113-n-enddate-on.raw, r83-n-date-enddate-fields.raw): two 106.4 boxes, 11.2 apart.
+  it('puts split date fields side by side, 11.2px apart', () => {
+    expect(rulesFor('[data-blok-database-date-fields][data-blok-database-date-split]')).toContain('flex-direction: row');
+    expect(rulesFor('[data-blok-database-date-fields][data-blok-database-date-split]')).toContain('gap: 11.2px');
+    expect(rulesFor('[data-blok-database-date-split] > [data-blok-database-date-field]')).toContain('flex: 1 1 0');
+    expect(rulesFor('[data-blok-database-date-split] > [data-blok-database-date-field]')).toContain('min-width: 0');
+  });
+
   // notion-motion.md Round 84b §1 (r84-n-tz-geo.raw): the list runs from +48 to the menu's bottom; each section
   // pads 4 and its heading has 6 above and 8 below a 14.9 box, so the first row sits at +81.9.
   it('the time zone list starts 48 down, its headings spaced like Notion\'s sections', () => {

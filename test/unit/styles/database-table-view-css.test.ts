@@ -255,8 +255,19 @@ describe('database table view styles', () => {
     expect(inner).toContain('z-index: -1');
     expect(inner).toContain('border-radius: var(--blok-radius-control-sm)');
     expect(inner).toContain('transition: background-color 20ms ease-in');
-    expect(exactRule('[data-blok-database-table-open]:not([data-compact]):hover::before')).toContain('background-color: var(--blok-database-table-header-hover-bg)');
+    expect(exactRule('[data-blok-database-table-open]:not([data-compact]):hover::before')).toContain('background-color: var(--blok-database-table-open-hover-bg)');
     expect(exactRule('[data-blok-database-table-open]:not([data-compact]):hover')).toBe('');
+  });
+
+  // notion-motion.md Round 105 §1 #3 (r105-n-opill-dark-hover.png): dark hover paints the inner box 41.
+  it('paints the dark OPEN pill hover 41, not the menu tint over its 37 box', () => {
+    expect(css.match(/--blok-database-table-open-hover-bg: rgb\(41, 41, 41\);/g)).toHaveLength(2);
+  });
+
+  // notion-motion.md Round 105 §1 #3 (r105-n-opill-light-hover.png): light hover paints the inner box 245.
+  it('paints the light OPEN pill hover 245', () => {
+    expect(css.match(/--blok-database-table-open-hover-bg: rgb\(245, 245, 245\);/g)).toHaveLength(1);
+    expect(css).not.toContain('--blok-database-table-open-hover-bg: var(--blok-database-table-header-hover-bg);');
   });
 
   it('draws the OPEN and CLOSE glyph at 18px, over its 15.25px slot', () => {
@@ -495,15 +506,44 @@ describe('database table calculation footer', () => {
     expect(ruleBody('[data-blok-database-table-calc][data-type="number"]')).toBe('');
   });
 
-  // r9-calc-numhover.raw: "Calculate" is a 26px button; its label fades 0 to 1 over 200ms ease, only in the hovered cell.
-  it('shows "Calculate" in a 26px box, fading in 200ms only on its own cell', () => {
+  // r9-calc-numhover.raw: "Calculate" is a 26px button, shown only in the hovered cell.
+  // notion-motion.md Round 110 §1 #4 (r110-n-footer-calc-hover-light.raw): opacity 1 at the first frame, no fade.
+  it('shows "Calculate" in a 26px box at once, only on its own cell', () => {
     expect(ruleBody('[data-blok-database-table-calc][data-empty] > [data-blok-database-table-calc-box]')).toMatch(/height:\s*26px/);
-    expect(ruleBody('[data-blok-database-table-calc-placeholder]')).toMatch(/transition:\s*opacity 200ms ease/);
+    expect(ruleBody('[data-blok-database-table-calc-placeholder]')).not.toMatch(/transition/);
     expect(ruleBody('[data-blok-database-table-calc]:hover [data-blok-database-table-calc-placeholder]')).toMatch(/opacity:\s*1/);
     expect(ruleBody('[data-blok-database-table-footer]:hover [data-blok-database-table-calc-placeholder]')).toBe('');
     // r10-timeline-calc-hovercell.raw: the timeline footer reveals it per cell too, not on the whole row.
     expect(ruleBody('[data-blok-database-timeline-table-footer]:hover [data-blok-database-table-calc-placeholder]')).toBe('');
-    expect(tableCss).toMatch(/\[data-blok-database-table-calc-placeholder\][^{]*\{\s*transition: none/);
+  });
+
+  // notion-motion.md Round 110 §1 #5 (r110-n-filtered-empty-light.raw): "Edit filters" fills 0.051 on hover, background 0.02s ease-in.
+  // The bordered rule's transparent background must not win over it.
+  it('fills "Edit filters" with the hover tint', () => {
+    const hover = exactRule('[data-blok-database-table-edit-filters]:hover');
+    const bordered = css.indexOf('[data-blok-database-table-empty] [data-blok-database-table-add-row] {\n  display: inline-flex');
+
+    expect(hover).toMatch(/background-color:\s*var\(--blok-database-hover-bg\)/);
+    expect(css.indexOf('[data-blok-database-table-edit-filters]:hover')).toBeGreaterThan(bordered);
+    expect(ruleBody('[data-blok-database-table-edit-filters]')).toMatch(/transition:\s*background-color 20ms ease-in/);
+  });
+
+  // notion-motion.md Round 111 §1 #7 (r111-n-filtered-empty-newpage-hover.raw): "New page" fills 0.051 too, by 49 ms.
+  it('fills the filtered-empty "New page" with the hover tint', () => {
+    const selector = '[data-blok-database-table-empty] [data-blok-database-table-add-row]:hover';
+    const bordered = css.indexOf('[data-blok-database-table-empty] [data-blok-database-table-add-row] {\n  display: inline-flex');
+
+    expect(exactRule(selector)).toMatch(/background-color:\s*var\(--blok-database-hover-bg\)/);
+    expect(css.indexOf(selector)).toBeGreaterThan(bordered);
+  });
+
+  // notion-motion.md Round 113 §1 #4 (r113-n-clearsearch-hover.raw): "Clear search" fills 0.051 light, white 0.055 dark.
+  it('fills "Clear search" with the hover tint', () => {
+    const selector = '[data-blok-database-table-clear-search]:hover';
+    const bordered = css.indexOf('[data-blok-database-table-empty] [data-blok-database-table-add-row] {\n  display: inline-flex');
+
+    expect(exactRule(selector)).toMatch(/background-color:\s*var\(--blok-database-hover-bg\)/);
+    expect(css.indexOf(selector)).toBeGreaterThan(bordered);
   });
 
   // Shot 66: the value ends 11px short of the column edge; the box's 6px plus the cell's 4px.

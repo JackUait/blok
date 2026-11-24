@@ -1877,6 +1877,87 @@ describe('PopoverDesktop — hover open/close intents', () => {
     expect(instance.nestedPopover).toBe(opened);
   });
 
+  // notion-motion.md R11 "Edit property flyout close timing": a database submenu starts closing 110–120ms after the pointer reaches another row.
+  it('closes after the root menu\'s own close delay, and its submenus inherit it', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({
+      items: [
+        { title: 'Plain', name: 'plain', onActivate: vi.fn() },
+        parentWithChildren(),
+      ],
+    });
+    const instance = asInternal(popover);
+
+    expect(popover.nestedCloseDelay).toBe(300);
+
+    popover.nestedCloseDelay = 115;
+    instance.handleHover(hoverOn(itemByName(popover, 'c-parent').getElement() as Element));
+    vi.advanceTimersByTime(100);
+
+    expect((instance.nestedPopover as PopoverDesktop).nestedCloseDelay).toBe(115);
+
+    instance.handleHover(hoverOn(itemByName(popover, 'plain').getElement() as Element));
+    vi.advanceTimersByTime(114);
+
+    expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+
+    vi.advanceTimersByTime(1);
+
+    expect(instance.nestedPopover).toBeNull();
+  });
+
+  it('with a close delay shorter than the open delay, moving to a sibling trigger still opens the sibling', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({
+      items: [
+        parentWithChildren(),
+        {
+          title: 'Sibling',
+          name: 'sibling',
+          children: {
+            items: [{ title: 'Other', name: 'other', onActivate: vi.fn() }],
+          },
+        },
+      ],
+    });
+    const instance = asInternal(popover);
+    const siblingItem = itemByName(popover, 'sibling');
+
+    popover.nestedOpenDelay = 125;
+    popover.nestedCloseDelay = 115;
+    instance.handleHover(hoverOn(itemByName(popover, 'c-parent').getElement() as Element));
+    vi.advanceTimersByTime(125);
+    instance.handleHover(hoverOn(siblingItem.getElement() as Element));
+    vi.advanceTimersByTime(200);
+
+    expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+    expect(instance.nestedPopoverTriggerItem).toBe(siblingItem);
+  });
+
+  it('with the short close delay, a pointer that crosses a row and reaches the submenu in time keeps it open', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({
+      items: [
+        { title: 'Plain', name: 'plain', onActivate: vi.fn() },
+        parentWithChildren(),
+      ],
+    });
+    const instance = asInternal(popover);
+
+    popover.nestedCloseDelay = 115;
+    instance.handleHover(hoverOn(itemByName(popover, 'c-parent').getElement() as Element));
+    vi.advanceTimersByTime(100);
+
+    const opened = instance.nestedPopover as PopoverDesktop;
+
+    instance.handleHover(hoverOn(itemByName(popover, 'plain').getElement() as Element));
+    vi.advanceTimersByTime(80);
+    opened.getElement().dispatchEvent(new PointerEvent('pointerenter'));
+    vi.advanceTimersByTime(400);
+
+    expect(instance.nestedPopover).toBe(opened);
+  });
+
   it('pointer close does not restore keyboard focus', () => {
     vi.useFakeTimers();
     const popover = createPopover({

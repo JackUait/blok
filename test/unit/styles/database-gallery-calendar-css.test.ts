@@ -51,6 +51,18 @@ describe('database gallery and calendar styles', () => {
     expect(colors).not.toContain(`${token}:`);
   });
 
+  // notion-motion.md Round 24 Gallery (motion-r24-gal-newhover.json): the "+ New page" tile hovers to
+  // oklab(0.2278 0.0068 0.0100 / 0.051) = rgba(33,27,23,0.051), not the card's 0.04. Dark was not read.
+  it('fills a hovered "+ New page" tile with its own measured hover, not the card hover', () => {
+    expect(ruleBody('[data-blok-database-gallery-new]:hover')).toContain('background-color: var(--blok-database-gallery-new-hover-bg)');
+    expect(ruleBody('[data-blok-database-gallery-card]:hover')).toContain('background-color: var(--blok-database-gallery-card-hover-bg)');
+    expect(Array.from(css.matchAll(/--blok-database-gallery-new-hover-bg:\s*([^;]+);/g), (match) => match[1].trim())).toEqual([
+      'rgba(33, 27, 23, 0.051)',
+      'var(--blok-database-gallery-card-hover-bg)',
+      'var(--blok-database-gallery-card-hover-bg)',
+    ]);
+  });
+
   it('uses the measured gallery grid gap and title type', () => {
     expect(ruleBody('[data-blok-database-gallery-grid]')).toContain('gap: var(--blok-space-4)');
     expect(ruleBody('[data-blok-database-gallery-title]')).toMatch(/font-size:\s*15px/);
@@ -292,6 +304,12 @@ describe('database gallery and calendar styles', () => {
     expect(inner).toMatch(/border-radius:\s*var\(--blok-radius-control\)/);
   });
 
+  // The keyboard reaches the "+" through the day's Tab stop, so it shows with the day's or its own keyboard focus.
+  it('shows the day "+" while the day or the "+" has keyboard focus', () => {
+    expect(ruleBody('[data-blok-database-calendar-day]:focus-visible [data-blok-database-calendar-add]')).toMatch(/opacity:\s*1/);
+    expect(ruleBody('[data-blok-database-calendar-add]:focus-visible')).toMatch(/opacity:\s*1/);
+  });
+
   it('tints only the day "+"\'s inner 20px button on hover, keeping the white chip', () => {
     const hover = ruleBody('[data-blok-database-calendar-add]:hover::before');
 
@@ -522,22 +540,23 @@ describe('calendar day digits and weekday row (Round 32)', () => {
 });
 
 describe('content inset (side-by-side-4 #2)', () => {
-  const inset = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
+  const lead = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)))';
+  const trail = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)))';
 
   // notion-motion.md Round 41 Part B Gallery: in a page-wide editor Notion's grid is the 692 text column (2 cards of 338).
   it('keeps gallery cards in the text column, like the toolbar', () => {
     const body = ruleBody('[data-blok-database-gallery]');
 
-    expect(body).toContain(`padding-inline-start: ${inset}`);
-    expect(body).toContain(`padding-inline-end: ${inset}`);
+    expect(body).toContain(`padding-inline-start: ${lead}`);
+    expect(body).toContain(`padding-inline-end: ${trail}`);
   });
 
   // notion-motion.md Round 41 Part B Calendar (r41-n-empty-cal.png): the grid spans x 539-1230.5 and ‹ Today › ends at the column.
   it('keeps the calendar grid and its nav in the text column, like the toolbar', () => {
     const body = ruleBody('[data-blok-database-calendar]');
 
-    expect(body).toContain(`padding-inline-start: ${inset}`);
-    expect(body).toContain(`padding-inline-end: ${inset}`);
+    expect(body).toContain(`padding-inline-start: ${lead}`);
+    expect(body).toContain(`padding-inline-end: ${trail}`);
   });
 });
 
@@ -589,6 +608,12 @@ describe('Round 45 gallery, calendar and settings panel', () => {
     expect(tile).toMatch(/box-shadow:\s*var\(--blok-database-layout-tile-ring\) 0 0 0 1px inset/);
     expect(ruleBody('[data-blok-database-layout-tile-glyph]')).toMatch(/margin-block-start:\s*var\(--blok-space-1\)/);
     expect(ruleBody('[data-blok-database-layout-tiles]')).toMatch(/margin-block-start:\s*var\(--blok-space-2-75\)/);
+  });
+
+  // notion-motion.md Round 105 §1 #5 (r105-n-layout-cal-page.raw): the first row 12 under the tiles, the last 8 above the bottom.
+  it('leaves 12 under the Layout tiles and 8 under the last row', () => {
+    expect(ruleBody('[data-blok-database-layout-tiles]')).toMatch(/padding:\s*var\(--blok-space-1\) var\(--blok-space-2\) var\(--blok-space-3\)/);
+    expect(ruleBody('[data-blok-database-panel][data-blok-database-panel-page="layout"]')).toMatch(/padding-block-end:\s*var\(--blok-space-2\)/);
   });
 
   // Round 90 §1 #8: light ring rgb(230,229,227) (r89-n-layout.raw); dark rgb(56,56,54) already matched Blok's ring.

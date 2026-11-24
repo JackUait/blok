@@ -393,8 +393,9 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
     label.setAttribute('data-blok-database-board-lane-label', '');
     if (lane.option !== undefined) {
-      // notion-motion.md Round 98 §1 #2: a band's pill is a Tab stop. What Enter does on it is unread, so it does nothing.
-      if (!this.readOnly) {
+      // notion-motion.md Round 98 §1 #2: a band's pill is a Tab stop. Round 99 §1 #2, Round 100 §1 #3-#4: a click, Enter or Space on it opens the rename popup (the owner listens).
+      // A locked database refuses the rename, so its pill is plain text, as the column pills are.
+      if (!this.readOnly && this.settings.structureLocked !== true) {
         label.tabIndex = 0;
         label.setAttribute('role', 'button');
       }

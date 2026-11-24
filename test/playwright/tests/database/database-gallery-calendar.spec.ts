@@ -144,6 +144,86 @@ test.describe('gallery', () => {
     await expect(page.locator('[data-blok-database-gallery-grid]')).toHaveCSS('gap', '16px');
   });
 
+  /** Opens Settings › Layout, then the menu behind `row`, and reads boxes once the motion is done. */
+  const openLayoutMenu = async (page: Page, row: string, menu: string): Promise<Record<string, { x: number; y: number; width: number; height: number; right: number; bottom: number }>> => {
+    await page.getByTestId('database-toolbar-settings').click();
+    await page.getByTestId('database-settings-layout').click();
+    await page.getByTestId(row).click();
+    await expect(page.getByTestId(menu)).toBeVisible();
+
+    return page.evaluate(async (ids) => {
+      await Promise.all(document.getAnimations().map((animation) => animation.finished));
+
+      return Object.fromEntries(ids.map((id) => {
+        const r = document.querySelector(`[data-blok-testid="${id}"]`)?.getBoundingClientRect() ?? new DOMRect();
+
+        return [id, { x: r.x, y: r.y, width: r.width, height: r.height, right: r.right, bottom: r.bottom }];
+      }));
+    }, [row, menu]);
+  };
+
+  // notion-motion.md Round 114 §1 #4 (r114-n-cardsize-menu.raw): a 250x94 menu, its top on the row's bottom and its
+  // right edge on the row's; rows 28 tall at a 29 pitch.
+  test('Card size opens a 250x94 menu under its row, end edges aligned', async ({ page }) => {
+    await mount(page, blocks({ type: 'gallery', cardSize: 'medium' }));
+    const boxes = await openLayoutMenu(page, 'database-gallery-card-size', 'database-gallery-card-size-menu');
+    const row = boxes['database-gallery-card-size'];
+    const menu = boxes['database-gallery-card-size-menu'];
+    const items = await page.getByTestId('database-gallery-card-size-menu').getByRole('menuitemradio').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().top));
+
+    expect(menu.y).toBeCloseTo(row.bottom, 0);
+    expect(menu.right).toBeCloseTo(row.right, 0);
+    expect(menu.width).toBe(250);
+    expect(menu.height).toBeCloseTo(94, 0);
+    expect(items.slice(1).map((top, i) => top - items[i])).toEqual([29, 29]);
+    await expect(page.getByTestId('database-gallery-card-size-medium')).toHaveAttribute('aria-checked', 'true');
+  });
+
+  // notion-motion.md Round 114 §1 #4 (r114-n-cardpreview-roombelow.raw) and Round 113 §1 #6: below the row when it fits,
+  // above it (bottom on the row's top) when it does not.
+  test('Card preview opens below its row when it fits', async ({ page }) => {
+    await mount(page, blocks({ type: 'gallery' }));
+    const boxes = await openLayoutMenu(page, 'database-gallery-card-preview', 'database-gallery-card-preview-menu');
+
+    expect(boxes['database-gallery-card-preview-menu'].y).toBeCloseTo(boxes['database-gallery-card-preview'].bottom, 0);
+  });
+
+  test('Card preview opens above its row, its bottom on the row\'s top, when it does not fit below', async ({ page }) => {
+    // A short window with the database pushed down: the Layout page slides up to the window's bottom.
+    await page.setViewportSize({ width: 1400, height: 600 });
+    await mount(page, blocks({ type: 'gallery' }));
+    await page.evaluate(() => {
+      const holder = document.getElementById('blok');
+
+      if (holder !== null) holder.style.marginTop = '400px';
+    });
+    const boxes = await openLayoutMenu(page, 'database-gallery-card-preview', 'database-gallery-card-preview-menu');
+    const row = boxes['database-gallery-card-preview'];
+    const menu = boxes['database-gallery-card-preview-menu'];
+
+    expect(row.bottom + menu.height).toBeGreaterThan(600 - 12);
+    expect(menu.bottom).toBeCloseTo(row.y, 0);
+  });
+
+  // notion-motion.md Round 114 §4 (r114-n-cardpreview-pageprops.raw): the Page properties list is centred on its row and,
+  // with no room on the right, sits left of it, its right edge on the row's left.
+  test('Card preview › Page properties opens its list beside the row, centred on it', async ({ page }) => {
+    await mount(page, blocks({ type: 'gallery' }));
+    await openLayoutMenu(page, 'database-gallery-card-preview', 'database-gallery-card-preview-menu');
+    await page.getByTestId('database-gallery-card-preview-properties').click();
+    await expect(page.getByTestId('database-gallery-card-preview-properties-menu')).toBeVisible();
+    const placed = await page.evaluate(async () => {
+      await Promise.all(document.getAnimations().map((animation) => animation.finished));
+      const row = document.querySelector('[data-blok-testid="database-gallery-card-preview-properties"]')?.getBoundingClientRect();
+      const list = document.querySelector('[data-blok-testid="database-gallery-card-preview-properties-menu"]')?.getBoundingClientRect();
+
+      return row === undefined || list === undefined ? null : { rowMid: row.top + row.height / 2, listMid: list.top + list.height / 2, rowLeft: row.left, listRight: list.right };
+    });
+
+    expect(placed?.listMid).toBeCloseTo(placed?.rowMid ?? 0, 0);
+    expect(placed?.listRight).toBeCloseTo(placed?.rowLeft ?? 0, 0);
+  });
+
   test('shows a url property as the card image, and fits it on request', async ({ page }) => {
     const rows = [{ id: 'r1', properties: { 'p-title': 'Pic', 'p-image': 'data:image/gif;base64,R0lGODlhAQABAAAAACw=' } }];
 
@@ -876,10 +956,12 @@ test.describe('calendar', () => {
     await expect(drawer(page)).toBeVisible();
   });
 
-  // notion-motion.md Round 96 §1 #2 (r96-n-cal-event-tab.raw): Tab from Next Month lands on the first event, no day cell first.
-  test('Tab from Next month visits each event, then leaves the grid; Space opens the focused event', async ({ page }) => {
+  // notion-motion.md Round 96 §1 #2 (r96-n-cal-event-tab.raw): Tab from Next Month lands on the first event, though today's cell comes first in the DOM.
+  // Notion's Tab then leaves; Blok stops on today and its "+" first, so a keyboard can reach the days.
+  test('Tab from Next month visits each event, then today and its "+", then leaves the grid; Space opens the focused event', async ({ page }) => {
     await mount(page, blocks({ type: 'calendar' }));
     const grid = page.locator('[data-blok-database-calendar-grid]');
+    const add = day(page, '2026-10-09').locator('[data-blok-database-calendar-add]');
 
     await page.locator('[data-blok-database-calendar-next]').focus();
     await page.keyboard.press('Tab');
@@ -887,12 +969,81 @@ test.describe('calendar', () => {
     await page.keyboard.press('Tab');
     await expect(event(page, 'r2')).toBeFocused();
     await page.keyboard.press('Tab');
+    await expect(day(page, '2026-10-09')).toBeFocused();
+    await expect(add).toHaveCSS('opacity', '1');
+    await page.keyboard.press('Tab');
+    await expect(add).toBeFocused();
+    await page.keyboard.press('Tab');
     expect(await grid.evaluate((el) => el.contains(document.activeElement))).toBe(false);
 
+    await page.keyboard.press('Shift+Tab');
+    await expect(add).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(day(page, '2026-10-09')).toBeFocused();
     await page.keyboard.press('Shift+Tab');
     await expect(event(page, 'r2')).toBeFocused();
     await page.keyboard.press('Space');
     await expect(drawer(page)).toBeVisible();
+  });
+
+  test('a month with no events: Tab reaches today, arrows walk the days, and the "+" adds a page there', async ({ page }) => {
+    await mount(page, blocks({ type: 'calendar' }, [{ id: 'r3', properties: { 'p-title': 'Someday' } }]));
+
+    await page.locator('[data-blok-database-calendar-next]').focus();
+    await page.keyboard.press('Tab');
+    await expect(day(page, '2026-10-09')).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(day(page, '2026-10-10')).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(day(page, '2026-10-10').locator('[data-blok-database-calendar-add]')).toBeFocused();
+    await page.keyboard.press('Enter');
+
+    await expect(drawer(page)).toBeVisible();
+    await expect.poll(async () => (await savedRows(page)).filter((row) => row.properties['p-due'] === '2026-10-10')).toHaveLength(1);
+  });
+
+  test('a clicked day becomes the day stop: Tab goes on to its "+", and Shift+Tab back to the day', async ({ page }) => {
+    await mount(page, blocks({ type: 'calendar' }));
+    const clicked = day(page, '2026-10-20');
+
+    await clicked.click({ position: { x: 10, y: 60 } });
+    await expect(clicked).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(clicked.locator('[data-blok-database-calendar-add]')).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(clicked).toBeFocused();
+  });
+
+  // The test page has nothing after the grid, so Tab out of it leaves focus on <body> with the database still current.
+  test('after a clicked day, Tab out of the grid and Shift+Tab back lands on that day\'s "+"', async ({ page }) => {
+    await mount(page, blocks({ type: 'calendar' }));
+    const clicked = day(page, '2026-10-20');
+    const add = clicked.locator('[data-blok-database-calendar-add]');
+
+    await clicked.click({ position: { x: 10, y: 60 } });
+    await page.keyboard.press('Tab');
+    await expect(add).toBeFocused();
+    await page.keyboard.press('Tab');
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+    await page.keyboard.press('Shift+Tab');
+    await expect(add).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(clicked).toBeFocused();
+  });
+
+  test('after a clicked day, Tab out of the grid and Tab again leaves the database where it is', async ({ page }) => {
+    await mount(page, [{ id: 'above', type: 'paragraph', data: { text: 'Above' } }, ...blocks({ type: 'calendar' })]);
+    const clicked = day(page, '2026-10-20');
+
+    await clicked.click({ position: { x: 10, y: 60 } });
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+    await page.keyboard.press('Tab');
+
+    const parent = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks.find((block) => block.id === 'db-1')?.parent ?? null);
+
+    expect(parent).toBeNull();
   });
 
   test('next, previous and Today navigate, and the range survives a reload for this person', async ({ page }) => {

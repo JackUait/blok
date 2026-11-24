@@ -255,7 +255,7 @@ export class DatabaseCardDrag {
       const above = visible[visible.indexOf(beforeEl) - 1];
       const centerY = above === undefined ? rect.top - HALF_GAP : (above.getBoundingClientRect().bottom + rect.top) / 2;
 
-      this.dropLine.showHorizontal({ left: rect.left, centerY, width: rect.width });
+      this.dropLine.showHorizontal({ left: rect.left, centerY, width: rect.width, slot: beforeEl });
 
       return;
     }
@@ -265,7 +265,7 @@ export class DatabaseCardDrag {
     if (last !== undefined) {
       const rect = last.getBoundingClientRect();
 
-      this.dropLine.showHorizontal({ left: rect.left, centerY: rect.bottom + HALF_GAP, width: rect.width });
+      this.dropLine.showHorizontal({ left: rect.left, centerY: rect.bottom + HALF_GAP, width: rect.width, slot: targetColumn });
 
       return;
     }
@@ -280,7 +280,7 @@ export class DatabaseCardDrag {
 
     const rect = cardsContainer.getBoundingClientRect();
 
-    this.dropLine.showHorizontal({ left: rect.left, centerY: rect.top + 2, width: rect.width });
+    this.dropLine.showHorizontal({ left: rect.left, centerY: rect.top + 2, width: rect.width, slot: cardsContainer });
   }
 
   /** The column under the pointer. Sub-group lanes stack columns, so the row of the pointer picks among them. */

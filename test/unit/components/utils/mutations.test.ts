@@ -42,6 +42,15 @@ describe('isMutationBelongsToElement', () => {
     expect(isMutationBelongsToElement(createMutation({ type: 'attributes', attributeName: 'data-blok-spotlight', target: card }), element)).toBe(false);
   });
 
+  it('ignores the joined-fill mark on a <mark>, which is never saved', () => {
+    const element = document.createElement('div');
+    const mark = document.createElement('mark');
+
+    element.appendChild(mark);
+
+    expect(isMutationBelongsToElement(createMutation({ type: 'attributes', attributeName: 'data-blok-mark-joined', target: mark }), element)).toBe(false);
+  });
+
   it('ignores internal data-blok-toggle-open attribute updates', () => {
     const element = document.createElement('div');
     const mutation = createMutation({

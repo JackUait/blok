@@ -293,4 +293,20 @@ describe('DatabaseListRowDrag', () => {
 
     expect(lines.every((line) => line.style.opacity === '0')).toBe(true);
   });
+  // notion-live/motion-r14-listdrag.json 2327/2334: when the line changes slot the old one fades 1→0 where it was
+  // and a new one fades 0→1 at the new slot. Moving inside one slot keeps one line.
+  it('crossfades the drop line when it changes slot, and keeps one line inside a slot', () => {
+    document.querySelectorAll('[data-blok-database-drop-line]').forEach((line) => line.remove());
+    drag.beginTracking('row-0', 0, 0);
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 0, clientY: 85 }));
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 0, clientY: 88 }));
+
+    expect(document.querySelectorAll('[data-blok-database-drop-line]')).toHaveLength(1);
+
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 0, clientY: 125 }));
+
+    const lines = Array.from(document.querySelectorAll<HTMLElement>('[data-blok-database-drop-line]'));
+
+    expect(lines.map((line) => [line.style.top, line.style.opacity])).toEqual([['78px', '0'], ['118px', '']]);
+  });
 });

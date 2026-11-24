@@ -10,13 +10,14 @@ import { checkboxGroupName } from './database-group-checkbox';
 import { NO_VALUE_GROUP_KEY } from './database-model';
 import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
-import { IconDotsHorizontal, IconExpandDiagonal, IconPeekCenter, IconPeekSide, IconPencilLine, IconPlayerPlay, IconPlus, IconRowGrip } from '../../components/icons';
+import { IconDotsHorizontal, IconExpandDiagonal, IconPeekCenter, IconPeekSide, IconPencilLine, IconPlayerPlay, IconPlus } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { onHover } from '../../components/utils/tooltip';
 import { KEYBOARD_OWNER_EDGE_EVENT } from '../../components/constants/data-attributes';
 import { propertyHint } from './property-hint';
 import { PROPERTY_TYPE_META } from './database-property-types';
 import { syncCommentBadge } from './database-comment-badge';
+import { createRowGutter } from './database-row-gutter';
 import type { CommentBadges } from './database-comment-badge';
 
 interface DatabaseListViewOptions {
@@ -708,7 +709,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
     rowEl.setAttribute('tabindex', '-1');
 
     if (!this.readOnly) {
-      rowEl.appendChild(this.createGutter(row.id));
+      rowEl.appendChild(createRowGutter(this.i18n, 'list-row', row.id));
     }
 
     const icon = this.showPageIcon ? rowPageGlyph(row, this.settings.cellContext?.rowHasBody?.(row.id) === true, true) : null;
@@ -733,31 +734,6 @@ export class DatabaseListView implements DatabaseViewRenderer {
     rowEl.appendChild(propertiesEl);
 
     return rowEl;
-  }
-
-  /** The ⋮⋮ left of the row: drags the row, and a click opens the row menu (research/12 §3, 66-list-handle-click.png). */
-  private createGutter(rowId: string): HTMLElement {
-    const gutter = document.createElement('div');
-    const handle = document.createElement('button');
-
-    gutter.setAttribute('data-blok-database-list-row-gutter', '');
-    const add = document.createElement('button');
-
-    add.type = 'button';
-    add.setAttribute('data-blok-database-list-row-add', '');
-    add.setAttribute('aria-label', this.i18n.t('tools.database.tableAddBelow'));
-    add.tabIndex = -1;
-    add.innerHTML = IconPlus;
-    gutter.appendChild(add);
-    handle.type = 'button';
-    handle.setAttribute('data-blok-database-list-row-handle', '');
-    handle.setAttribute('data-row-id', rowId);
-    handle.setAttribute('aria-label', this.i18n.t('tools.database.tableDragHandle'));
-    handle.tabIndex = -1;
-    handle.innerHTML = IconRowGrip;
-    gutter.appendChild(handle);
-
-    return gutter;
   }
 
   /**

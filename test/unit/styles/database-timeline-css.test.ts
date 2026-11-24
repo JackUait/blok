@@ -221,7 +221,7 @@ describe('database timeline styles', () => {
       expect(body).toContain('inline-size: max-content');
       expect(body).toMatch(/padding-inline: 0[;\s]/);
     }
-    expect(ruleBody('[data-blok-database-timeline-table-row] > *')).toContain('padding-inline: var(--blok-space-2)');
+    expect(ruleBody('[data-blok-database-timeline-table-row] > :not([data-blok-database-timeline-table-row-gutter])')).toContain('padding-inline: var(--blok-space-2)');
     expect(ruleBody('[data-blok-database-timeline-table-header] > *')).toContain('padding-inline: var(--blok-space-2)');
     expect(ruleBody('[data-blok-database-timeline-table-title]')).toContain('margin-inline-end: -1px');
     expect(ruleBody('[data-blok-database-timeline-table-footer] > :first-child')).toBe('');
@@ -378,6 +378,17 @@ describe('database timeline styles', () => {
     expect(css).toContain('--blok-database-timeline-bar-bg: #ffffff;');
   });
 
+  // notion-motion.md Round 92 §4: Notion's fill is the bar's A, 100% wide with 6px sides, so an 11 bar's fill is 12 and spills 1px.
+  it('never draws the hover fill narrower than its two 6px sides', () => {
+    const layer = ruleBody('[data-blok-database-timeline-bar]::before');
+
+    expect(layer).toContain('min-inline-size: calc(2 * var(--blok-space-1-5))');
+    expect(layer).not.toMatch(/(^|;)\s*inset:\s*0\s*(;|$)/);
+    expect(layer).toContain('inset-block: 0');
+    expect(layer).toContain('inset-inline-start: 0');
+    expect(layer).toContain('inline-size: 100%');
+  });
+
   it('turns every timeline transition off under reduced motion', () => {
     const reduced = timelineCss.slice(timelineCss.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
 
@@ -414,6 +425,21 @@ describe('timeline in dark (research/21 §1i)', () => {
     expect(ruleBody('[data-blok-database-timeline-table-header]')).toContain('color: var(--blok-database-timeline-header-text)');
   });
 
+  // notion-motion.md r9-timeline-dark: the open panel's « is fill rgb(125, 122, 117). Light keeps the button's ink.
+  it('inks the open panel\'s « like the toolbar «, 125 in dark only', () => {
+    expect(ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] svg'))
+      .toContain('color: var(--blok-database-toolbar-expand-ink, currentColor)');
+    expect(Array.from(css.matchAll(/--blok-database-toolbar-expand-ink:\s*([^;]+);/g)).map((m) => (m[1] ?? '').trim()))
+      .toEqual(['rgb(125, 122, 117)', 'rgb(125, 122, 117)']);
+  });
+
+  // notion-motion.md r9-timeline-dark: the panel row's pageEmpty icon is fill rgb(125, 122, 117). Light stays 142.
+  it('inks the panel row\'s page icon 125 in dark, like the table title icon', () => {
+    expect(css).toMatch(/\[data-blok-database-timeline-table-title\] > :is\(\[data-blok-database-page-icon\], \[data-blok-database-page-icon-placeholder\]\) \{[^}]*color: var\(--blok-database-table-title-icon\);/);
+    expect(css).toContain('--blok-database-table-title-icon: var(--blok-database-table-header-icon);');
+    expect(darkValues('--blok-database-table-title-icon')).toEqual(['rgb(125, 122, 117)', 'rgb(125, 122, 117)']);
+  });
+
   // The dark icon ink is unmeasured. White on the measured chip is 2.3:1, under the 3:1 icon minimum; page ink is 7.5:1.
   it('draws the off-screen arrow in page ink on the light chip, so it stays readable', () => {
     expect(darkValues('--blok-database-timeline-arrow-icon')).toEqual(['rgb(25, 25, 25)', 'rgb(25, 25, 25)']);
@@ -428,29 +454,30 @@ describe('timeline in dark (research/21 §1i)', () => {
 describe('content inset (side-by-side-4 #2)', () => {
   it('starts the toolbar at the text column, like the table, while the grid stays as wide as the view', () => {
     // Round 46 B: less the 6 the « sits before the column.
-    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5)))');
+    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5) - var(--blok-space-1-5)))');
     expect(ruleBody('[data-blok-database-timeline-scroller]')).not.toMatch(/padding-inline|padding-left/);
   });
 
   it('keeps "+ New" at the text column while the canvas scrolls, measured against the view\'s width', () => {
     expect(ruleBody('[data-blok-database-timeline]')).toMatch(/container(-type)?: [^;]*inline-size/);
-    expect(ruleBody('[data-blok-database-timeline-new-lane] [data-blok-database-timeline-new]')).toContain('inset-inline-start: max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2))');
+    expect(ruleBody('[data-blok-database-timeline-new-lane] [data-blok-database-timeline-new]')).toContain('inset-inline-start: max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)))');
   });
 });
 
 // notion-motion.md Round 41 Part B Timeline (r41-n-empty-tl.png): in a page-wide editor the grid spans x 531-1238.5,
 // the text column plus 8 each side, and › ends with the column. Round 6: with the table panel open the view is full-bleed.
 describe('page-wide editor: the timeline keeps to the text column', () => {
-  const inset = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
+  const lead = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)))';
+  const trail = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)))';
   const closed = '[data-blok-database-timeline]:not(:has(> [data-blok-database-timeline-toolbar] > [data-blok-database-timeline-table-toggle][aria-pressed="true"]))';
   const open = '[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])';
 
   it('narrows the closed-panel view to the column plus 8px each side', () => {
-    expect(ruleBody(closed)).toContain(`margin-inline: max(0px, calc(${inset} - var(--blok-space-2)))`);
+    expect(ruleBody(closed)).toContain(`margin-inline: max(0px, calc(${lead} - var(--blok-space-2))) max(0px, calc(${trail} - var(--blok-space-2)))`);
   });
 
   it('ends the toolbar at the column', () => {
-    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain(`padding-inline-end: ${inset}`);
+    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain(`padding-inline-end: ${trail}`);
   });
 
   it('keeps the open-panel toolbar full-bleed on both sides', () => {
@@ -537,6 +564,14 @@ describe('timeline toolbar row (Round 32, Round 47 A4)', () => {
     expect(body).toContain('min-block-size: 40px');
     expect(body).toContain('box-sizing: border-box');
     expect(body).toContain('padding-block-start: var(--blok-space-3-25)');
+  });
+
+  // notion-motion.md Round 105 §1 #6 (r105-n-dstitles-off.raw): with data source titles hidden, the zoom button sits
+  // 46.5 under the tabs' top, not 50.5. A full page's title row was not read, so it keeps its place.
+  it('rises 4 when no title row is shown', () => {
+    const hidden = ':not([data-blok-database-page]) > [data-blok-database-title-row][hidden] ~ [data-blok-database-board-container] [data-blok-database-timeline-toolbar]';
+
+    expect(ruleBody(hidden)).toContain('margin-block-start: calc(-1 * var(--blok-space-1))');
   });
 
   // notion-motion.md Round 47 A4: Notion's content starts 4 under the view top; r46-n-tltable.png: the card's border starts there.
@@ -650,7 +685,7 @@ describe('Hours zoom 15-minute lines and day period (Round 35)', () => {
       expect(toggle).toMatch(/padding:\s*0 var\(--blok-space-1\)/);
       expect(toggle).not.toContain('margin-inline-start');
       // 6 before the text column, never outside a narrow view.
-      expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5)))');
+      expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5) - var(--blok-space-1-5)))');
     });
 
     it('packs ‹, Today and › with no gap', () => {
@@ -790,8 +825,8 @@ describe('timeline toolbar controls hide the group labels under them', () => {
   it('runs the outer boxes to the chart edges while the panel is shut', () => {
     const shut = '[data-blok-database-timeline-toolbar]:not(:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"]))';
 
-    expect(ruleBody(`${shut} > :first-child::before`)).toContain('inset-inline-start: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5))))');
-    expect(ruleBody(`${shut} > :last-child::before`)).toContain('inset-inline-end: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2)))');
+    expect(ruleBody(`${shut} > :first-child::before`)).toContain('inset-inline-start: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5) - var(--blok-space-1-5))))');
+    expect(ruleBody(`${shut} > :last-child::before`)).toContain('inset-inline-end: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5))))');
   });
 });
 

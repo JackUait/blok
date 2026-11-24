@@ -83,6 +83,17 @@ const openList = async (page: Page): Promise<Locator> => {
   return list;
 };
 
+/** Opens the list from the keyboard: only that open starts with the current view highlighted. */
+const openListByKeyboard = async (page: Page): Promise<Locator> => {
+  await page.getByRole('button', { name: /more…$/ }).focus();
+  await page.keyboard.press('Enter');
+  const list = page.locator('[data-blok-database-tab-overflow-dropdown]');
+
+  await expect(list).toBeVisible();
+
+  return list;
+};
+
 const rowOf = (list: Locator, name: string): Locator =>
   list.locator('[data-blok-database-tab-overflow-item]').filter({ hasText: name });
 
@@ -115,7 +126,8 @@ test.describe('database view overflow list', () => {
 
     await expect(list.locator('[data-blok-database-tab-overflow-item]')).toHaveCount(NAMES.length);
     await expect(rowOf(list, 'Seventh')).toHaveAttribute('data-active', '');
-    await expect(list.locator('[data-highlighted]')).toHaveText('Seventh');
+    // Keyboard-only focus law: a mouse open tints no row.
+    await expect(list.locator('[data-highlighted]')).toHaveCount(0);
   });
 
   test('"N more…" keeps its own room: no tab runs into it at any width', async ({ page }) => {
@@ -212,7 +224,7 @@ test.describe('database view overflow list', () => {
   // research/21 §2: the highlight runs through "New view" and "New data source" and wraps.
   test('arrows move a highlight from the current view through New view and New data source, wrapping both ways', async ({ page }) => {
     await mount(page, 'v6');
-    const list = await openList(page);
+    const list = await openListByKeyboard(page);
     const search = list.getByPlaceholder('Search for a view...');
     const highlighted = list.locator('[data-highlighted]');
 
@@ -388,7 +400,7 @@ test.describe('database view overflow list', () => {
 
   test('arrows inside an open row menu do not move the list highlight', async ({ page }) => {
     await mount(page);
-    const list = await openList(page);
+    const list = await openListByKeyboard(page);
 
     await rowOf(list, 'Third').getByRole('button', { name: 'More actions' }).click();
     await expect(page.getByRole('menuitem', { name: 'Rename' })).toBeVisible();

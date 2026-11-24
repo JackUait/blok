@@ -79,6 +79,17 @@ describe('block-color foundation', () => {
       expect(el.style.boxShadow).toBe('');
     });
 
+    it('ignores a color name that is not a plain word, so saved data cannot write CSS', () => {
+      const el = document.createElement('div');
+
+      applyBlockColor(el, {
+        textColor: 'x); background: red',
+        backgroundColor: 'x), 0 0 0 9999px red, var(--y',
+      });
+
+      expect(el.getAttribute('style') ?? '').toBe('');
+    });
+
     it('leaves the shape alone for a block that draws its own fill', () => {
       const el = document.createElement('div');
 

@@ -391,14 +391,15 @@ describe('database card drag mutants', () => {
       expect(lineBox()).toEqual({ left: `${COLUMN_LEFT + CARD_INSET}px`, top: '108px', width: `${CARD_WIDTH}px`, height: '4px' });
     });
 
-    it('moves the line rather than drawing a second one, and never moves a card', () => {
+    // A slot change crossfades (motion-carddrag.json), so the old line may still be fading out.
+    it('shows one live line, and never moves a card', () => {
       const board = buildBoard(TWO_COLUMNS);
 
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 170, 160));
 
       expect(lineBox()?.top).toBe('168px');
-      expect(document.body.querySelectorAll('[data-blok-database-drop-line]')).toHaveLength(1);
+      expect(Array.from(document.body.querySelectorAll<HTMLElement>('[data-blok-database-drop-line]')).filter((el) => el.style.opacity !== '0')).toHaveLength(1);
       expect(cardOf(board, 'a3').style.marginTop).toBe('');
       expect(board.containers[0].style.paddingBottom).toBe('');
     });

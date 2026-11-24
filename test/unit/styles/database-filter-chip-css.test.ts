@@ -376,3 +376,17 @@ describe('property and group list drag', () => {
     expect(declared('[data-blok-database-panel-handle][data-fixed]', 'visibility')).toEqual(['hidden']);
   });
 });
+
+// notion-motion.md Round 115 §1 #6 (r115-n-filtertoken-x-hover.raw): the filter token × is 18×18 and fills
+// rgba(33,27,23,0.051) on hover over 0.1s ease-in-out. Dark is unmeasured: the database hover token.
+describe('filter token ×', () => {
+  const REMOVE = '[data-blok-database-chip-tokens] [data-blok-database-select-chip-remove]';
+
+  it('is 18px and fills on hover as Notion', () => {
+    expect(declared(REMOVE, 'width')).toEqual(['18px']);
+    expect(declared(REMOVE, 'height')).toEqual(['18px']);
+    expect(declared(REMOVE, 'transition')).toEqual(['background-color 100ms ease-in-out']);
+    expect(declared(`${REMOVE}:hover`, 'background-color')).toEqual(['var(--blok-database-hover-bg)']);
+    expect(database).toContain('--blok-database-hover-bg: rgba(33, 27, 23, 0.051);');
+  });
+});

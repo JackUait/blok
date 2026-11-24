@@ -97,6 +97,96 @@ describe('DatabaseTabBar — the view bar folds like Notion (notion-spec-2 §26.
     vi.restoreAllMocks();
   });
 
+  // notion-motion.md Round 101 §1 #2: the hover-only » takes no room, so it shows only where the tabs leave it room.
+  // Blok's choice: a tabs row that runs up to the toolbar is unmeasured in Notion.
+  describe('room for the hover-only »', () => {
+    const place = (el: Element, left: number, width: number): void => {
+      vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(left, 0, width, 28));
+    };
+
+    it('marks the bar when the tabs end less than one icon before the toolbar', () => {
+      const mounted = mount();
+
+      place(mounted.toolbar, 959.7, 270);
+      place(mounted.el.lastElementChild ?? mounted.el, 920.4, 28);
+      layOut(mounted, 1000);
+      fire();
+
+      expect(mounted.viewBar.hasAttribute('data-blok-database-fold-minimize')).toBe(true);
+    });
+
+    it('leaves the mark off when an icon fits between them', () => {
+      const mounted = mount();
+
+      place(mounted.toolbar, 959.7, 270);
+      place(mounted.el.lastElementChild ?? mounted.el, 600, 28);
+      layOut(mounted, 1000);
+      fire();
+
+      expect(mounted.viewBar.hasAttribute('data-blok-database-fold-minimize')).toBe(false);
+    });
+  });
+
+  // notion-motion.md Round 103 §1 #3 (r103-n-viewbar4-list-room.raw): with no rule Notion folds a tab at rest, so the
+  // hover-only » (which takes no room) still has its 28px when the pointer comes.
+  describe('room kept for the hover-only » with no rule', () => {
+    const addMinimize = ({ toolbar }: Mounted, hoverOnly: string, hidden = false): HTMLButtonElement => {
+      const minimize = document.createElement('button');
+
+      minimize.setAttribute('data-blok-database-toolbar-minimize', '');
+      minimize.setAttribute('data-blok-database-toolbar-hover-only', hoverOnly);
+      minimize.hidden = hidden;
+      toolbar.prepend(minimize);
+
+      return minimize;
+    };
+
+    // 334 for the tabs: three tabs and "+" fit only without »'s 28.
+    it('folds a tab so » fits beside the toolbar', () => {
+      const mounted = mount();
+
+      addMinimize(mounted, 'idle');
+      layOut(mounted, 581);
+      fire();
+
+      expect(shownTabs(mounted.el)).toEqual(['v1', 'v2']);
+      expect(mounted.el.querySelector('[data-blok-database-tab-more]')?.textContent).toBe('1 more…');
+    });
+
+    it('keeps every tab when » is hidden for good', () => {
+      const mounted = mount();
+
+      addMinimize(mounted, 'idle', true);
+      layOut(mounted, 581);
+      fire();
+
+      expect(shownTabs(mounted.el)).toEqual(['v1', 'v2', 'v3']);
+    });
+
+    // A chip bar's » keeps its room in the toolbar's own width (database.css), so it is not counted twice.
+    it('does not count a » that already takes its room', () => {
+      const mounted = mount();
+
+      addMinimize(mounted, 'bar');
+      layOut(mounted, 581);
+      fire();
+
+      expect(shownTabs(mounted.el)).toEqual(['v1', 'v2', 'v3']);
+    });
+
+    it('refolds when » comes back', async () => {
+      const mounted = mount();
+      const minimize = addMinimize(mounted, 'idle', true);
+
+      layOut(mounted, 581);
+      fire();
+      minimize.hidden = false;
+      await Promise.resolve();
+
+      expect(shownTabs(mounted.el)).toEqual(['v1', 'v2']);
+    });
+  });
+
   it('shows every tab, "+", the icons and New on a wide bar', () => {
     const mounted = mount();
 
@@ -232,5 +322,171 @@ describe('DatabaseTabBar — the view bar folds like Notion (notion-spec-2 §26.
     fire();
 
     expect(mounted.viewBar.hasAttribute('data-blok-database-fold-new')).toBe(false);
+  });
+  // notion-motion.md Round 99 §1 #8 (r99-n-search-open.raw): with search open, two tabs that fit fold into one "Board" pill.
+  // The pill is the "Table ⌄" fold Notion also shows while searching a gallery (Round 24) and with the side peek open (Round 31).
+  describe('while the toolbar search is open', () => {
+    const twoViews = (): DatabaseViewConfig[] => [view('v1', 'Table', 'a0'), view('v2', 'Board', 'a1')];
+
+    it('folds two tabs that fit into one pill naming the current view', () => {
+      const mounted = mount(twoViews(), 'v2');
+
+      mounted.toolbar.setAttribute('data-blok-database-searching', '');
+      layOut(mounted, 1000);
+      fire();
+
+      expect(shownTabs(mounted.el)).toEqual([]);
+      expect(mounted.el.querySelector('[data-blok-database-tab-compact]')?.textContent).toContain('Board');
+      mounted.tabBar.destroy();
+    });
+
+    // notion-motion.md:4360: four tabs while searching showed "Table ⌄", not "N more…".
+    it('takes the pill over "N more…"', () => {
+      const mounted = mount([...threeViews(), view('v4', 'Gallery', 'a3')]);
+
+      mounted.toolbar.setAttribute('data-blok-database-searching', '');
+      layOut(mounted, 543);
+      fire();
+
+      expect(mounted.el.querySelector('[data-blok-database-tab-more]')).toBeNull();
+      expect(mounted.el.querySelector('[data-blok-database-tab-compact]')).not.toBeNull();
+      mounted.tabBar.destroy();
+    });
+
+    it('gives the tabs back once the search closes', () => {
+      const mounted = mount(twoViews());
+
+      mounted.toolbar.setAttribute('data-blok-database-searching', '');
+      layOut(mounted, 1000);
+      fire();
+      mounted.toolbar.removeAttribute('data-blok-database-searching');
+      fire();
+
+      expect(shownTabs(mounted.el)).toEqual(['v1', 'v2']);
+      expect(mounted.el.querySelector('[data-blok-database-tab-compact]')).toBeNull();
+      mounted.tabBar.destroy();
+    });
+
+    // The search mark comes after the field's grow has started (database-view-controls.ts), when no resize may follow.
+    it('folds when the mark lands, with no resize', async () => {
+      const mounted = mount(twoViews(), 'v2');
+
+      layOut(mounted, 1000);
+      fire();
+      mounted.toolbar.setAttribute('data-blok-database-searching', '');
+      await Promise.resolve();
+
+      expect(mounted.el.querySelector('[data-blok-database-tab-compact]')).not.toBeNull();
+      mounted.toolbar.removeAttribute('data-blok-database-searching');
+      await Promise.resolve();
+
+      expect(shownTabs(mounted.el)).toEqual(['v1', 'v2']);
+      mounted.tabBar.destroy();
+    });
+
+    // notion-motion.md Round 100 §1 #6 (r100-n-fold-pill-menu.raw): Escape in the pill's list goes back to the search field.
+    it('hands the focus back to the search field on Escape in the pill\'s list', () => {
+      const mounted = mount(twoViews(), 'v2');
+      const search = document.createElement('input');
+
+      search.setAttribute('data-blok-database-search-input', '');
+      mounted.toolbar.append(search);
+      mounted.toolbar.setAttribute('data-blok-database-searching', '');
+      layOut(mounted, 1000);
+      fire();
+      mounted.el.querySelector<HTMLElement>('[data-blok-database-tab-compact]')?.click();
+      const input = document.querySelector<HTMLInputElement>('[data-blok-database-tab-overflow-dropdown] input');
+
+      input?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(search).toHaveFocus();
+      mounted.tabBar.destroy();
+    });
+
+    it('leaves a single tab as it is', () => {
+      const mounted = mount([view('v1', 'Table', 'a0')]);
+
+      mounted.toolbar.setAttribute('data-blok-database-searching', '');
+      layOut(mounted, 1000);
+      fire();
+
+      expect(shownTabs(mounted.el)).toEqual(['v1']);
+      expect(mounted.el.querySelector('[data-blok-database-tab-compact]')).toBeNull();
+      mounted.tabBar.destroy();
+    });
+  });
+
+  describe('the pill\'s views list by keyboard', () => {
+    const openList = (): { mounted: Mounted; input: HTMLInputElement } => {
+      const mounted = mount();
+
+      layOut(mounted, 493);
+      fire();
+      mounted.el.querySelector<HTMLElement>('[data-blok-database-tab-compact]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      const input = document.querySelector<HTMLInputElement>('[data-blok-database-tab-overflow-dropdown] input');
+
+      if (input === null) throw new Error('no list search');
+
+      return { mounted, input };
+    };
+
+    it('puts the focus back on the pill on Escape', () => {
+      const { mounted, input } = openList();
+
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(mounted.el.querySelector('[data-blok-database-tab-compact]')).toHaveFocus();
+      mounted.tabBar.destroy();
+    });
+
+    it('lands on the next bar\'s pill after Enter picks a view', async () => {
+      const { mounted, input } = openList();
+
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      mounted.tabBar.destroy();
+      document.body.replaceChildren();
+      const next = mount(threeViews(), 'v2');
+
+      await Promise.resolve();
+      layOut(next, 493);
+      fire();
+
+      expect(next.el.querySelector('[data-blok-database-tab-compact]')).toHaveFocus();
+      next.tabBar.destroy();
+    });
+
+    it('leaves the focus alone after a mouse pick', async () => {
+      const { mounted } = openList();
+
+      document.querySelector<HTMLElement>('[data-blok-database-tab-overflow-dropdown] [data-view-id="v2"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+      mounted.tabBar.destroy();
+      document.body.replaceChildren();
+      const next = mount(threeViews(), 'v2');
+
+      await Promise.resolve();
+      layOut(next, 493);
+      fire();
+
+      expect(next.el.querySelector('[data-blok-database-tab-compact]')).not.toHaveFocus();
+      next.tabBar.destroy();
+    });
+  });
+
+  // A tab that folds away must not drop the focus to the page: a view picked by keyboard lands on its tab first.
+  it('moves the focus from a tab that folds to the pill, and back when it unfolds', () => {
+    const mounted = mount();
+    const active = mounted.el.querySelector<HTMLElement>('[data-view-id="v1"]');
+
+    active?.focus();
+    layOut(mounted, 493);
+    fire();
+
+    expect(mounted.el.querySelector('[data-blok-database-tab-compact]')).toHaveFocus();
+    layOut(mounted, 1000);
+    fire();
+
+    expect(active).toHaveFocus();
+    mounted.tabBar.destroy();
   });
 });

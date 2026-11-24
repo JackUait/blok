@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import type { PropertyDefinition, PropertyType } from '../../../../src/tools/database/types';
+import type { NumberDisplay } from '../../../../src/shared/database/types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
 import { propertyTypeMeta } from '../../../../src/tools/database/database-property-types';
 import { IconAlarm, IconChangeType, IconCheck, IconClock, IconInfo, IconPageLayout, IconPencil, IconPreview, IconReplace, IconSliders, IconSort } from '../../../../src/components/icons';
@@ -20,7 +21,7 @@ interface CapturedItem {
   element?: HTMLElement;
   onActivate?: (item: CapturedItem) => void;
   confirmation?: { onActivate: (item: CapturedItem) => void; title?: string };
-  children?: { items: CapturedItem[]; align?: string; searchable?: boolean; width?: string; minWidth?: string; placement?: string; clickOnly?: boolean; class?: string };
+  children?: { items: CapturedItem[]; onOpen?: () => void; escapeFocusesRow?: boolean; align?: string; searchable?: boolean; width?: string; minWidth?: string; placement?: string; clickOnly?: boolean; class?: string };
 }
 
 interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; holds?: number; released?: number; params: Record<string, unknown>; activated: string[]; focused: string[]; hidden: Record<string, boolean>; closed?: () => void; hide: () => void; transitionAtShow?: string; moves: Array<{ position: DOMRect; positionContext?: HTMLElement }> }
@@ -357,6 +358,13 @@ describe('DatabasePropertyMenu', () => {
     expect((captured.instances.at(-1) as unknown as { nestedOpenDelay?: number }).nestedOpenDelay).toBe(125);
   });
 
+  // notion-motion.md R11 "Edit property flyout close timing": the flyout starts to fade 110–120ms after the pointer moves on.
+  it('closes a hovered submenu 115ms after the pointer moves to another row', () => {
+    open(prop('select'));
+
+    expect((captured.instances.at(-1) as unknown as { nestedCloseDelay?: number }).nestedCloseDelay).toBe(115);
+  });
+
   // notion-live/motion-header.json + header.png: the Name cell spans x 539..818, its menu box starts at x 533, y 296 (the cell's bottom).
   it('opens the header menu 6px left of its cell, at the cell\'s bottom', () => {
     const anchor = document.body.appendChild(document.createElement('div'));
@@ -416,6 +424,13 @@ describe('DatabasePropertyMenu', () => {
     field.dispatchEvent(new Event('change'));
 
     expect(cb.onRename).not.toHaveBeenCalled();
+  });
+
+  // notion-motion.md R113 §1 #1 (r113-n-changetype-click-escape.raw): Escape from a clicked Change type puts focus on its row.
+  it('the Change type list asks Escape to put focus on its row', () => {
+    open(prop('text'));
+
+    expect(byName(lastItems(), 'changeType').children).toMatchObject({ escapeFocusesRow: true });
   });
 
   // notion-motion.md Round 44 §3 (r44-tp-change.raw): a plain 200-wide list, the current type kept with a ✓.
@@ -490,6 +505,41 @@ describe('DatabasePropertyMenu', () => {
     del.onActivate?.(del);
 
     expect(document.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('tools.database.deletePropertyFromConfirm:Tasks');
+  });
+
+  // notion-motion.md Round 101 §1 #7 (r101-n-delete-property-dialog.raw): the title is 600 and the database name in it 700.
+  it('sets the question in the bold title, with the database name stronger', () => {
+    const menu = new DatabasePropertyMenu({
+      i18n: { t: (key: string, params?: Record<string, string>) => `${key}:${params?.name ?? ''}`, getLocale: () => 'en' } as never,
+      hasPeople: false,
+      ...callbacks(),
+      databaseName: () => 'Tasks',
+    });
+
+    menu.open(prop('text'), document.createElement('button'));
+    const del = byName(lastItems(), 'delete');
+
+    del.onActivate?.(del);
+
+    expect(document.querySelector('[data-blok-database-confirm-dialog]')?.hasAttribute('data-bold-title')).toBe(true);
+    expect(document.querySelector('[data-blok-database-confirm-title] strong')?.textContent).toBe('Tasks');
+  });
+
+  it('stresses the database name where the sentence puts it, even when the name is also in another word', () => {
+    const menu = new DatabasePropertyMenu({
+      i18n: { t: (key: string, params?: Record<string, string>) => `${key}:${params?.name ?? ''}`, getLocale: () => 'en' } as never,
+      hasPeople: false,
+      ...callbacks(),
+      databaseName: () => 'e',
+    });
+
+    menu.open(prop('text'), document.createElement('button'));
+    const del = byName(lastItems(), 'delete');
+
+    del.onActivate?.(del);
+    const strong = document.querySelector('[data-blok-database-confirm-title] strong');
+
+    expect(strong?.previousSibling?.textContent).toBe('tools.database.deletePropertyFromConfirm:');
   });
 
   it('keeps the property when the dialog is cancelled', async () => {
@@ -1146,6 +1196,45 @@ describe('DatabasePropertyMenu', () => {
       menu.destroy();
     });
 
+    // R112 (notion-motion.md §1 #3): Notion shows "100" in a field box on a bar that never set Divide by.
+    it('shows the Divide by the bar uses, in a Blok field box', () => {
+      const field = (number: NumberDisplay): HTMLInputElement | null | undefined => {
+        const { menu } = headerMenu(prop('number', { number }));
+        const input = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'divideBy').element?.querySelector('input');
+
+        menu.destroy();
+
+        return input;
+      };
+      const plain = field({ showAs: 'bar' });
+
+      expect(plain?.value).toBe('100');
+      expect(plain?.parentElement?.getAttribute('data-blok-field')).toBe('text');
+      expect(field({ showAs: 'bar', divideBy: 50 })?.value).toBe('50');
+    });
+
+    // notion-motion.md R115 §1 #5: a Percent bar has no Divide by row; Number brings it back.
+    it('a Percent bar has no Divide by row, and Number format Number brings it back', () => {
+      const { menu } = headerMenu(prop('number', { number: { showAs: 'bar' } }));
+
+      pick('numberFormat', 'format-percent');
+      expect(editNames()).not.toContain('divideBy');
+      expect(editNames()).toEqual(expect.arrayContaining(['color', 'showNumber']));
+      pick('numberFormat', 'format-number');
+      expect(editNames()).toContain('divideBy');
+      menu.destroy();
+    });
+
+    it('a saved Divide by survives a Percent bar and shows again under Number', () => {
+      const { cb, menu } = headerMenu(prop('number', { number: { showAs: 'bar', divideBy: 50 } }));
+
+      pick('numberFormat', 'format-percent');
+      expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { number: { showAs: 'bar', divideBy: 50, format: 'percent' } });
+      pick('numberFormat', 'format-number');
+      expect(byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'divideBy').element?.querySelector('input')?.value).toBe('50');
+      menu.destroy();
+    });
+
     // Divide by saves on blur without a redraw, so a later pick must not write the old value back.
     it('a color picked after typing Divide by keeps the typed Divide by and still redraws', () => {
       const { cb, menu } = headerMenu(prop('number', { number: { showAs: 'bar', divideBy: 100 } }));
@@ -1296,6 +1385,50 @@ describe('DatabasePropertyMenu', () => {
 
       expect(captured.popovers[captured.popovers.length - 1]?.focused).toEqual(['decimals']);
       menu.destroy();
+    });
+
+    // notion-motion.md R84b §1, R105 §1 #7: after a Number format pick Notion's focus is on the "Number format" row.
+    it('after a Number format pick, DOM focus is on the Number format row', () => {
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+      menu.openRowPage(prop('number'), document.createElement('div'), { edit: true });
+      const rows = byName(lastItems(), 'numberFormat').children?.items ?? [];
+
+      byName(rows, 'format-euro').onActivate?.(byName(rows, 'format-euro'));
+
+      // The mock leaves the swapped-out menu in the page; the redrawn row is the last one.
+      expect([...document.querySelectorAll('[data-blok-item-name="numberFormat"]')].at(-1)).toHaveFocus();
+      menu.destroy();
+    });
+
+    it('the Number format list asks Escape to put focus on its row', () => {
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+      menu.openRowPage(prop('number'), document.createElement('div'), { edit: true });
+
+      expect(byName(lastItems(), 'numberFormat').children).toMatchObject({ escapeFocusesRow: true });
+      menu.destroy();
+    });
+
+    // notion-motion.md R113 §1 #2 (r113-n-decimal-pick.raw): after a Decimal places pick Notion's focus is on the "Decimal places" row.
+    it('after a Decimal places pick, DOM focus is on the Decimal places row', () => {
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+      menu.openRowPage(prop('number'), document.createElement('div'), { edit: true });
+      const rows = byName(lastItems(), 'decimals').children?.items ?? [];
+
+      byName(rows, 'decimals-1').onActivate?.(byName(rows, 'decimals-1'));
+
+      expect([...document.querySelectorAll('[data-blok-item-name="decimals"]')].at(-1)).toHaveFocus();
+      menu.destroy();
+    });
+
+    // notion-motion.md R113 §1 #1: Escape from Decimal places or Color puts focus on the row that opened it.
+    it('the Decimal places and Color lists ask Escape to put focus on their row', () => {
+      const items = editItems(prop('number', { number: { showAs: 'bar' } }));
+
+      expect(byName(items, 'decimals').children).toMatchObject({ escapeFocusesRow: true });
+      expect(byName(items, 'color').children).toMatchObject({ escapeFocusesRow: true });
     });
 
     it('a color picked after Bar then Ring keeps Ring', () => {
@@ -1467,6 +1600,38 @@ describe('DatabasePropertyMenu', () => {
       expect(cb.onUpdate).toHaveBeenNthCalledWith(2, 'p', { optionSort: undefined });
     });
 
+    // R112 (notion-motion.md §1 #5): Sort opens with its current row in the hover tint, after a keyboard open only.
+    describe('Sort list starting highlight', () => {
+      const openSort = async (optionSort?: 'alphabetical'): Promise<string[]> => {
+        open(prop('select', { config: { options }, ...(optionSort === undefined ? {} : { optionSort }) }));
+        const sort = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'optionSort');
+        const popover = captured.popovers[captured.popovers.length - 1];
+
+        if (popover === undefined) throw new Error('no menu');
+        popover.focused = [];
+        sort.children?.onOpen?.();
+        await Promise.resolve();
+
+        return popover.focused;
+      };
+
+      afterEach(() => {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+      });
+
+      it('a mouse open tints no row', async () => {
+        document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+
+        expect(await openSort('alphabetical')).toEqual([]);
+      });
+
+      it.each([[undefined, 'optionSort-manual'], ['alphabetical', 'optionSort-alphabetical']] as const)('a keyboard open on Sort %s tints %s', async (optionSort, row) => {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+
+        expect(await openSort(optionSort)).toEqual([row]);
+      });
+    });
+
     it('lists the options in the Sort order', () => {
       open(prop('select', { config: { options }, optionSort: 'alphabetical' }));
       const list = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'options').element;
@@ -1549,6 +1714,53 @@ describe('DatabasePropertyMenu', () => {
       const items = byName(lastItems(), 'editProperty').children?.items ?? [];
 
       expect(byName(items, 'dateFormat').children?.class?.split(' ')).toEqual(['blok-database-panel-list', 'blok-database-date-format-list']);
+    });
+
+    // notion-motion.md R115 §1 #2 (r115-n-datefmt-kbpick.raw): a Date format pick closes only its list; focus lands on the Date format row.
+    it('picking a date format keeps Edit property open and highlights the Date format row', () => {
+      const cb = callbacks();
+      const onClose = vi.fn();
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...cb, onClose });
+
+      menu.open(prop('date'), document.createElement('button'));
+      const formats = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'dateFormat').children?.items ?? [];
+
+      expect(formats.every((f) => f.closeOnActivate !== true)).toBe(true);
+      byName(formats, 'dateFormat-short').onActivate?.(byName(formats, 'dateFormat-short'));
+
+      expect(cb.onUpdate).toHaveBeenCalledWith('p', { date: { dateFormat: 'short' } });
+      expect(onClose).not.toHaveBeenCalled();
+      expect(menu.isOpen).toBe(true);
+      expect(captured.popovers[captured.popovers.length - 1]?.activated).toEqual(['editProperty']);
+      expect(byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'dateFormat').valueLabel).toBe('tools.database.dateFormat.short');
+      // The mock draws no submenu rows; the row page test below checks DOM focus.
+      expect(captured.popovers[captured.popovers.length - 1]?.focused).toEqual(['dateFormat']);
+      menu.destroy();
+    });
+
+    it('picking a date format on the row page panel keeps the panel open and puts focus on the Date format row', () => {
+      const cb = callbacks();
+      const onClose = vi.fn();
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...cb, onClose });
+
+      menu.openRowPage(prop('date'), document.createElement('div'), { edit: true });
+      const formats = byName(lastItems(), 'dateFormat').children?.items ?? [];
+
+      byName(formats, 'dateFormat-relative').onActivate?.(byName(formats, 'dateFormat-relative'));
+
+      expect(onClose).not.toHaveBeenCalled();
+      expect(menu.isOpen).toBe(true);
+      expect(byName(lastItems(), 'dateFormat').valueLabel).toBe('tools.database.dateFormat.relative');
+      expect([...document.querySelectorAll('[data-blok-item-name="dateFormat"]')].at(-1)).toHaveFocus();
+      menu.destroy();
+    });
+
+    // notion-motion.md R113 §1 #1 (r113-n-dateformat-escape.raw): Escape puts focus on the Date format row.
+    it('the Date format list asks Escape to put focus on its row', () => {
+      open(prop('date'));
+      const items = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+      expect(byName(items, 'dateFormat').children).toMatchObject({ escapeFocusesRow: true });
     });
 
     // research/37 §2: an untouched Date property shows "Full date" and "12 hour".

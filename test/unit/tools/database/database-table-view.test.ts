@@ -9,7 +9,7 @@ import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/component
 import { TOOLTIP_MUTED_INK } from '../../../../src/components/modules/toolbar/tooltip';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 import { hover, shownHint } from './hint-harness';
-import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, PropertyType, PropertyValue } from '../../../../src/tools/database/types';
+import type { CalculationFn, DatabaseRow, DatabaseViewConfig, PropertyDefinition, PropertyType, PropertyValue } from '../../../../src/tools/database/types';
 
 const schema: PropertyDefinition[] = [
   { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
@@ -151,6 +151,8 @@ describe('DatabaseTableView', () => {
 
   afterEach(async () => {
     vi.restoreAllMocks();
+    // A menu left open keeps its arrow keys, and takes them before the next test's menu.
+    for (let i = 0; i < 20 && PopoverRegistry.instance.closeTopmost(); i++);
     document.body.innerHTML = '';
     // A drop leaves a one-tick click swallow on the document; let it lapse.
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -892,6 +894,34 @@ describe('DatabaseTableView', () => {
       expect(document.body).toHaveFocus();
     });
 
+    // notion-motion.md Round 56 §3: with no cell selected after that Tab, ArrowDown selects the edited row; again, the next row.
+    it('ArrowDown after Tab out of a changed Text cell selects the edited row, then the row below', () => {
+      const { root } = mount();
+      const selectedRows = (): Array<string | null> =>
+        [...root.querySelectorAll('[data-blok-database-table-row][aria-selected="true"]')].map((el) => el.getAttribute('data-row-id'));
+
+      cell(root, 'r1', 'p-notes').click();
+      editorField().value = 'typed';
+      editorField().dispatchEvent(new Event('input', { bubbles: true }));
+      press(editorField(), 'Tab');
+      const first = press(document.body, 'ArrowDown');
+
+      expect(selectedRows()).toEqual(['r1']);
+      expect(first.defaultPrevented).toBe(true);
+      expect(selectedCells(root)).toEqual([]);
+
+      press(document.body, 'ArrowDown');
+      expect(selectedRows()).toEqual(['r2']);
+    });
+
+    it('ArrowDown on the page with no edited row selects nothing', () => {
+      const { root } = mount();
+      const event = press(document.body, 'ArrowDown');
+
+      expect(root.querySelectorAll('[data-blok-database-table-row][aria-selected="true"]')).toHaveLength(0);
+      expect(event.defaultPrevented).toBe(false);
+    });
+
     it('Tab in a Number cell editor saves and selects the cell to the right', () => {
       const { root, handlers } = mount();
 
@@ -1406,6 +1436,15 @@ describe('DatabaseTableView', () => {
     // notion-motion.md Round 72 §3: every Cmd arrow runs to the edge of the table.
     describe('Cmd+arrows on a selected cell', () => {
       const rows = [row('r1', 'Alpha'), row('r2', 'Beta'), row('r3', 'Gamma'), row('r4', 'Delta')];
+
+      // A Cmd step across columns scrolls the table with scrollTo, which jsdom lacks.
+      beforeEach(() => {
+        HTMLElement.prototype.scrollTo = vi.fn();
+      });
+
+      afterEach(() => {
+        Reflect.deleteProperty(HTMLElement.prototype, 'scrollTo');
+      });
 
       it.each([
         ['ArrowUp', 'r3', 'p-amount', 'r1/p-amount'],
@@ -2604,6 +2643,32 @@ describe('DatabaseTableView', () => {
       document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 5, clientY: 60 }));
     });
 
+    // notion-live/motion-rowdrag.json 4536/4546: during the hold the old line fades 1→0 at y 333 while a new one
+    // fades 0→1 at y 448. Escape leaves no line behind.
+    it('crossfades the drop line when it changes slot, and Escape clears both lines', () => {
+      const { root } = mount();
+      const rowEls = [...root.querySelectorAll<HTMLElement>('[data-blok-database-table-row]')];
+
+      rowEls.forEach((el, i) => vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(rect(i * 37)));
+      rowEls[0].querySelector<HTMLElement>('[data-blok-database-table-row-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 5, clientY: 10, button: 0 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 5, clientY: 60 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 5, clientY: 62 }));
+
+      expect(root.querySelectorAll('[data-blok-database-table-drop-line]')).toHaveLength(1);
+
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 5, clientY: 100 }));
+
+      const lines = [...root.querySelectorAll<HTMLElement>('[data-blok-database-table-drop-line]')];
+
+      expect(lines.map((line) => [line.style.top, line.hasAttribute('data-visible')])).toEqual([['74px', false], ['111px', true]]);
+
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(root.querySelector('[data-blok-database-table-drop-line]')).toBeNull();
+      expect(document.querySelector('[data-blok-database-table-row-ghost]')).toBeNull();
+    });
+
     // Notion's row ghost moves sideways with the pointer (notion-live/rowdrag-mid.png: +74px).
     it('moves the row ghost sideways with the pointer, keeping the press offset', () => {
       const { root } = mount();
@@ -2715,6 +2780,142 @@ describe('DatabaseTableView', () => {
       root.querySelector<HTMLElement>('[data-blok-database-table-calc][data-property-id="p-amount"] [data-blok-database-table-calc-box]')?.click();
 
       expect(document.querySelector('[data-blok-popover-custom-class~="blok-database-calc-menu"]')).not.toBeNull();
+    });
+
+    // notion-motion.md Round 111 §1 #4: Notion tints the row holding the current calculation on open.
+    // User decision 2026-11-22: only after a keyboard open (keyboard-only focus law); a mouse open tints nothing.
+    describe('footer menu highlight', () => {
+      // The keyboard cursor, so the next arrow moves on from this row.
+      const lit = (): string[] => [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened] [data-blok-focused="true"]')].map((el) => el.textContent ?? '');
+      const row = (key: string): HTMLElement | undefined =>
+        [...document.querySelectorAll<HTMLElement>('[data-blok-popover-item]')].find((el) => el.textContent?.includes(key));
+      const openFooter = (calculations: Array<{ id: string; fn: CalculationFn }>, propertyId: string): void => {
+        const { root } = mount({ view: tableView({ calculations }) });
+
+        // The popover ignores hovers until the pointer moves from where it rested at open.
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: 1, clientY: 1, bubbles: true }));
+        root.querySelector<HTMLElement>(`[data-blok-database-table-calc][data-property-id="${propertyId}"] [data-blok-database-table-calc-box]`)?.click();
+      };
+      const useMouse = (): void => {
+        document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      };
+      const useKeyboard = (): void => {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+      };
+
+      afterEach(() => {
+        useKeyboard();
+      });
+
+      it('a mouse open tints no row, and nothing stays tinted after a hover and a leave', () => {
+        useMouse();
+        openFooter([{ id: 'p-amount', fn: 'sum' }], 'p-amount');
+
+        expect(lit()).toEqual([]);
+
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 5, bubbles: true }));
+        row('tools.database.calcNone')?.dispatchEvent(new MouseEvent('mouseover', { clientX: 10, clientY: 10, bubbles: true }));
+        document.querySelector<HTMLElement>('[data-blok-popover-opened="true"] [data-blok-popover-container]')
+          ?.dispatchEvent(new MouseEvent('mouseleave', { clientX: 900, clientY: 900 }));
+
+        expect(lit()).toEqual([]);
+      });
+
+      it('a keyboard open starts on More options when Sum is set', () => {
+        useKeyboard();
+        openFooter([{ id: 'p-amount', fn: 'sum' }], 'p-amount');
+
+        expect(lit()).toHaveLength(1);
+        expect(lit()[0]).toContain('tools.database.calcMoreOptions');
+      });
+
+      it('a keyboard open starts on Count when Count all is set', () => {
+        useKeyboard();
+        openFooter([{ id: 'p-amount', fn: 'count' }], 'p-amount');
+
+        expect(lit()).toHaveLength(1);
+        expect(lit()[0]).toContain('tools.database.calcCount');
+      });
+
+      it('a keyboard open starts on None when nothing is set', () => {
+        useKeyboard();
+        // Another column's sum keeps the footer row; p-notes has nothing set.
+        openFooter([{ id: 'p-amount', fn: 'sum' }], 'p-notes');
+
+        expect(lit()).toHaveLength(1);
+        expect(lit()[0]).toContain('tools.database.calcNone');
+      });
+
+      // notion-motion.md Round 115 §1 #4 (r115-n-tlfoot-calc-kbopen.raw): ArrowDown from None goes to Count.
+      it('after a keyboard open on None, ArrowDown moves the cursor to Count', () => {
+        useKeyboard();
+        openFooter([{ id: 'p-amount', fn: 'sum' }], 'p-notes');
+        document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'ArrowDown' }));
+
+        expect(lit()).toHaveLength(1);
+        expect(lit()[0]).toContain('tools.database.calcCount');
+      });
+
+      // User decision 2026-11-22: no tint stays on a row once the pointer takes over.
+      it('after a keyboard open, the start row lets go once the pointer takes a row, and nothing stays after a leave', () => {
+        useKeyboard();
+        openFooter([{ id: 'p-amount', fn: 'sum' }], 'p-amount');
+
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 5, bubbles: true }));
+        row('tools.database.calcNone')?.dispatchEvent(new MouseEvent('mouseover', { clientX: 10, clientY: 10, bubbles: true }));
+
+        expect(lit()).toEqual([]);
+
+        document.querySelector<HTMLElement>('[data-blok-popover-opened="true"] [data-blok-popover-container]')
+          ?.dispatchEvent(new MouseEvent('mouseleave', { clientX: 900, clientY: 900 }));
+
+        expect(lit()).toEqual([]);
+      });
+    });
+
+    // notion-motion.md Round 115 §1 #4: the header's Calculate list starts on its current row on a keyboard open.
+    // The table opens the header menu itself when the database is locked.
+    describe('header Calculate list on its own header menu', () => {
+      const cursor = (): string[] => [...document.querySelectorAll<HTMLElement>('[data-blok-nested] [data-blok-focused="true"]')].map((el) => el.textContent ?? '');
+      const openCalculate = async (): Promise<void> => {
+        const { root, view } = mount({ view: tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }] }) });
+
+        view.openHeaderMenu('p-amount', root.querySelector<HTMLElement>('[role="columnheader"][data-property-id="p-amount"]') ?? root);
+        [...document.querySelectorAll<HTMLElement>('[data-blok-popover-item]')].find((el) => el.textContent?.includes('tools.database.tableCalculate'))?.click();
+        await Promise.resolve();
+      };
+
+      afterEach(() => {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+      });
+
+      it('a keyboard open starts on More options when Sum is set', async () => {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+        await openCalculate();
+
+        expect(cursor()).toHaveLength(1);
+        expect(cursor()[0]).toContain('tools.database.calcMoreOptions');
+      });
+
+      it('a mouse open starts on no row', async () => {
+        document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+        await openCalculate();
+
+        expect(document.querySelector('[data-blok-nested] [data-blok-popover-item]')).not.toBeNull();
+        expect(cursor()).toEqual([]);
+      });
+
+      it('after a keyboard open, the start row lets go once the pointer takes a row', async () => {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+        await openCalculate();
+        const none = [...document.querySelectorAll<HTMLElement>('[data-blok-nested] [data-blok-popover-item]')]
+          .find((el) => el.textContent?.includes('tools.database.calcNone'));
+
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 5, bubbles: true }));
+        none?.dispatchEvent(new MouseEvent('mouseover', { clientX: 10, clientY: 10, bubbles: true }));
+
+        expect(cursor()).toEqual([]);
+      });
     });
 
     // r11-calc-count-sub.png and r11-group-agg-menu.raw: the Count list is 250 wide.

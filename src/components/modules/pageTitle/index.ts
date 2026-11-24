@@ -1,6 +1,6 @@
 import { Module } from '../../__module';
 import { DATA_ATTR } from '../../constants/data-attributes';
-import { I18nChanged } from '../../events';
+import { BlockChanged, BlocksRendered, I18nChanged } from '../../events';
 import { logLabeled } from '../../utils';
 import type { EditorWidth } from '../../../../types/api/width';
 import type { TitleChange, TitleSetOptions } from '../../../../types/api/title';
@@ -126,6 +126,8 @@ export class PageTitle extends Module {
     });
     this.stopPageListener = YjsManager.onPageChange((key, source) => this.onPageChange(key, source));
     this.eventsDispatcher.on(I18nChanged, this.relabel);
+    this.eventsDispatcher.on(BlocksRendered, this.refreshActions);
+    this.eventsDispatcher.on(BlockChanged, this.refreshActions);
   }
 
   public getText(): string {
@@ -316,6 +318,8 @@ export class PageTitle extends Module {
     this.dom?.title.removeEventListener('focusin', this.onFocusIn);
     if (this.resolved !== null) {
       this.eventsDispatcher.off(I18nChanged, this.relabel);
+      this.eventsDispatcher.off(BlocksRendered, this.refreshActions);
+      this.eventsDispatcher.off(BlockChanged, this.refreshActions);
     }
     this.dom?.header.remove();
     this.dom = null;
@@ -464,36 +468,62 @@ export class PageTitle extends Module {
     this.coverControl?.redraw();
   };
 
-  /** The page's first block may add buttons to the row (a full-page database's "Add description"). */
+  /**
+   * The page's first block may add buttons to the row (a full-page database's "Add description").
+   * A button is kept and relabelled, never rebuilt: a new one under the pointer shows at once, with no fade.
+   */
   private readonly refreshActions = (): void => {
-    const row = this.dom?.iconRow;
+    const dom = this.dom;
 
-    if (row === undefined) {
+    if (dom === null) {
       return;
     }
     const first = this.Blok.BlockManager.getBlockByIndex(0);
     const actions = this.readOnly || first === undefined ? [] : first.pageHeaderActions();
+    const kept = new Map(this.actionButtons.map((button) => [button.getAttribute(DATA_ATTR.pageHeaderAction), button]));
 
-    this.actionButtons.forEach((button) => button.remove());
+    // database/index.ts sets this attribute on its root when `fullPage`.
+    dom.header.toggleAttribute(
+      DATA_ATTR.pageFullDatabase,
+      first?.holder.querySelector(`:scope > [${DATA_ATTR.elementContent}] > [data-blok-database-page]`) != null
+    );
     this.actionButtons = actions.map((action) => {
-      const button = document.createElement('button');
-      const label = document.createElement('span');
+      const button = kept.get(action.name) ?? this.createActionButton();
 
-      button.type = 'button';
+      kept.delete(action.name);
       button.setAttribute(DATA_ATTR.pageHeaderAction, action.name);
-      // The tool's own trusted constant; the label goes in as text.
-      button.innerHTML = action.icon ?? '';
-      label.textContent = action.label;
-      button.append(label);
-      button.addEventListener('click', () => {
+      // BlockChanged runs this on every edit, so redraw only a changed label.
+      if (button.lastElementChild?.textContent !== action.label) {
+        // The tool's own trusted constant; the label goes in as text.
+        button.innerHTML = action.icon ?? '';
+        const label = document.createElement('span');
+
+        label.textContent = action.label;
+        button.append(label);
+      }
+      button.onclick = () => {
         action.onActivate();
         this.refreshActions();
-      });
+      };
 
       return button;
     });
-    row.append(...this.actionButtons);
+    kept.forEach((button) => button.remove());
+    // Re-appending a placed button restarts it with no transition.
+    const unplaced = this.actionButtons.filter((button) => button.parentElement !== dom.iconRow);
+
+    if (unplaced.length > 0) {
+      dom.iconRow.append(...unplaced);
+    }
   };
+
+  private createActionButton(): HTMLButtonElement {
+    const button = document.createElement('button');
+
+    button.type = 'button';
+
+    return button;
+  }
 
   private createCover(header: HTMLElement): CoverControl {
     const { I18n, API } = this.Blok;

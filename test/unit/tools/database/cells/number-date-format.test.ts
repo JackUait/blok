@@ -81,6 +81,13 @@ describe('number-format', () => {
     expect(numberFill(-3, {})).toBe(0);
     expect(numberFill(5, { divideBy: 0 })).toBe(0);
   });
+
+  // A Percent bar has no Divide by row (notion-motion.md R115 §1 #5), so a saved one must not change its fill.
+  it('a Percent bar ignores a saved divide-by; a Number bar and a Percent ring keep it', () => {
+    expect(numberFill(0.4, { showAs: 'bar', format: 'percent', divideBy: 2 })).toBe(0.4);
+    expect(numberFill(30, { showAs: 'bar', format: 'number', divideBy: 60 })).toBe(0.5);
+    expect(numberFill(0.4, { showAs: 'ring', format: 'percent', divideBy: 2 })).toBe(0.2);
+  });
 });
 
 describe('formatDateDisplay', () => {

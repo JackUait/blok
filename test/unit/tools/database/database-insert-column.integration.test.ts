@@ -38,10 +38,20 @@ const menuItem = (title: string): HTMLElement => {
   return item;
 };
 
-/** Column menu › Insert left / right › Text, as a user picks them. */
-const insertBeside = (el: HTMLElement, propertyId: string, item: string): void => {
+/** Column menu › Insert left / right, as a user picks it; returns the type picker. */
+const openInsert = (el: HTMLElement, propertyId: string, item: string): HTMLElement => {
   el.querySelector<HTMLElement>(`[data-blok-database-table-column-header][data-property-id="${propertyId}"] [data-blok-database-table-column-button]`)?.click();
   menuItem(item).click();
+  const picker = document.querySelector<HTMLElement>('[data-blok-database-property-type-layout]');
+
+  if (picker === null) throw new Error('no type picker');
+
+  return picker;
+};
+
+/** Column menu › Insert left / right › Text, as a user picks them. */
+const insertBeside = (el: HTMLElement, propertyId: string, item: string): void => {
+  openInsert(el, propertyId, item);
   const text = document.querySelector<HTMLElement>('[data-blok-database-property-type-option="text"]');
 
   if (text === null) throw new Error('no type list');
@@ -82,5 +92,12 @@ describe('DatabaseTool — column menu Insert left / right', () => {
     expect(order).toHaveLength(4);
     expect(order[0]).toBe('title');
     expect(order.slice(2)).toEqual(['notes', 'where']);
+  });
+
+  // notion-motion.md Round 114 §1 #2: Notion lays Insert left/right out as the "+": name box over the card, list fading out.
+  it.each(['tools.database.tableInsertLeft', 'tools.database.tableInsertRight'])('%s puts the name box over the card, as the "+" does', (item) => {
+    const picker = openInsert(build(), 'notes', item);
+
+    expect(picker.hasAttribute('data-blok-database-property-type-name-over-anchor')).toBe(true);
   });
 });

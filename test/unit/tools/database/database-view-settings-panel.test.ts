@@ -676,6 +676,37 @@ describe('view settings panel', () => {
     expect(document.querySelector('[data-blok-testid="database-layout-board"]')?.getAttribute('aria-checked')).toBe('true');
   });
 
+  // notion-motion.md Round 114 §1 #4 (r114-n-cardsize-menu.raw): Card size opens a 250 menu over the Layout page,
+  // not a page; the size in use is checked; Escape gives the row the focus back.
+  it('opens Card size as a 250 menu over the Layout page', () => {
+    const h = harness({ type: 'gallery' });
+
+    h.ctx.layoutItems = () => [{
+      type: PopoverItemType.Default,
+      name: 'gallery-card-size',
+      title: 'Card size',
+      children: { items: [
+        { type: PopoverItemType.Default, name: 'gallery-card-size-small', title: 'Small', isActive: false, onActivate: vi.fn() },
+        { type: PopoverItemType.Default, name: 'gallery-card-size-medium', title: 'Medium', isActive: true, onActivate: vi.fn() },
+      ] },
+    }];
+    h.open();
+    click('database-settings-layout');
+
+    expect(q('database-gallery-card-size')?.getAttribute('aria-haspopup')).toBe('menu');
+    click('database-gallery-card-size');
+
+    const menu = q('database-gallery-card-size-menu');
+
+    expect(menu?.style.width).toBe('250px');
+    expect(q('database-view-settings')?.getAttribute('data-blok-database-panel-page')).toBe('layout');
+    expect(q('database-gallery-card-size-medium')?.getAttribute('aria-checked')).toBe('true');
+    menu?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(q('database-gallery-card-size-menu')).toBeNull();
+    expect(q('database-gallery-card-size')).toHaveFocus();
+  });
+
   it('mounts the layout rows a gallery or calendar gives: a page per choice list, a switch per toggle', () => {
     const h = harness({ type: 'gallery' });
     const pickLarge = vi.fn();
@@ -707,6 +738,168 @@ describe('view settings panel', () => {
     expect(document.querySelector('[data-blok-testid="database-gallery-card-size-small"]')?.getAttribute('aria-checked')).toBe('true');
     click('database-gallery-card-size-large');
     expect(pickLarge).toHaveBeenCalledTimes(1);
+  });
+
+  // notion-motion.md Round 14 (r14-cal-showas.png), Round 87 §2 (r87-n-calas-open-mo.raw): a 250 menu under the row, end edges aligned; the › turns.
+  describe('"Show calendar as"', () => {
+    const calendar = (pickWeek: () => void, week = false): Harness => {
+      const h = harness({ type: 'calendar' });
+
+      h.ctx.layoutItems = () => [{
+        type: PopoverItemType.Default,
+        name: 'calendar-show-as',
+        title: 'Show calendar as',
+        children: { items: [
+          { type: PopoverItemType.Default, name: 'calendar-range-month', title: 'Month', isActive: !week, onActivate: vi.fn() },
+          { type: PopoverItemType.Default, name: 'calendar-range-week', title: 'Week', isActive: week, onActivate: pickWeek },
+        ] },
+      }];
+      h.open();
+      click('database-settings-layout');
+
+      return h;
+    };
+    const menu = (): HTMLElement | null => q('database-calendar-show-as-menu');
+
+    it('opens a 250 menu under the row and keeps the Layout page', () => {
+      calendar(vi.fn());
+      const row = q('database-calendar-show-as');
+
+      expect(row?.getAttribute('aria-haspopup')).toBe('menu');
+      expect(row?.getAttribute('aria-expanded')).toBe('false');
+      click('database-calendar-show-as');
+
+      expect(menu()?.style.width).toBe('250px');
+      expect(menu()?.closest('[data-blok-popover-custom-class]')?.getAttribute('data-blok-popover-custom-class')?.split(' ')).not.toContain('blok-database-docked-panel');
+      expect(q('database-view-settings')?.getAttribute('data-blok-database-panel-page')).toBe('layout');
+      expect(q('database-calendar-show-as')?.getAttribute('aria-expanded')).toBe('true');
+      expect(menu()?.querySelector('[data-blok-testid="database-calendar-range-month"]')?.getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('runs a pick, closes the menu and gives the row the focus back', () => {
+      const pickWeek = vi.fn();
+
+      calendar(pickWeek);
+      click('database-calendar-show-as');
+      click('database-calendar-range-week');
+
+      expect(pickWeek).toHaveBeenCalledTimes(1);
+      expect(menu()).toBeNull();
+      expect(q('database-calendar-show-as')).toHaveFocus();
+      expect(q('database-calendar-show-as')?.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    // A mouse open fills no row: the keyboard-only focus law (user decision over Notion's filled first row).
+    it('opens with no row filled after a mouse open', () => {
+      calendar(vi.fn(), true);
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      click('database-calendar-show-as');
+
+      expect(q('database-calendar-range-month')?.hasAttribute('data-active')).toBe(false);
+      expect(q('database-calendar-range-week')?.hasAttribute('data-active')).toBe(false);
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+    });
+
+    // notion-motion.md Round 105 §1 #4 (r105-n-calas-open-week.raw): a keyboard open fills the first row, whichever is checked;
+    // the fill then follows the pointer, one row at a time.
+    it('opens with the first row filled after a keyboard open, then the fill follows the pointer', () => {
+      calendar(vi.fn(), true);
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+      click('database-calendar-show-as');
+      const month = q('database-calendar-range-month');
+      const week = q('database-calendar-range-week');
+
+      expect(month?.hasAttribute('data-active')).toBe(true);
+      expect(week?.hasAttribute('data-active')).toBe(false);
+      week?.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+      expect(week?.hasAttribute('data-active')).toBe(true);
+      expect(month?.hasAttribute('data-active')).toBe(false);
+      month?.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+      week?.focus();
+      expect(week?.hasAttribute('data-active')).toBe(true);
+      expect(month?.hasAttribute('data-active')).toBe(false);
+    });
+
+    it('turns the chevron back when Escape closes the menu', () => {
+      calendar(vi.fn());
+      click('database-calendar-show-as');
+      menu()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(menu()).toBeNull();
+      expect(q('database-calendar-show-as')?.getAttribute('aria-expanded')).toBe('false');
+      expect(q('database-view-settings')).not.toBeNull();
+    });
+  });
+
+  // notion-motion.md Round 112 §1 #6, Round 113 §1 #6 (r113-n-settings-cardpreview-{menu,escape}.raw): a 250 menu
+  // over the Layout page, end edges aligned; None filled on open; Page properties › opens the properties; Escape
+  // gives the row the focus back.
+  describe('"Card preview"', () => {
+    const item = (name: string, title: string, extra: Partial<{ isActive: boolean; onActivate: () => void; description: string; children: { items: PopoverItemParams[] } }> = {}): PopoverItemParams =>
+      ({ type: PopoverItemType.Default, name, title, ...extra } as PopoverItemParams);
+    const gallery = (pickFiles: () => void, files = false): Harness => {
+      const h = harness({ type: 'gallery' });
+
+      h.ctx.layoutItems = () => [item('gallery-card-preview', 'Card preview', { children: { items: [
+        item('gallery-card-preview-none', 'None', { isActive: false, onActivate: vi.fn() }),
+        item('gallery-card-preview-cover', 'Page cover', { isActive: false, onActivate: vi.fn() }),
+        item('gallery-card-preview-properties', 'Page properties', { children: { items: [
+          item('gallery-card-preview-p-files', 'Files', { isActive: files, onActivate: pickFiles }),
+        ] } }),
+        item('gallery-card-preview-content', 'Page content', { isActive: !files, onActivate: vi.fn(), description: 'Uses first block on the page' }),
+      ] } })];
+      h.open();
+      click('database-settings-layout');
+
+      return h;
+    };
+    const menu = (): HTMLElement | null => q('database-gallery-card-preview-menu');
+
+    it('opens a 250 menu and keeps the Layout page', () => {
+      gallery(vi.fn());
+      const row = q('database-gallery-card-preview');
+
+      expect(row?.getAttribute('aria-haspopup')).toBe('menu');
+      click('database-gallery-card-preview');
+
+      expect(menu()?.style.width).toBe('250px');
+      expect(q('database-view-settings')?.getAttribute('data-blok-database-panel-page')).toBe('layout');
+      expect(q('database-gallery-card-preview')?.getAttribute('aria-expanded')).toBe('true');
+      expect(q('database-gallery-card-preview-none')?.hasAttribute('data-active')).toBe(true);
+      expect(q('database-gallery-card-preview-content')?.getAttribute('aria-checked')).toBe('true');
+      expect(q('database-gallery-card-preview-content')?.querySelector('[data-blok-database-panel-description]')?.textContent).toBe('Uses first block on the page');
+    });
+
+    it('shows a property picked inside Page properties as the row value', () => {
+      gallery(vi.fn(), true);
+
+      expect(q('database-gallery-card-preview')?.querySelector('[data-blok-database-panel-value]')?.textContent).toBe('Files');
+    });
+
+    it('opens the properties from Page properties and runs a pick', () => {
+      const pickFiles = vi.fn();
+
+      gallery(pickFiles);
+      click('database-gallery-card-preview');
+      click('database-gallery-card-preview-properties');
+
+      expect(menu()).not.toBeNull();
+      expect(q('database-gallery-card-preview-properties-menu')?.style.width).toBe('250px');
+      click('database-gallery-card-preview-p-files');
+
+      expect(pickFiles).toHaveBeenCalledTimes(1);
+      expect(q('database-gallery-card-preview-properties-menu')).toBeNull();
+    });
+
+    it('gives the row the focus back when Escape closes the menu', () => {
+      gallery(vi.fn());
+      click('database-gallery-card-preview');
+      menu()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(menu()).toBeNull();
+      expect(q('database-gallery-card-preview')).toHaveFocus();
+      expect(q('database-view-settings')?.getAttribute('data-blok-database-panel-page')).toBe('layout');
+    });
   });
 
   it('lists the tool actions on the root page; a click closes the panel and runs it', () => {
@@ -798,6 +991,17 @@ describe('view settings panel', () => {
       expect(document.querySelector('[data-blok-testid="database-settings-data-source-title"]')?.textContent).toContain(label);
     });
 
+    // notion-motion.md Round 98 §1 #4: a source block with one view reads "title" too; with two, "titles".
+    it.each([[1, 'tools.database.settingsShowDataSourceTitle'], [2, 'tools.database.showDataSourceTitles']] as const)('on a source block with %i view(s) reads %s', (count, label) => {
+      const h = harness();
+
+      h.ctx.dataSourceTitles = { shown: () => true, toggle: vi.fn(), views: () => count };
+      h.open();
+      click('database-settings-layout');
+
+      expect(document.querySelector('[data-blok-testid="database-settings-data-source-title"]')?.textContent).toContain(label);
+    });
+
     it('is not offered on a database that holds its own rows', () => {
       const h = harness();
 
@@ -813,7 +1017,7 @@ describe('view settings panel', () => {
       const h = harness();
       const toggle = vi.fn();
 
-      h.ctx.dataSourceTitles = { shown: () => false, toggle };
+      h.ctx.dataSourceTitles = { shown: () => false, toggle, views: () => 2 };
       h.open();
       click('database-settings-layout');
 
@@ -3046,7 +3250,35 @@ describe('view settings panel', () => {
       click('database-settings-color');
 
       expect(note()?.textContent).toBe('tools.database.colorBlurb');
+      expect(note()?.hasAttribute('data-blok-database-color-blurb')).toBe(true);
       expect(q('database-color-add')?.hasAttribute('data-blok-database-color-new')).toBe(true);
+    });
+
+    // notion-motion.md Round 95 §1 #7 (r95-n-condcolor-empty.raw): a click leaves the focus on the page.
+    it('leaves nothing focused when a click opens the empty page', () => {
+      harness().open();
+      q('database-settings-color')?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+
+      expect(document.body).toHaveFocus();
+      expect(note()).not.toBeNull();
+      // Escape still steps back from the page.
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(note()).toBeNull();
+      expect(q('database-settings-color')).not.toBeNull();
+    });
+
+    it('keeps the focus in the page when Enter opens it', () => {
+      harness().open();
+      click('database-settings-color');
+
+      expect(q('database-panel-back')).toHaveFocus();
+    });
+
+    it('keeps the focus in the page when a click opens it with rules', () => {
+      harness({ colorRules: [{ id: 'c1', propertyId: 'stage', operator: 'is_not_empty', value: null, color: 'match' }] }).open();
+      q('database-settings-color')?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+
+      expect(q('database-panel-back')).toHaveFocus();
     });
 
     it('drops the intro once a rule exists and heads each card "Property operator ⌄" with a trash', () => {
@@ -3103,7 +3335,7 @@ describe('view settings panel', () => {
       h.open();
       click('database-settings-color');
 
-      expect(q('database-color-value-c1')?.textContent).toBe('tools.database.colorValuePlaceholder');
+      expect(q('database-color-value-c1')?.textContent?.trim()).toBe('tools.database.colorValuePlaceholder');
 
       h.ctx.updateView({ colorRules: [{ id: 'c1', propertyId: 'stage', operator: 'equals', value: ['o1'], color: 'match' }] });
       const token = q('database-color-value-c1')?.querySelector('[data-blok-database-option-pill]');
@@ -3206,13 +3438,30 @@ describe('view settings panel', () => {
       for (const id of ['c1', 'c2', 'c3', 'c4', 'c5']) {
         const value = q(`database-color-value-${id}`);
 
-        expect(value?.textContent, id).toBe('tools.database.colorValuePlaceholder');
+        expect(value?.textContent?.trim(), id).toBe('tools.database.colorValuePlaceholder');
         expect(value?.hasAttribute('data-empty'), id).toBe(true);
       }
     });
 
+    // notion-motion.md Round 20 §4 (r20-cc-is-parts.raw, r21-cc-cb-cc.raw): the "Select..." field ends in a ⌄.
+    it('ends a Checkbox rule\'s "Select..." field in a chevron after its text', () => {
+      const h = harness({ colorRules: [{ id: 'c1', propertyId: 'cb', operator: 'equals', value: null, color: 'green' }] });
+
+      h.ctx.schema = () => [...schema, { id: 'cb', name: 'Done', type: 'checkbox', position: 'b1' }];
+      h.open();
+      click('database-settings-color');
+      const field = q('database-color-value-c1')?.querySelector('[data-blok-database-color-rule-field]');
+      const chevron = field?.lastElementChild;
+
+      expect(chevron?.hasAttribute('data-blok-database-color-rule-chevron')).toBe(true);
+      expect(chevron?.getAttribute('aria-hidden')).toBe('true');
+      expect(chevron?.querySelector('svg')).not.toBeNull();
+      expect(field?.querySelector('[data-blok-database-color-rule-text]')?.textContent).toBe('tools.database.colorValuePlaceholder');
+    });
+
     // notion-motion.md Round 22 §3: "Select..." on Relation, Created by/time and Last edited by/time too.
-    it('reads "Select..." on Relation, Created and Last edited rules while empty', () => {
+    // Round 104 §1 #4: each field ends in the ⌄ as well.
+    it('reads "Select..." with a chevron on Relation, Created and Last edited rules while empty', () => {
       const h = harness({ colorRules: [
         { id: 'c1', propertyId: 'rel', operator: 'contains', value: null, color: 'green' },
         { id: 'c2', propertyId: 'cby', operator: 'contains', value: null, color: 'green' },
@@ -3232,7 +3481,8 @@ describe('view settings panel', () => {
       click('database-settings-color');
 
       for (const id of ['c1', 'c2', 'c3', 'c4', 'c5']) {
-        expect(q(`database-color-value-${id}`)?.textContent, id).toBe('tools.database.colorValuePlaceholder');
+        expect(q(`database-color-value-${id}`)?.textContent?.trim(), id).toBe('tools.database.colorValuePlaceholder');
+        expect(q(`database-color-value-${id}`)?.querySelector('[data-blok-database-color-rule-chevron]'), id).not.toBeNull();
       }
     });
 

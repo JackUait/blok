@@ -808,6 +808,7 @@ export class PagePicker {
     slot.className = PAGE_ICON_CLASSES;
     slot.setAttribute('aria-hidden', 'true');
     slot.setAttribute(DATA_ATTR.testid, 'page-picker-option-icon');
+    slot.setAttribute('data-blok-page-picker-icon', '');
     slot.append(icon);
     // The icon markup's indentation would leak into the option's text name.
     [slot, ...Array.from(slot.querySelectorAll('*'))].forEach((element) => Array.from(element.childNodes).forEach((node) => {
@@ -847,6 +848,7 @@ export class PagePicker {
 
       path.className = PAGE_PATH_CLASSES;
       path.setAttribute(DATA_ATTR.testid, 'page-picker-option-path');
+      path.setAttribute('data-blok-page-picker-path', '');
       path.textContent = result.path.join(PAGE_PATH_SEPARATOR);
       body.append(path);
     }

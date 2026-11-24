@@ -1,7 +1,7 @@
-import { IconChevronDown, IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconForm, IconViewTimeline, IconViewDashboard, IconLink, IconDotsHorizontal, IconPageLayout, IconEyeSlash, IconExpandDiagonal } from '../../components/icons';
+import { IconChevronDown, IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconForm, IconViewTimeline, IconViewDashboard, IconLink, IconDotsHorizontal, IconPageLayout, IconEyeSlash, IconExpandDiagonal, IconArrowDiagonal, IconEmojiSmile } from '../../components/icons';
 import { ADD_VIEW_MENU_WIDTH, DatabaseViewPopover } from './database-view-popover';
 import type { ViewPopoverPlacement } from './database-view-popover';
-import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
+import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_CLOSE_DELAY_MS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { DATABASE_HEADER_MENU_CLASS } from './database-table-menus';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
@@ -13,6 +13,7 @@ import { startInlineRename } from '../../components/utils/inline-rename';
 import { onHover } from '../../components/utils/tooltip';
 import { rovingRadioGroup, type RovingRadioGroup } from '../../components/utils/roving-radio-group';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { isKeyboardModality } from '../../components/utils/input-modality';
 import type { API } from '../../../types';
 import type { DatabaseTabDisplay, DatabaseViewConfig, ViewType } from './types';
 import { isHistoryKey } from './database-keyboard';
@@ -22,6 +23,19 @@ import { positionBetween } from '../../shared/database/positions';
 // notion-motion.md Round 91 §1 #7: from a 556.1 press the tab sat still at 5.9 px and moved at 6.9.
 // 6.5 gives that and the whole-pixel read (6 no, 7 yes); Notion's exact cutoff is unread.
 const DRAG_THRESHOLD = 6.5;
+
+/**
+ * A press away closes a panel at pointerdown; the mousedown that follows in the same task would move
+ * focus to the page. Stops that one mousedown's default, then lets go.
+ */
+const keepFocusThroughPress = (): void => {
+  const keep = (event: MouseEvent): void => event.preventDefault();
+
+  window.addEventListener('mousedown', keep, { capture: true, once: true });
+  setTimeout(() => window.removeEventListener('mousedown', keep, true), 0);
+};
+/** A toolbar icon button's width (database.css `--blok-database-toolbar-icon-size`). */
+const TOOLBAR_ICON_SIZE = 28;
 
 /**
  * Set when a tab is activated from the keyboard. Switching views makes the
@@ -88,7 +102,8 @@ export interface TabBarOptions {
   /** "Source ›": the view's data source, read when the menu opens; undefined leaves the row out. */
   viewSource?: (viewId: string) => { name: string; enabled: boolean } | undefined;
   /** "Source ›" pressed: opens the view settings' Source picker. */
-  onViewSource?: (viewId: string, anchor: HTMLElement) => void;
+  /** `onClose` runs once the source panel has closed, after it has put focus back. */
+  onViewSource?: (viewId: string, anchor: HTMLElement, onClose?: (escape: boolean, away?: boolean) => void) => void;
   /** "Copy link to view". */
   onCopyLink?: (viewId: string) => void;
   /** "Open as full page": read when the menu opens; undefined leaves the row out. */
@@ -97,6 +112,8 @@ export interface TabBarOptions {
   onEditTitle?: () => void;
   /** "Edit layout" in the title row's "…": Customize layout on a row page. */
   onEditLayout?: () => void;
+  /** "Edit icon" in the title row's "…": the "…" gets focus back, and the picker sits under the row (when measured). */
+  onEditIcon?: (trigger: HTMLElement, row?: DOMRect) => void;
   /** This person's "Display as". Defaults to both. */
   display?: DatabaseTabDisplay;
   /** Offers "Display as" in the tab menu. */
@@ -132,6 +149,9 @@ export class DatabaseTabBar {
   /** "Table ⌄": the current view as one button once fewer than two tabs fit. */
   private compactBtnEl: HTMLElement | null = null;
   private resizeObserver: ResizeObserver | null = null;
+  /** The toolbar's search mark lands mid-grow (database-view-controls.ts), so no resize may follow it. */
+  private searchObserver: MutationObserver | null = null;
+  private observedToolbar: HTMLElement | null = null;
 
   private isDragging = false;
   /** The click after a drop belongs to the drag, not the tab. */
@@ -200,6 +220,8 @@ export class DatabaseTabBar {
     const addBtn = document.createElement('button');
     addBtn.setAttribute('data-blok-database-add-view', '');
     addBtn.setAttribute('aria-label', this.t('tools.database.addView', 'Add view'));
+    // One view moves it out of the bar into the title row, so it carries its own owner: Blok's block Tab would keep the focus.
+    addBtn.setAttribute(DATA_ATTR.keyboardOwner, '');
     addBtn.innerHTML = IconPlus;
     onHover(addBtn, this.t('tools.database.addNewView', 'Add a new view'));
     addBtn.addEventListener('click', () => {
@@ -319,7 +341,9 @@ export class DatabaseTabBar {
     const viewBar = parent?.hasAttribute('data-blok-database-view-bar') === true ? parent : null;
     const toolbar = viewBar?.querySelector<HTMLElement>(':scope > [data-blok-database-view-toolbar]') ?? null;
     const tabs = Array.from(bar.querySelectorAll<HTMLElement>('[data-blok-database-tab]'));
+    const focused = tabs.find((tab) => tab === document.activeElement) ?? (document.activeElement === this.compactBtnEl ? this.compactBtnEl : null);
 
+    this.watchSearchMark(toolbar);
     for (const tab of tabs) {
       tab.style.display = '';
     }
@@ -360,6 +384,9 @@ export class DatabaseTabBar {
     probe.remove();
     this.moreBtnEl = null;
 
+    // notion-motion.md Round 103 §1 #3: Notion folds a tab before it gives up the room of a » that shows on hover.
+    // This » takes no room (database.css), so the toolbar's width leaves it out.
+    const idleMinimize = toolbar?.querySelector(':scope > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"]:not([hidden])') != null ? TOOLBAR_ICON_SIZE : 0;
     const fold = planViewBarFold({
       width,
       gap,
@@ -367,23 +394,71 @@ export class DatabaseTabBar {
       current: tabs.findIndex((tab) => tab.getAttribute('data-view-id') === this.options.activeViewId),
       add,
       more,
-      toolbar: { full, noIcons },
+      toolbar: { full: full + idleMinimize, noIcons: noIcons + idleMinimize },
     });
+
+    // notion-motion.md Round 99 §1 #8: an open search folds two or more tabs into the pill, room or not.
+    const searching = tabs.length >= 2 && toolbar?.hasAttribute('data-blok-database-searching') === true;
+    const fit = searching ? 'compact' : fold.tabs;
 
     viewBar?.toggleAttribute('data-blok-database-fold-icons', !fold.icons);
     viewBar?.toggleAttribute('data-blok-database-fold-new', !fold.newButton);
-    if (fold.tabs === 'all') return;
-    // Notion's "+" leaves once a tab folds.
-    bar.setAttribute('data-blok-database-tab-folded', '');
-    if (fold.tabs === 'compact') {
+    if (fit === 'compact') {
+      // Notion's "+" leaves once a tab folds.
+      bar.setAttribute('data-blok-database-tab-folded', '');
       for (const tab of tabs) {
         tab.style.display = 'none';
       }
       this.placeCompactButton();
-
-      return;
+    } else if (fit !== 'all') {
+      bar.setAttribute('data-blok-database-tab-folded', '');
+      this.foldTabs(fit);
     }
-    this.foldTabs(fold.tabs);
+    this.markMinimizeRoom(viewBar, toolbar);
+    this.keepFocus(focused);
+  }
+
+  /**
+   * The hover-only » takes no room (database.css), so it stays hidden where
+   * the tabs run up to the toolbar and it would cover them.
+   */
+  private markMinimizeRoom(viewBar: HTMLElement | null, toolbar: HTMLElement | null): void {
+    const bar = this.element;
+
+    if (viewBar === null || toolbar === null || bar === null) return;
+    const rtl = getComputedStyle(viewBar).direction === 'rtl';
+    const shown = Array.from(bar.children, (child) => child.getBoundingClientRect()).filter((rect) => rect.width > 0);
+    const start = toolbar.getBoundingClientRect();
+    const tabsEnd = rtl ? Math.min(...shown.map((rect) => rect.left)) : Math.max(...shown.map((rect) => rect.right));
+    // No shown child gives ±Infinity, so the room is Infinity either way.
+    const room = rtl ? tabsEnd - start.right : start.left - tabsEnd;
+
+    viewBar.toggleAttribute('data-blok-database-fold-minimize', room < TOOLBAR_ICON_SIZE);
+  }
+
+  private watchSearchMark(toolbar: HTMLElement | null): void {
+    if (toolbar === this.observedToolbar || typeof MutationObserver === 'undefined') return;
+    this.searchObserver?.disconnect();
+    this.observedToolbar = toolbar;
+    if (toolbar === null) return;
+    this.searchObserver ??= new MutationObserver(() => this.refold());
+    // Subtree: » showing or not, or taking its room or not, changes the room the tabs have.
+    this.searchObserver.observe(toolbar, {
+      attributes: true,
+      subtree: true,
+      attributeFilter: ['data-blok-database-searching', 'hidden', 'data-blok-database-toolbar-hover-only'],
+    });
+  }
+
+  /** A fold that hid the focused tab or pill hands the focus to what now stands for the current view. */
+  private keepFocus(focused: HTMLElement | null): void {
+    const bar = this.element;
+
+    if (focused === null || bar === null || focused.isConnected && focused.style.display !== 'none') return;
+    const active = bar.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${CSS.escape(this.options.activeViewId)}"]`);
+    const target = this.compactBtnEl ?? (active !== null && active.style.display !== 'none' ? active : null);
+
+    target?.focus({ preventScroll: true });
   }
 
   /** "Table ⌄": the current view's icon and name and a chevron; it opens the views list. */
@@ -619,6 +694,8 @@ export class DatabaseTabBar {
     });
 
     this.contextPopover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
+
+    this.contextPopover.nestedCloseDelay = DATABASE_SUBMENU_CLOSE_DELAY_MS;
     this.contextPopover.show();
   }
 
@@ -636,9 +713,32 @@ export class DatabaseTabBar {
       valueLabel: source.name,
       chevron: true,
       isDisabled: !source.enabled,
-      closeOnActivate: true,
-      onActivate: () => onSource(viewId, anchor),
+      onActivate: () => this.openSourceFromMenu(viewId, anchor, onSource),
     }];
+  }
+
+  /**
+   * notion-motion.md Round 110 §1 #3: the source panel opens over the tab menu, which stays.
+   * Escape or a click away (Round 114 §1 #1) closes the panel only and gives focus back to the Source row;
+   * a pick takes the menu too. A pointer close leaves no cursor on the row (keyboard-only focus law).
+   */
+  private openSourceFromMenu(viewId: string, anchor: HTMLElement, onSource: NonNullable<TabBarOptions['onViewSource']>): void {
+    const popover = this.contextPopover;
+    // notion-motion.md Round 111 §1 #3: Notion covers the menu with a see-through layer while the panel is up.
+    const release = popover?.holdOpen('database-view-source');
+
+    onSource(viewId, anchor, (escape, away = false) => {
+      // A rebuild (the view switched) already closed this menu.
+      if (popover === null || this.contextPopover !== popover) return;
+      if ((escape || away) && release !== undefined) {
+        release(escape || isKeyboardModality() ? 'database-view-source' : undefined);
+        popover.getElement().querySelector('[data-blok-item-name="database-view-source"]')?.closest<HTMLElement>('[data-blok-popover-items]')?.focus({ preventScroll: true });
+        if (away) keepFocusThroughPress();
+
+        return;
+      }
+      this.closeContextPopover();
+    });
   }
 
   /** "Hide data source titles" (research/23 §10). The item stays with one source too. */
@@ -875,10 +975,8 @@ export class DatabaseTabBar {
         noResults: this.t('find.noResults', 'No results'),
       },
       readOnly: this.readOnly,
-      onSelect: (viewId) => {
-        if (viewId !== this.options.activeViewId) {
-          this.options.onTabClick(viewId);
-        }
+      onSelect: (viewId, byKeyboard) => {
+        this.activateTab(viewId, byKeyboard);
       },
       onReorder: (viewId, afterId, beforeId) => this.reorderBetween(viewId, afterId, beforeId),
       onMenu: (button, viewId, row) => {
@@ -929,8 +1027,10 @@ export class DatabaseTabBar {
 
         return true;
       },
-      onClose: () => {
+      onClose: (escape) => {
         this.closeViewPopover();
+        // The list's search field held the focus; Escape hands it back to the button that opened it.
+        if (escape && anchor.isConnected) (this.searchFieldBehind(anchor) ?? anchor).focus({ preventScroll: true });
       },
       yieldsKeys: () => this.viewPopover !== null,
       // notion-motion.md Round 38 §6: the first outside click closes only the Add view card.
@@ -942,6 +1042,15 @@ export class DatabaseTabBar {
 
     this.overflowList = list;
     list.open();
+  }
+
+  /** notion-motion.md Round 100 §1 #6: a pill folded by the toolbar search hands Escape back to that search. */
+  private searchFieldBehind(anchor: HTMLElement): HTMLElement | null {
+    const toolbar = this.observedToolbar;
+
+    if (anchor !== this.compactBtnEl || toolbar?.hasAttribute('data-blok-database-searching') !== true) return null;
+
+    return toolbar.querySelector<HTMLElement>('[data-blok-database-search-input]:not([data-closing])');
   }
 
   /** Moves a view between two neighbours, the same way for a tab and an overflow row. */
@@ -1108,6 +1217,9 @@ export class DatabaseTabBar {
   destroy(): void {
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
+    this.searchObserver?.disconnect();
+    this.searchObserver = null;
+    this.observedToolbar = null;
     this.cleanupDrag();
     this.closeContextPopover();
     this.closeOverflowDropdown();
@@ -1124,23 +1236,27 @@ export class DatabaseTabBar {
   }
 
   /**
-   * The title row's "…" with one view (feel/findings-toolbar V03): Notion's
-   * items that Blok can back, in Notion's order.
+   * The title row's "…" (feel/findings-toolbar V03): Notion's items that Blok
+   * can back, in Notion's order (notion-motion.md Round 112 §1 #2). With several
+   * views Notion drops the view rows (Round 111 §1 #2).
    */
-  createTitleMoreButton(): HTMLElement {
+  createTitleMoreButton(several = false): HTMLElement {
     const button = document.createElement('button');
     const viewId = this.options.activeViewId;
     const t = this.t.bind(this);
 
     button.type = 'button';
     button.setAttribute('data-blok-database-title-more', '');
+    // Not the title row: its title is a text field that keeps Blok's keys.
+    button.setAttribute(DATA_ATTR.keyboardOwner, '');
     button.setAttribute('aria-label', t('tools.database.tableMoreActions', 'More actions'));
     button.innerHTML = IconDotsHorizontal;
     button.addEventListener('click', () => {
       if (this.contextPopover !== null) return;
-      const { onCopyLink, onEditTitle, onEditLayout, onDataSourceTitlesToggle } = this.options;
+      const { onCopyLink, onEditTitle, onEditLayout, onEditIcon, onDataSourceTitlesToggle } = this.options;
       const hidden = this.options.dataSourceTitlesHidden === true;
-      const view: PopoverItemParams[] = [
+      const openFullPage = this.options.openFullPage?.();
+      const view: PopoverItemParams[] = several ? [] : [
         ...(onCopyLink === undefined ? [] : [{
           icon: IconLink,
           name: 'database-title-copy-link',
@@ -1158,12 +1274,28 @@ export class DatabaseTabBar {
       ];
       // A hidden title has nothing to edit.
       const edit: PopoverItemParams[] = [
+        ...(openFullPage === undefined ? [] : [{
+          icon: IconArrowDiagonal,
+          name: 'database-title-view-database',
+          title: t('tools.database.viewDatabase', 'View database'),
+          closeOnActivate: true,
+          onActivate: () => openFullPage(viewId),
+        }]),
         ...(onEditTitle === undefined || hidden ? [] : [{
           icon: IconPencil,
           name: 'database-title-edit',
           title: t('tools.database.editCardTitle', 'Edit title'),
           closeOnActivate: true,
           onActivate: onEditTitle,
+        }]),
+        ...(onEditIcon === undefined || hidden ? [] : [{
+          icon: IconEmojiSmile,
+          name: 'database-title-edit-icon',
+          title: t('tools.database.tableEditIcon', 'Edit icon'),
+          closeOnActivate: true,
+          // Read before the menu closes and takes the row with it.
+          onActivate: () => onEditIcon(button, this.contextPopover?.getElement()
+            .querySelector('[data-blok-item-name="database-title-edit-icon"]')?.getBoundingClientRect()),
         }]),
         ...(onEditLayout === undefined ? [] : [{
           icon: IconPageLayout,
@@ -1184,7 +1316,8 @@ export class DatabaseTabBar {
         .filter((group) => group.length > 0)
         .flatMap((group, index) => index === 0 ? group : [{ type: PopoverItemType.Separator as const }, ...group]);
 
-      this.showMenu(button, items);
+      // r111-n-titlemore-menu-2views.raw, r112-n-titlemore-menu-1view.raw: 200 wide, 28px rows, 4 under the ⋯.
+      this.showMenu(button, items, { class: `${DATABASE_HEADER_MENU_CLASS} blok-database-title-menu`, minWidth: '200px', offset: 4 });
     });
 
     return button;

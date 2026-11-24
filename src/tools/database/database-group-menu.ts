@@ -17,6 +17,13 @@ export const DATABASE_MENU_CLASS = 'blok-database-menu';
  */
 export const DATABASE_SUBMENU_OPEN_DELAY_MS = 125;
 
+/**
+ * How long a database menu keeps a hovered submenu after the pointer moves to
+ * another row. Notion starts the fade 110–120ms after (notion-motion.md R11
+ * "Edit property flyout close timing"). Editor menus keep their own 300ms.
+ */
+export const DATABASE_SUBMENU_CLOSE_DELAY_MS = 115;
+
 /** The board column's group menu: the header menu's 28px rows plus its own icon and text offsets (database.css). */
 export const DATABASE_GROUP_MENU_CLASS = `${DATABASE_MENU_CLASS} blok-database-header-menu blok-database-group-menu`;
 

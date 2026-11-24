@@ -122,6 +122,18 @@ test('shows "2 backlinks" first in the hover row, hidden until the top of the pe
   const box = await button.boundingBox();
 
   expect(box?.height).toBe(28);
+  // notion-motion.md Round 56 §8: the glyph takes 8.7 of the row, so the button is pad 8 + 8.7 + 6 + label + 8.
+  const glyph = await button.locator('[data-blok-database-backlinks-icon]').boundingBox();
+  const label = await button.evaluate((el) => {
+    const range = document.createRange();
+
+    range.selectNodeContents(el.lastChild ?? el);
+
+    return range.getBoundingClientRect().width;
+  });
+
+  expect(glyph?.width).toBeCloseTo(8.7, 1);
+  expect(box?.width).toBeCloseTo(8 + 8.7 + 6 + label + 8, 0);
 });
 
 test('lists the mentioning pages; one Escape closes only the list', async ({ page }) => {

@@ -75,8 +75,46 @@ describe('DatabaseTool — description on a full-page database', () => {
     description.innerHTML = '';
     description.dispatchEvent(new FocusEvent('blur'));
 
-    expect(field(el)).toBeNull();
     expect(save(tool)).not.toHaveProperty('description');
+  });
+
+  it('keeps a new empty line after it loses focus, without saving it (notion-motion.md Round 99 #7)', () => {
+    const { tool, el } = open({ fullPage: true });
+
+    tool.pageHeaderActions()[0]?.onActivate();
+    const description = field(el);
+
+    if (description === null) throw new Error('no field');
+    description.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    description.blur();
+    description.dispatchEvent(new FocusEvent('blur'));
+
+    expect(field(el)).toBe(description);
+    expect(tool.pageHeaderActions()[0]?.label).toBe('tools.database.hideDescription');
+    expect(save(tool)).not.toHaveProperty('description');
+
+    const reloaded = open(save(tool));
+
+    expect(field(reloaded.el)).toBeNull();
+    expect(reloaded.tool.pageHeaderActions()[0]?.label).toBe('tools.database.addDescription');
+  });
+
+  it('keeps the empty line when other data arrives, and drops a cleared one that had text', () => {
+    const { tool, el } = open({ fullPage: true });
+
+    tool.pageHeaderActions()[0]?.onActivate();
+    const description = field(el);
+
+    description?.dispatchEvent(new FocusEvent('blur'));
+    tool.setData(data({ fullPage: true, title: 'Renamed' }));
+
+    expect(field(el)).toBe(description);
+
+    tool.setData(data({ fullPage: true, description: 'From a peer' }));
+    expect(field(el)?.innerHTML).toBe('From a peer');
+
+    tool.setData(data({ fullPage: true }));
+    expect(field(el)).toBeNull();
   });
 
   it('keeps Enter and an empty Backspace away from core', () => {

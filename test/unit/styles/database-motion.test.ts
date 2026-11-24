@@ -309,6 +309,47 @@ describe('database toolbar search', () => {
     expect(closing).toContain('inline-size: 0');
     expect(closing).toContain('opacity: 0');
   });
+
+  // notion-motion.md Round 100 §1 #6 (r100-n-fold-pill-menu.raw): Notion's input narrows 146→126 for a query, so the field takes no
+  // more room. The × sits over the field's end: a wider toolbar would fold the icons at the first keystroke.
+  it('lays the clear × over the field\'s end, so a query adds no width', () => {
+    expect(database).toContain('--blok-database-search-clear-size: 24px;');
+    expect(body(database, `[data-blok-database-view-toolbar] > [data-blok-database-search-clear]`)).toContain('margin-inline-start: calc(-1 * var(--blok-database-search-clear-size))');
+    expect(body(database, `${INPUT}:has(+ [data-blok-database-search-clear]:not([hidden]))`)).toContain('padding-inline-end: var(--blok-database-search-clear-size)');
+  });
+
+  // notion-motion.md Round 101 §1 #8 (r100-n-search-open-rest.raw): Search 921.7, field 949.7, ⤢ 1099.7, with no gap round the field.
+  it('sets the field and its × against their neighbours, with no 1px gap', () => {
+    const SPACED = rules(database).filter((rule) => rule.body.includes('margin-inline: var(--blok-border-width-hairline)'))
+      .flatMap((rule) => rule.selectors).find((selector) => selector.startsWith('[data-blok-database-view-toolbar] > :not('));
+
+    expect(SPACED).toContain(INPUT);
+    expect(SPACED).toContain('[data-blok-database-search-clear]');
+  });
+
+  // notion-motion.md Round 102 §1 #9 (r102-n-struct-calendar.raw): » 846.3 + 28 = "No date (2)" 874.3, and its end 959.6 meets Filter 959.7.
+  // r61-n-glance-map.raw: "No place (3)" ends 987.6 and the next icon box starts 987.7.
+  it('sets "No date (N)" against its neighbours, with no 1px gap', () => {
+    const SPACED = rules(database).filter((rule) => rule.body.includes('margin-inline: var(--blok-border-width-hairline)'))
+      .flatMap((rule) => rule.selectors).find((selector) => selector.startsWith('[data-blok-database-view-toolbar] > :not('));
+
+    expect(SPACED).toContain('[data-blok-database-no-date-button]');
+  });
+
+  // notion-motion.md Round 101 §1 #5 (r101-n-kb-search-type.raw, r101-n-search-query.png): "Clear Input" is 24×24 and round,
+  // its icon box 20; the drawn disc (15 in Notion, 16 here) and the 6px × keep Blok's look.
+  it('draws the × as a round 24px button with a 20px icon and a 16px disc', () => {
+    const clear = body(database, `[data-blok-database-view-toolbar] > [data-blok-database-search-clear]`);
+    const icon = body(database, '[data-blok-database-search-clear] svg');
+
+    expect(clear).toContain('height: var(--blok-database-search-clear-size)');
+    expect(clear).toContain('border-radius: var(--blok-radius-pill)');
+    expect(icon).toContain('width: 20px');
+    expect(icon).toContain('height: 20px');
+    expect(icon).toContain('border: var(--blok-space-0-5) solid transparent');
+    expect(icon).toContain('padding: var(--blok-space-0-5)');
+    expect(icon).toContain('background-clip: padding-box');
+  });
 });
 
 // notion-motion.md Round 68 §1 (r68-n-locked-btn.raw): "Locked" is a 24 tall text button, r4, padding 0 6, gap 4, a 20px glyph,
@@ -351,23 +392,116 @@ describe('minimized database toolbar', () => {
       .toContain('display: none');
   });
 
-  it('shows « only while the pointer is on the header, fading over 200ms ease', () => {
-    expect(body(outsideReducedMotion, EXPAND)).toContain('opacity: 0');
-    expect(body(outsideReducedMotion, EXPAND)).toContain('transition: opacity 0.2s ease');
-    expect(body(database, `:is([data-blok-database-title-row], [data-blok-database-view-bar]):hover ${EXPAND}`)).toContain('opacity: 1');
-    expect(body(database, `${EXPAND}:focus-visible`)).toContain('opacity: 1');
+  // notion-motion.md Round 102 §1 #5 (r102-n-expand-table5.raw, -timeline2.raw, -expand-zone.raw): a view bar keeps «
+  // with the pointer away; a one-view title row shows it only on hover.
+  // Round 107 §1 #2: the title row's zone is its controls strip, so a minimized toolbar fills the row past the title.
+  it('keeps « in a view bar, and shows it in a title row only while the pointer is on the controls strip', () => {
+    const TITLE_EXPAND = `[data-blok-database-title-row] > ${TOOLBAR} > ${EXPAND}`;
+
+    expect(body(database, EXPAND)).not.toContain('opacity');
+    expect(body(database, TITLE_EXPAND)).toContain('opacity: 0');
+    expect(body(database, `[data-blok-database-title-row] > ${TOOLBAR}:hover > ${EXPAND}`)).toContain('opacity: 1');
+    expect(body(database, `${TITLE_EXPAND}:focus-visible`)).toContain('opacity: 1');
+    expect(body(database, `[data-blok-database-title-row] > ${TOOLBAR}[data-minimized]`)).toContain('flex-grow: 1');
   });
 
-  // motion-search.json t1217, motion-minimize.json t1190: Notion's 28px » and « fade in over 200ms ease.
-  it('fades » and « in over 200ms ease when they appear, keeping the hover fill', () => {
-    const MINIMIZE = '[data-blok-database-toolbar-minimize]';
-    const pair = `${TOOLBAR} > :is(${MINIMIZE}, ${EXPAND})`;
+  // notion-motion.md Round 108 §1 #3 (r108-n-expand-zone.raw): with a view bar, « shows from 16 left of the toolbar
+  // (x 1159 against 1175). Padding, so it never covers a tab: the tab fold counts the toolbar's width.
+  it('starts a minimized view bar\'s « hover zone 16 left of the toolbar', () => {
+    expect(body(database, `[data-blok-database-view-bar] > ${TOOLBAR}[data-minimized]`)).toContain('padding-inline-start: var(--blok-space-4)');
+  });
 
-    // Must outrank `${TOOLBAR} > button`, which sets only the hover fill.
+  // notion-motion.md Round 109 §1 #4 (r109-n-expand-ink-dark.raw): Notion's dark « paints rgb(125, 122, 117).
+  // Light is unread, so it keeps the button's ink: the token is set in the two dark blocks only.
+  it('paints « in rgb(125, 122, 117) in dark, and keeps the button ink in light', () => {
+    const values = [ ...database.matchAll(/--blok-database-toolbar-expand-ink:\s*([^;]+);/g) ].map((match) => match[1]);
+
+    expect(values).toEqual([ 'rgb(125, 122, 117)', 'rgb(125, 122, 117)' ]);
+    expect(body(database, `${EXPAND} svg`)).toContain('color: var(--blok-database-toolbar-expand-ink, currentColor)');
+  });
+
+  // notion-motion.md Round 104 §1 #2: in a view bar, once the pointer has left «, it shows only while the pointer is
+  // on the toolbar. A keyboard focus on a control still shows it. A title row already shows it on hover only.
+  it('hides a hover-only « while the pointer and the keyboard are off the toolbar', () => {
+    expect(body(database, `[data-blok-database-view-bar] > ${TOOLBAR}:not(:hover):not(:has(> :focus-visible)) > ${EXPAND}[data-blok-database-expand-hover-only]`)).toContain('opacity: 0');
+  });
+
+  // motion-minimize.json t1190: « fades in over 200ms ease as it appears.
+  it('fades « in over 200ms ease when it appears, keeping the hover fill', () => {
+    const pair = `${TOOLBAR} > ${EXPAND}`;
+
     expect(body(outsideReducedMotion, pair)).toContain('transition: background-color 0.1s ease-in-out, opacity 0.2s ease');
-    expect(body(startStyle, `${TOOLBAR} > ${MINIMIZE}`)).toContain('opacity: 0');
-    expect(body(startStyle, `:is([data-blok-database-title-row], [data-blok-database-view-bar]):hover ${EXPAND}`)).toContain('opacity: 0');
+    expect(body(startStyle, pair)).toContain('opacity: 0');
+    expect(body(startStyle, `[data-blok-database-title-row] > ${TOOLBAR}:hover > ${EXPAND}`)).toContain('opacity: 0');
     expect(body(reducedMotion, pair)).toContain('transition: none');
+  });
+
+  // notion-motion.md Round 102 §1 #6, §3: » has no fade in any state; it mounts within a frame.
+  it('never fades »', () => {
+    expect(database).not.toMatch(/\[data-blok-database-toolbar-minimize\][^{}]*\{[^}]*opacity 0\.2s/);
+    expect(startStyle).not.toContain('[data-blok-database-toolbar-minimize]');
+  });
+
+  // notion-motion.md Round 102 §1 #7 (r102-n-zone-2views-y.raw): »'s hover zone is the toolbar group, as tall as the
+  // 40px row (shown at y 267 and 302 of a 265-305 bar). Blok's toolbar fills its row's height to match.
+  it('stretches the toolbar to its row height, so the hover zone is the full row', () => {
+    expect(body(database, `:is([data-blok-database-view-bar], [data-blok-database-title-row]) > ${TOOLBAR}`)).toContain('align-self: stretch');
+  });
+
+  // notion-motion.md Round 100 §1 #7, Round 102 §1 #6 (r102-n-search-open-minimize-motion.raw): with the search open, » keeps
+  // its room. It shows at once and leaves ~200ms after the pointer, and a keyboard focus on a control shows it too.
+  // Hidden, it stays focusable, so Shift+Tab from Filter can land on it (database-toolbar-minimize.spec.ts).
+  // Round 103 §1 #2 (r103-n-titlerow-search-zone.raw): a one-view title row the same.
+  it('hides a » kept for the search until the pointer or a keyboard focus is on the controls, 200ms after they leave', () => {
+    const rule = body(database, `:is([data-blok-database-view-bar], [data-blok-database-title-row]) > ${TOOLBAR}:not(:hover):not(:has(> :not([data-blok-database-search-input]):focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only=""]`);
+
+    expect(rule).not.toContain('visibility');
+    expect(rule).toContain('opacity: 0');
+    expect(rule).toContain('pointer-events: none');
+    expect(rule).toContain('transition: background-color 0.1s ease-in-out, opacity 0s 0.2s, pointer-events 0s 0.2s allow-discrete');
+  });
+
+  // notion-motion.md Round 102 §1 #1, #2: with a sort or filters » shows the same way, in a view bar and a title row.
+  // It keeps its room, so the tab fold leaves space for it as it did while » always showed.
+  it('hides a » kept for a chip bar until the pointer or a keyboard focus is on the controls, 200ms after they leave', () => {
+    const rule = body(database, `:is([data-blok-database-view-bar], [data-blok-database-title-row]) > ${TOOLBAR}:not(:hover):not(:has(> :focus-visible)) > [data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="bar"]`);
+
+    expect(rule).toContain('opacity: 0');
+    expect(rule).toContain('pointer-events: none');
+    expect(rule).toContain('transition: background-color 0.1s ease-in-out, opacity 0s 0.2s, pointer-events 0s 0.2s allow-discrete');
+  });
+
+  // notion-motion.md Round 101 §1 #2, §3, Round 102 §1 #3: with no rule, Notion mounts » while the
+  // pointer is on the controls, with no fade, and drops it ~200ms after the pointer leaves.
+  describe('» on hover, with the search closed', () => {
+    const IDLE = '[data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only="idle"]';
+
+    it('takes no room in a view bar, so the tabs never refold under the pointer', () => {
+      expect(body(outsideReducedMotion, `${TOOLBAR} > ${IDLE}`)).toContain('margin-inline-start: calc(-1 * var(--blok-database-toolbar-icon-size))');
+    });
+
+    // Hidden, it stays focusable, so Shift+Tab from Filter can land on it (database-toolbar-minimize.spec.ts).
+    it('leaves 200ms after the pointer and the keyboard focus leave the controls, staying focusable', () => {
+      const rule = body(outsideReducedMotion, `${TOOLBAR}:not(:hover):not(:has(> :focus-visible)) > ${IDLE}`);
+
+      expect(rule).not.toContain('display: none');
+      expect(rule).toContain('opacity: 0');
+      expect(rule).toContain('pointer-events: none');
+      expect(rule).toContain('transition: background-color 0.1s ease-in-out, opacity 0s 0.2s, pointer-events 0s 0.2s allow-discrete, margin-inline-start 0s 0.2s');
+    });
+
+    // r102-n-minimize-hover-titlerow.raw: a one-view title row shows it too. The row folds by its own width
+    // (database-view-bar-fold.ts), so a shown » takes its room there and never lies over the title.
+    it('takes its room in a title row while shown, and stays off tabs that run up to the toolbar', () => {
+      expect(body(database, `[data-blok-database-title-row] > ${TOOLBAR}:hover > ${IDLE}`)).toContain('margin-inline-start: 0');
+      expect(body(database, `[data-blok-database-title-row] > ${TOOLBAR}:has(> :focus-visible) > ${IDLE}`)).toContain('margin-inline-start: 0');
+      expect(body(database, `[data-blok-database-view-bar][data-blok-database-fold-minimize] > ${TOOLBAR} > ${IDLE}`)).toContain('display: none');
+    });
+
+    // r273's search rule must not reach this one, or its 200ms stay is lost.
+    it('is left out of the search rule', () => {
+      expect(database).not.toContain('[data-blok-database-toolbar-minimize][data-blok-database-toolbar-hover-only] {');
+    });
   });
 
   it('draws « as a mirrored »', () => {
@@ -421,7 +555,7 @@ describe.each(['dateFormat', 'timeFormat', 'timeZone'])('date editor %s menu', (
 });
 
 // notion-motion.md Round 87 §1 #3 (r87-n-timefmt-open-mo.raw): Edit property › Time format scales from .96 about its top right.
-// The other lists under Edit property are unmeasured, so they keep the core .98.
+// Decimal places is unmeasured, so it keeps the core .98.
 describe('Edit property Time format list', () => {
   const LIST = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-time-format-list']";
 
@@ -447,6 +581,43 @@ describe('Edit property Date format list', () => {
   });
 });
 
+// notion-motion.md Round 26 (r26-numfmt-list.raw), Round 81: Edit property › Number format scales like Date format.
+describe('Edit property Number format list', () => {
+  const LIST = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-format-list']";
+
+  it('opens from scale .96', () => {
+    expect(body(database, `${LIST}:not([data-blok-popover-opened='true']) > [data-blok-popover-container]`)).toContain('transform: scale(0.96)');
+  });
+
+  it('grows from its top right corner', () => {
+    expect(body(database, `${LIST} > [data-blok-popover-container]`)).toContain('transform-origin: top right');
+  });
+});
+
+// notion-motion.md Round 26, Round 81, Round 88 (NM:2675, NM:9415, NM:10042): the Number format and Date format
+// rows turn their › 90° over 200ms ease-in-out while their list is open.
+describe('Edit property Number format and Date format chevrons', () => {
+  const FLYOUT = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property']";
+  const CHEVRON = (name: string, open = ''): string =>
+    `${FLYOUT} [data-blok-item-name="${name}"]${open} [data-blok-popover-item-icon-chevron-right] svg`;
+
+  it.each(['numberFormat', 'dateFormat'])('%s turns over 200ms ease-in-out', (name) => {
+    expect(body(outsideReducedMotion, CHEVRON(name))).toContain('transition: transform 0.2s ease-in-out');
+  });
+
+  it.each(['numberFormat', 'dateFormat'])('%s points down while its list is open', (name) => {
+    expect(body(outsideReducedMotion, CHEVRON(name, "[aria-expanded='true']"))).toContain('transform: rotate(90deg)');
+  });
+
+  it.each(['numberFormat', 'dateFormat'])('%s keeps the RTL flip first while open', (name) => {
+    expect(body(outsideReducedMotion, `[dir="rtl"] ${CHEVRON(name, "[aria-expanded='true']")}`)).toContain('transform: scaleX(-1) rotate(90deg)');
+  });
+
+  it.each(['numberFormat', 'dateFormat'])('%s does not animate under reduced motion', (name) => {
+    expect(body(reducedMotion, CHEVRON(name))).toContain('transition: none');
+  });
+});
+
 // notion-motion.md Round 93 §1 #5 (r93-n-changetype-mo.raw): the Change type list is at most 470 tall,
 // and it fades in about its centre with no scale.
 describe('column header Change type list', () => {
@@ -461,5 +632,22 @@ describe('column header Change type list', () => {
 
     expect(container).toContain('--max-height: 470px');
     expect(container).toContain('transform-origin: center');
+  });
+});
+
+// notion-motion.md Round 87 §2 (r87-n-calas-open-mo.raw): while the Show calendar as menu is open, its row's › turns 90° over 200ms ease-in-out.
+describe('a panel row that opens a menu', () => {
+  const ROW = '[data-blok-database-panel-row][aria-haspopup="menu"]';
+  const CHEVRON = `${ROW} [data-blok-database-panel-chevron] svg`;
+  const OPEN = `${ROW}[aria-expanded="true"] [data-blok-database-panel-chevron] svg`;
+
+  it('turns its chevron down while the menu is open', () => {
+    expect(body(outsideReducedMotion, CHEVRON)).toContain('transition: rotate 200ms ease-in-out');
+    expect(body(outsideReducedMotion, OPEN)).toContain('rotate: 90deg');
+    expect(body(outsideReducedMotion, `[dir="rtl"] ${OPEN}`)).toContain('rotate: -90deg');
+  });
+
+  it('turns at once under reduced motion', () => {
+    expect(body(reducedMotion, CHEVRON)).toContain('transition: none');
   });
 });

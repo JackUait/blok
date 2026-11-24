@@ -16,7 +16,7 @@ import { getTabbables } from '../../components/utils/modal-dialog';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { getUserOS } from '../../components/utils/browser';
-import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
+import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_CLOSE_DELAY_MS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { DATABASE_HEADER_MENU_CLASS, rowActionItems, rowFooter } from './database-table-menus';
 import type { RowActionContext, RowFavorite, RowMenuContext } from './database-table-menus';
 import { hide as hideTooltip, onHover, show as showTooltip } from '../../components/utils/tooltip';
@@ -1650,6 +1650,8 @@ export class DatabaseCardDrawer {
     });
 
     menu.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
+
+    menu.nestedCloseDelay = DATABASE_SUBMENU_CLOSE_DELAY_MS;
     menu.on(PopoverEvent.Closed, () => {
       anchor.setAttribute('aria-expanded', 'false');
       if (this.modeMenu === menu) {
@@ -2234,6 +2236,8 @@ export class DatabaseCardDrawer {
     });
 
     menu.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
+
+    menu.nestedCloseDelay = DATABASE_SUBMENU_CLOSE_DELAY_MS;
     menu.on(PopoverEvent.Closed, () => {
       anchor.setAttribute('aria-expanded', 'false');
       if (this.modeMenu === menu) {
@@ -2288,6 +2292,8 @@ export class DatabaseCardDrawer {
     });
 
     menu.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
+
+    menu.nestedCloseDelay = DATABASE_SUBMENU_CLOSE_DELAY_MS;
     menu.on(PopoverEvent.Closed, () => {
       anchor.setAttribute('aria-expanded', 'false');
       if (this.modeMenu === menu) {
@@ -2329,6 +2335,8 @@ export class DatabaseCardDrawer {
     });
 
     menu.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
+
+    menu.nestedCloseDelay = DATABASE_SUBMENU_CLOSE_DELAY_MS;
     menu.on(PopoverEvent.Closed, () => {
       anchor.setAttribute('aria-expanded', 'false');
       if (this.modeMenu === menu) {

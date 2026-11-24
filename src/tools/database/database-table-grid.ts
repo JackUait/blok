@@ -50,6 +50,8 @@ export interface TableState {
   focusedCell?: CellRef;
   /** Row a drag just dropped. The redraw it asks for reads and clears it. */
   droppedRowId?: string;
+  /** The row a Tab out of a changed Text editor left, and the selection it left. ArrowDown on the page picks up from it. */
+  arrowRow?: { rowId: string; selection: TableSelection | null };
 }
 
 export const createTableState = (): TableState => ({
@@ -214,6 +216,7 @@ export class DatabaseTableGrid {
     this.root.addEventListener('focusout', this.handleFocus);
     // Bubble phase: Blok's capture pass closes a popover or leaves navigation mode first.
     document.addEventListener('keydown', this.handleBodyEscape);
+    document.addEventListener('keydown', this.handleBodyArrow);
   }
 
   destroy(): void {
@@ -230,6 +233,7 @@ export class DatabaseTableGrid {
     this.root.removeEventListener('focusout', this.handleFocus);
     window.removeEventListener('keydown', this.recordKey, true);
     document.removeEventListener('keydown', this.handleBodyEscape);
+    document.removeEventListener('keydown', this.handleBodyArrow);
     this.editor?.close();
   }
 
@@ -442,6 +446,7 @@ export class DatabaseTableGrid {
     const deselect = text && ((key === 'Shift+Tab' && !caretAtStart && !openedEmpty) || (key === 'Tab' && committed));
 
     this.state.selection = deselect ? null : { kind: 'cell', anchor: target, focus: target };
+    this.state.arrowRow = deselect && key === 'Tab' ? { rowId: ref.rowId, selection: null } : undefined;
     this.paint();
     if (deselect) {
       // Notion's focus after this Tab is unmeasured; with no cell selected the grid lets it go, like Enter in Notion.
@@ -1132,6 +1137,31 @@ export class DatabaseTableGrid {
     if (event.key !== 'Escape' || event.target !== document.body || event.defaultPrevented || isEscapeConsumed(event)) return;
     if (this.state.selection?.kind !== 'rows' || this.isEditing || this.state.busy) return;
     this.escape(event);
+  };
+
+  /** notion-motion.md Round 56 §3: after a Tab left no cell selected, ArrowDown selects the edited row, then the next one. */
+  private readonly handleBodyArrow = (event: KeyboardEvent): void => {
+    const from = this.state.arrowRow;
+
+    if (event.key !== 'ArrowDown' || event.target !== document.body || event.defaultPrevented || from === undefined || !this.root.isConnected) return;
+    if (from.selection !== this.state.selection || this.isEditing || this.state.busy) {
+      this.state.arrowRow = undefined;
+
+      return;
+    }
+    const rows = this.rowIds();
+    const index = rows.indexOf(from.rowId);
+
+    if (index === -1) {
+      this.state.arrowRow = undefined;
+
+      return;
+    }
+    event.preventDefault();
+    const rowId = from.selection === null ? from.rowId : rows[Math.min(index + 1, rows.length - 1)];
+
+    this.selectRows([rowId]);
+    this.state.arrowRow = { rowId, selection: this.state.selection };
   };
 
   private escape(event: KeyboardEvent): void {

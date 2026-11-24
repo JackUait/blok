@@ -187,9 +187,9 @@ export class KeyboardController extends Controller {
   private lastInputWasPointer = false;
 
   /**
-   * A block whose field lost focus to a key (a field that blurs itself on
-   * Tab or Enter), leaving focus on the page while the block stays current.
-   * Tab from outside the editor must not move that block.
+   * A block that lost focus to a key (a field that blurs itself on Tab or
+   * Enter, or Tab past its last control), leaving focus on the page while the
+   * block stays current. Tab from outside the editor must not move that block.
    */
   private blockLeftByKey: Block | null = null;
 
@@ -207,7 +207,7 @@ export class KeyboardController extends Controller {
       return;
     }
 
-    if (currentBlock.holder.contains(target) && (isInsideEditable(target) || target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) {
+    if (currentBlock.holder.contains(target)) {
       this.blockLeftByKey = currentBlock;
     }
   };
@@ -1131,9 +1131,8 @@ export class KeyboardController extends Controller {
      * Otherwise, let the default behavior handle it (e.g., toolbar navigation)
      */
     if (!BlockSelection.anyBlockSelected) {
+      // Not prevented: the browser moves focus, so Shift+Tab goes back into the block.
       if (this.isTabAfterKeyLeftBlock(event)) {
-        event.preventDefault();
-
         return;
       }
 

@@ -28,6 +28,14 @@ export interface BlockColorData {
 }
 
 /**
+ * The name goes into a CSS value. It comes from saved data, so anything that
+ * is not a plain word is dropped: it could close the var() and write more CSS.
+ */
+const safePresetName = (name: string | undefined): string | undefined => {
+  return typeof name === 'string' && /^[a-z0-9-]+$/i.test(name) ? name : undefined;
+};
+
+/**
  * Options for {@link applyBlockColor}.
  */
 export interface ApplyBlockColorOptions {
@@ -43,13 +51,16 @@ export interface ApplyBlockColorOptions {
  * @param options - how the fill is shaped
  */
 export const applyBlockColor = (element: HTMLElement, data: BlockColorData, options: ApplyBlockColorOptions = {}): void => {
-  if (data.textColor) {
-    element.style.setProperty('color', colorVarName(data.textColor, 'text'));
+  const textColor = safePresetName(data.textColor);
+  const backgroundColor = safePresetName(data.backgroundColor);
+
+  if (textColor) {
+    element.style.setProperty('color', colorVarName(textColor, 'text'));
   } else {
     element.style.removeProperty('color');
   }
 
-  if (!data.backgroundColor) {
+  if (!backgroundColor) {
     element.style.removeProperty('background-color');
     element.style.removeProperty('border-radius');
     element.style.removeProperty('box-shadow');
@@ -57,7 +68,7 @@ export const applyBlockColor = (element: HTMLElement, data: BlockColorData, opti
     return;
   }
 
-  const fill = colorVarName(data.backgroundColor, 'bg');
+  const fill = colorVarName(backgroundColor, 'bg');
 
   element.style.setProperty('background-color', fill);
 

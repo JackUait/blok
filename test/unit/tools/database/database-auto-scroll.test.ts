@@ -446,7 +446,8 @@ describe('database drags scroll near an edge', () => {
     drag.beginTracking('r0', 50, 110);
     enter(50, 440);
     runFrames(0, 72);
-    const line = document.querySelector<HTMLElement>('[data-blok-database-drop-line]');
+    // A slot change leaves the old line fading out (opacity 0) next to the live one.
+    const line = Array.from(document.querySelectorAll<HTMLElement>('[data-blok-database-drop-line]')).find((el) => el.style.opacity !== '0') ?? null;
     const before = Array.from({ length: 12 }, (_, i) => i).find((i) => i > 0 && 100 + i * 36 + 18 - scroller.scrollTop > 440);
     const top = 100 + (before ?? 0) * 36 - scroller.scrollTop;
     const lineTop = line === null ? NaN : parseFloat(line.style.top) + parseFloat(line.style.height || '0') / 2;

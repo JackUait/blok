@@ -362,6 +362,41 @@ test.describe('property header menu: Edit property opens one level at a time (re
     await expect(open).toHaveCount(0);
   });
 
+  // notion-motion.md Round 115: Escape from Number format leaves keyboard focus on its row, with a blue ring
+  // 2px outside it. A mouse pick leaves no ring.
+  test('the Number format row shows the ring after Escape, and none after a mouse pick', async ({ page }) => {
+    const open = page.locator('[data-blok-popover-opened="true"]');
+    const edit = page.locator('[data-blok-popover-opened="true"] [data-blok-item-name="editProperty"]');
+    const formatRow = page.locator('[data-blok-popover-opened="true"] [data-blok-item-name="numberFormat"]');
+
+    await page.locator('[data-blok-database-table-column-header][data-property-id="p-amount"]').click();
+    await expect(edit).toBeVisible();
+    for (let i = 0; i < 10 && await edit.getAttribute('data-blok-focused') !== 'true'; i++) {
+      await page.keyboard.press('ArrowDown');
+      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 200)));
+    }
+    await page.keyboard.press('Enter');
+    await expect(formatRow).toBeVisible();
+    for (let i = 0; i < 10 && await formatRow.getAttribute('data-blok-focused') !== 'true'; i++) {
+      await page.keyboard.press('ArrowDown');
+      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 200)));
+    }
+    await page.keyboard.press('Enter');
+    await expect(open).toHaveCount(3);
+    await page.keyboard.press('Escape');
+    await expect(open).toHaveCount(2);
+
+    await expect(formatRow).toBeFocused();
+    await expect(formatRow).toHaveCSS('box-shadow', 'rgb(248, 248, 247) 0px 0px 0px 2px, rgb(35, 131, 226) 0px 0px 0px 4px, rgba(255, 255, 255, 0.25) 0px 0px 0px 6px');
+    await expect(formatRow).toHaveCSS('outline-color', 'rgba(0, 0, 0, 0)');
+
+    await formatRow.click();
+    await expect(open).toHaveCount(3);
+    await open.last().getByText('Percent', { exact: true }).click();
+    await expect(open).toHaveCount(2);
+    await expect(formatRow).toHaveCSS('box-shadow', 'none');
+  });
+
   // research/30 X2: the (i) shows a field inside the header menu; there is no "Property description" row.
   test('the (i) shows a description field in the same menu; Enter adds no line; Escape closes the menu and saves', async ({ page }) => {
     const open = page.locator('[data-blok-popover-opened="true"]');

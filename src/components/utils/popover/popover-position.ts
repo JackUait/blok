@@ -198,7 +198,9 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
   if (cover) {
     const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(value, max));
     // `alignEnd` puts the end edge on the anchor's end edge instead of the start edges together.
-    const start = (direction === 'rtl') !== alignEnd ? anchor.right - popoverSize.width : anchor.left;
+    // The side it grows towards, which also sets the motion's transform-origin corner.
+    const growsLeft = (direction === 'rtl') !== alignEnd;
+    const start = growsLeft ? anchor.right - popoverSize.width : anchor.left;
     const left = clamp(start, boundaryLeft + viewportMargin, boundaryRight - viewportMargin - popoverSize.width);
     const aboveBottom = coverFlipOffset === undefined ? undefined : anchor.top - coverFlipOffset;
     const fitsBelow = anchor.top + popoverSize.height <= boundaryBottom - coverVerticalMargin;
@@ -207,11 +209,11 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     if (aboveBottom !== undefined && (coverStayAbove || (!fitsBelow && fitsAbove))) {
       const top = Math.max(boundaryTop + coverVerticalMargin, aboveBottom - popoverSize.height);
 
-      return { top: top + scrollOffset.y, left: left + scrollOffset.x, openTop: true, openLeft: direction === 'rtl' };
+      return { top: top + scrollOffset.y, left: left + scrollOffset.x, openTop: true, openLeft: growsLeft };
     }
     const top = clamp(anchor.top, boundaryTop + coverVerticalMargin, boundaryBottom - coverVerticalMargin - popoverSize.height);
 
-    return { top: top + scrollOffset.y, left: left + scrollOffset.x, openTop: false, openLeft: direction === 'rtl' };
+    return { top: top + scrollOffset.y, left: left + scrollOffset.x, openTop: false, openLeft: growsLeft };
   }
 
   // --- Vertical ---

@@ -54,4 +54,50 @@ describe('page title css', () => {
       expect(rule('[data-blok-page-cover-picker][data-blok-top-layer][popover]')).toMatch(/animation:\s*blok-page-cover-picker-in 200ms ease/);
     });
   });
+
+  // notion-motion.md Round 86 (row 27/73): over a full-page database the H1 is 32/38.4 with no block padding,
+  // and the tabs start 12 under it (the tab bar keeps its own 4px top padding, so the title adds 8).
+  describe('over a full-page database', () => {
+    const flat = css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
+    const body = (selector: string): string => {
+      const at = flat.indexOf(` ${selector} {`);
+
+      expect(at, selector).toBeGreaterThan(-1);
+
+      return flat.slice(at, flat.indexOf('}', at));
+    };
+
+    it('keeps the published 40px default for every other page', () => {
+      expect(body('[data-blok-page-header]')).toMatch(/--blok-page-title-size: 40px/);
+    });
+
+    it('sets the title size to 32px on the header, so the narrow tiers on the title still win', () => {
+      expect(body('[data-blok-page-header][data-blok-page-full-database]')).toMatch(/--blok-page-title-size: 32px/);
+    });
+
+    it('drops the title block padding and leaves 8px under it', () => {
+      const title = body('[data-blok-page-header][data-blok-page-full-database] [data-blok-page-title]');
+
+      expect(title).toMatch(/padding-block: 0/);
+      expect(title).toMatch(/margin-block-end: var\(--blok-space-2\)/);
+    });
+
+    // notion-motion.md Round 99 #9: Notion's title text starts at the tab box x.
+    it('puts the title text in line with the tabs', () => {
+      expect(body('[data-blok-page-header][data-blok-page-full-database] [data-blok-page-title]')).toMatch(/padding-inline: 0/);
+    });
+
+    // notion-motion.md Round 99 #6: the description sits right under the title, the tabs 16 under it.
+    it('puts the description right under the title and the tabs 16 under it', () => {
+      const database = readFileSync('src/styles/database.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
+      const selector = '[data-blok-page-header][data-blok-page-full-database] ~ [data-blok-redactor] [data-blok-database-page] > [data-blok-database-description]';
+      const at = database.indexOf(` ${selector} {`);
+
+      expect(at, selector).toBeGreaterThan(-1);
+      const rule = database.slice(at, database.indexOf('}', at));
+
+      expect(rule).toMatch(/margin-block-start: calc\(-1 \* var\(--blok-space-2\)\)/);
+      expect(database).toMatch(/ \[data-blok-database-page\] > \[data-blok-database-description\] \{ margin-block-end: var\(--blok-space-3\); \}/);
+    });
+  });
 });

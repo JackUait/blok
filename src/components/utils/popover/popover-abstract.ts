@@ -307,6 +307,25 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   /** Opt-in, with animateClose: an Escape close skips the close motion; other closes keep it. */
   public escapeClosesAtOnce = false;
 
+  /** Opt-in, with animateClose: every close skips the close motion. */
+  public closesAtOnce = false;
+
+  /**
+   * Opt-in: a left or right click away acts like a click on a full-window backdrop.
+   * It only closes the popover, reaches nothing under it, and leaves focus on the body.
+   * A right click still opens the browser's own menu.
+   */
+  public swallowsOutsideClick = false;
+
+  /**
+   * Opt-in: when the popover was opened from the mouse, Escape gives its trigger focus
+   * back without a focus ring. The Escape press itself would otherwise turn the ring on.
+   */
+  public escapeRestoresPointerModality = false;
+
+  /** Opt-in, with swallowsOutsideClick: a middle click away keeps the popover open and reaches nothing under it. */
+  public holdsOnMiddleClick = false;
+
   /** True only inside {@link hideOnEscape}. */
   private hidingOnEscape = false;
 
@@ -335,7 +354,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     const mountTarget = this.nodes.popover;
     const alreadyClosing = this.closing !== null;
     const isPromoted = mountTarget !== null && supportsPopoverAPI() && isPromotedToTopLayer(mountTarget);
-    const animates = isPromoted && !alreadyClosing && this.params.animateClose === true && !this.hidingOnEscape && !prefersReducedMotion();
+    const animates = isPromoted && !alreadyClosing && this.params.animateClose === true && !this.closesAtOnce && !this.hidingOnEscape && !prefersReducedMotion();
 
     if (animates) {
       // Hide now, so the UA's own close steps run at once; the attribute and

@@ -336,6 +336,50 @@ test('a board card\'s Comment box sits 4px under the card, centred on it, and gr
   expect(origin).toBe(`${card.width / 2}px 0px`);
 });
 
+const mountBoard = async (page: Page): Promise<Locator> => {
+  const schema = [
+    { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+    { id: 'p-stage', name: 'Stage', type: 'select', position: 'a1', config: { options: [{ id: 'o-todo', label: 'Not started', color: 'gray', position: 'a0' }] } },
+  ];
+  const [intro, database, row] = withView({ type: 'board', groupBy: 'p-stage' }, schema);
+
+  await mount(page, [intro, database, { ...row, data: { ...row.data, properties: { 'p-title': 'Launch', 'p-stage': 'o-todo' } } }]);
+
+  return page.locator('[data-blok-database-card][data-row-id="r1"]');
+};
+
+const outlineStyle = (locator: Locator): Promise<string> => locator.evaluate((el) => getComputedStyle(el).outlineStyle);
+
+// notion-motion.md Round 111 §1 #5: Blok's card took a ring after Escape on a mouse flow.
+test('Escape from a mouse-opened board card comment box gives the card focus without a ring', async ({ page }) => {
+  const card = await mountBoard(page);
+
+  await card.click({ button: 'right' });
+  await page.getByRole('menuitem', { name: /Comment/ }).click();
+  await expect(composer(page)).toBeFocused();
+  await page.keyboard.press('Escape');
+
+  await expect(card).toBeFocused();
+  expect(await outlineStyle(card)).toBe('none');
+});
+
+test('Escape from a keyboard-opened board card comment box gives the card focus with its ring', async ({ page }) => {
+  const card = await mountBoard(page);
+  const item = page.getByRole('menuitem', { name: /Comment/ });
+
+  await card.click({ button: 'right' });
+  await expect(item).toBeVisible();
+  for (let step = 0; step < 12 && await item.getAttribute('data-blok-focused') !== 'true'; step += 1) {
+    await page.keyboard.press('ArrowDown');
+  }
+  await page.keyboard.press('Enter');
+  await expect(composer(page)).toBeFocused();
+  await page.keyboard.press('Escape');
+
+  await expect(card).toBeFocused();
+  expect(await outlineStyle(card)).toBe('solid');
+});
+
 test('a list row\'s Comment box sits 4px under the row, centred on it', async ({ page }) => {
   // notion-motion.md Round 61 §2: + 4.2 under the row. Its centre x is 887 on a row centred at 885 (anchor unread).
   await mount(page, withView({ type: 'list' }));

@@ -281,6 +281,237 @@ describe('New data source: every layout on a second source', () => {
     expect(zoomButton()).toHaveFocus();
   });
 
+  // notion-motion.md Round 105 §1 #8 (r105-n-tlzoom-pick.raw): the closing menu moves under the narrower new button.
+  const zoomButtonAt = (picked: string): void => {
+    const real = HTMLElement.prototype.getBoundingClientRect;
+
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (!this.hasAttribute('data-blok-database-timeline-zoom')) return real.call(this);
+      const x = this.closest('[data-blok-database-timeline]')?.getAttribute('data-zoom') === picked ? 605 : 600;
+
+      return new DOMRect(x, 40, 70, 28);
+    });
+  };
+
+  const pickMovesMenu = async (zoomButton: () => Element | null, picked: string, keepFocus = false): Promise<void> => {
+    zoomButtonAt(picked);
+    // A keyboard open leaves focus on the button; the redraw then hands it to the new button.
+    if (keepFocus) (zoomButton() as HTMLElement | null)?.focus();
+    await click(zoomButton());
+    const menu = document.querySelector<HTMLElement>('[data-blok-popover-opened]');
+
+    if (menu === null) throw new Error('no zoom menu');
+    const { top } = menu.style;
+    const openLeft = menu.getAttribute('data-blok-popover-open-left');
+    const align = menu.getAttribute('data-align');
+
+    expect(menu.style.left).toBe('600px');
+    // jsdom has no top layer, so the close settles at once and clears left; the records keep each step.
+    const records: MutationRecord[] = [];
+    const watch = new MutationObserver((seen) => records.push(...seen));
+
+    watch.observe(menu, { attributes: true, attributeOldValue: true, attributeFilter: ['style', 'data-align', 'data-blok-popover-open-left'] });
+    await click(document.querySelector(`[data-blok-item-name="database-timeline-zoom-${picked}"]`));
+    records.push(...watch.takeRecords());
+    const before = (name: string): Array<string | null> => records.filter((r) => r.attributeName === name).map((r) => r.oldValue);
+    const styleOf = (value: string | null, prop: string): string | undefined => value?.match(new RegExp(`(?:^|;\\s*)${prop}:\\s*([^;]+)`))?.[1];
+
+    watch.disconnect();
+    expect(before('style').map((v) => styleOf(v, 'left'))).toContain('605px');
+    expect(new Set(before('style').map((v) => styleOf(v, 'top')).filter((v) => v !== undefined))).toEqual(new Set([top]));
+    expect(before('data-blok-popover-open-left').every((v) => v === openLeft)).toBe(true);
+    expect(before('data-align').every((v) => v === align)).toBe(true);
+  };
+
+  it('a zoom pick moves the closing menu under the redrawn button', async () => {
+    await make(doc('vb', {}, { type: 'timeline', timelineBy: 'due' }));
+
+    await pickMovesMenu(() => layoutRoot('[data-blok-database-timeline]').querySelector('[data-blok-database-timeline-zoom]'), 'quarter');
+  });
+
+  it('a keyboard zoom pick also moves the closing menu under the new button', async () => {
+    await make([{
+      id: 'db', type: 'database', content: [],
+      data: {
+        title: 'Plain',
+        schema: [...parentSchema, { id: 'when', name: 'When', type: 'date', position: 'a2' }],
+        views: [table('v1', 'a0', { type: 'timeline', timelineBy: 'when' })],
+        activeViewId: 'v1',
+      },
+    }]);
+
+    await pickMovesMenu(() => own('[data-blok-database-timeline]').querySelector('[data-blok-database-timeline-zoom]'), 'year', true);
+    expect(own('[data-blok-database-timeline]').querySelector('[data-blok-database-timeline-zoom]')).toHaveFocus();
+  });
+
+  // notion-motion.md Round 115 §1 #4 (r115-n-zoom-kbopen.raw): a keyboard open starts on the current zoom.
+  // User decision 2026-11-22: a mouse open starts on no row.
+  describe('zoom menu start row', () => {
+    const ownTimelineZoom = async (): Promise<HTMLElement | null> => {
+      await make([{
+        id: 'db', type: 'database', content: [],
+        data: {
+          title: 'Plain',
+          schema: [...parentSchema, { id: 'when', name: 'When', type: 'date', position: 'a2' }],
+          views: [table('v1', 'a0', { type: 'timeline', timelineBy: 'when' })],
+          activeViewId: 'v1',
+        },
+      }]);
+
+      return own('[data-blok-database-timeline]').querySelector<HTMLElement>('[data-blok-database-timeline-zoom]');
+    };
+    const cursor = (): Array<string | null> => [...document.querySelectorAll('[data-blok-popover-opened] [data-blok-focused="true"]')]
+      .map((row) => row.closest('[data-blok-item-name]')?.getAttribute('data-blok-item-name') ?? null);
+    const press = async (key: string): Promise<void> => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+      await quiet();
+    };
+
+    // A menu left open keeps its arrow keys and its cursor into the next test.
+    afterEach(async () => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      await quiet();
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
+    });
+
+    it('a keyboard open starts on Month, and ArrowUp twice lands on Week', async () => {
+      const button = await ownTimelineZoom();
+
+      button?.focus();
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
+      await click(button);
+
+      expect(cursor()).toEqual(['database-timeline-zoom-month']);
+
+      await press('ArrowUp');
+      await press('ArrowUp');
+
+      expect(cursor()).toEqual(['database-timeline-zoom-week']);
+    });
+
+    it('a mouse open starts on no row', async () => {
+      const button = await ownTimelineZoom();
+
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      await click(button);
+
+      expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+      expect(cursor()).toEqual([]);
+    });
+  });
+
+  // notion-motion.md Round 115 §1 #4 (r115-n-hdr-calc-kbopen.raw): Enter on Calculate opens the list on None
+  // (first and current); ArrowDown goes to Count. User decision 2026-11-22: a mouse open starts on no row.
+  describe('header Calculate submenu start row', () => {
+    const openCalculate = async (): Promise<void> => {
+      await make([{
+        id: 'db', type: 'database', content: [],
+        data: { title: 'Plain', schema: parentSchema, views: [table('v1', 'a0')], activeViewId: 'v1' },
+      }]);
+      await click(own('[data-blok-database-table]').querySelector('[role="columnheader"][data-property-id="notes"]'));
+      const calculate = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened] [data-blok-popover-item]')]
+        .find((row) => row.textContent?.includes('Calculate'));
+
+      await click(calculate);
+    };
+    const cursor = (): Array<string | null> => [...document.querySelectorAll('[data-blok-nested] [data-blok-focused="true"]')]
+      .map((row) => row.closest('[data-blok-item-name]')?.getAttribute('data-blok-item-name') ?? null);
+
+    // A menu left open keeps its arrow keys and its cursor into the next test.
+    afterEach(async () => {
+      for (let i = 0; i < 3; i++) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      await quiet();
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
+    });
+
+    it('a keyboard open starts on None, and ArrowDown lands on Count', async () => {
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
+      await openCalculate();
+
+      expect(document.querySelector('[data-blok-nested] [data-blok-item-name="database-calc-none"]')).not.toBeNull();
+      expect(cursor()).toEqual(['database-calc-none']);
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      await quiet();
+
+      expect(cursor()).toEqual(['database-calc-group-count']);
+    });
+
+    it('a mouse open starts on no row', async () => {
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      await openCalculate();
+
+      expect(document.querySelector('[data-blok-nested] [data-blok-item-name="database-calc-none"]')).not.toBeNull();
+      expect(cursor()).toEqual([]);
+    });
+  });
+
+  // notion-motion.md Round 115 §1 #4 (r115-n-tlfoot-calc-kbopen.raw): a keyboard open starts on None; ArrowDown goes to Count.
+  // User decision 2026-11-22: a mouse open starts on no row.
+  describe('timeline footer Calculate start row', () => {
+    const footerCalc = async (): Promise<HTMLElement | null> => {
+      await make([{
+        id: 'db', type: 'database', content: [],
+        data: {
+          title: 'Plain',
+          schema: [...parentSchema, { id: 'when', name: 'When', type: 'date', position: 'a2' }],
+          views: [table('v1', 'a0', { type: 'timeline', timelineBy: 'when', showTimelineTable: true })],
+          activeViewId: 'v1',
+        },
+      }]);
+
+      return own('[data-blok-database-timeline]').querySelector<HTMLElement>('[data-blok-database-timeline-table-footer] button[data-blok-database-table-calc]');
+    };
+    const cursor = (): Array<string | null> => [...document.querySelectorAll('[data-blok-popover-opened] [data-blok-focused="true"]')]
+      .map((row) => row.closest('[data-blok-item-name]')?.getAttribute('data-blok-item-name') ?? null);
+
+    // A menu left open keeps its arrow keys and its cursor into the next test.
+    afterEach(async () => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      await quiet();
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
+    });
+
+    it('a keyboard open starts on None, and ArrowDown lands on Count', async () => {
+      const cell = await footerCalc();
+
+      cell?.focus();
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
+      await click(cell);
+
+      expect(cursor()).toEqual(['database-calc-none']);
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      await quiet();
+
+      expect(cursor()).toEqual(['database-calc-group-count']);
+    });
+
+    it('a mouse open starts on no row', async () => {
+      const cell = await footerCalc();
+
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      await click(cell);
+
+      expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+      expect(cursor()).toEqual([]);
+    });
+  });
+
+  it('a zoom pick on a database\'s own timeline moves the closing menu under the new button', async () => {
+    await make([{
+      id: 'db', type: 'database', content: [],
+      data: {
+        title: 'Plain',
+        schema: [...parentSchema, { id: 'when', name: 'When', type: 'date', position: 'a2' }],
+        views: [table('v1', 'a0', { type: 'timeline', timelineBy: 'when' })],
+        activeViewId: 'v1',
+      },
+    }]);
+
+    await pickMovesMenu(() => own('[data-blok-database-timeline]').querySelector('[data-blok-database-timeline-zoom]'), 'year');
+  });
+
   it('a form answer in the Preview becomes a source row', async () => {
     const api = await make(doc('vb', {}, { type: 'form' }));
 

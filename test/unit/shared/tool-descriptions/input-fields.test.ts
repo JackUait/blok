@@ -150,11 +150,9 @@ const samples: Record<keyof typeof BLOCK_CLASSES, Sample[]> = {
       inputs: [{ selector: '[data-blok-database-title]', field: 'title' }],
     },
     {
+      // A pill click opens the rename popup: its field sits in the popover, outside the block.
       state: 'column rename', data: databaseData,
-      inputs: [
-        { selector: '[data-blok-database-title]', field: 'title' },
-        { selector: '[data-blok-database-column-title-input]', field: 'schema', scope: 'nested' },
-      ],
+      inputs: [{ selector: '[data-blok-database-title]', field: 'title' }],
     },
     {
       // Rename opens View settings: its name field sits in the panel, outside the block.
@@ -683,9 +681,10 @@ describe('Task02/28 inputFields scratch candidate', () => {
     if (sample === undefined) throw new Error('Missing column-rename fixture.');
     const { block } = await boot('database', sample);
     const before = await block.data;
-    const input = requireElement(block, '[data-blok-database-column-title-input]');
+    const input = document.querySelector('[data-blok-database-group-name-field] input');
     const editingInputs = block.inputs;
     if (!(input instanceof HTMLInputElement)) throw new Error('Column rename is not a native input.');
+    expect(input).toHaveFocus();
     input.value = 'In progress';
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
@@ -699,7 +698,7 @@ describe('Task02/28 inputFields scratch candidate', () => {
       },
     ]);
     expect({ ...saved, schema: before.schema }).toEqual(before);
-    expect(editingInputs).toEqual([requireElement(block, '[data-blok-database-title]'), input]);
+    expect(editingInputs).toEqual([requireElement(block, '[data-blok-database-title]')]);
     expect(descriptionFor('database').inputFields).toEqual(['title']);
     expect(descriptionFor('database').inputFields?.[1]).toBeUndefined();
   }, 60_000);

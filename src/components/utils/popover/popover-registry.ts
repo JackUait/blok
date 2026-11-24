@@ -1,5 +1,6 @@
 import { isEscapeConsumed, markEscapeConsumed } from '../consumed-escape';
 import { hasEscapeLayer } from '../dismissable-layer';
+import { isKeyboardModality, recordActionKey } from '../input-modality';
 
 import type { PopoverAbstract } from './popover-abstract';
 
@@ -9,6 +10,8 @@ import type { PopoverAbstract } from './popover-abstract';
 interface PopoverRegistryEntry {
   popover: PopoverAbstract;
   triggerElement: HTMLElement;
+  /** Read by {@link PopoverAbstract.escapeRestoresPointerModality}. */
+  openedByPointer: boolean;
 }
 
 /**
@@ -20,6 +23,38 @@ interface PopoverRegistryEntry {
  */
 const isInteractiveTriggerControl = (element: HTMLElement): boolean =>
   element.matches('button, [role="button"]');
+
+/**
+ * Eats the mousedown, mouseup and click (auxclick for a middle press, contextmenu for a
+ * right one) that follow a swallowed pointerdown. Lives outside the registry's listeners:
+ * closing the popover empties the stack, which removes those. Ends on the click, or on the
+ * next pointerdown when the press made none. A right press on macOS fires its mouseup after
+ * the contextmenu, so that one eats the contextmenu once and ends on the next pointerdown.
+ * The contextmenu keeps its default: the browser's own menu still opens, as in Notion.
+ * @param button - the pressed button
+ */
+const swallowRestOfPress = (button: number): void => {
+  const last = ['click', 'auxclick', 'contextmenu'][button] ?? 'click';
+  const types = ['mousedown', 'mouseup', last];
+  const swallow = (event: Event): void => {
+    if (event.type !== 'contextmenu') {
+      event.preventDefault();
+    }
+    event.stopImmediatePropagation();
+    if (event.type === 'contextmenu') {
+      window.removeEventListener(last, swallow, true);
+    } else if (event.type === last) {
+      stop();
+    }
+  };
+  const stop = (): void => {
+    types.forEach(type => window.removeEventListener(type, swallow, true));
+    window.removeEventListener('pointerdown', stop, true);
+  };
+
+  types.forEach(type => window.addEventListener(type, swallow, true));
+  window.addEventListener('pointerdown', stop, true);
+};
 
 /**
  * Singleton registry that manages open popovers.
@@ -77,6 +112,12 @@ export class PopoverRegistry {
   private pressedOpenTrigger: HTMLElement | null = null;
 
   /**
+   * Bound reference to the window capture-phase pointerdown handler that runs
+   * the {@link PopoverAbstract.swallowsOutsideClick} backdrop
+   */
+  private boundBackdropPointerDown: ((e: PointerEvent) => void) | null = null;
+
+  /**
    * Bound reference to the capture-phase keydown handler for add/remove symmetry
    */
   private boundKeyDown: ((e: KeyboardEvent) => void) | null = null;
@@ -129,7 +170,7 @@ export class PopoverRegistry {
       this.stack.splice(existingIndex, 1);
     }
 
-    this.stack.push({ popover, triggerElement });
+    this.stack.push({ popover, triggerElement, openedByPointer: !isKeyboardModality() });
     this.ensureDocumentListener();
   }
 
@@ -156,7 +197,7 @@ export class PopoverRegistry {
     }
 
     const topmost = this.stack[this.stack.length - 1];
-    const { triggerElement } = topmost;
+    const { triggerElement, openedByPointer } = topmost;
 
     // A menu that opted in closes an open submenu before itself. The type check is for test mocks.
     if (typeof topmost.popover.closeSubmenuOnEscape === 'function' && topmost.popover.closeSubmenuOnEscape()) {
@@ -190,6 +231,9 @@ export class PopoverRegistry {
      * in the document — a stale trigger would throw or steal focus.
      */
     if (triggerElement.isConnected) {
+      if (openedByPointer && topmost.popover.escapeRestoresPointerModality) {
+        recordActionKey();
+      }
       triggerElement.focus();
     }
 
@@ -376,6 +420,58 @@ export class PopoverRegistry {
   }
 
   /**
+   * Backdrop for popovers with {@link PopoverAbstract.swallowsOutsideClick}. Runs at
+   * window capture, before any page handler: when a primary press away closes such a
+   * popover, it closes the same entries the bubble handler would and eats the rest of
+   * the gesture, so the press does not act on what lies under it. A secondary press does
+   * the same, so no other menu opens under the pointer. A middle press only reaches
+   * nothing when a popover holds on it ({@link PopoverAbstract.holdsOnMiddleClick}).
+   * @param event - the pointerdown event
+   */
+  private handleBackdropPointerDown(event: PointerEvent): void {
+    const target = event.target;
+
+    if (event.button > 2 || !(target instanceof Node)) {
+      return;
+    }
+
+    const entriesToClose: PopoverRegistryEntry[] = [];
+
+    for (const entry of [...this.stack].reverse()) {
+      if (entry.popover.hasNode(target) || entry.triggerElement.contains(target)) {
+        break;
+      }
+      entriesToClose.push(entry);
+    }
+
+    // A popover no longer in the document (its editor was torn down) shows no backdrop.
+    const backdrops = entriesToClose.filter(entry => entry.popover.swallowsOutsideClick && entry.popover.getElement().isConnected);
+    const holds = backdrops.some(entry => entry.popover.holdsOnMiddleClick);
+
+    if (backdrops.length === 0 || (event.button === 1 && !holds)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    swallowRestOfPress(event.button);
+
+    if (event.button === 1) {
+      return;
+    }
+
+    for (const entry of entriesToClose) {
+      entry.popover.hide();
+    }
+
+    const active = document.activeElement;
+
+    if (active instanceof HTMLElement && active !== document.body) {
+      active.blur();
+    }
+  }
+
+  /**
    * Capture-phase click handler enforcing the same-trigger law: a click that
    * started (pointerdown) on the interactive trigger of an already-open
    * popover must do nothing. The popover neither closes (guaranteed by
@@ -430,6 +526,9 @@ export class PopoverRegistry {
     this.boundKeyDown = (e: KeyboardEvent): void => this.handleDocumentKeyDown(e);
     this.boundFocusIn = (e: FocusEvent): void => this.handleDocumentFocusIn(e);
 
+    this.boundBackdropPointerDown = (e: PointerEvent): void => this.handleBackdropPointerDown(e);
+
+    window.addEventListener('pointerdown', this.boundBackdropPointerDown, true);
     document.addEventListener('pointerdown', this.boundPointerDown);
     document.addEventListener('click', this.boundClickCapture, true);
     document.addEventListener('keydown', this.boundKeyDown, true);
@@ -445,6 +544,11 @@ export class PopoverRegistry {
     if (this.boundPointerDown !== null) {
       document.removeEventListener('pointerdown', this.boundPointerDown);
       this.boundPointerDown = null;
+    }
+
+    if (this.boundBackdropPointerDown !== null) {
+      window.removeEventListener('pointerdown', this.boundBackdropPointerDown, true);
+      this.boundBackdropPointerDown = null;
     }
 
     if (this.boundClickCapture !== null) {

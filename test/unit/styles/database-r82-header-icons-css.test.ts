@@ -67,6 +67,15 @@ describe('database Round 41 menu icon inks', () => {
     expect(ruleBody('[data-blok-database-picker-list="filter"] [data-blok-database-panel-icon], [data-blok-database-picker-list="sort"] [data-blok-database-panel-icon]')).toContain('color: var(--blok-database-peek-glyph-strong)');
     expect(tokenValues('--blok-database-peek-glyph-strong')[0]).toBe('rgb(56, 56, 54)');
   });
+
+  // notion-motion.md Round 110 §1 #6 (r110-n-sortpicker-end.raw): the sort picker's surface is its one scroller,
+  // so the search scrolls away with the list. The list must not scroll on its own.
+  it('scrolls the sort picker as one surface, search and list together', () => {
+    const body = ruleBody('[data-blok-database-panel-page="picker"] > [data-blok-database-picker-list="sort"]');
+
+    expect(body).toContain('flex: none');
+    expect(body).toContain('overflow-y: visible');
+  });
 });
 
 describe('database Round 41 header ⋯', () => {

@@ -360,6 +360,29 @@ describe('PopoverDesktop close motion (animateClose)', () => {
     });
   });
 
+  describe('closesAtOnce', () => {
+    it('a plain hide leaves the top layer at once, with no motion', () => {
+      const popover = open({ animateClose: true });
+
+      popover.closesAtOnce = true;
+      stubAnimations(popover, [controllableAnimation().animation]);
+      popover.hide();
+
+      expect(isInTopLayer(popover)).toBe(false);
+      expect(popover.isClosing).toBe(false);
+    });
+
+    it('is off by default: a plain hide plays the motion', () => {
+      const popover = open({ animateClose: true });
+
+      stubAnimations(popover, [controllableAnimation().animation]);
+      popover.hide();
+
+      expect(popover.closesAtOnce).toBe(false);
+      expect(popover.isClosing).toBe(true);
+    });
+  });
+
   describe('a submenu', () => {
     const openWithSubmenu = (animateClose: boolean): { root: PopoverDesktop; nested: HTMLElement } => {
       const trigger = document.createElement('button');

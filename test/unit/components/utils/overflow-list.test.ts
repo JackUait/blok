@@ -130,6 +130,35 @@ describe('OverflowList keyboard (research/21 §2)', () => {
     expect(highlighted()).toBe('b');
   });
 
+  // Keyboard-only focus law: a mouse open tints no row.
+  describe('after a mouse open', () => {
+    beforeEach(() => {
+      list.close();
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      list = make();
+      list.open();
+    });
+
+    afterEach(() => {
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+    });
+
+    it('highlights no row, and the search still has focus', () => {
+      expect(highlighted()).toBeNull();
+      expect(input()).toHaveFocus();
+    });
+
+    it('ArrowDown starts at the first row, ArrowUp at New view', () => {
+      press('ArrowDown');
+
+      expect(highlighted()).toBe('a');
+
+      press('ArrowUp');
+
+      expect(highlighted()).toBe('new');
+    });
+  });
+
   it('wires the search as a combobox over a listbox of options', () => {
     const listbox = document.querySelector(`[${P}-dropdown] [role="listbox"]`);
     const current = document.querySelector(`[${P}-item][data-id="b"]`);
@@ -183,8 +212,23 @@ describe('OverflowList keyboard (research/21 §2)', () => {
     press('ArrowDown');
     press('Enter');
 
-    expect(onSelect).toHaveBeenCalledWith('c');
+    expect(onSelect).toHaveBeenCalledWith('c', true);
     expect(list.isOpen).toBe(false);
+  });
+
+  // The owner hands the focus back to its button only when Escape closed the list.
+  it('tells the owner whether Escape closed it', () => {
+    const onClose = vi.fn();
+
+    list.close();
+    list = make({ onClose });
+    list.open();
+    press('Escape');
+    list = make({ onClose });
+    list.open();
+    press('Enter');
+
+    expect(onClose.mock.calls).toEqual([[true], [false]]);
   });
 
   it('Enter on New view runs the new-item action and closes the list', () => {
@@ -358,9 +402,9 @@ describe('OverflowList fixed rows', () => {
     expect(onSelect).not.toHaveBeenCalled();
     expect(list.isOpen).toBe(true);
 
-    row('c').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    row('c').dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
 
-    expect(onSelect).toHaveBeenCalledWith('c');
+    expect(onSelect).toHaveBeenCalledWith('c', false);
   });
 });
 

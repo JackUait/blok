@@ -87,6 +87,21 @@ export interface PopoverItemChildren {
   clickOnly?: boolean;
 
   /**
+   * True if Escape on the children puts DOM focus on the item itself, not on
+   * the parent list, when a click or key opened them. After a hover open,
+   * Escape keeps focus on the parent list. Needs `escapeClosesSubmenuFirst`
+   * on the root popover. False by default.
+   */
+  escapeFocusesRow?: boolean;
+
+  /**
+   * True if a 'dropdown' list opens on the item's drawn button box (styled
+   * by the host), 3px outside its start edge, instead of on the value.
+   * False by default.
+   */
+  fromButton?: boolean;
+
+  /**
    * Width of the nested popover. Defaults to '280px'.
    * Use 'auto' to fit content width.
    */

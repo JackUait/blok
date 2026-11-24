@@ -2593,3 +2593,81 @@ describe('DatabaseTimelineView grouped with undated rows', () => {
     expect(order(root)).toEqual(['row:r1', 'row:r2', 'new:']);
   });
 });
+
+// notion-motion.md Round 114 §1 #7: a panel row shows a + and a ⋮⋮ on its left on hover; a ⋮⋮ click opens the row menu.
+describe('DatabaseTimelineView table panel row gutter', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  const withPanel = (overrides: Partial<DatabaseTimelineViewOptions> = {}): Mounted & { openRowMenu: ReturnType<typeof vi.fn>; addRowBelow: ReturnType<typeof vi.fn> } => {
+    const openRowMenu = vi.fn();
+    const addRowBelow = vi.fn();
+    const handlers = { ...makeHandlers(), openRowMenu, addRowBelow };
+    const mounted = mount({ view: timelineView({ showTimelineTable: true }), handlers, ...overrides });
+
+    return { ...mounted, handlers, openRowMenu, addRowBelow };
+  };
+  const panelRow = (root: HTMLElement, rowId: string): HTMLElement => {
+    const el = root.querySelector<HTMLElement>(`[data-blok-database-timeline-table-row][data-row-id="${rowId}"]`);
+
+    if (el === null) throw new Error('no panel row');
+
+    return el;
+  };
+  const gutterPart = (root: HTMLElement, rowId: string, part: 'add' | 'handle'): HTMLElement | null =>
+    panelRow(root, rowId).querySelector<HTMLElement>(`:scope > [data-blok-database-timeline-table-row-gutter] > [data-blok-database-timeline-table-row-${part}]`);
+
+  it('gives each panel row a + then a ⋮⋮, out of the Tab order', () => {
+    const { root } = withPanel();
+    const add = gutterPart(root, 'r1', 'add');
+    const handle = gutterPart(root, 'r1', 'handle');
+
+    expect(add?.nextElementSibling).toBe(handle);
+    expect(add?.getAttribute('aria-label')).toBe('tools.database.tableAddBelow');
+    expect(handle?.getAttribute('aria-label')).toBe('tools.database.tableDragHandle');
+    expect(add?.tabIndex).toBe(-1);
+    expect(handle?.tabIndex).toBe(-1);
+  });
+
+  it('a ⋮⋮ click opens that row\'s menu from the ⋮⋮', () => {
+    const { root, openRowMenu } = withPanel();
+    const handle = gutterPart(root, 'r2', 'handle');
+
+    handle?.click();
+
+    expect(openRowMenu).toHaveBeenCalledWith(handle, panelRow(root, 'r2'), 'r2');
+  });
+
+  it('a + click adds a row below that row', () => {
+    const { root, addRowBelow, openRowMenu } = withPanel();
+
+    gutterPart(root, 'r1', 'add')?.click();
+
+    expect(addRowBelow).toHaveBeenCalledWith(null, 'r1');
+    expect(openRowMenu).not.toHaveBeenCalled();
+  });
+
+  it('drags a row by its panel ⋮⋮, and the drag opens no menu', () => {
+    const { root, handlers, openRowMenu } = withPanel();
+
+    [...root.querySelectorAll<HTMLElement>('[data-blok-database-timeline-row]')].forEach((el, i) => rect(el, 0, 100 + i * 36, 2000, 36));
+    const handle = gutterPart(root, 'r1', 'handle');
+
+    if (handle === null) throw new Error('no handle');
+    pointer('pointerdown', handle, 5, 110);
+    pointer('pointermove', document, 5, 100 + 36 + 30);
+    pointer('pointerup', document, 5, 100 + 36 + 30);
+    handle.click();
+
+    // With the panel shown, the undated r3 has a lane too.
+    expect(handlers.moveRow).toHaveBeenCalledWith({ rowId: 'r1', afterRowId: 'r2', beforeRowId: 'r3', groupKey: '', fromGroupKey: '' });
+    expect(openRowMenu).not.toHaveBeenCalled();
+  });
+
+  it('has no gutter when read-only', () => {
+    const { root } = withPanel({ readOnly: true });
+
+    expect(root.querySelector('[data-blok-database-timeline-table-row-gutter]')).toBeNull();
+  });
+});

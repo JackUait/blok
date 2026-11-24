@@ -24,10 +24,11 @@ const ruleBody = (css: string, selector: string): string =>
 describe('list width (notion-spec-2 §21.8, side-by-side-3 #1, Round 41)', () => {
   it('starts rows at the text column and ends them with the view toolbar at the column\'s end', () => {
     const body = ruleBody(database, '[data-blok-database-list]');
-    const inset = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
+    const lead = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)))';
+  const trail = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)))';
 
-    expect(body).toContain(`padding-inline-start: ${inset}`);
-    expect(body).toContain(`padding-inline-end: ${inset}`);
+    expect(body).toContain(`padding-inline-start: ${lead}`);
+    expect(body).toContain(`padding-inline-end: ${trail}`);
     expect(body).not.toMatch(/padding-(left|right)/);
   });
 });
@@ -327,6 +328,15 @@ describe('list title edit (findings-listgallery L05)', () => {
     expect(ruleBody(database, '[data-blok-database-list-row] > [data-blok-database-page-icon-placeholder]')).toContain('margin-inline-end: var(--blok-space-1)');
   });
 
+  // notion-motion.md Round 95 §2 "Dark list row": Notion's page icon ink is 125 in dark. Light keeps the card-actions ink.
+  it('inks the page glyph 125 in dark without changing light', () => {
+    expect(ruleBody(database, '[data-blok-database-list-row] > [data-blok-database-page-icon-placeholder]'))
+      .toContain('color: var(--blok-database-list-row-icon, var(--blok-database-card-actions-icon))');
+    expect(ruleBody(database, ':where([data-blok-theme="dark"] [data-blok-interface])')).toContain('--blok-database-list-row-icon: rgb(125, 122, 117)');
+    expect(database).toMatch(/prefers-color-scheme: dark[^@]*--blok-database-list-row-icon: rgb\(125, 122, 117\)/);
+    expect(ruleBody(database, ':where([data-blok-interface])')).not.toContain('--blok-database-list-row-icon:');
+  });
+
   // sweep9a/pixel-scans.txt (LIST ROW): Notion's glyph ink starts 8px into the row and its title 31px; Blok's were 6 and 34.
   it('moves the glyph or emoji 2px in and the title 3px back', () => {
     expect(ruleBody(database, '[data-blok-database-list-row] > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder])')).toContain('margin-inline: var(--blok-space-0-5) -1px');
@@ -505,6 +515,54 @@ describe('conditional color card lines (notion-motion.md Round 20 §4)', () => {
     expect(value).toContain('color: var(--blok-database-panel-value-text)');
     expect(value).toContain('font-size: 14px');
     expect(ruleBody(database, '[data-blok-database-color-setting-value] svg')).toContain('width: 16px');
+  });
+});
+
+// notion-motion.md Round 95 §1 #7 (r95-n-condcolor-empty.raw): the text box is 258 wide at +16, as "New color setting".
+describe('conditional color intro text', () => {
+  it('drops the note padding and takes the button\'s side margins', () => {
+    const body = ruleBody(database, '[data-blok-database-panel-note][data-blok-database-color-blurb]');
+
+    expect(body).toContain('padding: 0');
+    expect(body).toContain('margin-inline: var(--blok-space-3)');
+  });
+
+  // Round 104 §1 #5 (r104-n-cc-empty-light.raw): Notion's wrapper has margin 16px 0, so the button sits 16 under the text.
+  it('leaves 16 between the text and the New color setting button', () => {
+    expect(ruleBody(database, '[data-blok-database-panel-note][data-blok-database-color-blurb]')).toContain('margin-block-end: var(--blok-space-4)');
+  });
+
+  // Round 107 §1 #3 (r107-b-cc-empty.raw): the note's 4px bottom padding made that gap 20.
+  it('drops the note\'s bottom padding, so the margin alone is the gap', () => {
+    expect(ruleBody(database, '[data-blok-database-panel-note][data-blok-database-color-blurb]')).toContain('padding: 0');
+  });
+});
+
+// notion-motion.md Round 20 §4 (r20-cc-is-parts.raw): a 16x16 ⌄ in rgb(173, 169, 163) at the "Select..." field's end.
+describe('conditional color value chevron', () => {
+  it('lays the field out as a row whose text truncates before a 16px chevron in the gutter icon ink', () => {
+    expect(ruleBody(database, 'button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-field]')).toContain('display: flex');
+    const text = ruleBody(database, '[data-blok-database-color-rule-text]');
+
+    expect(text).toContain('min-width: 0');
+    expect(text).toContain('text-overflow: ellipsis');
+    expect(ruleBody(database, '[data-blok-database-color-rule-chevron]')).toContain('color: var(--blok-database-table-gutter-icon)');
+    const svg = ruleBody(database, '[data-blok-database-color-rule-chevron] svg');
+
+    expect(svg).toContain('width: 16px');
+    expect(svg).toContain('height: 16px');
+  });
+});
+
+// notion-motion.md Round 104 §2 (r104-n-cc-rule-relation-contains-light.raw): "Select..." is 200 wide; the ⌄ is level
+// with its top and ends 8 in from the inner box, 2 after the text.
+describe('conditional color value chevron place (Round 104)', () => {
+  it('tops the text and the chevron together and keeps the chevron 8 in from the field end', () => {
+    const field = ruleBody(database, 'button[data-blok-database-color-rule-value] > [data-blok-database-color-rule-field]');
+
+    expect(field).toContain('align-items: flex-start');
+    expect(field).toContain('padding-inline-end: var(--blok-space-2)');
+    expect(field).toContain('gap: var(--blok-space-0-5)');
   });
 });
 

@@ -264,6 +264,12 @@ describe('View settings Layout page rows (notion-motion Round 9)', () => {
   it('put 1px between rows, a 29px pitch', () => {
     expect(ruleBody(NEXT)).toContain('margin-block-start: var(--blok-space-0-25)');
   });
+
+  // r25-lay-board.raw: Load limit ends 583.7, the line sits at 591.7, Card preview starts at 600.7.
+  // Round 114 §1 #10: Load limit 469.7 to Card preview 514.7 on a gallery too.
+  it('keep the card rows\' line 8px from the row above and below it', () => {
+    expect(ruleBody('[data-blok-database-panel-page="layout"] > [data-blok-database-panel-separator]')).toContain('margin-block: var(--blok-space-2)');
+  });
 });
 
 // r35:497-509 (two rules 32 tall at y 133 and 173) and r10-sort-popover.png (box top 305, rule 313, Add sort 351, bottom 412).
@@ -298,6 +304,13 @@ describe('sort panel insets (Round 35 gap 6)', () => {
     expect(ruleBody(`${PAGE} [data-blok-database-panel-handle]`)).toContain('margin-inline-end: var(--blok-space-2-25)');
     expect(ruleBody(`${PAGE} [data-blok-database-panel-handle] svg`)).toContain('width: 16px');
     expect(ruleBody(`${PAGE} [data-blok-database-panel-handle] svg`)).toContain('height: 16px');
+  });
+
+  // notion-motion.md Round 114 §1 #8 (r114-n-sortrule-handle-ink.raw): the handle glyph is 142 in light, 173 in dark.
+  it('inks the sort rule handle 142 in light and 173 in dark', () => {
+    expect(ruleBody(`${PAGE} [data-blok-database-panel-handle]`)).toContain('color: var(--blok-database-sort-handle-ink)');
+    // Order: light, the dark media query, the dark theme attribute.
+    expect(tokenValues('--blok-database-sort-handle-ink')).toEqual(['rgb(142, 139, 134)', 'rgb(173, 169, 163)', 'rgb(173, 169, 163)']);
   });
 
   it('keeps the × glyph 20px after the direction button and 18px from the edge', () => {

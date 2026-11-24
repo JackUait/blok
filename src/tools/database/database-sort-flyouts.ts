@@ -31,7 +31,7 @@ export const openFlyout = (
   testId: string,
   width: number,
   rows: (pick: (write: () => HTMLElement | false | null | undefined | void) => void) => HTMLElement[],
-  place: { beside?: number; aside?: { side: 'left' | 'right'; gap: number; flip?: boolean }; fit?: boolean; gap?: number; flip?: boolean; alignEnd?: boolean; escapeFocus?: () => HTMLElement | null | undefined } = {}
+  place: { beside?: number; aside?: { side: 'left' | 'right'; gap: number; flip?: boolean }; fit?: boolean; gap?: number; flip?: boolean; alignEnd?: boolean; escapeFocus?: () => HTMLElement | null | undefined; onClose?: () => void } = {}
 ): DatabasePanel => {
   const release = host.hold();
   const focusKey = anchor.getAttribute('data-blok-testid') ?? '';
@@ -66,6 +66,7 @@ export const openFlyout = (
     ...(place.alignEnd === true ? { alignEnd: true } : {}),
     onClose: (escape) => {
       release();
+      place.onClose?.();
       if (escape) (place.escapeFocus?.() ?? anchor).focus();
     },
   });

@@ -19,6 +19,9 @@ const rule = (selector: string): string => {
   return database.slice(at + 2, database.indexOf('}', at + 2));
 };
 
+/** One view's "+" and several views' "…" sit after the same hidden placeholder copy. */
+const PLACEHOLDER_COPY = '[data-blok-database-title-row][data-single-view] [data-blok-database-title]:is(:empty, [data-blok-empty="true"])::after, [data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title]:is(:empty, [data-blok-empty="true"]):has(+ [data-blok-database-title-more])::after';
+
 describe('one view: the toolbar shares the title row (V01)', () => {
   it('the emptied view bar takes no room', () => {
     expect(rule('[data-blok-database-view-bar][data-single-view]')).toMatch(/display: none/);
@@ -39,7 +42,7 @@ describe('one view: the toolbar shares the title row (V01)', () => {
 
 describe('the empty title keeps its placeholder width (V02)', () => {
   it('a hidden copy of the placeholder holds the title open', () => {
-    const body = rule('[data-blok-database-title-row][data-single-view] [data-blok-database-title]:is(:empty, [data-blok-empty="true"])::after');
+    const body = rule(PLACEHOLDER_COPY);
 
     expect(body).toMatch(/content: attr\(data-placeholder\)/);
     expect(body).toMatch(/visibility: hidden/);
@@ -71,6 +74,28 @@ describe('a long title stays one line', () => {
 
   it('with several views the title spans its own row', () => {
     expect(rule('[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title]')).toMatch(/flex: 1 1 0%; min-width: 0/);
+  });
+
+  // notion-motion.md Round 110 §1 #2 (r110-n-titlemore-2views.raw): with two views the ⋯ sits 4 after the title text,
+  // and the title still stops at the column end.
+  it('with several views a titled database\'s "…" sits 4 after the title text', () => {
+    const trail = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)))';
+
+    expect(rule('[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title-more]')).toContain(`margin-inline: var(--blok-space-1) ${trail}`);
+  });
+
+  // notion-motion.md Round 111 §1 #1 (r111-n-titlemore-empty-2views.raw): with two views an empty title is the
+  // placeholder's width (155.9) and the ⋯ sits 4 after it, as with a typed title.
+  it('with several views an empty title hugs its placeholder and the "…" sits 4 after it', () => {
+    expect(rule('[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title]:has(+ [data-blok-database-title-more])'))
+      .toMatch(/flex: 0 1 auto; padding-inline-end: 0/);
+    const copy = rule(PLACEHOLDER_COPY);
+
+    expect(copy).toMatch(/content: attr\(data-placeholder\)/);
+    expect(copy).toMatch(/visibility: hidden/);
+    expect(copy).toMatch(/height: 0/);
+    expect(copy).toMatch(/white-space: nowrap/);
+    expect(database).not.toContain('+ [data-blok-database-title-more] { margin-inline-start: calc(-1 * var(--blok-space-6))');
   });
 
   it('"+" and "…" keep their 24px while the title gives way', () => {
@@ -312,28 +337,29 @@ describe('full-page database: the toolbar icons show on hover', () => {
 
 // notion-motion.md Round 32 §3 Table and gap 0 (side-by-side-v1 X1): in a page-wide editor Notion's New ends at the text column.
 describe('the toolbar ends at the text column', () => {
-  const inset = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
+  const trail = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)))';
 
   it('stops the toolbar beside the tabs at the column end', () => {
-    expect(rule('[data-blok-database-view-bar] > [data-blok-database-view-toolbar]')).toContain(`margin-inline-end: ${inset}`);
+    expect(rule('[data-blok-database-view-bar] > [data-blok-database-view-toolbar]')).toContain(`margin-inline-end: ${trail}`);
   });
 
   it('stops the one-view title row at the column end', () => {
-    expect(rule('[data-blok-database-title-row][data-single-view]')).toContain(`padding-inline-end: ${inset}`);
+    expect(rule('[data-blok-database-title-row][data-single-view]')).toContain(`padding-inline-end: ${trail}`);
   });
 });
 
 // notion-motion.md Round 35 gap 5 (r35-sort2.raw, .png): in a page-wide editor the bar's line spans x 531-1238 (the column and 8 each side) at y 309, 4 under Blok's,
 // and the "2 sorts" chip sits at (539, 322.2), 13 under the line.
 describe('the sort and filter chip bar keeps to the text column', () => {
-  const inset = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
+  const lead = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)))';
+  const trail = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5)))';
 
   it('stops the line 8px outside the column on both sides', () => {
-    expect(rule('[data-blok-database-filter-bar]')).toContain(`margin-inline: max(0px, calc(${inset} - var(--blok-space-2)))`);
+    expect(rule('[data-blok-database-filter-bar]')).toContain(`margin-inline: max(0px, calc(${lead} - var(--blok-space-2))) max(0px, calc(${trail} - var(--blok-space-2)))`);
   });
 
   it('starts the first chip at the column', () => {
-    expect(rule('[data-blok-database-filter-bar]')).toContain(`padding-inline-start: min(var(--blok-space-2), ${inset})`);
+    expect(rule('[data-blok-database-filter-bar]')).toContain(`padding-inline-start: min(var(--blok-space-2), ${lead})`);
   });
 
   it('puts the line 4px lower and the chips 13px under it, in the same 45px bar', () => {
@@ -356,15 +382,49 @@ describe('several views: the selection bar sits at the top of the first row', ()
   });
 });
 
-// notion-motion.md Round 97 §1 #4: with one view the bar's top is the database's top too, 8px left of the title.
-describe('one view: the selection bar sits at the database top, 8px left of the title', () => {
+// notion-motion.md Round 97 §1 #4 and Round 98 §1 #3: with one view or several the bar's top is the database's top, 8px left of the title.
+describe('the selection bar on the title row sits at the database top, 8px left of the title', () => {
   it('no rule keeps the one-view bar centred in the title row', () => {
     expect(database).not.toContain(':not([data-single-view]) > [data-blok-database-table-selection-bar]');
   });
 
-  it('starts 8px before the title text', () => {
-    const body = rule('[data-blok-database-title-row][data-single-view] > [data-blok-database-table-selection-bar], [data-blok-database-title-row][data-single-view] > [data-blok-database-table-selection-bar-leaving]');
+  it('starts 8px before the title text, with one view or several', () => {
+    const body = rule('[data-blok-database-title-row] > [data-blok-database-table-selection-bar], [data-blok-database-title-row] > [data-blok-database-table-selection-bar-leaving]');
 
-    expect(body).toMatch(/inset-inline-start: max\(0px, calc\(\(100% - var\(--blok-content-max-width, var\(--max-width-content\)\)\) \/ 2 - 8px\)\)/);
+    expect(body).toMatch(/inset-inline-start: max\(0px, calc\(\(100% - var\(--blok-content-max-width, var\(--max-width-content\)\)\) \* var\(--_blok-database-lead, 0\.5\) - 8px\)\)/);
+  });
+});
+
+// notion-motion.md Round 99 §1 #5: with no title row the bar starts 8px left of the tabs, and 10px on a full-page database.
+describe('the selection bar on the tab row starts left of the tabs, as in Notion', () => {
+  it('starts 8px before the tabs when the titles are hidden', () => {
+    const body = rule('[data-blok-database-view-bar] > [data-blok-database-table-selection-bar], [data-blok-database-view-bar] > [data-blok-database-table-selection-bar-leaving]');
+
+    expect(body).toMatch(/inset-inline-start: calc\(max\(0px, \(100% - var\(--blok-content-max-width, var\(--max-width-content\)\)\) \* var\(--_blok-database-lead, 0\.5\)\) - 8px\)/);
+  });
+
+  it('starts 10px before the tabs on a full-page database', () => {
+    const body = rule('[data-blok-database-page] > [data-blok-database-view-bar] > [data-blok-database-table-selection-bar], [data-blok-database-page] > [data-blok-database-view-bar] > [data-blok-database-table-selection-bar-leaving]');
+
+    expect(body).toMatch(/inset-inline-start: calc\(max\(0px, \(100% - var\(--blok-content-max-width, var\(--max-width-content\)\)\) \* var\(--_blok-database-lead, 0\.5\)\) - 10px\)/);
+  });
+});
+
+// notion-motion.md Round 111 §1 #2, Round 112 §1 #2 (r112-n-titlemore-menu-1view.raw): the title ⋯ menu's
+// 20px icon at +8 and text at +36; a rule 176 wide, 12 in from the menu, 4 under the row above and 4 over the next.
+describe('the title "…" menu', () => {
+  it('draws 20px icons with 8 after them', () => {
+    expect(database).toMatch(/\[data-blok-popover\]\[data-blok-popover-custom-class~='blok-database-title-menu'\] \[data-blok-popover-item-icon\] ?[,{]/);
+  });
+
+  it('spaces its rules 4 from the rows, 12 in from the menu', () => {
+    expect(rule("[data-blok-popover][data-blok-popover-custom-class~='blok-database-title-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator]"))
+      .toMatch(/padding: var\(--blok-space-0-75\) var\(--blok-space-2\) var\(--blok-space-1\)/);
+  });
+
+  // 200x255 with 8 rows: the last row ends 4 over the menu's bottom.
+  it('leaves no row gap under the last row', () => {
+    expect(rule("[data-blok-popover][data-blok-popover-custom-class~='blok-database-title-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item]:last-child"))
+      .toMatch(/margin-block-end: 0/);
   });
 });

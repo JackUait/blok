@@ -312,6 +312,24 @@ describe('DatabaseCardDrag', () => {
     vi.useRealTimers();
   });
 
+  // notion-live/motion-carddrag.json 4456/4464: when the line changes slot the old one fades 1→0 where it was
+  // and a new one fades 0→1 at the new slot. Moving inside one slot keeps one line.
+  it('crossfades the drop line when it changes slot, and keeps one line inside a slot', () => {
+    document.querySelectorAll('[data-blok-database-drop-line]').forEach((line) => line.remove());
+    drag.beginTracking('row-0-0', 50, 30);
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 250, clientY: 20 }));
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 250, clientY: 25 }));
+
+    expect(document.querySelectorAll('[data-blok-database-drop-line]')).toHaveLength(1);
+
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 250, clientY: 80 }));
+
+    const lines = Array.from(document.querySelectorAll<HTMLElement>('[data-blok-database-drop-line]'));
+
+    expect(lines).toHaveLength(2);
+    expect(lines.map((line) => line.style.opacity)).toEqual(['0', '']);
+  });
+
   it('sets dragging attribute on wrapper during active drag', () => {
     drag.beginTracking('row-0-0', 50, 30);
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 70, clientY: 30 }));

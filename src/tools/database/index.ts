@@ -47,8 +47,9 @@ import type { TemplateRepeatHost } from './database-template-menu';
 import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
 import { announce } from '../../components/utils/announcer';
+import { isKeyboardModality } from '../../components/utils/input-modality';
 import { bulkCloseClearsSelection, bulkEditableProperties, bulkStartValue, createSelectionBar, watchBulkCloseKey } from './database-selection-bar';
-import { CALC_MENU_MIN_WIDTH, CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, openMenu, rowMenuFooter, rowMenuItems, selectionActionItems, selectionMenuItems } from './database-table-menus';
+import { CALC_MENU_MIN_WIDTH, CALCULATION_LABEL_KEYS, calcHighlight, calcMenuAt, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, openMenu, rowMenuFooter, rowMenuItems, selectionActionItems, selectionMenuItems } from './database-table-menus';
 import type { OpenMenuOptions, RowFavorite } from './database-table-menus';
 import { EmojiPicker, prefetchEmojiPickerData } from '../callout/emoji-picker';
 import { refreshCommentBadges } from './database-comment-badge';
@@ -71,7 +72,7 @@ import { UNORDERED_VIEW_TYPES } from '../../shared/database/row-order';
 import { openDatabaseChoice, openDatabaseConfirm } from './database-confirm-dialog';
 import { draftOf, openAutofillSetup, presetDraft } from './database-autofill-setup';
 import type { AutofillDraft } from './database-autofill-setup';
-import { DATABASE_GROUP_MENU_CLASS, DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS, groupMenuItems } from './database-group-menu';
+import { DATABASE_GROUP_MENU_CLASS, DATABASE_MENU_CLASS, DATABASE_SUBMENU_CLOSE_DELAY_MS, DATABASE_SUBMENU_OPEN_DELAY_MS, groupMenuItems } from './database-group-menu';
 import { groupCalculationHint, groupCalculationItems, groupCalculationText } from './database-board-calculation';
 import { optionColorOf, type OptionColor } from './cells/option-colors';
 import { DatabaseBoardView } from './database-board-view';
@@ -407,6 +408,9 @@ const releaseCaret = (): void => {
 /** Core's rule for a right-click that keeps the browser menu: the element holds text itself. */
 const ownsText = (target: Element | null | undefined): boolean =>
   Array.from(target?.childNodes ?? []).some((node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? '').trim() !== '');
+
+/** notion-motion.md Round 101 §1 #4: the room round the coloured pill inside Notion's group pill button. */
+const PILL_BUTTON_PAD = 3;
 
 const groupMenuCoverPlacement = (anchor: HTMLElement, margin: number, offset: number): Pick<PopoverDesktopParams, 'cover' | 'viewportMargin' | 'coverFlipOffset' | 'coverVerticalMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
   const rect = anchor.getBoundingClientRect();
@@ -2627,12 +2631,6 @@ export class DatabaseTool implements BlockTool {
         element.blur();
       }
     });
-    // Clearing it removes the line (notion-motion.md Round 15 C).
-    element.addEventListener('blur', () => {
-      if (this.descriptionElement === element && (element.textContent ?? '').trim() === '') {
-        this.removeDescription();
-      }
-    });
     // Before the title row, which on a full page holds only the add-view "+": Notion puts the description right under the page title, above the views.
     titleRow.before(element);
     this.descriptionElement = element;
@@ -2654,7 +2652,10 @@ export class DatabaseTool implements BlockTool {
 
   /** After setData: show, update or drop the field to match the data. */
   private syncDescription(): void {
-    if (!this.fullPage || this.description === '') {
+    // An empty line stays until reload (notion-motion.md Round 99 #7). save() leaves it out.
+    const emptyLine = this.descriptionElement !== null && this.readDescription() === '';
+
+    if (!this.fullPage || (this.description === '' && !emptyLine)) {
       this.descriptionElement?.remove();
       this.descriptionElement = null;
 
@@ -2698,6 +2699,8 @@ export class DatabaseTool implements BlockTool {
 
     button.type = 'button';
     button.setAttribute('aria-label', this.api.i18n.t('tools.database.tableEditIcon'));
+    // Blok's block Tab would keep the focus here (database-tab-bar.ts marks the title row's other buttons too).
+    button.setAttribute(DATA_ATTR.keyboardOwner, '');
     button.addEventListener('click', () => this.openIconPicker(button));
 
     return button;
@@ -2906,13 +2909,15 @@ export class DatabaseTool implements BlockTool {
    * Edit icon: the emoji picker the row pages use. A pick or Remove is one change.
    * notion-motion.md Round 67 §1: centred under the ⋮⋮ handle from the menu, or under the icon when it is clicked.
    * A menu opened with no handle shown keeps the icon or title as anchor: unmeasured.
+   * From the title row's "…" (`menuRow` is its Edit icon row): centred under that row and kept below it,
+   * 390 tall, and Escape returns to the "…" (notion-motion.md Round 114 §1 #5).
    */
-  private openIconPicker(from?: HTMLElement): void {
+  private openIconPicker(from?: HTMLElement, menuRow?: DOMRect): void {
     const anchor = from ?? this.iconElement ?? this.titleElement;
 
     if (anchor === null || !this.titleEditable()) return;
     // Read now: the handle hides once the menu closes.
-    const handle = from !== undefined ? undefined : [...this.block.holder.closest(`[${DATA_ATTR.editor}]`)?.querySelectorAll<HTMLElement>(`[${DATA_ATTR.settingsToggler}]`) ?? []]
+    const handle = from !== undefined ? menuRow : [...this.block.holder.closest(`[${DATA_ATTR.editor}]`)?.querySelectorAll<HTMLElement>(`[${DATA_ATTR.settingsToggler}]`) ?? []]
       .map((el) => el.getBoundingClientRect())
       .find((rect) => rect.width > 0);
     const write = (emoji: string): void => {
@@ -2945,6 +2950,8 @@ export class DatabaseTool implements BlockTool {
       height: from !== undefined ? 390 : 356,
       current: this.databaseEmoji,
       removable: this.databaseEmoji !== '' || this.databaseIcon !== undefined,
+      // r114-n-editicon-open.raw: with no room below the row, Notion holds the picker 8 off the bottom.
+      stayBelow: menuRow !== undefined,
     });
   }
 
@@ -5739,6 +5746,13 @@ export class DatabaseTool implements BlockTool {
       if (!this.readOnly && !this.structureLocked() && addBtn !== null && tabBarEl !== null && !tabBarEl.contains(addBtn)) {
         tabBarEl.appendChild(addBtn);
       }
+      // notion-motion.md Round 110 §1 #2: several views keep the ⋯, right after the title, shown on hover.
+      // After a second source's title too: paintSourceTitle puts that right after the block's own title.
+      const lastTitle = this.sourceTitleElement ?? this.titleElement;
+
+      if (!this.readOnly && !this.structureLocked() && lastTitle !== null) {
+        lastTitle.after(this.tabBar.createTitleMoreButton(true));
+      }
       if (tabBarEl instanceof HTMLElement) {
         tabBarEl.style.display = views.length >= 2 ? '' : 'none';
       }
@@ -5843,12 +5857,14 @@ export class DatabaseTool implements BlockTool {
       onEditView: (viewId, anchor) => this.editView(viewId, anchor),
       ...(this.linked ? {} : {
         viewSource: (viewId: string) => this.viewSource(viewId),
-        onViewSource: (viewId: string, anchor: HTMLElement) => this.editView(viewId, anchor, 'source'),
+        onViewSource: (viewId: string, anchor: HTMLElement, onClose?: (escape: boolean, away?: boolean) => void) => this.editView(viewId, anchor, 'source', onClose),
       }),
       onRenameView: (viewId, anchor) => this.editView(viewId, anchor, 'rename'),
       onCopyLink: (viewId) => this.copyViewLink(viewId),
       openFullPage: () => (this.fullPageOpener() === undefined ? undefined : (viewId) => this.openFullPage(viewId)),
       onEditTitle: () => this.focusTitle(),
+      // The ⋮⋮ menu's Edit icon gate (renderSettings).
+      ...(this.isLocked() || !this.titleEditable() ? {} : { onEditIcon: (trigger, row) => this.openIconPicker(trigger, row) }),
       sourceTitle: () => (this.title.trim() === '' ? this.api.i18n.t('tools.database.titlePlaceholder') : this.title.trim()),
       ...this.editLayoutOption(),
       display: this.tabDisplay.get(),
@@ -5988,7 +6004,7 @@ export class DatabaseTool implements BlockTool {
   /** This block's own data, then its second sources: the child database blocks, whether a view shows them or not. */
   /**
    * The view tab menu's "Source" (notion-motion.md Round 35): the view's source name, as View settings
-   * names it, and whether there is another source to pick, as View settings enables its row.
+   * names it. Round 109 §1 #5: one source does not grey it. A locked database does; Notion's locked case is unread.
    */
   private viewSource(viewId: string): { name: string; enabled: boolean } {
     const current = this.model.getView(viewId)?.dataSourceId ?? this.dataId;
@@ -5997,7 +6013,7 @@ export class DatabaseTool implements BlockTool {
     const fallback = current === this.dataId ? 'tools.database.titlePlaceholder' : 'tools.database.newDataSource';
     const name = choice === undefined || choice.title.trim() === '' ? this.api.i18n.t(fallback) : choice.title;
 
-    return { name, enabled: !this.structureLocked() && choices.some((option) => option.id !== current && option.fits) };
+    return { name, enabled: !this.structureLocked() };
   }
 
   private dataSourceChoices(viewId = this.activeViewId): DataSourceChoice[] {
@@ -7306,6 +7322,15 @@ export class DatabaseTool implements BlockTool {
 
           if (rowId !== undefined && this.view instanceof DatabaseTimelineView) this.view.editTitle(rowId);
         },
+        ...(this.readOnly ? {} : {
+          // notion-motion.md Round 114 §1 #7. What Notion's + does here is unmeasured; it is the list's and table's add-below.
+          addRowBelow: (groupKey: string | null, afterRowId: string) => {
+            const rowId = this.addTableRow(groupKey, afterRowId);
+
+            if (rowId !== null && this.view instanceof DatabaseTimelineView) this.view.editTitle(rowId);
+          },
+          openRowMenu: (handle: HTMLElement, rowEl: HTMLElement, rowId: string) => this.openCardMenu(handle, rowEl, rowId, undefined, 'handle'),
+        }),
         renameRow: (rowId, title) => this.updateRowTitleBlock(rowId, titlePropId, title),
         writeDates: (rowId, write) => this.writeTimelineDates(rowId, write, startId, endId),
         moveRow: (result) => this.handleTableRowDrop(result),
@@ -7344,7 +7369,7 @@ export class DatabaseTool implements BlockTool {
     }, {
       capCounts: resolveCountCaps(viewConfig).has(propertyId),
       onCapCounts: (cap) => this.updateActiveView({ calculations: withCalculationCap(viewConfig, propertyId, cap) }),
-    }), { kind: 'calc', at: calcMenuAt(anchor) });
+    }), { kind: 'calc', at: calcMenuAt(anchor), highlight: calcHighlight(shown(property), current) });
   }
 
   /** "+ New": a row with the new bar's dates, plus what the view's filters and group ask for. */
@@ -7415,13 +7440,29 @@ export class DatabaseTool implements BlockTool {
       title: this.api.i18n.t(timelineZoomLabelKey(zoom)),
       isActive: zoom === current,
       // notion-motion.md Round 90 §1 #1: a pick closes the menu, focus back on the zoom button.
-      closeOnActivate: true,
       onActivate: () => {
+        const menu = this.groupMenuPopover;
+
+        // A keyboard open leaves focus on the button: the redraw would refocus its twin, and focus
+        // outside the menu closes it before it can move. The microtask below focuses the twin.
+        if (document.activeElement === anchor) anchor.blur();
         this.updateActiveView({ timelineZoom: zoom });
-        // Focus was in the menu, so a redraw that replaced the button could not hand focus to its twin.
-        (anchor.isConnected ? anchor : this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-timeline-zoom]'))?.focus({ preventScroll: true });
+        // A bound view redraws in a microtask; close after it, on the redrawn button.
+        queueMicrotask(() => {
+          const button = anchor.isConnected ? anchor : (this.binding?.owner ?? this).boardContainer?.querySelector<HTMLElement>('[data-blok-database-timeline-zoom]');
+
+          // notion-motion.md Round 105 §1 #8: the menu moves under the new, narrower button, then fades.
+          if (button !== null && button !== undefined) menu?.updatePosition(button.getBoundingClientRect(), { positionContext: button });
+          // Focus was in the menu, so a redraw that replaced the button could not hand focus to its twin.
+          button?.focus({ preventScroll: true });
+          menu?.hide();
+        });
       },
-    })), undefined, { minWidth: '180px' });
+    })), undefined, {
+      minWidth: '180px',
+      // notion-motion.md Round 115 §1 #4: a keyboard open starts on the current zoom.
+      keyboardStart: `database-timeline-zoom-${current}`,
+    });
   }
 
   /** "+" on a day: a new row dated that day, plus what the view's filters ask for. */
@@ -7862,11 +7903,11 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** "Edit view" or "Rename" on a tab: show that view, then its settings. */
-  private editView(viewId: string, anchor: HTMLElement, start: 'edit' | 'rename' | 'source' = 'edit'): void {
+  private editView(viewId: string, anchor: HTMLElement, start: 'edit' | 'rename' | 'source' = 'edit', onClose?: (escape: boolean, away?: boolean) => void): void {
     this.showView(viewId);
     const tab = this.element?.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${CSS.escape(viewId)}"]`);
 
-    this.controls.openSettings(tab?.isConnected === true ? tab : anchor, start);
+    this.controls.openSettings(tab?.isConnected === true ? tab : anchor, start, onClose);
   }
 
   private setDatabaseLocked(locked: boolean): void {
@@ -10279,8 +10320,23 @@ export class DatabaseTool implements BlockTool {
         this.pressButton(rowId, propertyId);
       }
     }, true);
+    // notion-motion.md Round 99 §1 #2, Round 100 §1 #3-#4: a click, Enter or Space on a band pill opens the rename popup under it.
+    boardEl.addEventListener('keydown', (event) => {
+      const label = event.target instanceof HTMLElement && event.target.matches('[data-blok-database-board-lane-label][role="button"]') ? event.target : null;
+
+      if (label === null || (event.key !== 'Enter' && event.key !== ' ') || event.isComposing) return;
+      event.preventDefault();
+      this.renameLane(label);
+    });
     boardEl.addEventListener('click', (event) => {
       const target = event.target as HTMLElement;
+      const bandPill = target.closest<HTMLElement>('[data-blok-database-board-lane-label][role="button"]');
+
+      if (bandPill !== null) {
+        this.renameLane(bandPill);
+
+        return;
+      }
 
       const addCardBtn = target.closest('[data-blok-database-add-card]');
 
@@ -10508,7 +10564,12 @@ export class DatabaseTool implements BlockTool {
       const placement = pointerMenuPlacement(rowEl, event);
       const anchor = placement?.anchor ?? rowEl;
 
-      this.openCardMenu(anchor, rowEl, rowId, undefined, 'card', placement?.coverFlipOffset, event);
+      // notion-motion.md Round 114 §1 #6: a timeline panel row's menu hands focus to the row's Name cell.
+      const refocus = rowEl.matches('[data-blok-database-timeline-table-row]')
+        ? (): void => this.boardContainer?.querySelector<HTMLElement>(`[data-blok-database-timeline-table-row][data-row-id="${CSS.escape(rowId)}"] [data-blok-database-timeline-table-title]`)?.focus({ preventScroll: true })
+        : undefined;
+
+      this.openCardMenu(anchor, rowEl, rowId, undefined, 'card', placement?.coverFlipOffset, event, refocus);
       if (anchor !== rowEl) this.cardMenuPopover?.on(PopoverEvent.Closed, () => anchor.remove());
     });
     boardEl.addEventListener('click', (event) => {
@@ -10567,7 +10628,7 @@ export class DatabaseTool implements BlockTool {
    * Board and gallery carry Layout and Property visibility; a list row does not (research/12 §3).
    * A timeline bar has no Comment; its table panel row does (research/22 §11).
    */
-  private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string, at?: OpenMenuOptions['at'], kind: 'card' | 'handle' = 'card', coverFlipOffset?: number, pointer?: Pick<MouseEvent, 'clientX' | 'clientY'>): void {
+  private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string, at?: OpenMenuOptions['at'], kind: 'card' | 'handle' = 'card', coverFlipOffset?: number, pointer?: Pick<MouseEvent, 'clientX' | 'clientY'>, refocus?: () => void): void {
     const type = this.shownView()?.type;
 
     this.openRowMenu(rowId, anchor, cardEl, {
@@ -10577,6 +10638,7 @@ export class DatabaseTool implements BlockTool {
       ...(at !== undefined ? { at } : {}),
       ...(coverFlipOffset !== undefined ? { coverFlipOffset } : {}),
       ...(pointer !== undefined ? { pointer } : {}),
+      ...(refocus !== undefined ? { refocus } : {}),
     });
   }
 
@@ -10595,11 +10657,13 @@ export class DatabaseTool implements BlockTool {
    * `rowMenuItems` as the table's ⋮⋮ so they cannot drift. `card` keeps its
    * hover buttons while the menu is up.
    */
-  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean; at?: OpenMenuOptions['at']; kind?: 'card' | 'handle'; viewportMargin?: number; coverFlipOffset?: number; pointer?: Pick<MouseEvent, 'clientX' | 'clientY'> }): void {
+  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean; at?: OpenMenuOptions['at']; kind?: 'card' | 'handle'; viewportMargin?: number; coverFlipOffset?: number; pointer?: Pick<MouseEvent, 'clientX' | 'clientY'>; refocus?: () => void }): void {
     // notion-motion.md Round 64 §3: Move to opens at a right-click's point, read now while the card is where it was clicked.
     const spot = options.pointer === undefined ? undefined : pointerFrom(card, options.pointer);
     const comment = options.comment === false ? undefined : this.commentLever().comment;
     const writable = (): boolean => !this.readOnly && !this.destroyed;
+    const fromDots = options.pointer === undefined && anchor.hasAttribute('data-blok-database-card-menu');
+    const duplicated = { done: false };
     // notion-motion.md Round 42 §2: Edit property › lists every property A→Z, shown or not; Created time and ID were not in it.
     const properties = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n)
       .filter((p) => !['title', 'createdTime', 'uniqueId'].includes(p.type))
@@ -10613,7 +10677,11 @@ export class DatabaseTool implements BlockTool {
           onPropertyVisibility: () => this.controls.openSettingsPage('properties', card),
         }
         : {}),
-      onDuplicate: () => { if (writable()) this.duplicateTableRow(rowId); },
+      onDuplicate: () => {
+        if (!writable()) return;
+        this.duplicateTableRow(rowId);
+        duplicated.done = true;
+      },
       onDelete: () => { if (writable()) this.deleteTableRows([rowId]); },
       ...(this.canMoveRow() ? { onMoveTo: (menu: DOMRect | undefined) => { if (writable()) this.openMoveTo(rowId, card, spot ?? menuFrom(menu, card)); } } : {}),
     };
@@ -10651,6 +10719,26 @@ export class DatabaseTool implements BlockTool {
       },
     });
 
+    // notion-motion.md Round 108 §1 #6, Round 109 §1 #2: a middle click away keeps a right-click or ••• menu open.
+    popover.holdsOnMiddleClick = options.pointer !== undefined || fromDots;
+    // Round 109 §1 #1: after Duplicate, focus is on the card's •••. The redraw may have replaced the button, so find it again.
+    if (fromDots) {
+      popover.on(PopoverEvent.Closed, () => {
+        if (duplicated.done) this.boardContainer?.querySelector<HTMLElement>(`[data-blok-database-card-menu][data-row-id="${CSS.escape(rowId)}"]`)?.focus({ preventScroll: true });
+      });
+    }
+    // Escape, a click away or Duplicate refocus; another item opens something that takes focus itself.
+    // ClosedOnActivate fires right after Closed, so the check waits a microtask.
+    const refocus = options.refocus;
+
+    if (refocus !== undefined) {
+      const byItem = { closed: false };
+
+      popover.on(PopoverEvent.ClosedOnActivate, () => { byItem.closed = true; });
+      popover.on(PopoverEvent.Closed, () => queueMicrotask(() => {
+        if (!byItem.closed || duplicated.done) refocus();
+      }));
+    }
     this.cardMenuPopover = popover;
   }
 
@@ -10722,7 +10810,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** `owner` keeps `data-popover-open` while the menu is up, so its hover-only buttons stay shown. */
-  private showGroupPopover(anchor: HTMLElement, items: ReturnType<typeof groupMenuItems>, owner?: HTMLElement, layout: { minWidth?: string; scopeElement?: HTMLElement; class?: string; offset?: number; highlight?: string; edgeMargin?: number } = {}): void {
+  private showGroupPopover(anchor: HTMLElement, items: ReturnType<typeof groupMenuItems>, owner?: HTMLElement, layout: { minWidth?: string; scopeElement?: HTMLElement; class?: string; offset?: number; highlight?: string; keyboardStart?: string; edgeMargin?: number; position?: DOMRect } = {}): void {
     this.groupMenuPopover?.destroy();
 
     const params: PopoverDesktopParams = {
@@ -10736,13 +10824,15 @@ export class DatabaseTool implements BlockTool {
       items,
       ...(layout.scopeElement !== undefined ? { scopeElement: layout.scopeElement } : {}),
     };
+    const groupParams: PopoverDesktopParams = layout.position === undefined ? params : { ...params, position: layout.position, positionContext: anchor };
     const popover = new PopoverDesktop(layout.edgeMargin === undefined
-      ? params
+      ? groupParams
       : { ...params, ...groupMenuCoverPlacement(anchor, layout.edgeMargin, layout.offset ?? 0) });
 
     // Escape closes only the open submenu, as measured on Notion's other menus (research/23:33, 26:78, 27:299, 35:418).
     popover.escapeClosesSubmenuFirst = true;
     popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
+    popover.nestedCloseDelay = DATABASE_SUBMENU_CLOSE_DELAY_MS;
     owner?.setAttribute('data-popover-open', '');
     popover.on(PopoverEvent.Closed, () => {
       owner?.removeAttribute('data-popover-open');
@@ -10765,6 +10855,10 @@ export class DatabaseTool implements BlockTool {
           popover.focusItemByName(name);
         }
       });
+    }
+    // A keyboard open's start row (focus law: a mouse open starts on none).
+    if (layout.keyboardStart !== undefined && isKeyboardModality()) {
+      popover.startCursorOn(layout.keyboardStart);
     }
   }
 
@@ -10845,6 +10939,22 @@ export class DatabaseTool implements BlockTool {
       // notion-motion.md Round 39 §4 (r39-subgroup-menu.raw): opens with its first row filled, like a column's.
       highlight: 'edit-groups',
     });
+  }
+
+  private renameLane(label: HTMLElement): void {
+    const key = label.closest('[data-blok-database-board-lane]')?.getAttribute('data-sub-group') ?? null;
+    const subGroupBy = this.shownView()?.subGroupBy;
+    const option = key === null || subGroupBy === undefined ? undefined : this.model.getProperty(subGroupBy)?.config?.options?.find((o) => o.id === key);
+
+    if (key === null || option === undefined || !this.isOptionGroup(subGroupBy) || this.structureLocked()) return;
+    this.openGroupRename(label, option.label, subGroupBy, (name) => {
+      if (name !== null && name !== option.label) {
+        this.handleOptionRename(key, name, subGroupBy);
+        this.rerenderView({ keepDrawer: true });
+      }
+      // A rename redraws the bands, so the pill is found again by its band.
+      this.element?.querySelector<HTMLElement>(`[data-blok-database-board-lane][data-sub-group="${CSS.escape(key)}"] [data-blok-database-board-lane-label][role="button"]`)?.focus();
+    }, 'tools.database.renameGroup');
   }
 
   /** The rows a band shows: every shown column's rows in that sub-group. */
@@ -11126,24 +11236,62 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * notion-motion.md Round 98 §1 #1: Enter or Space on a column pill opens this under the pill:
-   * 240 wide, 4 below it, the name selected, and the same field and "Done ↵" as "+ New group".
-   * `done` gets the trimmed name on Done or Enter, and null on any other close.
+   * notion-motion.md Round 98 §1 #1, Round 99 §1 #1-#4, Round 100 §1 #3-#4: a click, Enter or Space on a column pill
+   * or a band pill opens this under the pill (Round 101 §1 #4: 7 below its coloured pill, 3 left of it), the name selected, and the same field and "Done ↵" as "+ New group".
+   * `propertyId` is the grouped property: a Status option's popup is 240 wide, a Select or Multi-select one's 300.
+   * `done` gets the trimmed name on Done or Enter, and null on any other close
+   * (Round 100 §1 #1: Notion drops a typed name on a click outside).
+   * `nameKey` names the field for screen readers: a band pill renames a row of the board, not a column.
    */
-  private openGroupRename(pill: HTMLElement, label: string, done: (label: string | null) => void): void {
+  private openGroupRename(
+    pill: HTMLElement,
+    label: string,
+    propertyId: string | undefined,
+    done: (label: string | null) => void,
+    nameKey = 'tools.database.renameColumn'
+  ): void {
     const result: { label: string | null } = { label: null };
     const field = this.groupNameField(label, (value) => {
       result.label = value === '' ? null : value;
       this.groupMenuPopover?.hide();
     });
+    const status = propertyId !== undefined && this.model.getProperty(propertyId)?.type === 'status';
 
-    field.input.setAttribute('aria-label', this.api.i18n.t('tools.database.renameColumn'));
+    // Round 101 §1 #4: Notion's pill button is the coloured pill with 3px round it, and the popup sits 4 under that button.
+    // A band pill's coloured pill is inside its label; a column pill is coloured itself.
+    const coloured = (pill.querySelector(':scope > [data-blok-database-option-pill]') ?? pill).getBoundingClientRect();
+
+    field.input.setAttribute('aria-label', this.api.i18n.t(nameKey));
+    field.input.placeholder = this.api.i18n.t('tools.database.renameGroup');
     this.showGroupPopover(pill, [{ type: PopoverItemType.Html, element: field.wrap, name: 'rename-group' }], pill, {
       class: `${DATABASE_MENU_CLASS} blok-database-new-group-menu`,
-      minWidth: '240px',
+      minWidth: status ? '240px' : '300px',
       offset: 4,
+      position: new DOMRect(coloured.x - PILL_BUTTON_PAD, coloured.y - PILL_BUTTON_PAD, coloured.width + 2 * PILL_BUTTON_PAD, coloured.height + 2 * PILL_BUTTON_PAD),
     });
-    this.groupMenuPopover?.on(PopoverEvent.Closed, () => done(result.label));
+    const popover = this.groupMenuPopover;
+
+    if (popover === null) return;
+    // Round 100 §1 #1: the popup sits on a full-window backdrop, so a click away acts on nothing under it.
+    popover.swallowsOutsideClick = true;
+    popover.on(PopoverEvent.Closed, () => {
+      done(result.label);
+      // Round 100 §1 #1: after a click outside, the pill gets focus once the close motion ends.
+      // The click away moves focus to the body after `done` focused the pill.
+      const target = document.activeElement;
+      const refocus = (): void => {
+        if (popover.isClosing) {
+          requestAnimationFrame(refocus);
+
+          return;
+        }
+        if (target instanceof HTMLElement && target.isConnected && (document.activeElement === null || document.activeElement === document.body)) {
+          target.focus();
+        }
+      };
+
+      requestAnimationFrame(refocus);
+    });
     field.input.focus();
     field.input.select();
   }
@@ -11573,13 +11721,8 @@ export class DatabaseTool implements BlockTool {
       });
 
       this.columnControls = new DatabaseColumnControls({
-        i18n: this.api.i18n,
         onRename: (optionId, label) => this.handleOptionRename(optionId, label),
-        openRename: (pill, label, done) => this.openGroupRename(pill, label, done),
-        onRenameInput: (optionId, label) => {
-          // Instant local save — update the model immediately so save() captures latest value
-          this.handleOptionRename(optionId, label);
-        },
+        openRename: (pill, label, done) => this.openGroupRename(pill, label, this.shownView()?.groupBy, done),
         onRenameCommit: (optionId, label) => {
           // Debounced backend persist
           const viewConfig = this.shownView();
@@ -12134,9 +12277,8 @@ export class DatabaseTool implements BlockTool {
     }
   }
 
-  private handleOptionRename(optionId: string, label: string): void {
-    const viewConfig = this.shownView();
-    const groupByPropId = viewConfig?.groupBy;
+  /** `groupByPropId`: whose option to rename; a sub-group band passes the view's subGroupBy. */
+  private handleOptionRename(optionId: string, label: string, groupByPropId = this.shownView()?.groupBy): void {
 
     if (groupByPropId === undefined || this.structureLocked()) {
       return;
@@ -14046,6 +14188,7 @@ export class DatabaseTool implements BlockTool {
 
     popover.getElement().setAttribute('data-blok-database-related-to', '');
     popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
+    popover.nestedCloseDelay = DATABASE_SUBMENU_CLOSE_DELAY_MS;
     const closed = { done: false };
 
     // destroy() hides, and a hide emits Closed again: without the flag this re-queues itself forever.
@@ -14204,7 +14347,7 @@ export class DatabaseTool implements BlockTool {
 
       return;
     }
-    const viewItems = (hostTable?.headerItems(propertyId, anchor) ?? []).map((item): PopoverItemParams => {
+    const viewItems = (hostTable?.headerItems(propertyId, anchor, (name) => menu.startCursor(name)) ?? []).map((item): PopoverItemParams => {
       // A widget holds its redraw while this menu is open, so these writes close it; onClose redraws.
       if (context !== undefined && item.type === PopoverItemType.Default && WIDGET_CLOSING_HEADER_ITEMS.has(item.name ?? '')
         && !('children' in item) && !('confirmation' in item)) return { ...item, closeOnActivate: true };
@@ -14386,10 +14529,9 @@ export class DatabaseTool implements BlockTool {
       i18n: this.api.i18n,
       hasPeople: this.hasPeople,
       withNameField: true,
-      // research/08: the table's "+" and Insert left/right get Notion's header grid; the row page passes onAdded and keeps the list.
-      ...(onAdded === undefined ? { layout: 'grid' as const } : {}),
-      // notion-spec-2 §19.11: the "+" puts the name box in the header cell. Insert left/right's is unmeasured.
-      ...(onAdded === undefined && placement === undefined ? { nameOverAnchor: true } : {}),
+      // research/08, notion-spec-2 §19.11, notion-motion.md Round 114 §1 #2: the table's "+" and Insert left/right
+      // get Notion's header grid with the name box over the card; the row page passes onAdded and keeps the list.
+      ...(onAdded === undefined ? { layout: 'grid' as const, nameOverAnchor: true } : {}),
       onSelect: (type, name, icon) => {
         if (!writable()) return;
         const side = placement?.side === 'left' ? 'beforeId' : 'afterId';

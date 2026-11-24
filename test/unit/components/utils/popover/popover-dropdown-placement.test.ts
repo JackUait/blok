@@ -17,18 +17,18 @@ const rect = (left: number, top: number, width: number, height: number): DOMRect
  * a key, never on hover, over or under the button, and moving over other rows leaves it open.
  */
 describe('Popover: children.placement dropdown', () => {
-  const items = (): PopoverItemParams[] => [
+  const items = (fromButton = false): PopoverItemParams[] => [
     { title: 'Other', name: 'other', onActivate: vi.fn() },
     {
       title: 'Color',
       name: 'color',
       valueLabel: 'Green',
-      children: { placement: 'dropdown', items: [{ title: 'Red', name: 'red', onActivate: vi.fn() }] },
+      children: { placement: 'dropdown', fromButton, items: [{ title: 'Red', name: 'red', onActivate: vi.fn() }] },
     },
   ];
   const popovers: PopoverDesktop[] = [];
-  const open = (): PopoverDesktop => {
-    const popover = new PopoverDesktop({ items: items() });
+  const open = (fromButton = false): PopoverDesktop => {
+    const popover = new PopoverDesktop({ items: items(fromButton) });
 
     popovers.push(popover);
     document.body.appendChild(popover.getElement());
@@ -118,6 +118,44 @@ describe('Popover: children.placement dropdown', () => {
 
     // Content left 409 + 12, button 8 before it: 413, in the menu's space 133.
     expect(listBox()?.style.left).toBe('133px');
+  });
+
+  // Only a fromButton list reads the drawn box: other dropdowns keep their v2.1.0 place.
+  it('ignores the drawn button box unless the list opens from the button', () => {
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(900);
+    const popover = open();
+
+    placeRow(popover);
+    const row = itemEl('color');
+    const button = row?.querySelector<HTMLElement>('[data-blok-popover-item-dropdown-button]');
+
+    if (button === null || button === undefined) throw new Error('no button');
+    row?.querySelector<HTMLElement>('[data-blok-popover-item-value]')?.style.setProperty('padding-left', '16px');
+    vi.spyOn(button, 'getBoundingClientRect').mockReturnValue(rect(401, 390, 123, 48));
+    row?.click();
+
+    // Content left 409 + 16 - 8 = 417, bottom 428 + 4 = 432; in the menu's space (280, 180).
+    expect(listBox()?.style.left).toBe('137px');
+    expect(listBox()?.style.top).toBe('252px');
+  });
+
+  // R112 (notion-motion.md §1 #7): Notion's Color list starts 3px left of its button (875 vs 878).
+  it('opens 3px left of the drawn button box, whatever the value\'s padding', () => {
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(900);
+    const popover = open(true);
+
+    placeRow(popover);
+    const row = itemEl('color');
+    const button = row?.querySelector<HTMLElement>('[data-blok-popover-item-dropdown-button]');
+
+    if (button === null || button === undefined) throw new Error('no button');
+    row?.querySelector<HTMLElement>('[data-blok-popover-item-value]')?.style.setProperty('padding-left', '16px');
+    vi.spyOn(button, 'getBoundingClientRect').mockReturnValue(rect(401, 396, 123, 36));
+    row?.click();
+
+    // Button left 401 - 3 = 398, bottom 432; in the menu's space (280, 180).
+    expect(listBox()?.style.left).toBe('118px');
+    expect(listBox()?.style.top).toBe('252px');
   });
 
   it('opens over the button when there is no room under it', () => {

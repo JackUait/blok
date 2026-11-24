@@ -42,6 +42,7 @@ import { getElementDirection } from '../../components/utils/direction';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
+import { createRowGutter } from './database-row-gutter';
 import { openNoDatePanel } from './database-no-date';
 import type { NoDateControl } from './database-no-date';
 import type { DatabasePanel } from './database-panel';
@@ -68,6 +69,10 @@ export interface TimelineHandlers {
   landRow?: (rowId: string) => void;
   /** Group key, or null when the timeline is not grouped; the new bar's dates. */
   addRow: (groupKey: string | null, write: BarWrite) => void;
+  /** The panel row's +: a dateless row right below `rowId`. */
+  addRowBelow?: (groupKey: string | null, rowId: string) => void;
+  /** The panel row's ⋮⋮ was clicked: its row menu, from the ⋮⋮. */
+  openRowMenu?: (handle: HTMLElement, rowEl: HTMLElement, rowId: string) => void;
   /** A title typed into a new bar. */
   renameRow?: (rowId: string, title: string) => void;
   /** New stored values for the start and/or end property. */
@@ -548,7 +553,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       if (this.options.grouped) {
         panel.appendChild(this.createGroupHeader(group, 'table'));
       }
-      group.rows.forEach((row) => panel.appendChild(this.createTableRow(row, properties)));
+      group.rows.forEach((row) => panel.appendChild(this.createTableRow(row, properties, group.key)));
       if (group.total > group.rows.length) {
         panel.appendChild(this.createSpacer());
       }
@@ -595,11 +600,15 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     return footer;
   }
 
-  private createTableRow(row: DatabaseRow, properties: PropertyDefinition[]): HTMLElement {
+  private createTableRow(row: DatabaseRow, properties: PropertyDefinition[], groupKey: string): HTMLElement {
     const line = document.createElement('div');
 
     line.setAttribute('data-blok-database-timeline-table-row', '');
     line.setAttribute('data-row-id', row.id);
+    line.setAttribute('data-group-key', groupKey);
+    if (this.canEdit) {
+      line.appendChild(createRowGutter(this.options.i18n, 'timeline-table-row', row.id));
+    }
     const depth = this.options.depthOf?.(row.id) ?? 0;
 
     if (depth > 0) {
@@ -632,6 +641,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     const title = document.createElement('span');
 
     cell.setAttribute('data-blok-database-timeline-table-title', '');
+    // Takes focus when the row's menu closes (Round 114 §1 #6); Tab still skips it.
+    cell.setAttribute('tabindex', '-1');
     title.setAttribute('data-blok-database-timeline-table-title-text', '');
     title.textContent = this.titleOf(row);
     cell.append(rowPageGlyph(row, this.rowHasBody(row.id), true) ?? '', title);
@@ -855,7 +866,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
     // Round 50 §5: a Name-only row is the anchor (Notion 281 over the 279 row). Round 51 §3: with more columns the
     // Name cell is, 280 at 359; that width comes from the cell's -1px end margin in database.css.
-    const anchor = line.childElementCount === 1 ? line : cell;
+    const anchor = line.querySelectorAll(':scope > [data-property-id]').length === 1 ? line : cell;
 
     this.titleEditor?.close();
     this.titleEditor = openCellEditor(property, readPropertyValue(row, property), anchor, {
@@ -1462,6 +1473,18 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         '[data-blok-database-timeline-offscreen], [data-blok-database-timeline-bar-chip]',
         (el) => this.jumpTo(el.closest('[data-row-id]')?.getAttribute('data-row-id') ?? '', el.getAttribute('data-blok-database-timeline-bar-chip') === 'end' ? 'end' : 'start'),
       ],
+      ['[data-blok-database-timeline-table-row-add]', (el) => {
+        const line = el.closest('[data-blok-database-timeline-table-row]');
+        const rowId = line?.getAttribute('data-row-id');
+
+        if (rowId !== null && rowId !== undefined) handlers.addRowBelow?.(this.options.grouped ? line?.getAttribute('data-group-key') ?? null : null, rowId);
+      }],
+      ['[data-blok-database-timeline-table-row-handle]', (el) => {
+        const line = el.closest<HTMLElement>('[data-blok-database-timeline-table-row]');
+        const rowId = line?.getAttribute('data-row-id');
+
+        if (el instanceof HTMLElement && line !== null && rowId !== null && rowId !== undefined) handlers.openRowMenu?.(el, line, rowId);
+      }],
       ['[data-blok-database-table-open]', (el) => pressOpenButton(el, el.closest('[data-row-id]')?.getAttribute('data-row-id') ?? '', this.options.peek, handlers.openRow)],
       ['[data-blok-database-timeline-table-title], [data-blok-database-timeline-bar]', (el) => {
         const rowId = el.closest('[data-row-id]')?.getAttribute('data-row-id');
@@ -1613,10 +1636,11 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       return;
     }
 
-    const handle = event.target.closest('[data-blok-database-timeline-row-handle]');
+    // The panel row's ⋮⋮ drags the same row as the lane's; panel rows and lanes share their y.
+    const handle = event.target.closest('[data-blok-database-timeline-row-handle], [data-blok-database-timeline-table-row-handle]');
 
     if (handle !== null && this.canReorder) {
-      const line = handle.closest('[data-blok-database-timeline-row]');
+      const line = handle.closest('[data-blok-database-timeline-row], [data-blok-database-timeline-table-row]');
 
       this.drag = {
         kind: 'row',

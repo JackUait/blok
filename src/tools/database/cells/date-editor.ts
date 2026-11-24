@@ -100,6 +100,16 @@ const createSwitch = (attribute: string, label: string, checked: boolean, onTogg
 
 const SWITCH_ATTRIBUTES = ['data-blok-database-date-end-toggle', 'data-blok-database-date-time-toggle'];
 
+/** Puts `next` in `parent` in order without detaching kept nodes: a detached switch skips its transition. */
+const syncChildren = (parent: HTMLElement, next: HTMLElement[]): void => {
+  [...parent.children].filter((child) => !next.some((node) => node === child)).forEach((child) => child.remove());
+  next.forEach((child, at) => {
+    if (parent.children[at] !== child) {
+      parent.insertBefore(child, parent.children[at] ?? null);
+    }
+  });
+};
+
 const zoneMenus = { count: 0 };
 
 interface ZoneEntry {
@@ -168,10 +178,11 @@ const MENU_GAP = 4;
 const SIDE_MENU_PLACE = { gap: -4, bottom: 12 };
 /**
  * notion-motion.md Round 55 §4: the Remind menu overlaps the picker's edge by 4px.
- * Which side it takes was read only once (left, with no room on the right), so
- * the side is still chosen as if it sat 4px clear. Round 57 §8: it stays 12px above the window bottom.
+ * Round 104 §1 #3: it stays on the end side while its drawn edge is 12 inside the window.
+ * The start side's fit was read only once, so it is still chosen as if it sat 4px clear.
+ * Round 57 §8: it stays 12px above the window bottom.
  */
-const REMIND_MENU_PLACE = { gap: -4, bottom: 12, fitGap: MENU_GAP };
+const REMIND_MENU_PLACE = { gap: -4, bottom: 12, fitGap: MENU_GAP, edge: 12 };
 
 type MenuKind = 'remind' | 'dateFormat' | 'timeFormat' | 'timeZone';
 
@@ -213,6 +224,9 @@ class DateEditor {
   private readonly weekStart: number;
   private readonly hostHourCycle: 'h12' | 'h23';
   private readonly root = document.createElement('div');
+  private readonly options = document.createElement('div');
+  /** Built once and kept across redraws (notion-motion.md Round 113 §1 #7). */
+  private readonly switches: Record<string, HTMLButtonElement> = {};
   private readonly popover: CellPopover;
   private readonly anchor: HTMLElement;
 
@@ -419,22 +433,35 @@ class DateEditor {
     const focusedDay = this.root.contains(document.activeElement)
       ? document.activeElement?.getAttribute('data-blok-database-date-day')
       : null;
-    // notion-motion.md Round 83 §1: a clicked switch keeps the focus across the redraw.
-    const focusedSwitch = SWITCH_ATTRIBUTES.find((attribute) => this.root.contains(document.activeElement) && document.activeElement?.hasAttribute(attribute));
 
-    this.root.replaceChildren(this.renderFields(), this.calendar.header(), this.calendar.grid(), this.renderOptions());
+    // notion-motion.md Round 83 §1: the switches and their row stay in place, so a clicked switch keeps the focus.
+    syncChildren(this.root, [this.renderFields(), this.calendar.header(), this.calendar.grid(), this.renderOptions()]);
     if (focusedDay !== null && focusedDay !== undefined) {
       this.calendar.focusDay();
     }
-    if (focusedSwitch !== undefined) {
-      this.root.querySelector<HTMLElement>(`[${focusedSwitch}]`)?.focus();
+  }
+
+  private switchFor(attribute: string, label: string, checked: boolean, onToggle: () => void): HTMLButtonElement {
+    const existing = this.switches[attribute];
+
+    if (existing !== undefined) {
+      existing.setAttribute('aria-checked', String(checked));
+
+      return existing;
     }
+    this.switches[attribute] = createSwitch(attribute, label, checked, onToggle);
+
+    return this.switches[attribute];
   }
 
   private renderFields(): HTMLElement {
     const fields = document.createElement('div');
 
     fields.setAttribute('data-blok-database-date-fields', '');
+    // notion-motion.md Round 113 §1 #7: side by side for a date range, stacked once times show (Round 83 §1).
+    if (this.rangeOn && !this.timeOn) {
+      fields.setAttribute('data-blok-database-date-split', '');
+    }
     fields.appendChild(this.renderField('start'));
     if (this.rangeOn) {
       fields.appendChild(this.renderField('end'));
@@ -548,11 +575,11 @@ class DateEditor {
   }
 
   private renderOptions(): HTMLElement {
-    const options = document.createElement('div');
+    const options: HTMLElement[] = [];
     const clear = document.createElement('button');
 
-    options.setAttribute('data-blok-database-date-options', '');
-    options.appendChild(createSwitch(SWITCH_ATTRIBUTES[0], this.t('tools.database.dateEndDate'), this.rangeOn, () => {
+    this.options.setAttribute('data-blok-database-date-options', '');
+    options.push(this.switchFor(SWITCH_ATTRIBUTES[0], this.t('tools.database.dateEndDate'), this.rangeOn, () => {
       this.rangeOn = !this.rangeOn;
       if (this.rangeOn) {
         // research/30 B2: an empty cell gets today → today at once. A bulk picker writes nothing: Notion's
@@ -568,9 +595,9 @@ class DateEditor {
       this.render();
     }));
     if (this.ctx.onDateDisplayChange !== undefined) {
-      options.appendChild(this.renderDateFormatRow());
+      options.push(this.renderDateFormatRow());
     }
-    options.appendChild(createSwitch(SWITCH_ATTRIBUTES[1], this.t('tools.database.dateIncludeTime'), this.timeOn, () => {
+    options.push(this.switchFor(SWITCH_ATTRIBUTES[1], this.t('tools.database.dateIncludeTime'), this.timeOn, () => {
       this.timeOn = !this.timeOn;
       if (this.timeOn) {
         const today = toIsoDay(new Date());
@@ -586,11 +613,11 @@ class DateEditor {
       this.render();
     }));
     if (this.ctx.onDateDisplayChange !== undefined && this.timeOn) {
-      options.append(this.renderTimeFormatRow(), this.renderTimeZoneRow());
+      options.push(this.renderTimeFormatRow(), this.renderTimeZoneRow());
     }
 
     if (this.ctx.onReminderChange !== undefined) {
-      options.appendChild(this.renderRemindRow());
+      options.push(this.renderRemindRow());
     }
 
     clear.type = 'button';
@@ -602,7 +629,7 @@ class DateEditor {
       this.commit(true);
       this.finish(true);
     });
-    options.appendChild(clear);
+    options.push(clear);
     // research/23 §1: only a picker with reminders links to their help.
     const help = this.ctx.onReminderChange === undefined
       ? null
@@ -613,10 +640,12 @@ class DateEditor {
 
       footer.setAttribute('data-blok-database-date-help-footer', '');
       footer.appendChild(help);
-      options.appendChild(footer);
+      options.push(footer);
     }
 
-    return options;
+    syncChildren(this.options, options);
+
+    return this.options;
   }
 
   private renderRemindRow(): HTMLButtonElement {
@@ -921,7 +950,7 @@ class DateEditor {
   }
 
   /** Beside the picker on its end side, else its start side, else kept inside the window; level with the row, kept `place.bottom` above the window bottom. */
-  private placeMenu(row: HTMLElement, menu: HTMLElement, place: { gap: number; bottom: number; fitGap?: number }): void {
+  private placeMenu(row: HTMLElement, menu: HTMLElement, place: { gap: number; bottom: number; fitGap?: number; edge?: number }): void {
     const box = this.root.getBoundingClientRect();
     const rowBox = row.getBoundingClientRect();
     const width = menu.offsetWidth;
@@ -934,7 +963,11 @@ class DateEditor {
       return rtl ? [left, right] : [right, left];
     };
     const sides = sidesAt(place.gap);
-    const fit = sidesAt(place.fitGap ?? place.gap).findIndex((side) => side >= 0 && side + width <= window.innerWidth);
+    const fitSides = sidesAt(place.fitGap ?? place.gap);
+    // With `edge`, the drawn menu must end that far inside the window's right edge.
+    const fit = fitSides.findIndex((side, i) => side >= 0 && (place.edge === undefined
+      ? side + width <= window.innerWidth
+      : sides[i] + width <= window.innerWidth - place.edge));
     const x = fit >= 0 ? sides[fit] : Math.max(0, Math.min(sides[1], window.innerWidth - width));
     const top = Math.max(0, Math.min(rowBox.top, window.innerHeight - height - place.bottom));
 

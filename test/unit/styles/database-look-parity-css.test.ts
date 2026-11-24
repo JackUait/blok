@@ -578,13 +578,13 @@ describe('row page Add a property', () => {
     expect(body).toContain('transition: background-color 0.1s ease-in-out');
   });
 
-  // Notion's plusFillSmall: 1px lower than centre. Its rgb(173, 169, 163) is 2.34:1 on white, so the icon takes 142,139,134 (3.39:1).
-  it('draws the plus 1px low in the type icon ink, apart from the text', () => {
+  // notion-motion.md L2660: plusFillSmall, 1px lower than centre, rgb(173, 169, 163). The text names the button.
+  it('draws the plus 1px low in Notion\'s light gray, apart from the text', () => {
     const svg = ruleBody('[data-blok-database-drawer-add-prop] svg');
 
     expect(svg).toContain('margin-top: var(--blok-space-0-25)');
     expect(svg).toContain('color: var(--blok-database-peek-add-icon)');
-    expect(tokenValues('--blok-database-peek-add-icon')).toEqual(['rgb(142, 139, 134)', 'var(--blok-database-ink-tertiary)', 'var(--blok-database-ink-tertiary)']);
+    expect(tokenValues('--blok-database-peek-add-icon')).toEqual(['rgb(173, 169, 163)', 'var(--blok-database-ink-tertiary)', 'var(--blok-database-ink-tertiary)']);
   });
 });
 
@@ -716,8 +716,8 @@ describe('map view chrome', () => {
   it('keeps the map in the text column, 8 short of its end, 8 under the view top', () => {
     const map = ruleBody('[data-blok-database-map]');
 
-    expect(map).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))');
-    expect(map).toContain('padding-inline-end: calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)) + var(--blok-space-2))');
+    expect(map).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-lead, 0.5)))');
+    expect(map).toContain('padding-inline-end: calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) * var(--_blok-database-trail, 0.5))) + var(--blok-space-2))');
     expect(map).toContain('padding-block-start: var(--blok-space-2)');
   });
 

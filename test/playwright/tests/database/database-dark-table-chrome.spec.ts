@@ -181,11 +181,15 @@ for (const path of paths) {
     });
 
     test('filter pill: stays gray, the user\'s divergence from Notion\'s blue (ledger S4)', async ({ page }) => {
-      const fill = await page.locator('[data-blok-database-filter-pill]').first().evaluate((el) => getComputedStyle(el).backgroundColor);
-      const [ r, g, b ] = (fill.match(/\d+/g) ?? []).map(Number);
+      const pill = page.locator('[data-blok-database-filter-pill]').first();
+      // Polled: the pill's 20ms fill transition is still running right after the theme switch.
+      const isGray = (): Promise<boolean> => pill.evaluate((el) => {
+        const [ r, g, b ] = (getComputedStyle(el).backgroundColor.match(/\d+/g) ?? []).map(Number);
 
-      expect(r).toBe(g);
-      expect(g).toBe(b);
+        return r === g && g === b;
+      });
+
+      await expect.poll(isGray).toBe(true);
     });
 
     test('selection bar: the dark menu fill and the measured bar shadow (§1e)', async ({ page }) => {
@@ -207,7 +211,8 @@ for (const path of paths) {
       await expect(open).toHaveCSS('color', 'rgb(173, 169, 163)');
       await open.hover();
       // Round 46 §A: only the inner box (the ::before) fills; the 2px frame keeps its color.
-      await expect.poll(() => open.evaluate((el) => getComputedStyle(el, '::before').backgroundColor)).toBe(HOVER_FILL);
+      // Round 105 §1 #3: that fill is 41, not the menu tint.
+      await expect.poll(() => open.evaluate((el) => getComputedStyle(el, '::before').backgroundColor)).toBe('rgb(41, 41, 41)');
       await expect(open).toHaveCSS('background-color', 'rgb(37, 37, 37)');
     });
 

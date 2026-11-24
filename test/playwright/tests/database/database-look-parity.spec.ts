@@ -210,6 +210,56 @@ test('the filter picker slides up to stop 8 from the window bottom', async ({ pa
   expect(717 - (bottom ?? 0)).toBeCloseTo(8, 0);
 });
 
+// notion-motion.md Round 108 §1 #4 (r108-n-sort-picker-end.raw): the sort picker stops 8.2 from the window bottom too,
+// and scrolled to the end its last row ends 4.1 over the surface's bottom, not cut.
+// Round 110 §1 #6 (r110-n-sortpicker-end.raw): the surface is the one scroller (max 90.5), so the search scrolls out.
+test('the sort picker stops 8 from the window bottom and scrolls as one surface to its last row', async ({ page }) => {
+  const many = [
+    { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+    ...Array.from({ length: 24 }, (_, i) => ({ id: `p-t${i}`, name: `Text ${String(i).padStart(2, '0')}`, type: 'text', position: `b${String(i).padStart(2, '0')}` })),
+  ];
+
+  await page.setViewportSize({ width: 1512, height: 717 });
+  await mount(page, undefined, [{
+    id: 'db-1',
+    type: 'database',
+    data: { schema: many, views: [{ id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }], activeViewId: 'v1' },
+  }]);
+  await page.evaluate(() => {
+    const holder = document.getElementById('blok');
+
+    if (holder !== null) holder.style.marginTop = '300px';
+  });
+  await page.getByTestId('database-toolbar-sort').click();
+  await expect(page.getByTestId('database-sort-picker')).toBeVisible();
+  const read = await page.evaluate(async () => {
+    await Promise.all(document.getAnimations().map((a) => a.finished));
+    const surface = document.querySelector('[data-blok-testid="database-sort-picker"]');
+    const list = surface?.querySelector('[data-blok-database-picker-list]');
+    const search = surface?.querySelector('[data-blok-database-picker-search]');
+
+    if (!(surface instanceof HTMLElement) || !(list instanceof HTMLElement) || !(search instanceof HTMLElement)) return null;
+    surface.scrollTop = surface.scrollHeight;
+    const rows = list.querySelectorAll('[data-blok-database-panel-row]');
+    const last = rows[rows.length - 1]?.getBoundingClientRect();
+
+    return {
+      top: surface.getBoundingClientRect().top,
+      bottom: surface.getBoundingClientRect().bottom,
+      lastBottom: last?.bottom ?? Infinity,
+      searchBottom: search.getBoundingClientRect().bottom,
+      listScrolls: list.scrollHeight > list.clientHeight,
+    };
+  });
+
+  expect(read).not.toBeNull();
+  expect(717 - (read?.bottom ?? 0)).toBeCloseTo(8, 0);
+  expect(read?.searchBottom).toBeLessThan(read?.top ?? 0);
+  expect((read?.bottom ?? 0) - (read?.lastBottom ?? 0)).toBeGreaterThanOrEqual(3.5);
+  expect((read?.bottom ?? 0) - (read?.lastBottom ?? 0)).toBeLessThanOrEqual(4.5);
+  expect(read?.listScrolls).toBe(false);
+});
+
 test('rows stay 37px with Files and Button columns and a long URL (research/07:70, 08:380)', async ({ page }) => {
   for (const rowId of ['r1', 'r2']) {
     expect((await page.locator(`[data-blok-database-table-row][data-row-id="${rowId}"]`).boundingBox())?.height).toBe(37);

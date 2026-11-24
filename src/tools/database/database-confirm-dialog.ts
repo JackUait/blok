@@ -46,6 +46,11 @@ export interface DatabaseConfirmOptions {
   focusConfirm?: boolean;
   /** A 600 title, as Notion's "Delete this option?" (notion-motion.md Round 78 §2). */
   boldTitle?: boolean;
+  /**
+   * A part of the title set at 700, as the database name in Notion's Delete property (notion-motion.md Round 101 §1 #7).
+   * `at` is where it starts in the title, so a name that also occurs inside another word is not mistaken.
+   */
+  titleEmphasis?: { text: string; at: number };
   /** A 600 title, a 16px body and a borderless Cancel, as Notion's "Move database to Trash?" (notion-motion.md Round 65 §1). */
   trash?: boolean;
 }
@@ -56,6 +61,21 @@ export interface DatabaseChoice {
 }
 
 const counter = { next: 0 };
+
+/** Writes `text` into `el`, with `emphasis` (at `found`, else its first match) as a `strong`. */
+const writeEmphasised = (el: HTMLElement, text: string, emphasis: string | undefined, found?: number): void => {
+  const at = emphasis === undefined || emphasis === '' ? -1 : found ?? text.indexOf(emphasis);
+
+  if (at < 0 || emphasis === undefined) {
+    el.append(text);
+
+    return;
+  }
+  const strong = document.createElement('strong');
+
+  strong.textContent = emphasis;
+  el.append(text.slice(0, at), strong, text.slice(at + emphasis.length));
+};
 
 /**
  * Asks a yes/no question in a centred modal (research/08 "Modal dialog").
@@ -120,24 +140,14 @@ const buildConfirm = (options: DatabaseConfirmOptions, choices: DatabaseChoice[]
   title.setAttribute('data-blok-database-confirm-title', '');
   counter.next += 1;
   title.id = `blok-database-confirm-title-${counter.next}`;
-  title.textContent = options.title;
+  writeEmphasised(title, options.title, options.titleEmphasis?.text, options.titleEmphasis?.at);
   panel.appendChild(title);
   const description = options.description === undefined ? null : document.createElement('div');
 
   if (description !== null) {
     description.setAttribute('data-blok-database-confirm-description', '');
     description.id = `blok-database-confirm-description-${counter.next}`;
-    const text = options.description ?? '';
-    const at = options.emphasis === undefined || options.emphasis === '' ? -1 : text.indexOf(options.emphasis);
-
-    if (at < 0) {
-      description.textContent = text;
-    } else {
-      const strong = document.createElement('strong');
-
-      strong.textContent = options.emphasis ?? '';
-      description.append(text.slice(0, at), strong, text.slice(at + strong.textContent.length));
-    }
+    writeEmphasised(description, options.description ?? '', options.emphasis);
     panel.appendChild(description);
   }
 

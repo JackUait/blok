@@ -185,6 +185,7 @@ A selected, current, or active item is NEVER blue: no blue fill, no blue text, n
 
 - Selected states come from `--blok-icon-active-bg`, `--blok-icon-active-text` and `--blok-popover-icon-active-bg` (`src/styles/colors.css`). Their defaults are gray fills and primary ink. `test/unit/styles/selected-state-neutral.test.ts` fails if a blue value comes back. Paint new selected states with these tokens, not a local color.
 - When you add a selected state, add a test asserting it has no fill and the same ink as an unselected row.
+- A database menu row with keyboard focus shows the blue focus ring (USER, 2026-11-23). It is a focus ring, not a selected state. Its selected or current marking stays neutral.
 
 ### Hints show on hover only, after a delay
 A hint (tooltip) NEVER shows instantly. It shows only when the pointer hovers its trigger, and only after a delay. Focus never shows a hint, because a click focuses its target and the hint would pop up at once.

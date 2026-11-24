@@ -9,7 +9,7 @@ import type { PopoverParams } from '../../../types/utils/popover/popover';
 import { PopoverEvent } from '../../../types/utils/popover/popover-event';
 import type { I18n } from '../../../types';
 import { EmojiPicker } from '../callout/emoji-picker';
-import { NUMBER_FORMATS } from './cells/number-format';
+import { NUMBER_FORMATS, numberDivideBy } from './cells/number-format';
 import { OPTION_COLORS, optionColorLabelKey, optionSwatch } from './cells/option-colors';
 import { addablePropertyTypes, propertyTypeMeta } from './database-property-types';
 import { typeSearchHeading } from './database-property-type-popover';
@@ -18,12 +18,13 @@ import { buttonEditItems } from './database-button-menu';
 import { createOptionsEditor } from './cells/options-editor';
 import { offersAutofill } from './database-autofill-setup';
 import { DATABASE_HEADER_MENU_CLASS, SHOW_PAGE_ICON_ITEM } from './database-table-menus';
-import { DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
+import { DATABASE_SUBMENU_CLOSE_DELAY_MS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { reminderLabel, remindersFor } from './reminders';
 import { DATE_FORMATS, HOUR_CYCLES, TIME_FORMATS, resolveHourCycle, resolveLocale, timeZones } from './cells/date-format';
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
 import { hide as hideHint, onHover, type HintOptions } from '../../components/utils/tooltip';
 import { getElementDirection } from '../../components/utils/direction';
+import { isKeyboardModality } from '../../components/utils/input-modality';
 import { openDatabaseConfirm } from './database-confirm-dialog';
 import type {
   DateDisplay,
@@ -275,6 +276,8 @@ const OPTION_SORTS = [
 ] as const;
 
 /** Person "Edit property" rows (research/16 §5). The first choice of each is what an absent key means. */
+/** A private-use character, so no database name contains it. */
+const NAME_MARK = '\uE000';
 const PERSON_LIMITS = [['one', 'tools.database.personLimitOne'], ['none', 'tools.database.relationLimitNone']] as const;
 const PERSON_DEFAULTS = [['none', 'tools.database.personDefaultNone'], ['createdBy', 'tools.database.propertyTypeCreatedBy']] as const;
 const PERSON_NOTIFICATIONS = [
@@ -345,10 +348,18 @@ export class DatabasePropertyMenu {
 
   /** Notion asks in a modal (notion-motion.md Round 14), not in the menu. */
   private confirmDelete(id: string): void {
+    const name = this.options.databaseName?.();
+    // A mark no name holds finds where the sentence puts the name.
+    const marked = name === undefined ? undefined : this.options.i18n.t('tools.database.deletePropertyFromConfirm', { name: NAME_MARK });
+    const at = marked?.indexOf(NAME_MARK) ?? -1;
+
     void openDatabaseConfirm({
-      title: this.options.databaseName === undefined
+      title: marked === undefined || name === undefined
         ? this.t('tools.database.deletePropertyConfirm')
-        : this.options.i18n.t('tools.database.deletePropertyFromConfirm', { name: this.options.databaseName() }),
+        : marked.replace(NAME_MARK, () => name),
+      // notion-motion.md Round 101 §1 #7: the title is 600 and the database name in it 700.
+      ...(name !== undefined && at >= 0 ? { titleEmphasis: { text: name, at } } : {}),
+      boldTitle: true,
       confirmLabel: this.t('blockSettings.delete'),
       cancelLabel: this.t('tools.database.layoutCancel'),
       destructive: true,
@@ -447,10 +458,11 @@ export class DatabasePropertyMenu {
   private showAsUpdate(property: PropertyDefinition, name: HTMLElement, redraw: (patch: Partial<PropertySettingsV2>, typed: string | undefined) => void): (patch: Partial<PropertySettingsV2>) => void {
     return (patch) => {
       this.options.onUpdate(property.id, patch);
-      if (patch.number === undefined && patch.rollup === undefined) return;
-      const input = name.querySelector('input');
-
       const row = this.pickedRow;
+
+      // Other date writes (time zone, notifications) stay quiet: only a picked row redraws.
+      if (patch.number === undefined && patch.rollup === undefined && row === null) return;
+      const input = name.querySelector('input');
 
       this.pickedRow = null;
       // The old field goes away without a blur: save its name first, as leaving it would.
@@ -459,7 +471,16 @@ export class DatabasePropertyMenu {
       if (row === null) return;
       this.popover?.focusItemByName(row);
       // The redraw dropped DOM focus to <body>; Notion keeps it in the flyout, so arrows go on from the row.
-      this.popover?.getElement().querySelector(`[data-blok-item-name="${row}"]`)?.closest<HTMLElement>('[data-blok-popover-items]')?.focus({ preventScroll: true });
+      const rowElement = this.popover?.getElement().querySelector<HTMLElement>(`[data-blok-item-name="${row}"]`);
+
+      // notion-motion.md R84b §1, R113 §1 #2, R115 §1 #2: Number format, Decimal places and Date format put focus on the row itself.
+      if ((row === 'numberFormat' || row === 'decimals' || row === 'dateFormat') && rowElement !== null && rowElement !== undefined) {
+        rowElement.setAttribute('tabindex', '-1');
+        rowElement.focus({ preventScroll: true });
+
+        return;
+      }
+      rowElement?.closest<HTMLElement>('[data-blok-popover-items]')?.focus({ preventScroll: true });
     };
   }
 
@@ -680,6 +701,7 @@ export class DatabasePropertyMenu {
     popover.setArrowTarget(skipNameRowButtons);
     // notion-motion.md Round 10: Notion mounts the Edit property flyout about 130ms after the row lights.
     popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
+    popover.nestedCloseDelay = DATABASE_SUBMENU_CLOSE_DELAY_MS;
     this.popover = popover;
     popover.on(PopoverEvent.Closed, () => {
       if (this.popover === popover) {
@@ -739,6 +761,11 @@ export class DatabasePropertyMenu {
       icon: IconWand,
       children: { items: [{ name: 'aiAutofill-basic', title: this.t('tools.database.aiAutofillBasic'), closeOnActivate: true, onActivate: open }] },
     }];
+  }
+
+  /** Puts the cursor on row `name` of the open submenu, else of the menu, until the pointer takes a row. */
+  startCursor(name: string): void {
+    this.popover?.startCursorOn(name);
   }
 
   close(): void {
@@ -982,7 +1009,8 @@ export class DatabasePropertyMenu {
           title: this.t('tools.database.changeType'),
           icon: IconChangeType,
           // notion-motion.md Round 44 §3 (r44-tp-change.raw): a plain 200-wide list.
-          children: { items: this.typeChoices(property), width: '200px', class: CHANGE_TYPE_LIST_CLASS },
+          // notion-motion.md R113 §1 #1: Escape from a clicked list puts focus on this row.
+          children: { items: this.typeChoices(property), width: '200px', class: CHANGE_TYPE_LIST_CLASS, escapeFocusesRow: true },
         };
       case 'duplicate':
         return { name: entry, title: this.t('tools.database.duplicateProperty'), icon: IconCopy, closeOnActivate: true, onActivate: () => this.options.onDuplicate(id) };
@@ -1429,6 +1457,11 @@ export class DatabasePropertyMenu {
       valueLabel: this.t(current[1]),
       children: {
         ...VALUE_LIST,
+        // R112: a keyboard open starts on the current row (a mouse open tints nothing: focus law).
+        // After show: the list is not drawn yet.
+        onOpen: () => {
+          if (isKeyboardModality()) queueMicrotask(() => this.focusCurrentRow(`optionSort-${current[0]}`));
+        },
         items: OPTION_SORTS.map(([sort, labelKey]) => ({
           name: `optionSort-${sort}`,
           title: this.t(labelKey),
@@ -1531,13 +1564,15 @@ export class DatabasePropertyMenu {
         icon: IconCalendar,
         children: {
           ...VALUE_LIST,
+          // notion-motion.md R113 §1 #1: Escape puts focus on this row.
+          escapeFocusesRow: true,
           class: DATE_FORMAT_LIST_CLASS,
           items: DATE_FORMATS.map((format) => ({
             name: `dateFormat-${format}`,
             title: this.t(`tools.database.dateFormat.${format}`),
             ...checkedIf((date.dateFormat ?? 'full') === format),
-            closeOnActivate: true,
-            onActivate: () => setDate({ dateFormat: format }),
+            // notion-motion.md R115 §1 #2: the pick closes only this list; focus goes to its row.
+            onActivate: () => this.pickFrom('dateFormat', () => setDate({ dateFormat: format })),
           })),
         },
       },
@@ -1632,6 +1667,8 @@ export class DatabasePropertyMenu {
         valueLabel: this.t(`tools.database.numberFormat.${number.format ?? 'number'}`).replace(/ \([A-Z]{3}\)$/, ''),
         children: {
           ...CLICK_ONLY_UNDER,
+          // notion-motion.md R94 §1 #6: Escape puts focus on this row.
+          escapeFocusesRow: true,
           class: FORMAT_SEARCH_LIST_CLASS,
           width: '192px',
           searchable: true,
@@ -1650,6 +1687,8 @@ export class DatabasePropertyMenu {
         valueLabel: number.decimals === undefined ? this.t('tools.database.decimalPlacesDefault') : String(number.decimals),
         children: {
           ...CLICK_ONLY_UNDER,
+          // notion-motion.md R113 §1 #1: Escape puts focus on this row.
+          escapeFocusesRow: true,
           class: PANEL_LIST_CLASS,
           width: '250px',
           // Its hint does not stay while the list is open, also when a key opened it.
@@ -1688,6 +1727,9 @@ export class DatabasePropertyMenu {
             valueIcon: optionSwatch(current),
             children: {
               placement: 'dropdown' as const,
+              fromButton: true,
+              // notion-motion.md R113 §1 #1: Escape puts focus on this row.
+              escapeFocusesRow: true,
               minWidth: '150px',
               items: OPTION_COLORS.map((color) => ({
                 name: `color-${color}`,
@@ -1698,14 +1740,15 @@ export class DatabasePropertyMenu {
               })),
             },
           },
-          this.inputItem('divideBy', number.divideBy === undefined ? '' : String(number.divideBy), 'tools.database.divideBy', (text) => {
+          // notion-motion.md R115 §1 #5: a Percent bar has no Divide by row. A Percent ring is unmeasured.
+          ...(showAs === 'bar' && number.format === 'percent' ? [] : [this.inputItem('divideBy', String(numberDivideBy(number)), 'tools.database.divideBy', (text) => {
             const divideBy = Number(text);
             const next: NumberDisplay = text === '' || !Number.isFinite(divideBy) || divideBy <= 0 ? without(latest.number, 'divideBy') : { ...latest.number, divideBy };
 
             if (next.divideBy === latest.number.divideBy) return;
             latest.number = next;
             this.options.onUpdate(property.id, { number: next });
-          }),
+          }, true)]),
           this.switchItem('showNumber', 'tools.database.showNumber', number.showNumber !== false, (on) => {
             latest.number = on ? without(latest.number, 'showNumber') : { ...latest.number, showNumber: false };
             this.options.onUpdate(property.id, { number: latest.number });
@@ -1799,7 +1842,8 @@ export class DatabasePropertyMenu {
     return { type: PopoverItemType.Html, element: button, name };
   }
 
-  private inputItem(name: string, value: string, labelKey: string, onChange: (value: string) => void): PopoverItemParams {
+  /** `boxed`: the input sits in Blok's field box (R112: Notion boxes Divide by). */
+  private inputItem(name: string, value: string, labelKey: string, onChange: (value: string) => void, boxed = false): PopoverItemParams {
     const label = document.createElement('label');
     const input = document.createElement('input');
 
@@ -1808,7 +1852,15 @@ export class DatabasePropertyMenu {
     input.type = 'text';
     input.value = value;
     input.addEventListener('change', () => onChange(input.value.trim()));
-    label.appendChild(input);
+    if (boxed) {
+      const box = document.createElement('span');
+
+      box.setAttribute('data-blok-field', 'text');
+      box.appendChild(input);
+      label.appendChild(box);
+    } else {
+      label.appendChild(input);
+    }
 
     return { type: PopoverItemType.Html, element: label, name };
   }

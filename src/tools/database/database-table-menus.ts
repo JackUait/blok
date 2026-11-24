@@ -1,8 +1,9 @@
 import type { I18n } from '../../../types';
 import type { PopoverItemDefaultBaseParams, PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
+import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_CLOSE_DELAY_MS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
+import { isKeyboardModality } from '../../components/utils/input-modality';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import {
   IconArrowDiagonal,
@@ -124,6 +125,25 @@ export interface CountCap {
   onCapCounts: (cap: boolean) => void;
 }
 
+/** A group row's name; the group's first calculation tells them apart. */
+const calcGroupName = (fns: readonly CalculationFn[]): string => `database-calc-group-${fns[0]}`;
+
+/**
+ * The calculation menu row that holds `current`: None, or the group whose list has it.
+ * notion-motion.md Round 111 §1 #4, Round 115 §1 #4: a keyboard-opened menu starts on this row.
+ */
+export const calcHighlight = (property: Pick<PropertyDefinition, 'type'>, current: CalculationFn | undefined): string => {
+  if (current === undefined) {
+    return 'database-calc-none';
+  }
+  const groups = property.type === 'checkbox'
+    ? [CHECKBOX_COUNT_FNS, CHECKBOX_PERCENT_FNS]
+    : [COUNT_FNS, PERCENT_FNS, NUMBER_FNS, DATE_FNS];
+  const holder = groups.find((fns) => fns.includes(current));
+
+  return holder === undefined ? 'database-calc-none' : calcGroupName(holder);
+};
+
 /**
  * The calculation menu for one column (research/08): None, Count ›,
  * Percent ›, then More options › for numbers or Date › for dates and
@@ -147,6 +167,7 @@ export const calculationItems = (
   });
   const group = (titleKey: string, fns: readonly CalculationFn[], lead: PopoverItemParams[] = []): PopoverItemParams => ({
     type: PopoverItemType.Default,
+    name: calcGroupName(fns),
     title: i18n.t(titleKey),
     // notion-motion.md Round 64 §5: the group stays unmarked; only the picked calculation inside it is.
     children: { items: [...lead, ...fns.map(leaf)], width: CALC_LIST_WIDTH },
@@ -231,6 +252,11 @@ export interface OpenMenuOptions {
   alignEnd?: boolean;
   /** A card menu that does not fit below opens above, its bottom this far over the anchor's top, when it fits there. */
   coverFlipOffset?: number;
+  /**
+   * The row (item name) the cursor starts on when the menu opens from the keyboard,
+   * until the pointer takes a row. A mouse open starts on no row.
+   */
+  highlight?: string;
 }
 
 const MENU_CLASS = {
@@ -297,11 +323,19 @@ export const openMenu = (
   if (options.kind === 'calc' || options.kind === 'row' || options.kind === 'handle') {
     popover.escapeClosesSubmenuFirst = true;
   }
-  // notion-motion.md Round 85c §1: Escape removes the row handle menu at once; other closes still fade.
-  if (options.kind === 'row' || options.kind === 'handle') {
-    popover.escapeClosesAtOnce = true;
+  // notion-motion.md Round 85c §1, Round 105 §1 #2: Escape, a click away and an item click remove the row handle menu at once.
+  // Round 108 §1 #1, #5: a card's menu too (Escape ≤ 11 ms; gone by +120 ms after a click away).
+  if (options.kind === 'row' || options.kind === 'handle' || options.kind === 'card') {
+    popover.closesAtOnce = true;
+    // Round 105 §1 #2, Round 107 §1 #1, Round 108 §1 #1: a click away hits Notion's full-window backdrop and acts on nothing under it.
+    popover.swallowsOutsideClick = true;
+  }
+  // Round 109 §1 #3: a middle click away keeps the table ⋮⋮ menu open. A card's menu sets its own (index.ts).
+  if (options.kind === 'row') {
+    popover.holdsOnMiddleClick = true;
   }
   popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
+  popover.nestedCloseDelay = DATABASE_SUBMENU_CLOSE_DELAY_MS;
   popover.alignEnd = options.alignEnd === true;
 
   const state = { closed: false };
@@ -319,6 +353,10 @@ export const openMenu = (
     queueMicrotask(() => popover.destroy());
   });
   popover.show();
+  // A real cursor, so the next arrow moves on from this row. Keyboard opens only: the focus law.
+  if (options.highlight !== undefined && isKeyboardModality()) {
+    popover.startCursorOn(options.highlight);
+  }
 
   return popover;
 };
@@ -332,6 +370,8 @@ export interface HeaderMenuContext {
   showPageIcon: boolean;
   calculation: CalculationFn | undefined;
   countCap?: CountCap;
+  /** Puts the cursor on a row of the menu's open submenu. */
+  startCursor?: (name: string) => void;
   onFilter: () => void;
   onSort: () => void;
   onGroup: () => void;
@@ -371,7 +411,15 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
     type: PopoverItemType.Default,
     title: i18n.t('tools.database.tableCalculate'),
     icon: IconSigma,
-    children: { items: calculationItems(property, ctx.calculation, i18n, ctx.onCalculate, ctx.countCap), minWidth: CALC_MENU_MIN_WIDTH, class: DATABASE_CALC_MENU_CLASS },
+    children: {
+      items: calculationItems(property, ctx.calculation, i18n, ctx.onCalculate, ctx.countCap),
+      minWidth: CALC_MENU_MIN_WIDTH,
+      class: DATABASE_CALC_MENU_CLASS,
+      // notion-motion.md Round 115 §1 #4: a keyboard open starts on the current row. After open: the list is not drawn yet.
+      onOpen: () => {
+        if (isKeyboardModality()) queueMicrotask(() => ctx.startCursor?.(calcHighlight(property, ctx.calculation)));
+      },
+    },
   };
   // research/08: Files and ID offer no Group; research/20 §1d: nor does Place. None can group a view.
   const groupable = property.type !== 'files' && property.type !== 'uniqueId' && property.type !== 'place';
@@ -604,13 +652,13 @@ export interface RowActionContext {
  * Copy link, Duplicate, Move to and Move to Trash, shared so the two menus cannot drift.
  * Notion's row page shows no shortcut on Move to Trash (research/12, 15-row-page-actions.png).
  */
-export const rowActionItems = (ctx: RowActionContext, options: { trashShortcut: boolean }): PopoverItemParams[] => {
+export const rowActionItems = (ctx: RowActionContext, options: { trashShortcut: boolean; closes?: boolean }): PopoverItemParams[] => {
   const { i18n, onDuplicate, onDelete, onMoveTo } = ctx;
 
   return [
     { type: PopoverItemType.Default, name: 'database-row-copy-link', title: i18n.t('tools.database.tableCopyLink'), icon: IconLink, onActivate: ctx.onCopyLink },
     ...(onDuplicate !== undefined
-      ? [{ type: PopoverItemType.Default as const, name: 'database-row-duplicate', title: i18n.t('tools.database.tableDuplicate'), icon: IconCopy, secondaryLabel: beautifyShortcut('CMD+D'), onActivate: onDuplicate }]
+      ? [{ type: PopoverItemType.Default as const, name: 'database-row-duplicate', title: i18n.t('tools.database.tableDuplicate'), icon: IconCopy, secondaryLabel: beautifyShortcut('CMD+D'), ...(options.closes === true ? { closeOnActivate: true } : {}), onActivate: onDuplicate }]
       : []),
     ...(onMoveTo !== undefined
       ? [{
@@ -630,6 +678,7 @@ export const rowActionItems = (ctx: RowActionContext, options: { trashShortcut: 
         title: i18n.t('tools.database.tableMoveToTrash'),
         icon: IconTrash,
         ...(options.trashShortcut ? { secondaryLabel: beautifyShortcut('DELETE') } : {}),
+        ...(options.closes === true ? { closeOnActivate: true } : {}),
         onActivate: onDelete,
       }]
       : []),
@@ -742,7 +791,9 @@ export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
     ...(page.length > 0 ? [line] : []),
     ...open,
     line,
-    ...rowActionItems(ctx, { trashShortcut: true }),
+    // notion-motion.md Round 109 §1 #1: Duplicate removes the row menu. Move to Trash does too: its row is gone.
+    // The row page's menu is unmeasured.
+    ...rowActionItems(ctx, { trashShortcut: true, closes: true }),
     ...(ctx.lastEdited !== undefined || ctx.counts !== undefined ? [line, rowFooter(i18n, ctx.lastEdited, ctx.counts)] : []),
   ];
 };

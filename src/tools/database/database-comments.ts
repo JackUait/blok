@@ -102,6 +102,8 @@ export class BuiltInCommentsUi {
     });
 
     popover.alignCenter = centred;
+    // Round 111 §1 #5: a mouse flow ends on the card without a ring.
+    popover.escapeRestoresPointerModality = true;
     this.popover = popover;
     popover.on(PopoverEvent.Closed, () => {
       if (this.popover !== popover) return;

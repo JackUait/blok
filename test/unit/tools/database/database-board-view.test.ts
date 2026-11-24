@@ -176,6 +176,18 @@ describe('DatabaseBoardView', () => {
     expect(pill?.getAttribute('data-color')).toBe('gray');
   });
 
+  // A locked database refuses the rename, so the pill must not offer one.
+  it.each([[false, 0, 'button'], [true, -1, null]])('a band pill in a locked (%s) board has tabIndex %s and role %s', (structureLocked, tabIndex, role) => {
+    const board = new DatabaseBoardView({
+      readOnly: false, structureLocked, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title',
+      subGroups: [{ key: 'red', label: 'Red', option: makeOption({ id: 'red', label: 'Red' }) }],
+    }).createView();
+    const label = board.querySelector<HTMLElement>('[data-blok-database-board-lane-label]');
+
+    expect(label?.tabIndex).toBe(tabIndex);
+    expect(label?.getAttribute('role')).toBe(role);
+  });
+
   describe('a Status board\'s column header (findings-board B01)', () => {
     const statusView = (options: SelectOption[], extra: Partial<DatabaseViewConfig> = {}): HTMLElement => new DatabaseBoardView({
       readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title',

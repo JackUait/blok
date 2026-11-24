@@ -1,6 +1,6 @@
 import { IconDatabase } from '../../components/icons';
 import { VIEW_ICONS } from './database-tab-bar';
-import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
+import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_CLOSE_DELAY_MS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import type { ArrowTarget } from '../../components/flipper';
@@ -162,6 +162,8 @@ export class DatabaseViewPopover {
     });
 
     this.popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
+
+    this.popover.nestedCloseDelay = DATABASE_SUBMENU_CLOSE_DELAY_MS;
     this.popover.show();
     this.popover.setArrowTarget(gridArrowTarget(shown.length));
     // notion-motion.md Round 15 §A: Table is filled on open, and stays filled while another tile is hovered: the keyboard cursor.

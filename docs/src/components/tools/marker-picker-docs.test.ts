@@ -23,7 +23,8 @@ describe('Marker picker instructions', () => {
   it.each(cases)('$name names the panel sections by their displayed labels, with no tabs', ({ description, messages, tab }) => {
     expect(description).not.toMatch(tab);
     expect(description).toContain(messages['tools.marker.textColor']);
-    expect(description).toContain(messages['tools.marker.background']);
+    // The background column title, not the shorter mode word tools.marker.background.
+    expect(description).toContain(messages['tools.colorPicker.backgroundColor']);
     expect(description).toContain(messages['tools.marker.default']);
   });
 });

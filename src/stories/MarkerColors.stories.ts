@@ -493,8 +493,8 @@ export const PickerDefaultButton: Story = {
 };
 
 /**
- * Opens the marker picker on uncolored text and verifies no Text swatch
- * other than Default has an active ring indicator.
+ * Opens the marker picker on uncolored text and verifies no Text row
+ * other than Default is marked as picked.
  */
 export const PickerNoActiveSwatch: Story = {
   args: {
@@ -514,14 +514,12 @@ export const PickerNoActiveSwatch: Story = {
           expect(swatches?.length).toBe(10);
 
           swatches?.forEach((swatch) => {
-            // Default swatch correctly shows active ring when no color is set
+            // Default is the picked row when no color is set.
             if (swatch.getAttribute('data-blok-testid')?.endsWith('-default')) {
               return;
             }
 
-            // Use classList.contains for exact token match — className.includes
-            // would false-positive on the hover:ring-swatch-ring-hover variant
-            expect(swatch.classList.contains('ring-swatch-ring-hover')).toBe(false);
+            expect(swatch).toHaveAttribute('aria-pressed', 'false');
           });
         },
         TIMEOUT_ACTION
@@ -532,7 +530,7 @@ export const PickerNoActiveSwatch: Story = {
 
 /**
  * Selects pre-colored red text, opens the marker picker, and verifies the
- * red swatch shows an active ring indicator.
+ * red row is marked as picked: aria-pressed and a visible checkmark.
  */
 export const PickerActiveTextSwatch: Story = {
   args: {
@@ -591,12 +589,12 @@ export const PickerActiveTextSwatch: Story = {
         TIMEOUT_ACTION
       );
 
-      // Verify the red swatch has the active ring
       await waitFor(
         () => {
           const redSwatch = document.querySelector('[data-blok-testid="marker-swatch-color-red"]');
 
-          expect(redSwatch?.className).toContain('ring-swatch-ring-hover');
+          expect(redSwatch).toHaveAttribute('aria-pressed', 'true');
+          expect(redSwatch?.querySelector('[data-blok-testid="marker-check"]')).toBeVisible();
         },
         TIMEOUT_ACTION
       );
@@ -606,8 +604,8 @@ export const PickerActiveTextSwatch: Story = {
 
 /**
  * Selects pre-colored orange background text, opens the marker picker,
- * switches to the background tab, and verifies the orange swatch shows
- * an active ring indicator.
+ * and verifies the orange background row is marked as picked: aria-pressed
+ * and a visible checkmark.
  */
 export const PickerActiveBackgroundSwatch: Story = {
   args: {
@@ -666,12 +664,12 @@ export const PickerActiveBackgroundSwatch: Story = {
         TIMEOUT_ACTION
       );
 
-      // Verify the orange swatch has the active ring
       await waitFor(
         () => {
           const orangeSwatch = document.querySelector('[data-blok-testid="marker-swatch-background-color-orange"]');
 
-          expect(orangeSwatch?.className).toContain('ring-swatch-ring-hover');
+          expect(orangeSwatch).toHaveAttribute('aria-pressed', 'true');
+          expect(orangeSwatch?.querySelector('[data-blok-testid="marker-check"]')).toBeVisible();
         },
         TIMEOUT_ACTION
       );

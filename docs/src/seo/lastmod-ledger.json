@@ -1,23 +1,23 @@
 {
   "/": {
-    "hash": "e54d70a8ea4292ac",
-    "date": "2026-11-10"
+    "hash": "aad8ffad6954de46",
+    "date": "2026-11-25"
   },
   "/404": {
-    "hash": "a05d42b0bc88b227",
-    "date": null
+    "hash": "f3db65958b9202f0",
+    "date": "2026-11-25"
   },
   "/changelog": {
-    "hash": "097a17316d3f9f6a",
-    "date": "2026-09-04"
+    "hash": "3f63b99b2ad9b556",
+    "date": "2026-11-25"
   },
   "/demo": {
-    "hash": "dd78d2e1dc86e294",
-    "date": "2026-11-10"
+    "hash": "247e37f1a7837987",
+    "date": "2026-11-25"
   },
   "/docs": {
-    "hash": "6ebcb7e1d29ac2be",
-    "date": "2026-11-12"
+    "hash": "0b0e4e88cf92d027",
+    "date": "2026-11-25"
   },
   "/docs/agent-api": {
     "hash": "232f1d198bf38dcc",
@@ -32,20 +32,20 @@
     "date": "2026-11-12"
   },
   "/docs/block-api": {
-    "hash": "c4b24974caa1224b",
-    "date": "2026-11-16"
+    "hash": "3b4700a0d29d7179",
+    "date": "2026-11-25"
   },
   "/docs/block-data": {
     "hash": "94d6c57021a0e302",
     "date": "2026-10-26"
   },
   "/docs/blocks-api": {
-    "hash": "73879430e4105047",
-    "date": "2026-11-10"
+    "hash": "9e20dbff8fe0a54b",
+    "date": "2026-11-25"
   },
   "/docs/blok-editor": {
-    "hash": "6f75015eb476bc78",
-    "date": "2026-10-08"
+    "hash": "159dec624ac8fe26",
+    "date": "2026-11-25"
   },
   "/docs/bold": {
     "hash": "1cd15e772c819125",
@@ -80,24 +80,24 @@
     "date": "2026-09-08"
   },
   "/docs/concepts": {
-    "hash": "33f68c80642ad777",
-    "date": "2026-10-05"
+    "hash": "f8095f5470d680ec",
+    "date": "2026-11-25"
   },
   "/docs/config": {
-    "hash": "8a31cf2766da3a1f",
-    "date": "2026-11-13"
+    "hash": "c8b042c4d259f613",
+    "date": "2026-11-25"
   },
   "/docs/core": {
-    "hash": "bbf26a19fdeecc03",
-    "date": "2026-10-08"
+    "hash": "7329749738305713",
+    "date": "2026-11-25"
   },
   "/docs/custom-block-tool": {
-    "hash": "eabe365e74d499c9",
-    "date": "2026-09-08"
+    "hash": "2e8e2d8e51837a88",
+    "date": "2026-11-25"
   },
   "/docs/database": {
-    "hash": "442285922cf7c2f1",
-    "date": "2026-11-16"
+    "hash": "54a95e584ea7b677",
+    "date": "2026-11-25"
   },
   "/docs/database-comment": {
     "hash": "477f7b5d1545fcb4",
@@ -128,8 +128,8 @@
     "date": "2026-10-07"
   },
   "/docs/events-api": {
-    "hash": "f90181402e9050a9",
-    "date": "2026-09-08"
+    "hash": "889e8ab1cbe28bb5",
+    "date": "2026-11-25"
   },
   "/docs/file": {
     "hash": "0c556edb11382417",
@@ -144,8 +144,8 @@
     "date": "2026-11-10"
   },
   "/docs/i18n-api": {
-    "hash": "f49d20326c37eb23",
-    "date": "2026-09-08"
+    "hash": "0afcd2ae0e450223",
+    "date": "2026-11-25"
   },
   "/docs/image": {
     "hash": "6aa82eb231c8a108",
@@ -168,32 +168,32 @@
     "date": "2026-10-07"
   },
   "/docs/list": {
-    "hash": "20d0bfefba1ff7f7",
-    "date": "2026-10-07"
+    "hash": "8a5e0d25a8581fdb",
+    "date": "2026-11-25"
   },
   "/docs/listeners-api": {
     "hash": "f6cda1d7503bda39",
     "date": "2026-09-08"
   },
   "/docs/marker": {
-    "hash": "0c99819d7669604c",
-    "date": "2026-10-07"
+    "hash": "7eeade7cc7dadfce",
+    "date": "2026-11-25"
   },
   "/docs/marks-api": {
-    "hash": "4f796707304a269f",
-    "date": "2026-09-08"
+    "hash": "914869e7b8511051",
+    "date": "2026-11-25"
   },
   "/docs/notifier-api": {
     "hash": "21c4783ed82f1462",
     "date": "2026-09-08"
   },
   "/docs/output-data": {
-    "hash": "5b75aadcad3a88b0",
-    "date": "2026-11-16"
+    "hash": "3b70a0dba65cc19e",
+    "date": "2026-11-25"
   },
   "/docs/page": {
-    "hash": "a0498b119e5ecce4",
-    "date": "2026-11-12"
+    "hash": "91a550f193f86676",
+    "date": "2026-11-25"
   },
   "/docs/page-link": {
     "hash": "9676c2329dc1eede",
@@ -216,8 +216,8 @@
     "date": "2026-10-07"
   },
   "/docs/readonly-api": {
-    "hash": "e30c734e1732cf9f",
-    "date": "2026-09-08"
+    "hash": "0775ddcdc4675c05",
+    "date": "2026-11-25"
   },
   "/docs/sanitizer-api": {
     "hash": "8c93c4d20e5da2fc",
@@ -240,8 +240,8 @@
     "date": "2026-10-07"
   },
   "/docs/styles-api": {
-    "hash": "fd70fd59cca7f10e",
-    "date": "2026-10-06"
+    "hash": "1d10237121dc9acc",
+    "date": "2026-11-25"
   },
   "/docs/supSub": {
     "hash": "f4182c1d77d1a87b",
@@ -280,12 +280,12 @@
     "date": "2026-10-07"
   },
   "/docs/toolbar-api": {
-    "hash": "1db67960c4d77b0c",
-    "date": "2026-09-26"
+    "hash": "b95053db9a602705",
+    "date": "2026-11-25"
   },
   "/docs/tools-api": {
-    "hash": "ea22c2c897d07646",
-    "date": "2026-11-12"
+    "hash": "a6602511901ab1b8",
+    "date": "2026-11-25"
   },
   "/docs/tooltip-api": {
     "hash": "ae6cf1cd5cfcf272",
@@ -304,24 +304,24 @@
     "date": "2026-10-07"
   },
   "/docs/uploader-api": {
-    "hash": "bbdb31ae45d10440",
-    "date": "2026-11-12"
+    "hash": "e7bc1784cf95d237",
+    "date": "2026-11-25"
   },
   "/docs/use-blocks": {
-    "hash": "67b4861fe2d1a101",
-    "date": "2026-11-12"
+    "hash": "785c94c3139b5e66",
+    "date": "2026-11-25"
   },
   "/docs/use-blok-ready": {
-    "hash": "76036f6e147870be",
-    "date": "2026-09-08"
+    "hash": "2125c2e919278567",
+    "date": "2026-11-25"
   },
   "/docs/video": {
     "hash": "f9296582d5be195c",
     "date": "2026-09-28"
   },
   "/docs/view-api": {
-    "hash": "46b3c9f1a3516e76",
-    "date": "2026-11-12"
+    "hash": "78f4dfa4fc072826",
+    "date": "2026-11-25"
   },
   "/docs/view-state-api": {
     "hash": "1981c1ecf65077dc",
@@ -332,32 +332,32 @@
     "date": "2026-09-08"
   },
   "/migration": {
-    "hash": "8defd2719fc1e9ba",
-    "date": "2026-10-05"
+    "hash": "6629b748d8c393d1",
+    "date": "2026-11-25"
   },
   "/migration/reference": {
-    "hash": "a33e46b3013c3816",
-    "date": "2026-09-08"
+    "hash": "a853aad25d26964b",
+    "date": "2026-11-25"
   },
   "/presets": {
-    "hash": "f9723209f9e06bcb",
-    "date": "2026-11-03"
+    "hash": "2d5bb6df39c089df",
+    "date": "2026-11-25"
   },
   "/ru": {
-    "hash": "530e560c29a681df",
-    "date": "2026-11-10"
+    "hash": "e7d99fa19fc7e386",
+    "date": "2026-11-25"
   },
   "/ru/changelog": {
-    "hash": "9c2511d89a54424b",
-    "date": "2026-09-04"
+    "hash": "baa4503b12d8da26",
+    "date": "2026-11-25"
   },
   "/ru/demo": {
-    "hash": "7c1d1a71c4219655",
-    "date": "2026-11-10"
+    "hash": "645c365e73042164",
+    "date": "2026-11-25"
   },
   "/ru/docs": {
-    "hash": "32d01fb65c97b1e9",
-    "date": "2026-11-12"
+    "hash": "41c7868abea41525",
+    "date": "2026-11-25"
   },
   "/ru/docs/agent-api": {
     "hash": "e1bfdb20e56be28d",
@@ -372,20 +372,20 @@
     "date": "2026-11-12"
   },
   "/ru/docs/block-api": {
-    "hash": "3b2e741aaea0827b",
-    "date": "2026-11-16"
+    "hash": "88fa9a6b6ad64232",
+    "date": "2026-11-25"
   },
   "/ru/docs/block-data": {
     "hash": "43d0c3ec12e497aa",
     "date": "2026-10-26"
   },
   "/ru/docs/blocks-api": {
-    "hash": "27c40bf3ccf8942b",
-    "date": "2026-11-10"
+    "hash": "dfe7be11af5f383f",
+    "date": "2026-11-25"
   },
   "/ru/docs/blok-editor": {
-    "hash": "5536bd3bdc5a817e",
-    "date": "2026-10-08"
+    "hash": "2aac42ce1d8bc457",
+    "date": "2026-11-25"
   },
   "/ru/docs/bold": {
     "hash": "2558a8b84871ac68",
@@ -420,24 +420,24 @@
     "date": "2026-09-08"
   },
   "/ru/docs/concepts": {
-    "hash": "5b05167014f36056",
-    "date": "2026-10-05"
+    "hash": "7d46ca7b9cdb9ea8",
+    "date": "2026-11-25"
   },
   "/ru/docs/config": {
-    "hash": "3221dd880b18d324",
-    "date": "2026-11-13"
+    "hash": "597d3dfef0b59034",
+    "date": "2026-11-25"
   },
   "/ru/docs/core": {
-    "hash": "b1c6e1c381d91d77",
-    "date": "2026-10-08"
+    "hash": "82cce8e0f6e3712c",
+    "date": "2026-11-25"
   },
   "/ru/docs/custom-block-tool": {
-    "hash": "066ebbf44b63b57b",
-    "date": "2026-09-08"
+    "hash": "675a25555ce5cfac",
+    "date": "2026-11-25"
   },
   "/ru/docs/database": {
-    "hash": "16d01587544550a1",
-    "date": "2026-11-16"
+    "hash": "1bbf23a47ab84ea5",
+    "date": "2026-11-25"
   },
   "/ru/docs/database-comment": {
     "hash": "b2202e88a335bb34",
@@ -468,8 +468,8 @@
     "date": "2026-10-07"
   },
   "/ru/docs/events-api": {
-    "hash": "a4098ed392fce82f",
-    "date": "2026-09-08"
+    "hash": "94bb3b5fde2e4a22",
+    "date": "2026-11-25"
   },
   "/ru/docs/file": {
     "hash": "bbdf9ffacd2622b0",
@@ -484,8 +484,8 @@
     "date": "2026-11-10"
   },
   "/ru/docs/i18n-api": {
-    "hash": "54ffa8c4ea5b422b",
-    "date": "2026-09-08"
+    "hash": "5f1eea1fc623f308",
+    "date": "2026-11-25"
   },
   "/ru/docs/image": {
     "hash": "a137c9ae4f651663",
@@ -508,32 +508,32 @@
     "date": "2026-10-07"
   },
   "/ru/docs/list": {
-    "hash": "fa5131e53b69bff4",
-    "date": "2026-10-07"
+    "hash": "fa9c432e5f687761",
+    "date": "2026-11-25"
   },
   "/ru/docs/listeners-api": {
     "hash": "8647d11c003ca907",
     "date": "2026-09-08"
   },
   "/ru/docs/marker": {
-    "hash": "aa2c22159e2accd6",
-    "date": "2026-10-07"
+    "hash": "dd55ea47edebec72",
+    "date": "2026-11-25"
   },
   "/ru/docs/marks-api": {
-    "hash": "6c3e5100afaea987",
-    "date": "2026-09-08"
+    "hash": "5c5e9b4c1559079b",
+    "date": "2026-11-25"
   },
   "/ru/docs/notifier-api": {
     "hash": "80f406bb7e07e27d",
     "date": "2026-09-08"
   },
   "/ru/docs/output-data": {
-    "hash": "dd4226874fd69db4",
-    "date": "2026-11-16"
+    "hash": "6b56cc06132384cb",
+    "date": "2026-11-25"
   },
   "/ru/docs/page": {
-    "hash": "275eeb1a7697e124",
-    "date": "2026-11-16"
+    "hash": "d88dd4d4fd1a21c1",
+    "date": "2026-11-25"
   },
   "/ru/docs/page-link": {
     "hash": "4a17b6190ff46ca9",
@@ -556,8 +556,8 @@
     "date": "2026-10-07"
   },
   "/ru/docs/readonly-api": {
-    "hash": "817b46fd30ee1ace",
-    "date": "2026-09-08"
+    "hash": "e9643d80f744e0fd",
+    "date": "2026-11-25"
   },
   "/ru/docs/sanitizer-api": {
     "hash": "d212c9a6ca5772d3",
@@ -580,8 +580,8 @@
     "date": "2026-10-07"
   },
   "/ru/docs/styles-api": {
-    "hash": "caaf7de63662e3d0",
-    "date": "2026-10-06"
+    "hash": "a4221ec783961396",
+    "date": "2026-11-25"
   },
   "/ru/docs/supSub": {
     "hash": "fc6ca0a0cbb18eeb",
@@ -620,12 +620,12 @@
     "date": "2026-10-07"
   },
   "/ru/docs/toolbar-api": {
-    "hash": "529520a9bce1fbe5",
-    "date": "2026-09-26"
+    "hash": "ec04023acf0b2726",
+    "date": "2026-11-25"
   },
   "/ru/docs/tools-api": {
-    "hash": "dc970286e6ae34bc",
-    "date": "2026-11-16"
+    "hash": "c11b555bc7804cc0",
+    "date": "2026-11-25"
   },
   "/ru/docs/tooltip-api": {
     "hash": "9b906a484c38ff4f",
@@ -644,24 +644,24 @@
     "date": "2026-10-07"
   },
   "/ru/docs/uploader-api": {
-    "hash": "52cff86edad2f2c5",
-    "date": "2026-11-12"
+    "hash": "dcee5de74e05c1b1",
+    "date": "2026-11-25"
   },
   "/ru/docs/use-blocks": {
-    "hash": "77bf212d2e32d6ac",
-    "date": "2026-11-12"
+    "hash": "4fa6db8bea8bb05a",
+    "date": "2026-11-25"
   },
   "/ru/docs/use-blok-ready": {
-    "hash": "c73705579e3d719a",
-    "date": "2026-09-08"
+    "hash": "047ad5b414bd44a3",
+    "date": "2026-11-25"
   },
   "/ru/docs/video": {
     "hash": "40d94a5fa49949bc",
     "date": "2026-09-28"
   },
   "/ru/docs/view-api": {
-    "hash": "fa4d469e47f5a9d6",
-    "date": "2026-11-12"
+    "hash": "52c17f1c4402b1fd",
+    "date": "2026-11-25"
   },
   "/ru/docs/view-state-api": {
     "hash": "b0418f22b56273c5",
@@ -672,28 +672,28 @@
     "date": "2026-09-08"
   },
   "/ru/migration": {
-    "hash": "dc6b984b426ae0e7",
-    "date": "2026-10-05"
+    "hash": "a09a6116db5d7529",
+    "date": "2026-11-25"
   },
   "/ru/migration/reference": {
-    "hash": "41d9020f58defc97",
-    "date": "2026-09-08"
+    "hash": "83af676f2578e99b",
+    "date": "2026-11-25"
   },
   "/ru/presets": {
-    "hash": "b71c16a137473a2c",
-    "date": "2026-11-03"
+    "hash": "0b771b9d83f44b68",
+    "date": "2026-11-25"
   },
   "/ru/server": {
-    "hash": "4035a96a10a174bf",
-    "date": "2026-11-13"
+    "hash": "b4f8e2567d37d952",
+    "date": "2026-11-25"
   },
   "/ru/tools": {
     "hash": "2b0fddd440ba58c4",
     "date": null
   },
   "/server": {
-    "hash": "29d57d6142f0bb2c",
-    "date": "2026-11-13"
+    "hash": "25665314a3a6ee0f",
+    "date": "2026-11-25"
   },
   "/tools": {
     "hash": "8ae406d370e08ec0",

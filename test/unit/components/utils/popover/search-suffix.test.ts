@@ -147,7 +147,8 @@ describe('the "/" row text in Notion\'s size and dark ink (research/28 §1b, res
 
     expect(classes).toContain('text-popover-item-label');
     expect(classes).not.toContain('text-text-primary');
-    expect(values).toEqual([ 'rgb(240, 239, 237)', 'rgb(240, 239, 237)' ]);
+    // The third is the block menu's quiet look, which sets its own label ink.
+    expect(values).toEqual([ 'rgb(240, 239, 237)', 'rgb(240, 239, 237)', 'var(--blok-block-menu-label)' ]);
     // Light has no value of its own, so it follows --blok-text-primary where the host sets it.
     expect(colors).toContain('--color-popover-item-label: var(--blok-popover-item-label-text, var(--blok-text-primary));');
   });

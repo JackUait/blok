@@ -29,6 +29,10 @@ import { join, relative, sep } from 'node:path';
  *                                              icons module (it would pull the
  *                                              shared icons chunk into view.mjs);
  *                                              tool-classes.test.ts pins it equal
+ * - src/playground/presence-glyph-icons.ts → holds no drawing: it adds a size
+ *                                              to the `<svg ` root of artwork
+ *                                              decoded from presence.css, which
+ *                                              owns it; a registry copy would drift
  * - src/stories/** (Storybook story files)   → fixtures demonstrating the
  *                                              external custom-icon API
  * - JSDoc comments mentioning `<svg>...</svg>` as documentation
@@ -42,6 +46,7 @@ const ALLOWED_FILES = new Set([
   'components/utils/media-preview-art.ts',
   'components/utils/brand-marks.ts',
   'shared/tool-classes/page.ts',
+  'playground/presence-glyph-icons.ts',
 ]);
 
 const ALLOWED_DIR_PREFIXES = [

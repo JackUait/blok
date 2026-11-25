@@ -6,20 +6,8 @@ import {
   mergeListItemData,
   type RerenderContext,
 } from '../../../../src/tools/list/block-operations';
-import type { ListItemData, ListItemStyle, StyleConfig } from '../../../../src/tools/list/types';
+import type { ListItemData, ListItemStyle } from '../../../../src/tools/list/types';
 import { parseHTML } from '../../../../src/tools/list/content-operations';
-import type { PopoverItemDefaultBaseParams } from '../../../../types/utils/popover/popover-item';
-
-/**
- * Type guard to check if a menu config item is a default params item
- */
-const isDefaultParamsItem = (item: unknown): item is PopoverItemDefaultBaseParams => {
-  return (
-    typeof item === 'object' &&
-    item !== null &&
-    'onActivate' in item
-  );
-};
 
 describe('block-operations', () => {
   describe('rerenderListItem', () => {

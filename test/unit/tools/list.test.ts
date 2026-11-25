@@ -3,7 +3,6 @@ import { ListItem as List, type ListItemConfig, type ListItemData } from '../../
 import defaultDictionary from '../../../src/components/i18n/locales/en.json';
 import type { API, BlockToolConstructorOptions } from '../../../types';
 import type { I18nDictionary } from '../../../types/configs';
-import type { MenuConfig } from '../../../types/tools/menu-config';
 import { analyzeDataFormat, expandToHierarchical, collapseToLegacy } from '../../../src/components/utils/data-model-transform';
 import type { OutputBlockData } from '../../../types';
 import { REPARENT_IN_PLACE } from '../../../src/components/utils/index-move-neighbours';
@@ -56,13 +55,6 @@ const createListOptions = (
   readOnly: false,
   block: {} as never,
 });
-
-/**
- * Helper to convert MenuConfig to array for easier testing
- */
-const toMenuArray = (config: MenuConfig): Array<Record<string, unknown>> => {
-  return (Array.isArray(config) ? config : [config]) as Array<Record<string, unknown>>;
-};
 
 describe('List Tool - rAF timing fixes', () => {
   beforeEach(() => {

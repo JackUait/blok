@@ -17,7 +17,14 @@ export type CanonCell = Record<string, unknown> & { blocks?: Canon[] };
 
 /* ----------------------------- editor setup ----------------------------- */
 
+/** The richTable image. It never loads; a local 404 makes it fail at once instead of after the network. */
+const FIXTURE_IMAGE_URL = 'https://example.com/a.png';
+
 export const createEditor = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
+  // The shared page keeps routes for the whole spec file, so drop the last one first.
+  await page.unroute(FIXTURE_IMAGE_URL);
+  await page.route(FIXTURE_IMAGE_URL, route => route.fulfill({ status: 404, contentType: 'text/plain', body: '' }));
+
   await page.evaluate(async ({ holder, blokBlocks }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
@@ -54,6 +61,16 @@ export const createEditor = async (page: Page, blocks: OutputData['blocks']): Pr
       }
     }
   });
+
+  // A broken image grows into a loading box, then shrinks to the error card.
+  // The cell helpers click measured points, so wait for the final size.
+  // Runs after the toggles open: an image in a closed toggle never settles.
+  await page.waitForFunction((holder) => Array.from(document.querySelectorAll(`#${holder} [data-blok-component="image"]`)).every((block) => {
+    const img = block.querySelector('img');
+
+    return block.querySelector('[data-state="error"]') !== null
+      || (img !== null && img.complete && img.naturalWidth > 0 && block.querySelector('[data-loading]') === null);
+  }), HOLDER_ID);
 };
 
 export const saveRaw = async (page: Page): Promise<SavedBlock[]> => {

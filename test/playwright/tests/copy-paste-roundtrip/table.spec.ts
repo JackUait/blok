@@ -286,6 +286,16 @@ test.describe('table round trips', () => {
 
   /* ------------------------- cell range (in-table) ------------------------ */
 
+  // The cell helpers click raw coordinates. If the image cell is still swapping
+  // its loading box for the error card, the click lands in the table below.
+  test('setup: the image cell has its final size when createEditor returns', async ({ page }) => {
+    await createEditor(page, [...richTable('t1'), plainTable('t2', 4, 4, 'z')]);
+    const atReturn = await box(cellOf(page, 't1', 2, 1), 'image cell');
+
+    await expect(page.locator('[data-blok-id="t1i1"]').getByText('Image failed to load')).toBeVisible();
+    expect(await box(cellOf(page, 't1', 2, 1), 'image cell')).toEqual(atReturn);
+  });
+
   const rangeIntoTable = async (
     page: Page,
     r0: number, c0: number, r1: number, c1: number,

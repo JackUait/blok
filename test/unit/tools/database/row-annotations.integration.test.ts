@@ -123,9 +123,11 @@ describe('a row page ignores its annotations', () => {
 
     const placeholder = holder?.querySelector<HTMLElement>('[data-blok-database-drawer-editor] [data-blok-database-row-empty]');
     const css = readFileSync(resolve(__dirname, '../../../../src/styles/database.css'), 'utf8');
-    const hideRule = /([^{}]+)\{\s*display:\s*none;\s*\}/g;
-    const hidden = [...css.matchAll(hideRule)]
-      .map((match) => match[1].replace(/\/\*[\s\S]*?\*\//g, '').trim())
+    // Split, not a /([^{}]+)\{...\}/ regex: that backtracks quadratically and takes seconds on this file.
+    const hidden = css.split('}')
+      .map((chunk) => chunk.split('{'))
+      .filter((parts) => parts.length >= 2 && /^\s*display:\s*none;\s*$/.test(parts[parts.length - 1]))
+      .map((parts) => parts[parts.length - 2].replace(/\/\*[\s\S]*?\*\//g, '').trim())
       .filter((selector) => selector.endsWith('[data-blok-database-row-empty]'));
 
     expect(hidden).toHaveLength(1);

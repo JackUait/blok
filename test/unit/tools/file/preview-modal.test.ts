@@ -410,6 +410,21 @@ describe('openFilePreview — text kinds', () => {
     expect(document.querySelector('[data-role="file-preview-text"]')).toBeNull();
   });
 
+  it('writes no error card if the renderer fails after the preview closed', async () => {
+    const render = { fail: (_error: Error): void => undefined };
+    vi.mocked(loadTextPreview).mockResolvedValue({ ok: true, text: '# Hi' });
+    vi.mocked(markdownToHtml).mockReturnValueOnce(new Promise((_, reject) => { render.fail = reject; }));
+    const teardown = openFilePreview({ url: 'readme.md', fileName: 'readme.md', labels: LABELS });
+    const dialog = getDialog();
+    await vi.waitFor(() => expect(markdownToHtml).toHaveBeenCalled());
+
+    teardown();
+    render.fail(new Error('chunk failed'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(dialog?.querySelector('[data-role="file-preview-error"]')).toBeNull();
+  });
+
   it('routes docx files to fillOfficeBody', async () => {
     const teardown = openFilePreview({ url: 'blob:x', fileName: 'a.docx', labels: LABELS });
     expect(fillOfficeBody).toHaveBeenCalledWith(

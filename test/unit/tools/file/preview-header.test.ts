@@ -11,6 +11,12 @@ vi.mock('../../../../src/tools/file/office-preview', async () => {
 });
 
 const labels = { close: 'Close preview' };
+// A preview left open keeps loading after the file ends; its late failure then
+// writes into a torn-down jsdom.
+const closers: Array<() => void> = [];
+const open = (opts: Parameters<typeof openFilePreview>[0]): void => {
+  closers.push(openFilePreview(opts));
+};
 const q = <T extends Element>(selector: string): T | null => document.body.querySelector<T>(selector);
 
 describe('file preview header', () => {
@@ -19,6 +25,7 @@ describe('file preview header', () => {
   });
 
   afterEach(() => {
+    closers.splice(0).forEach((close) => close());
     document.body.innerHTML = '';
     document.body.style.overflow = '';
     vi.restoreAllMocks();
@@ -34,7 +41,7 @@ describe('file preview header', () => {
     ['people.csv', 'CSV', 'spreadsheet'],
     ['server.log', 'LOG', 'text'],
   ])('badges %s as %s in the %s colour', (fileName, badge, category) => {
-    openFilePreview({ url: `https://example.com/${fileName}`, fileName, labels });
+    open({ url: `https://example.com/${fileName}`, fileName, labels });
 
     const el = q<HTMLElement>('[data-role="file-preview-badge"]');
     expect(el?.textContent).toBe(badge);
@@ -51,7 +58,7 @@ describe('file preview header', () => {
     ['people.csv', 'CSV'],
     ['notes.txt', 'TXT'],
   ])('shows no type, count or size after the name of %s', (fileName, badge) => {
-    openFilePreview({ url: `https://example.com/${fileName}`, fileName, size: 18_432, labels });
+    open({ url: `https://example.com/${fileName}`, fileName, size: 18_432, labels });
 
     expect(q('[data-role="file-preview-meta"]')).toBeNull();
     const title = q('[data-role="file-preview-badge"]')?.parentElement;
@@ -59,7 +66,7 @@ describe('file preview header', () => {
   });
 
   it('offers a download link named after the file', () => {
-    openFilePreview({ url: 'https://example.com/files/a.docx', fileName: 'a.docx', labels: { ...labels, download: 'Download' } });
+    open({ url: 'https://example.com/files/a.docx', fileName: 'a.docx', labels: { ...labels, download: 'Download' } });
 
     const link = q<HTMLAnchorElement>('[data-action="preview-save"]');
     expect(link?.getAttribute('href')).toBe('https://example.com/files/a.docx');
@@ -69,7 +76,7 @@ describe('file preview header', () => {
   });
 
   it('downloads a blob file in place, without opening a tab', () => {
-    openFilePreview({ url: 'blob:https://example.com/abc', fileName: 'a.txt', labels });
+    open({ url: 'blob:https://example.com/abc', fileName: 'a.txt', labels });
 
     const link = q<HTMLAnchorElement>('[data-action="preview-save"]');
     expect(link?.getAttribute('href')).toBe('blob:https://example.com/abc');
@@ -78,13 +85,13 @@ describe('file preview header', () => {
   });
 
   it('offers no download link for a url that is neither http(s) nor blob', () => {
-    openFilePreview({ url: 'javascript:alert(1)', fileName: 'a.txt', labels });
+    open({ url: 'javascript:alert(1)', fileName: 'a.txt', labels });
 
     expect(q('[data-action="preview-save"]')).toBeNull();
   });
 
   it('opens any http(s) file in a new tab', () => {
-    openFilePreview({ url: 'https://example.com/a.ts', fileName: 'a.ts', labels: { ...labels, openInNewTab: 'Open in new tab' } });
+    open({ url: 'https://example.com/a.ts', fileName: 'a.ts', labels: { ...labels, openInNewTab: 'Open in new tab' } });
 
     const link = q<HTMLAnchorElement>('[data-action="preview-open-tab"]');
     expect(link?.getAttribute('href')).toBe('https://example.com/a.ts');
@@ -93,13 +100,13 @@ describe('file preview header', () => {
   });
 
   it('never opens a blob text file in a tab, where it could run as the editor', () => {
-    openFilePreview({ url: 'blob:https://example.com/abc', fileName: 'a.html', labels });
+    open({ url: 'blob:https://example.com/abc', fileName: 'a.html', labels });
 
     expect(q('[data-action="preview-open-tab"]')).toBeNull();
   });
 
   it('keeps Download, Open in new tab and Close in that order', () => {
-    openFilePreview({ url: 'https://example.com/a.ts', fileName: 'a.ts', labels });
+    open({ url: 'https://example.com/a.ts', fileName: 'a.ts', labels });
 
     const actions = Array.from(document.body.querySelectorAll('.blok-file-preview-actions > *'))
       .map((el) => el.getAttribute('data-action'));

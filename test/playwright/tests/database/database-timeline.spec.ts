@@ -479,7 +479,8 @@ test.describe('timeline', () => {
 
     const panel = page.locator('[data-blok-database-timeline-table]');
     const row = panel.locator('[data-blok-database-timeline-table-row]').first();
-    const widths = await row.evaluate((el) => [...el.children].map((cell) => cell.getBoundingClientRect().width));
+    // Only the property cells: the row also holds the absolute + and ⋮⋮ gutter.
+    const widths = await row.evaluate((el) => [...el.querySelectorAll(':scope > [data-property-id]')].map((cell) => cell.getBoundingClientRect().width));
     const rowBox = await row.boundingBox();
     const panelBox = await panel.boundingBox();
 

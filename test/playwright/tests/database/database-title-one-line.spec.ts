@@ -223,9 +223,24 @@ test.describe('Database — a long title stays one line', () => {
     await setRowWidth(page, 400);
     const box = await page.locator(TITLE).boundingBox();
     const more = await page.locator(ROW).locator('[data-blok-database-title-more]').boundingBox();
+    // The platform's font sets the width: 156 on macOS, about 192 on the Linux CI. So measure the text itself.
+    const placeholder = await page.locator(TITLE).evaluate((el) => {
+      const probe = document.createElement('span');
 
-    // "New database" at 24px; the font decides the last pixel.
-    expect(box?.width).toBeCloseTo(156, -1);
+      probe.textContent = el.getAttribute('data-placeholder');
+      probe.style.font = getComputedStyle(el).font;
+      probe.style.position = 'absolute';
+      probe.style.whiteSpace = 'pre';
+      document.body.appendChild(probe);
+      const width = probe.getBoundingClientRect().width;
+
+      probe.remove();
+
+      return width;
+    });
+
+    expect(placeholder).toBeGreaterThan(100);
+    expect(box?.width).toBeCloseTo(placeholder, 0);
     expect(box?.height).toBeCloseTo(31.2, 0);
     expect((more?.x ?? 0) - ((box?.x ?? 0) + (box?.width ?? 0))).toBeCloseTo(4, 0);
   });

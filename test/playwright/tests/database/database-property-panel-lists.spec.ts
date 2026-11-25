@@ -262,8 +262,7 @@ test('Number format\'s search field is Notion\'s "Filter formats…" field', asy
   expect(first.y - list.y).toBe(52);
 });
 
-// notion-motion.md Round 83 §4: Escape closes the list and leaves focus on the Number format row.
-// Blok's menus keep DOM focus on the list and mark the row with their keyboard cursor.
+// notion-motion.md Round 83 §4, R94 §1 #6: Escape closes the list and puts DOM focus on the Number format row.
 test('Escape on Number format puts focus back on its row', async ({ page }) => {
   await openPanel(page);
   const row = page.locator('[data-blok-item-name="numberFormat"]');
@@ -273,7 +272,7 @@ test('Escape on Number format puts focus back on its row', async ({ page }) => {
   await page.keyboard.press('Escape');
 
   await expect(page.locator('[data-blok-item-name^="format-"]')).toHaveCount(0);
-  await expect(page.locator('[data-blok-popover-items]:has([data-blok-item-name="numberFormat"])')).toBeFocused();
+  await expect(row).toBeFocused();
   await expect(row).toHaveAttribute('data-blok-focused', 'true');
   await page.keyboard.press('ArrowDown');
   await expect(page.locator('[data-blok-item-name="decimals"]')).toHaveAttribute('data-blok-focused', 'true');
@@ -296,7 +295,7 @@ test('picking a currency keeps the Edit property flyout 300 wide and focused on 
   await expect(page.locator('[data-blok-item-name^="format-"]')).toHaveCount(0);
   await expect(row).toContainText('Australian dollar');
   await expect(row).not.toContainText('(AUD)');
-  await expect(page.locator('[data-blok-popover-items]:has([data-blok-item-name="numberFormat"])')).toBeFocused();
+  await expect(row).toBeFocused();
   await expect(row).toHaveAttribute('data-blok-focused', 'true');
   expect((await listBox(page, 'numberFormat')).width).toBe(300);
   await page.keyboard.press('ArrowDown');

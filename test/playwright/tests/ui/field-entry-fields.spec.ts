@@ -55,13 +55,15 @@ test.beforeAll(ensureBlokBundleBuilt);
 for (const [theme, width] of [['light', 1280], ['dark', 1280], ['light', 390]] as const) {
   test.describe(`${theme}, ${width}px`, () => {
     test.use({ viewport: { width, height: 900 } });
+    // The link picker's field is drawn larger, like its rows (link-picker.css).
+    const LINK_FIELD_SIZE = { height: width < 651 ? 36 : 32, radius: '6px' };
 
     test('link URL field is the shared text field', async ({ page }) => {
       await mount(page, [{ type: 'paragraph', data: { text: TEXT } }], theme);
       const input = await openLinkField(page);
 
       await expect(input).toBeVisible();
-      await expectBlokField(input, input, 'text');
+      await expectBlokField(input, input, 'text', LINK_FIELD_SIZE);
     });
 
     test('an invalid link URL paints the danger border', async ({ page }) => {
@@ -83,7 +85,7 @@ for (const [theme, width] of [['light', 1280], ['dark', 1280], ['light', 390]] a
       const title = page.getByTestId('inline-tool-title-input');
 
       await expect(title).toBeVisible();
-      await expectBlokField(title, title, 'text');
+      await expectBlokField(title, title, 'text', LINK_FIELD_SIZE);
     });
 
     // The embed field is the address bar from its design, not the filled shared look.

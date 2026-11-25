@@ -61,14 +61,15 @@ test('the block menu is a 264px card with 12px corners', async ({ page }) => {
   expect(await style(container, 'border-radius')).toBe('12px');
 });
 
-test('the search field is a soft fill with no glyph, and keeps the fill under a hairline while focused', async ({ page }) => {
+test('the search field is a soft fill with no glyph, and keeps the fill under the blue focus ring while focused', async ({ page }) => {
   const container = await openMenu(page);
   const field = container.getByTestId('popover-search-field');
   const input = container.getByTestId('popover-search-input');
 
   await expect(input).toBeFocused();
   expect(await style(field, 'display', '::before')).toBe('none');
-  expect(await style(field, 'border-top-color')).toBe('rgba(55, 53, 47, 0.09)');
+  expect(await style(field, 'border-top-color')).toBe('rgb(35, 131, 226)');
+  expect(await style(field, 'box-shadow')).toBe('rgb(35, 131, 226) 0px 0px 0px 1px inset');
   expect(await style(field, 'background-color')).toBe('rgba(55, 53, 47, 0.043)');
   expect(await style(field, 'border-radius')).toBe('6px');
   expect((await box(field)).height).toBe(30);

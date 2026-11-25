@@ -167,7 +167,7 @@
         display: none;
       }
 
-      /* The menu opens with the field focused, so focus keeps the fill. The shared field adds its hairline border. */
+      /* The menu opens with the field focused, so focus keeps the fill. The shared field adds its blue ring. */
       &:has(:is(input, textarea):focus) {
         background-color: var(--blok-block-menu-field-bg);
       }

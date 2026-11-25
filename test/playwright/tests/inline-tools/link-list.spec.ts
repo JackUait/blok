@@ -162,12 +162,14 @@ test.describe('link field: recent links as a list', () => {
     const sign = rows.nth(0).locator('[data-link-recent-icon]');
     const field = await box(input);
     const signBox = await box(sign);
-    // The drawn shape without its line thickness: Playwright's own box adds the stroke.
+    // The drawn shape without its line thickness. getBBox, not the client rect:
+    // Firefox's client rect of a path adds the stroke, Chromium's does not.
     const ink = await sign.evaluate((element) => {
       const path = element.querySelector('path');
-      const rect = path?.getBoundingClientRect();
+      const shape = path?.getBBox();
+      const scale = path?.getScreenCTM()?.a ?? 0;
 
-      return { width: rect?.width ?? 0, height: rect?.height ?? 0, line: path ? getComputedStyle(path).strokeWidth : '' };
+      return { width: (shape?.width ?? 0) * scale, height: (shape?.height ?? 0) * scale, line: path ? getComputedStyle(path).strokeWidth : '' };
     });
 
     expect([signBox.width, signBox.height].map(Math.round)).toEqual([20, 20]);

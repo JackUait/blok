@@ -281,15 +281,26 @@ const layoutOf = async (page: Page, holderId: string, blocks: Blocks): Promise<L
       return [blockId, anc && container.contains(anc) ? anc.getAttribute('data-blok-id') : null];
     });
 
+    // Player controls are not block text. Their time readout fades out after
+    // mount, so a read during the fade would see it on one side only.
+    const hideChrome = document.createElement('style');
+
+    hideChrome.textContent = '[data-role="video-controls"], [data-role="audio-controls"] { display: none !important; }';
+    document.head.appendChild(hideChrome);
+
+    // Toolbars and popovers mount in the container too; read block holders only.
+    const text = all.filter((h) => !h.parentElement?.closest('[data-blok-element]'))
+      .map((h) => (h as HTMLElement).innerText ?? '')
+      .join('\n')
+      .replace(/​/g, '');
+
+    hideChrome.remove();
+
     return {
       holders: all.length,
       orphanHolders: all.filter((h) => !known.has(h.getAttribute('data-blok-id') ?? '')).length,
       ancestors,
-      // Toolbars and popovers mount in the container too; read block holders only.
-      text: all.filter((h) => !h.parentElement?.closest('[data-blok-element]'))
-        .map((h) => (h as HTMLElement).innerText ?? '')
-        .join('\n')
-        .replace(/​/g, ''),
+      text,
     };
   }, { id: holderId, ids: blocks.map((b) => b.id ?? '') });
 };
@@ -539,6 +550,28 @@ test.describe('cross-context round trips', () => {
       });
     }
   }
+
+  // The fixture video is 160px wide, so its time readout fades out after mount.
+  // A text read during the fade must not count the readout as block text.
+  test('setup: the text read skips the video player controls', async ({ page }) => {
+    const video = MATRIX.find((m) => m.name === 'leaf-video');
+
+    if (!video) {
+      throw new Error('no leaf-video entry');
+    }
+    await createEditor(page, 'cc-a', { data: { blocks: video.blocks } });
+    const early = await layoutOf(page, 'cc-a', video.blocks);
+
+    await page.waitForFunction(() => {
+      const time = document.querySelector('#cc-a [data-role="time"]');
+
+      return time !== null && getComputedStyle(time).visibility === 'hidden';
+    });
+    const settled = await layoutOf(page, 'cc-a', video.blocks);
+
+    expect(textLines(early.text)).toEqual(textLines(settled.text));
+    expect(textLines(settled.text)).toEqual(['A video', 'TAIL-SENTINEL']);
+  });
 
   // A lone media or URL block: its text/plain matches a tool's paste pattern.
   for (const single of [

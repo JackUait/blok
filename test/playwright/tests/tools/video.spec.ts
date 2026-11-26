@@ -522,6 +522,31 @@ test.describe('a narrow player (capsule)', () => {
     await expect.poll(() => block.locator('[data-role="seek-wrap"]').evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
   });
 
+  // A hidden capsule hangs below the frame. If the frame can scroll, focus (or any
+  // scrollIntoView) scrolls it to show the capsule, and the picture stays shifted up.
+  test('keeps the picture in place when a hidden capsule control takes focus', async ({ page }) => {
+    await createBlok(page, { blocks: [{ type: 'video', data: { url: unplayedVideoUrl(), width: 45 } }] });
+    const block = page.locator(VIDEO_BLOCK_SELECTOR);
+
+    await expect(block).toHaveAttribute('data-state', 'rendered');
+    await expect(figureOf(page)).toHaveAttribute('data-capsule', '');
+    await playThenPause(page);
+    await page.mouse.move(0, 0);
+    await expect.poll(() => block.locator('[data-role="seek-wrap"]').evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
+
+    await block.getByRole('slider', { name: 'Seek' }).focus();
+
+    const offset = await block.evaluate((root) => {
+      const frame = root.querySelector('[data-role="video-media"]')?.getBoundingClientRect();
+      const video = root.querySelector('video')?.getBoundingClientRect();
+
+      return frame && video ? video.top - frame.top : null;
+    });
+
+    expect(offset).toBe(0);
+    await expect(block.getByRole('slider', { name: 'Seek' })).toBeFocused();
+  });
+
   test('keeps the three dots on the smallest player and carries sound in the tiles', async ({ page }) => {
     await createBlok(page, { blocks: [{ type: 'video', data: { url: unplayedVideoUrl(), width: 20 } }] });
     const block = page.locator(VIDEO_BLOCK_SELECTOR);

@@ -2129,6 +2129,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R329_BYTES = 401;
     // Lane r330: Round 115 the ring 2px outside a focused database menu row, and its list room. Net database.css growth against origin/main.
     const DATABASE_R330_BYTES = 1285;
+    // video.css: the frame clips instead of hiding overflow, so nothing can scroll the picture. Measured growth.
+    const VIDEO_FRAME_CLIP_BYTES = 103;
     // file.css: the object on a file card — pages, editor tab, filmstrip, record, folder, punch card (measured file.css growth).
     const FILE_CARD_OBJECT_BYTES = 27_626;
     // emoji-picker.css: the database icon pickers' keyboard highlight (measured emoji-picker.css growth).
@@ -2821,7 +2823,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R322_BYTES
       + DATABASE_R325_BYTES
       + DATABASE_R329_BYTES
-      + DATABASE_R330_BYTES;
+      + DATABASE_R330_BYTES
+      + VIDEO_FRAME_CLIP_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

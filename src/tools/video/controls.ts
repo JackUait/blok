@@ -1058,7 +1058,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   syncSpeedUi(state.selectedRate, state.selectedRate);
   showPane('main', { animate: false });
   bar.insertBefore(menuWrap, fullscreen);
-  // The menu lives on the figure, NOT inside the overflow:hidden media box, so the
+  // The menu lives on the figure, NOT inside the clipped media box, so the
   // card spills outside a short player instead of being clipped to its frame.
   // It is then anchored to the gear by hand on each open / viewport change.
   figure.appendChild(menu);

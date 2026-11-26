@@ -884,12 +884,22 @@ describe('dist weight (consumer parse cost)', () => {
 
   // One base64 string and nothing else, like the pdf.js asset chunks: one cheap string node.
   const BASE64_DATA_CHUNK = /^var (\w+)=`[A-Za-z0-9+/\n]*={0,2}\n?`;export\{\1 as default\};?\s*$/
+  // Any one template string with no `${`: CSS chunks and pdf.js decoder source are one string node too.
+  const STRING_DATA_CHUNK = /^var (\w+)=`(?:[^`\\$]|\\[\s\S]|\$(?!\{))*`;export\{\1 as default\};?\s*$/
 
   it('tells a base64 data chunk from code', () => {
     expect(BASE64_DATA_CHUNK.test('var e=`AAEC/+Q=`;export{e as default};')).toBe(true)
     expect(BASE64_DATA_CHUNK.test('var e=`\nAAEC\n/+Q=\n`;export{e as default};')).toBe(true)
     expect(BASE64_DATA_CHUNK.test('var e=`a${b}`;export{e as default};')).toBe(false)
     expect(BASE64_DATA_CHUNK.test('var e=`AAEC`;export{e as default};function f(){}')).toBe(false)
+  })
+
+  it('tells a string-only chunk (CSS, worker source) from code', () => {
+    expect(STRING_DATA_CHUNK.test('var e=`a{color:red}`;export{e as default};')).toBe(true)
+    expect(STRING_DATA_CHUNK.test('var e=`a:before{content:"\\\\2022"} \\` $x`;export{e as default};')).toBe(true)
+    expect(STRING_DATA_CHUNK.test('var e=`a${b}`;export{e as default};')).toBe(false)
+    expect(STRING_DATA_CHUNK.test('var e=`a`;export{e as default};function f(){}')).toBe(false)
+    expect(STRING_DATA_CHUNK.test('var e=`a`+f();export{e as default};')).toBe(false)
   })
 
   it('keeps the non-data ES code surface under the parse-cost budget', () => {
@@ -907,15 +917,17 @@ describe('dist weight (consumer parse cost)', () => {
     // code went 14,779,303 -> 16,673,517 bytes.
     // 16.5 MiB (USER, 2026-11-14: pdf.js assets in Blok): the JS image decoders for a CSP without wasm are
     // 470,957 bytes; code measured 17,261,125. pdf.js's cmaps, fonts and wasm are base64 data chunks.
+    // 15.25 MiB (USER, 2026-11-26): string-only chunks count as data. Code measured 17,549,726 before,
+    // 1,793,846 of it in 8 string-only chunks (database CSS 583 KB, pdf.js decoder source 471 KB).
     const codeBytes = esFiles
       .filter((file) => {
         const code = readFileSync(file, 'utf-8')
 
-        return !code.slice(0, 200).includes('JSON.parse(') && !BASE64_DATA_CHUNK.test(code)
+        return !code.slice(0, 200).includes('JSON.parse(') && !STRING_DATA_CHUNK.test(code)
       })
       .reduce((sum, file) => sum + readFileSync(file).byteLength, 0)
     expect(esFiles.filter((file) => BASE64_DATA_CHUNK.test(readFileSync(file, 'utf-8'))).length).toBeGreaterThan(100)
-    expect(codeBytes).toBeLessThan(16.5 * 1024 * 1024)
+    expect(codeBytes).toBeLessThan(15.25 * 1024 * 1024)
   })
 
   // Minifiers keep the newlines inside string and template literals (the SVG

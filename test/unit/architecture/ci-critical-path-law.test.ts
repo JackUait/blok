@@ -557,7 +557,7 @@ describe('CI critical-path law', () => {
         name: 'Test Go server with coverage',
         'working-directory': 'packages/server/go',
         run: [
-          'go test -p 2 -covermode=atomic -coverprofile="$RUNNER_TEMP/go-coverage.out" ./...',
+          'go test -p 3 -covermode=atomic -coverprofile="$RUNNER_TEMP/go-coverage.out" ./...',
           'go tool cover -func="$RUNNER_TEMP/go-coverage.out" | tail -n 1',
           'node ../../../scripts/check-server-coverage.mjs --go "$RUNNER_TEMP/go-coverage.out"',
         ].join('\n'),

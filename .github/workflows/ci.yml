@@ -346,10 +346,13 @@ jobs:
         working-directory: packages/server/go
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 
+      # -p 3: blokagent and blokmcp take two slots for minutes; the third runs
+      # the other packages beside them instead of after. -p 4 was slower on 4
+      # vCPUs, -p 2 hit the 10 min limit on slow runners.
       - name: Test Go server with coverage
         working-directory: packages/server/go
         run: |
-          go test -p 2 -covermode=atomic -coverprofile="$RUNNER_TEMP/go-coverage.out" ./...
+          go test -p 3 -covermode=atomic -coverprofile="$RUNNER_TEMP/go-coverage.out" ./...
           go tool cover -func="$RUNNER_TEMP/go-coverage.out" | tail -n 1
           node ../../../scripts/check-server-coverage.mjs --go "$RUNNER_TEMP/go-coverage.out"
 

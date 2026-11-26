@@ -90,7 +90,7 @@ describe('server quality gates', () => {
     expect(runs).toContain('go vet ./...');
     // Pinned: @latest would let a new release change what fails the gate.
     expect(runs).toContain('go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...');
-    expect(runs).toMatch(/go test -p 2 .*-coverprofile=/);
+    expect(runs).toMatch(/go test -p 3 .*-coverprofile=/);
     expect(runs).toContain('scripts/check-server-coverage.mjs --go "$RUNNER_TEMP/go-coverage.out"');
     expect(runs).toContain('node scripts/test-server-go-module.mjs');
     // Go conformance runs in Validate Spec File Coverage, which has the time.

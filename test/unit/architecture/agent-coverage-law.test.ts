@@ -8,8 +8,25 @@ import type { Coverage } from './agent-coverage.ledger';
 import { ENUMERATORS, HAND_FEATURES, SCAN_FLOORS, enumerateTunes, featureAnchorProblems, scanToolMenus } from './agent-coverage/enumerators';
 import { KNOWN_GAPS } from './agent-coverage/probes';
 import type { Capability } from './agent-coverage/scan';
+import type * as Scan from './agent-coverage/scan';
 import type { CapabilitySource } from './agent-coverage/enumerators';
 import { isInstrumented } from '../helpers/instrumented';
+
+// A counter, not vi.fn: beforeEach clears mock calls.
+const parses = vi.hoisted(() => new Map<string, number>());
+
+vi.mock('./agent-coverage/scan', async (importOriginal) => {
+  const actual = await importOriginal<typeof Scan>();
+
+  return {
+    ...actual,
+    parseFile: (file: string) => {
+      parses.set(file, (parses.get(file) ?? 0) + 1);
+
+      return actual.parseFile(file);
+    },
+  };
+});
 
 /**
  * ARCHITECTURE LAW — every human-reachable capability has an agent route.
@@ -74,8 +91,10 @@ const once = <T>(scan: () => T): (() => T) => {
 const SCAN_TIMEOUT_MS = 60_000;
 
 const toolMenus = once(scanToolMenus);
+const tunes = once(enumerateTunes);
 // One scan per source, shared by assertions 7 and 1. Same first-wins order as enumerateAll.
-const bySource = once(() => (Object.keys(ENUMERATORS) as CapabilitySource[]).map((source) => ({ source, found: ENUMERATORS[source]() })));
+const bySource = once(() => (Object.keys(ENUMERATORS) as CapabilitySource[])
+  .map((source) => ({ source, found: source === 'tune' ? tunes() : ENUMERATORS[source]() })));
 const allCapabilities = once(() => {
   const all = new Map<string, Capability>();
 
@@ -152,7 +171,7 @@ describe('agent coverage law', () => {
   }, SCAN_TIMEOUT_MS);
 
   it.skipIf(isInstrumented())('no tool menu name collides with a block settings item', () => {
-    const settingsNames = new Set(enumerateTunes().map((c) => c.id.replace(/^tune:/, '')));
+    const settingsNames = new Set(tunes().map((c) => c.id.replace(/^tune:/, '')));
     const collisions = toolMenus().capabilities
       .map((c) => ({ ...c, name: c.id.slice(c.id.indexOf('/') + 1) }))
       .filter((c) => settingsNames.has(c.name))
@@ -204,6 +223,18 @@ describe('agent coverage law', () => {
         'whose `mirrors` lists the id (02), or add a LEDGER row in agent-coverage.ledger.ts naming the ' +
         'command / field, or exempt it with a category and a reason.'
     ).toEqual([]);
+  }, SCAN_TIMEOUT_MS);
+
+  // Parsing is nearly all the scan's cost, so a walk that re-parses src/ multiplies it.
+  // A file named directly (a tune or toolbox source) is also met by the src/ walk, so twice is the cap.
+  it.skipIf(isInstrumented())('the scans parse each source file at most twice', () => {
+    toolMenus();
+    bySource();
+
+    const repeated = [...parses].filter(([, count]) => count > 2).map(([file, count]) => `${file}: ${count}`);
+
+    expect(parses.size).toBeGreaterThan(100);
+    expect(repeated).toEqual([]);
   }, SCAN_TIMEOUT_MS);
 
   it.skipIf(isInstrumented())('no ledger row is stale (assertion 4)', () => {

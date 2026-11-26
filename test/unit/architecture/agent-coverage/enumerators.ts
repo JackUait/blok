@@ -156,7 +156,7 @@ export const scanMenus = (source: ts.SourceFile, repoPath: string): MenuScan => 
 };
 
 export const scanToolMenus = (): MenuScan => {
-  const scans = walkTs(join(SRC_ROOT, 'tools')).map((file) => scanMenus(parseFile(file), toRepoPath(file)));
+  const scans = walkTs(join(SRC_ROOT, 'tools')).map((file) => scanOf(file).menu);
 
   return {
     capabilities: scans.flatMap((scan) => scan.capabilities),
@@ -332,10 +332,10 @@ const fromFile = (relative: string, fn: (source: ts.SourceFile, repoPath: string
 export const enumerateActionUnions = (): Capability[] =>
   [join(SRC_ROOT, 'tools'), ...SHARED_TOOL_DIRS.map((dir) => join(SRC_ROOT, 'shared', dir))]
     .flatMap((root) => walkTs(root))
-    .flatMap((file) => actionUnionIds(parseFile(file), toRepoPath(file)));
+    .flatMap((file) => scanOf(file).action);
 
 export const enumerateShortcuts = (): Capability[] =>
-  walkTs(SRC_ROOT).flatMap((file) => shortcutIds(parseFile(file), toRepoPath(file)));
+  walkTs(SRC_ROOT).flatMap((file) => scanOf(file).shortcut);
 
 export const enumerateKeys = (): Capability[] => [
   ...fromFile('components/modules/blockEvents/index.ts', keyIds),
@@ -498,9 +498,63 @@ export const slashColorIds = (source: ts.SourceFile, repoPath: string): Capabili
 
 const BLOCK_COLOR_FILE = 'components/shared/block-color.ts';
 
+let blockColorSource: ts.SourceFile | undefined;
+
+const blockColorOf = (): ts.SourceFile => {
+  blockColorSource ??= parseFile(join(SRC_ROOT, BLOCK_COLOR_FILE));
+
+  return blockColorSource;
+};
+
+let blockModes: string[] | undefined;
+
+const blockModesOf = (): string[] => {
+  blockModes ??= colorPickerModes(blockColorOf());
+
+  return blockModes;
+};
+
+interface FileScan {
+  menu: MenuScan;
+  action: Capability[];
+  shortcut: Capability[];
+  color: Capability[];
+  uiFile: Capability[];
+}
+
+/*
+ * Parsing is nearly all the scan's cost, and several walks visit the same files,
+ * so each file is parsed once and only the small results are kept. Keeping the
+ * ASTs of all of src/ instead holds ~440 MB.
+ */
+const fileScans = new Map<string, FileScan>();
+
+const scanOf = (file: string): FileScan => {
+  const cached = fileScans.get(file);
+
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const source = parseFile(file);
+  const repoPath = toRepoPath(file);
+  const inTools = repoPath.startsWith('src/tools/');
+  const toolCode = inTools || SHARED_TOOL_DIRS.some((dir) => repoPath.startsWith(`src/shared/${dir}/`));
+  const scan: FileScan = {
+    menu: inTools ? scanMenus(source, repoPath) : { capabilities: [], unnamed: [] },
+    action: toolCode ? actionUnionIds(source, repoPath) : [],
+    shortcut: shortcutIds(source, repoPath),
+    color: inTools ? colorIds(source, repoPath, blockModesOf()) : [],
+    uiFile: inTools ? uiFileIds(source, repoPath) : [],
+  };
+
+  fileScans.set(file, scan);
+
+  return scan;
+};
+
 export const enumerateColor = (): Capability[] => {
   const blockColor = join(SRC_ROOT, BLOCK_COLOR_FILE);
-  const blockModes = colorPickerModes(parseFile(blockColor));
   const toolbox = parseFile(join(SRC_ROOT, 'components/ui/toolbox.ts'));
   let slashShown = false;
 
@@ -509,8 +563,8 @@ export const enumerateColor = (): Capability[] => {
   });
 
   return [
-    ...walkTs(join(SRC_ROOT, 'tools')).flatMap((file) => colorIds(parseFile(file), toRepoPath(file), blockModes)),
-    ...(slashShown ? slashColorIds(parseFile(blockColor), toRepoPath(blockColor)) : []),
+    ...walkTs(join(SRC_ROOT, 'tools')).flatMap((file) => scanOf(file).color),
+    ...(slashShown ? slashColorIds(blockColorOf(), toRepoPath(blockColor)) : []),
   ];
 };
 
@@ -633,7 +687,7 @@ export const ENUMERATORS: Record<CapabilitySource, () => Capability[]> = {
   typing: enumerateTyping,
   drag: enumerateDrag,
   api: enumerateApi,
-  'ui-file': () => walkTs(join(SRC_ROOT, 'tools')).flatMap((file) => uiFileIds(parseFile(file), toRepoPath(file))),
+  'ui-file': () => walkTs(join(SRC_ROOT, 'tools')).flatMap((file) => scanOf(file).uiFile),
   color: enumerateColor,
   paste: enumeratePaste,
   feature: enumerateFeatures,
